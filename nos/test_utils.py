@@ -1,4 +1,5 @@
-"""Various nos test utilities."""
+#  Copyright 2022-  Autonomi AI , Inc. All rights reserved.
+"""Various test utilities."""
 import os
 import unittest
 from pathlib import Path
