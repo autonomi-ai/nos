@@ -24,9 +24,6 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-test: ## Basic testing using pytest (see pytest.ini)
-	pytest -sv tests -k "not (skip)"
-
 develop: ## Install wheel package in developer/editable-mode
 	python -m pip install --upgrade pip
 	pip install --upgrade pip setuptools
@@ -44,3 +41,9 @@ dist: clean ## builds source and wheel package
 
 style: ## Format source code automatically
 	pre-commit run --all-files # Uses pyproject.toml
+
+test: ## Basic testing using pytest (see pytest.ini)
+	pytest -sv tests -k "not (skip)"
+
+test-benchmarks: ## Testing with benchmarks
+	NOS_TEST_BENCHMARK=1 pytest -sv tests -k "not (skip)"
