@@ -40,7 +40,7 @@ jobs:
         run: conda list
       - uses: actions/cache@v2
         with:
-          path: .conda/
+          path: /usr/share/miniconda3/envs/nos-${{ matrix.os }}-${{ matrix.python-version }}
           key: conda-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('conda/envs/base-cpu/env.yml') }}-${{ env.CACHE_NUMBER }}
         id: cache
       - name: Install dependencies

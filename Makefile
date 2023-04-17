@@ -44,11 +44,6 @@ develop-cpu: ## Install CPU dependencies and package in developer/editable-mode
 install: ## Install wheel package
 	pip install .
 
-dist: clean ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
-	ls -lh dist
-
 style: ## Format source code automatically
 	pre-commit run --all-files # Uses pyproject.toml
 
@@ -60,3 +55,7 @@ test-cpu: ## Basic CPU testing using pytest (see pytest.ini)
 
 test-benchmarks: ## Testing with benchmarks
 	NOS_TEST_BENCHMARK=1 make test
+
+dist: clean ## builds source and wheel package
+	python -m build --sdist --wheel
+	ls -lh dist
