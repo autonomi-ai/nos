@@ -6,8 +6,11 @@ on:
     branches: [main]
   workflow_call:
 
+env:
+  CACHE_NUMBER: 0  # increase to reset cache manually
+
 jobs:
-  setup-miniconda-env:
+  conda-test:
     name: Test env (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -24,18 +27,25 @@ jobs:
         uses: actions/checkout@master
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          miniconda-version: "latest"
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
           auto-update-conda: true
           activate-environment: nos-${{ matrix.os }}-${{ matrix.python-version }}
           python-version: ${{ matrix.python-version }}
+          use-mamba: true
           # environment-file: conda/envs/base-cpu/env.yml
       - name: Conda info
         run: conda info
       - name: Conda list
-        shell: pwsh
         run: conda list
+      - uses: actions/cache@v2
+        with:
+          path: .conda/
+          key: conda-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('conda/envs/base-cpu/env.yml') }}-${{ env.CACHE_NUMBER }}
+        id: cache
       - name: Install dependencies
         run: make develop-cpu
+        if: steps.cache.outputs.cache-hit != 'true'
       - name: Quality Check
         run: make style
       - name: Test
