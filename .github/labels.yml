@@ -1,0 +1,79 @@
+- color: fef2c0
+  description: API-related issues
+  name: api
+- color: ee0701
+  description: Something isn't working
+  name: bug
+- color: eeeeee
+  description: Distribution related issues
+  name: distribution
+- color: 0075ca
+  description: Indicates a need for improvements or additions to documentation
+  name: docs
+- color: eeeeee
+  description: This issue or pull request already exists
+  name: duplicate
+- color: a2eeef
+  description: New feature or request
+  name: feature
+- color: eeeeee
+  description: This doesn't seem right
+  name: invalid
+- color: fbca04
+  description: Refactoring, maintenance, or cleanup
+  name: maintenance
+- color: d4c5f9
+  description: Enhancements or optimizations
+  name: optimizations
+- color: cc317c
+  description: Further information is requested
+  name: question
+- color: bfe5bf
+  description: Questions and discussions
+  name: test
+- color: e99695
+  description: Customer user-stories
+  name: user-story
+- color: eeeeee
+  description: This will not be worked on
+  name: wontfix
+- color: bfe5bf
+  description: Easy fix
+  name: 'difficulty: easy'
+- color: e99695
+  description: Harder fix
+  name: 'difficulty: hard'
+# Repo-specific labels
+- color: eeeeee
+  description: ""
+  name: 'module: auth'
+- color: eeeeee
+  description: ""
+  name: 'module: backend'
+- color: eeeeee
+  description: ""
+  name: 'module: ci'
+- color: eeeeee
+  description: ""
+  name: 'module: db'
+- color: eeeeee
+  description: ""
+  name: 'module: io'
+- color: eeeeee
+  description: Issues related to logging
+  name: 'module: logging'
+- color: eeeeee
+  description: Issues related to model improvements, fixes, etc.
+  name: 'module: model'
+- color: eeeeee
+  description: Issues related to monitoring
+  name: 'module: monitoring'
+- color: eeeeee
+  description: ""
+  name: 'module: ray'
+- color: eeeeee
+  description: ""
+  name: 'module: search'
+- color: eeeeee
+  description: ""
+  name: 'module: ui'

@@ -24,12 +24,22 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-develop: ## Install wheel package in developer/editable-mode
+post-install-check: ## Post-install checks (check version, etc)
+	python -c 'from nos._version import __version__; print(f"nos=={__version__}")'
+
+develop: ## Install GPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
 	pip install --upgrade pip setuptools
 	pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 	pip install --editable '.[dev,docs]'
-	python -c 'from nos._version import __version__; print(f"nos=={__version__}")'
+	make post-install-check
+
+develop-cpu: ## Install CPU dependencies and package in developer/editable-mode
+	python -m pip install --upgrade pip
+	pip install --upgrade pip setuptools
+	pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
+	pip install --editable '.[dev,docs]'
+	make post-install-check
 
 install: ## Install wheel package
 	pip install .
@@ -45,5 +55,8 @@ style: ## Format source code automatically
 test: ## Basic testing using pytest (see pytest.ini)
 	pytest -sv tests -k "not (skip)"
 
+test-cpu: ## Basic CPU testing using pytest (see pytest.ini)
+	CUDA_VISIBLE_DEVICES="" make test
+
 test-benchmarks: ## Testing with benchmarks
-	NOS_TEST_BENCHMARK=1 pytest -sv tests -k "not (skip)"
+	NOS_TEST_BENCHMARK=1 make test
