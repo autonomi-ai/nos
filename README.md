@@ -1,2 +1,2 @@
-# perf
-Fast inference of popular CV models
+# nos 🔥
+Nitrous Oxide System (NOS) for Computer Vision.

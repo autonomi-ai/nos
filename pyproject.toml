@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nos"
+description = "Nitrous oxide system (NOS) for computer-vision."
+license = {file = "LICENSE"}
+dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+]
+dependencies = [
+    "av>=9.2.0",
+    "opencv-python-headless==4.6.0.66",
+    "rich>=12.5.1",
+]
+
+[project.urls]
+"Documentation" = "https://autonomi-ai.github.io/nos/"
+"Source Code" = "https://github.com/autonomi-ai/nos"
+
+[project.optional-dependencies]
+
+# Development related packages
+# Note: Currently torch depdendencies are not included here as they are not
+# available on pypi and require an extra-index-url to be specified.
+dev = [
+    "black[jupyter]==22.3.0",
+    "pre-commit==3.2.2",
+    "pylint==2.13.4",
+    "pytest==7.1.2",
+    "pytest-xdist==2.5.0",
+    "typeguard==2.13.3",
+]
+
+# Documentation related packages
+docs = [
+    "mkdocs==1.4.2",
+    "mkdocs-material==9.0.14",
+    "mkdocstrings==0.20.0",
+    "mkdocstrings-python==0.8.3",
+]
+
+[project.scripts]
+nos = "nos.cli.cli:app_cli"
+
+[tool.setuptools.dynamic]
+version = {attr = "nos._version.__version__"}
+
+# for specifying additional pypi index urls
+# see https://setuptools.pypa.io/en/latest/userguide/dependency_management.html
+# [options]
+# dependency_links = [
+#     "https://download.pytorch.org/whl/cu117",
+# ]
+
+[tool.setuptools.packages.find]
+include = ["nos*","scripts*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.json", "py.typed", "setup.bash", "setup.zsh"]
+
+[tool.black]
+line-length = 120
+target-version = ['py39']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | build
+  | dist
+
+  # The following are specific to Black, you probably don't want those.
+  | tests/data
+)/
+'''
+
+[tool.isort]
+py_version = 39
+include_trailing_comma = "true"
+multi_line_output = 3
+# line_length = 88
