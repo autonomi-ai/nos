@@ -50,7 +50,6 @@ repos:
     - id: debug-statements
     - id: detect-private-key      # check for private keys
     - id: end-of-file-fixer
-    - id: pretty-format-json
     - id: trailing-whitespace
     - id: check-added-large-files
       args: ['--maxkb=100']
