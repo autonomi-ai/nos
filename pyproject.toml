@@ -45,6 +45,13 @@ dev = [
     "typeguard==2.13.3",
 ]
 
+# HF transformers, diffusers related packages
+hf = [
+    "transformers==4.21.2",
+    "diffusers==0.3.0",
+    "huggingface_hub",
+]
+
 # Documentation related packages
 docs = [
     "mkdocs==1.4.2",

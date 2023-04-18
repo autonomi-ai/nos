@@ -1,4 +1,3 @@
-# Copyright 2022- Autonomi AI, Inc. All rights reserved.
 .PHONY: default clean clean-build clean-pyc clean-test test test-coverage develop install style
 
 default: test
@@ -31,7 +30,7 @@ develop: ## Install GPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
 	pip install --upgrade pip setuptools
 	pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
-	pip install --editable '.[dev,docs]'
+	pip install --editable '.[dev,hf,docs]'
 	make post-install-check
 
 develop-cpu: ## Install CPU dependencies and package in developer/editable-mode

@@ -1,6 +1,3 @@
-- color: fef2c0
-  description: API-related issues
-  name: api
 - color: ee0701
   description: Something isn't working
   name: bug
@@ -43,37 +40,6 @@
 - color: e99695
   description: Harder fix
   name: 'difficulty: hard'
-# Repo-specific labels
 - color: eeeeee
   description: ""
-  name: 'module: auth'
-- color: eeeeee
-  description: ""
-  name: 'module: backend'
-- color: eeeeee
-  description: ""
-  name: 'module: ci'
-- color: eeeeee
-  description: ""
-  name: 'module: db'
-- color: eeeeee
-  description: ""
-  name: 'module: io'
-- color: eeeeee
-  description: Issues related to logging
-  name: 'module: logging'
-- color: eeeeee
-  description: Issues related to model improvements, fixes, etc.
-  name: 'module: model'
-- color: eeeeee
-  description: Issues related to monitoring
-  name: 'module: monitoring'
-- color: eeeeee
-  description: ""
-  name: 'module: ray'
-- color: eeeeee
-  description: ""
-  name: 'module: search'
-- color: eeeeee
-  description: ""
-  name: 'module: ui'
+  name: 'ci'
