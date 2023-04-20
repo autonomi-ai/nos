@@ -20,10 +20,17 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
 ]
 dependencies = [
-    "av>=10.0.0",
-    "opencv-python-headless==4.6.0.66",
+    "docker>=6.0.0",
+    "psutil>=5.9.5",
     "rich>=12.5.1",
     "typer>=0.7.0",
+    # CV
+    "av>=10.0.0",
+    "opencv-python-headless==4.6.0.66",
+    # Huggingface-related packages
+    "transformers==4.21.2",
+    "diffusers==0.3.0",
+    "huggingface_hub",
 ]
 
 [project.urls]
@@ -35,11 +42,6 @@ dependencies = [
 # Development related packages
 # Note: Currently torch depdendencies are not included here as they are not
 # available on pypi and require an extra-index-url to be specified.
-test = [
-    "pytest==7.1.2",
-    "pytest-xdist==2.5.0",
-    "typeguard==2.13.3",
-]
 dev = [
     "black[jupyter]==22.3.0",
     "build==0.10.0",
@@ -47,15 +49,14 @@ dev = [
     "ruff==0.0.262",
 ]
 
-# HF transformers, diffusers related packages
-hf = [
-    "transformers==4.21.2",
-    "diffusers==0.3.0",
-    "huggingface_hub",
+test = [
+    "pytest==7.1.2",
+    "pytest-xdist==2.5.0",
+    "typeguard==2.13.3",
 ]
 
 # Documentation related packages
-doc = [
+docs = [
     "mkdocs==1.4.2",
     "mkdocs-material==9.0.14",
     "mkdocstrings==0.20.0",
@@ -91,7 +92,7 @@ select = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
     "F",  # pyflakes
-    # "I",  # isort
+    "I",  # isort
     "C",  # flake8-comprehensions
     "B",  # flake8-bugbear
 ]

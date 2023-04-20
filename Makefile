@@ -40,7 +40,7 @@ develop-cpu: ## Install CPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
 	pip install --upgrade pip setuptools
 	pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
-	pip install --editable '.[dev,docs]'
+	pip install --editable '.[dev,test,docs]'
 	make post-install-check
 
 install: ## Install wheel package
