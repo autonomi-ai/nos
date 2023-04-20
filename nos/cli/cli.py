@@ -4,6 +4,7 @@ import typer
 
 from nos.constants import NOS_MODELS_DIR
 
+
 app_cli = typer.Typer(no_args_is_help=True)
 hub_cli = typer.Typer(name="hub", help="NOS Hub CLI.", no_args_is_help=True)
 
@@ -19,7 +20,10 @@ def _download_hf_model(
     model_name: str = typer.Option(..., "-m", "--model-name", help="Huggingface model name."),
     token: str = typer.Option("", "-t", "--token", help="HF access token"),
     output_directory: str = typer.Option(
-        DEFAULT_MODEL_CACHE_DIR, "-d", "--output-directory", help="Download huggingface models locally."
+        DEFAULT_MODEL_CACHE_DIR,
+        "-d",
+        "--output-directory",
+        help="Download huggingface models locally.",
     ),
 ) -> None:
     import torch

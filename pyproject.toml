@@ -35,14 +35,16 @@ dependencies = [
 # Development related packages
 # Note: Currently torch depdendencies are not included here as they are not
 # available on pypi and require an extra-index-url to be specified.
+test = [
+    "pytest==7.1.2",
+    "pytest-xdist==2.5.0",
+    "typeguard==2.13.3",
+]
 dev = [
     "black[jupyter]==22.3.0",
     "build==0.10.0",
     "pre-commit==3.2.2",
-    "pylint==2.13.4",
-    "pytest==7.1.2",
-    "pytest-xdist==2.5.0",
-    "typeguard==2.13.3",
+    "ruff==0.0.262",
 ]
 
 # HF transformers, diffusers related packages
@@ -53,7 +55,7 @@ hf = [
 ]
 
 # Documentation related packages
-docs = [
+doc = [
     "mkdocs==1.4.2",
     "mkdocs-material==9.0.14",
     "mkdocstrings==0.20.0",
@@ -80,28 +82,62 @@ include = ["nos*","scripts*"]
 "*" = ["*.json", "py.typed", "setup.bash", "setup.zsh"]
 
 [tool.black]
-line-length = 120
+line-length = 119
 target-version = ['py39']
-include = '\.pyi?$'
-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | build
-  | dist
 
-  # The following are specific to Black, you probably don't want those.
-  | tests/data
-)/
-'''
+[tool.ruff]
+# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    # "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+ignore = [
+    "E501",  # E501: Line too long
+    "C901",  # C901: Function is too complex
+    "B008",  # do not perform function calls in argument defaults
+]
+line-length = 119
+target-version = "py39"
 
-[tool.isort]
-py_version = 39
-include_trailing_comma = "true"
-multi_line_output = 3
-# line_length = 88
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
+unfixable = []
+
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "build",
+    "dist",
+    "venv",
+]
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.ruff.isort]
+lines-after-imports = 2
+
+[tool.ruff.mccabe]
+# Unlike Flake8, default to a complexity level of 10.
+max-complexity = 10

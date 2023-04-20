@@ -1,8 +1,9 @@
-include makefiles/Makefile.base.mk
-
+.DEFAULT_GOAL := default
 .PHONY: default clean clean-build clean-pyc clean-test test test-coverage develop install style
 
-default: test
+include makefiles/Makefile.base.mk
+
+default: test;
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -45,7 +46,7 @@ develop-cpu: ## Install CPU dependencies and package in developer/editable-mode
 install: ## Install wheel package
 	pip install .
 
-style: ## Format source code automatically
+lint: ## Format source code automatically
 	pre-commit run --all-files # Uses pyproject.toml
 
 test: ## Basic testing using pytest (see pytest.ini)

@@ -12,8 +12,8 @@
 
 ## Checks
 
-- [ ] I've run `make style` to lint the changes in this PR.
-- [ ] I've made sure the tests (`make test-cpu`) are passing.
-- Testing Strategy
-   - [ ] Unit tests
-   - [ ] Release tests
+- [ ] `make lint`: I've run `make lint` to lint the changes in this PR.
+- [ ] `make test`: I've made sure the tests (`make test-cpu` or `make test`) are passing.
+- Additional tests:
+   - [ ] Benchmark tests (when contributing new models)
+   - [ ] GPU/HW tests

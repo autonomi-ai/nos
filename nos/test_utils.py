@@ -5,6 +5,7 @@ from pathlib import Path
 
 import torch
 
+
 NOS_TEST_DATA_DIR = Path(__file__).parent.parent / "tests/test_data"
 NOS_TEST_IMAGE = NOS_TEST_DATA_DIR / "test.jpg"
 NOS_TEST_VIDEO = NOS_TEST_DATA_DIR / "test.mp4"
@@ -18,7 +19,8 @@ def benchmark(test_case):
     These tests are triggered when `NOS_TEST_BENCHMARKS=1`, and defaults to False.
     """
     return unittest.skipUnless(
-        os.getenv("NOS_TEST_BENCHMARK", default=False), "slow test requires NOS_TEST_BENCHMARK=1"
+        os.getenv("NOS_TEST_BENCHMARK", default=False),
+        "slow test requires NOS_TEST_BENCHMARK=1",
     )(test_case)
 
 

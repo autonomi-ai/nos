@@ -47,6 +47,6 @@ jobs:
         run: make develop-cpu
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Quality Check
-        run: make style
+        run: make lint
       - name: Test
         run: make test-cpu
