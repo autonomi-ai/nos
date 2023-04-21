@@ -70,7 +70,7 @@ docs = [
 nos = "nos.cli.cli:app_cli"
 
 [tool.setuptools.dynamic]
-version = {attr = "nos._version.__version__"}
+version = {attr = "nos.version.__version__"}
 
 # for specifying additional pypi index urls
 # see https://setuptools.pypa.io/en/latest/userguide/dependency_management.html

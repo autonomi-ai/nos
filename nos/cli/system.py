@@ -5,14 +5,17 @@ from typing import Optional
 import psutil
 import torch
 import typer
-from loguru import logger
+
 from rich.console import Console
 from rich.panel import Panel
 
 import docker
 from docker.errors import APIError
 
+from nos.logging import build_logger
 
+
+logger = build_logger(__name__)
 system_cli = typer.Typer(name="system", help="NOS System CLI.", no_args_is_help=True)
 console = Console()
 

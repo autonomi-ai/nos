@@ -1,4 +1,4 @@
-NOS_VERSION := $(shell sed -n 's/^__version__ = "\([0-9.]\+\)"/\1/p' nos/_version.py)
+NOS_VERSION := $(shell sed -n 's/^__version__ = "\([0-9.]\+\)"/\1/p' nos/version.py)
 NOS_VERSION_TAG := v${NOS_VERSION}
 
 DOCKER_BASE_IMAGE_NAME := nos

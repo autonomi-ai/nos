@@ -27,7 +27,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 
 post-install-check: ## Post-install checks (check version, etc)
-	python -c 'from nos._version import __version__; print(f"nos=={__version__}")'
+	python -c 'from nos.version import __version__; print(f"nos=={__version__}")'
 
 develop: ## Install GPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
