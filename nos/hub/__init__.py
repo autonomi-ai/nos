@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Dict, List, Optional
 
-from loguru import logger
+from nos.logging import logger
 
 
 @dataclass(frozen=True)

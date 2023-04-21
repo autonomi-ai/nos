@@ -4,6 +4,7 @@ from datetime import datetime
 
 from .constants import NOS_LOG_DIR
 
+
 # Set the loguru logger level to the same level as the nos logger
 date = datetime.utcnow().strftime("%Y-%m-%d_%H%M%S")
 NOS_LOGGING_PATH = os.getenv("NOS_LOGGING_PATH", os.path.join(NOS_LOG_DIR, f"nos-{date}.log"))

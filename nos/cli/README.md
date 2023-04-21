@@ -19,21 +19,13 @@ Commands are organized into subcommands, which are organized into groups. For ex
 ```bash
 # List all available models in the hub
 nos hub list
-```
 
-1. Stable diffusion inference on CPU
-
-```bash
 # Download model and compile/archive it for inference
-nos hub compile torchvision/fasterrcnn-resnet50-fpn --device cpu
-```
+nos hub download -m stabilityai/stable-diffusion-2
 
-```bash
-```
+# Optimize model for inference (WIP)
+nos opt optimize -m stabilityai/stable-diffusion-2
 
-```bash
-# Serve the model for inference
-nos serve torchvision/fasterrcnn-resnet50-fpn --device auto
+# Serve the model for inference (WIP)
+nos serve -m stabilityai/stable-diffusion-2 --device auto
 ```
-
-```bash

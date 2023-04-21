@@ -1,5 +1,7 @@
-from nos.logging import logger  # noqa: F401
-from nos.logging import build_logger  # noqa: F401
+from nos.logging import (
+    build_logger,  # noqa: F401
+    logger,  # noqa: F401
+)
 
 
 def test_default_logger():
