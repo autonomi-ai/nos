@@ -37,5 +37,7 @@ def _download_hf_model(
     output_directory = Path(output_directory) / model_name
     output_directory.mkdir(parents=True, exist_ok=True)
 
-    model = hub.load(model_name)
-    model.save_pretrained(output_directory)
+    # Downloads the model from the hub and loads it (also caches).
+    hub.load(model_name)
+    # TODO (spillai): Save model to output_directory
+    # model.save_pretrained(output_directory)
