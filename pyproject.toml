@@ -8,7 +8,7 @@ description = "Nitrous oxide system (NOS) for computer-vision."
 license = {file = "LICENSE"}
 dynamic = ["version"]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.8.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python",
@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     "docker>=6.0.0",
+    "loguru>=0.7.0",
     "psutil>=5.9.5",
     "rich>=12.5.1",
     "typer>=0.7.0",
@@ -84,7 +85,7 @@ include = ["nos*","scripts*"]
 
 [tool.black]
 line-length = 119
-target-version = ['py39']
+target-version = ['py38']
 
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
@@ -102,7 +103,7 @@ ignore = [
     "B008",  # do not perform function calls in argument defaults
 ]
 line-length = 119
-target-version = "py39"
+target-version = "py38"
 
 # Allow autofix for all enabled rules (when `--fix`) is provided.
 fixable = ["A", "B", "C", "D", "E", "F", "G", "I", "N", "Q", "S", "T", "W", "ANN", "ARG", "BLE", "COM", "DJ", "DTZ", "EM", "ERA", "EXE", "FBT", "ICN", "INP", "ISC", "NPY", "PD", "PGH", "PIE", "PL", "PT", "PTH", "PYI", "RET", "RSE", "RUF", "SIM", "SLF", "TCH", "TID", "TRY", "UP", "YTT"]
