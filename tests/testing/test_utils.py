@@ -1,7 +1,7 @@
-from nos.test_utils import benchmark, require_torch_cuda
+from nos.test.utils import benchmark, requires_torch_cuda
 
 
-@require_torch_cuda
+@requires_torch_cuda
 def test_torch_cuda():
     """This test is skipped when torch.cuda.is_available() is False."""
     import torch

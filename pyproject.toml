@@ -22,6 +22,7 @@ classifiers = [
 dependencies = [
     "docker>=6.0.0",
     "loguru>=0.7.0",
+    "pandas>=1.5.0",
     "psutil>=5.9.5",
     "rich>=12.5.1",
     "typer>=0.7.0",
@@ -29,8 +30,9 @@ dependencies = [
     "av>=10.0.0",
     "opencv-python-headless==4.6.0.66",
     # Huggingface-related packages
-    "transformers==4.21.2",
-    "diffusers==0.3.0",
+    "transformers>=4.27.0",
+    "diffusers>=0.14.0",
+    "accelerate>=0.18.0",
     "huggingface_hub",
 ]
 
@@ -101,6 +103,7 @@ ignore = [
     "E501",  # E501: Line too long
     "C901",  # C901: Function is too complex
     "B008",  # do not perform function calls in argument defaults
+    "B904",  # B904: check for raise from None
 ]
 line-length = 119
 target-version = "py38"
@@ -143,3 +146,21 @@ lines-after-imports = 2
 [tool.ruff.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
 max-complexity = 10
+
+[tool.pytest.ini_options]
+markers = [
+    "flaky", # Flaky tests that needs attention
+    "benchmark", # Benchmark tests that is slow for basic CI
+    "asyncio", # Async IO tests
+
+]
+filterwarnings = [
+    "error",
+    "default:Using or importing the ABCs:DeprecationWarning:unittest2.*",
+    "default:.*not marked using pytest.hook.*",
+    "ignore:.*not marked using pytest.hook.*::xdist.*",
+    "ignore::DeprecationWarning",
+    "ignore::ResourceWarning",
+]
+log_format = "%(asctime)s %(levelname)s %(message)s"
+log_date_format = "%Y-%m-%d %H:%M:%S"
