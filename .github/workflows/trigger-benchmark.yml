@@ -5,5 +5,8 @@ on:
 
 jobs:
   call-benchmark:
-    uses: autonomi-ai/nos/.github/workflows/benchmark.yml
-    if: contains(github.event.comment.body, '/benchmark') && github.event.issue.pull_request    # check if the comments come from pull request, exclude those from issue.
+    steps:
+      - uses: actions/checkout@v3 # Necessary to access local action
+      - name: Trigger benchmark workflow
+        uses: ./.github/workflows/benchmark
+        if: contains(github.event.comment.body, '/benchmark') && github.event.issue.pull_request    # check if the comments come from pull request, exclude those from issue.
