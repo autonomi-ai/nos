@@ -44,4 +44,4 @@ def test_stable_diffusion_benchmark(model):
         ),
         num_iters=5,
     )
-    print(f"StableDiffusion2: {time_ms / steps:.2f} ms / step")
+    print(f"BENCHMARK [StableDiffusion2]: {time_ms / steps:.2f} ms / step")

@@ -3,6 +3,8 @@ from typing import List
 import torch
 from PIL import Image
 
+from nos import hub
+
 
 class StableDiffusion2:
     """StableDiffusion model for text to image generation."""
@@ -59,3 +61,8 @@ class StableDiffusion2:
                     num_inference_steps=num_inference_steps,
                     guidance_scale=guidance_scale,
                 ).images
+
+
+@hub.register("stabilityai/stable-diffusion-2")
+def stable_diffusion_2_ddim_fp16():
+    return StableDiffusion2("stabilityai/stable-diffusion-2", scheduler="ddim", dtype=torch.float16)
