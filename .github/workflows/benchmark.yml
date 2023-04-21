@@ -1,7 +1,6 @@
-name: CPU Tests
+name: GPU Benchmarks
 
 on:
-  pull_request:
   push:
     branches: [main]
   workflow_call:
@@ -10,10 +9,10 @@ env:
   CACHE_NUMBER: 0  # increase to reset cache manually
 
 jobs:
-  conda-test-cpu:
-    name: Test env (${{ matrix.python-version }}, ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+  docker-test-gpu-benchmark:
+    name: Self-hosted Test env (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: self-hosted
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -33,7 +32,6 @@ jobs:
           activate-environment: nos-${{ matrix.os }}-${{ matrix.python-version }}
           python-version: ${{ matrix.python-version }}
           use-mamba: true
-          # environment-file: conda/envs/base-cpu/env.yml
       - name: Conda info
         run: conda info
       - name: Conda list
@@ -41,12 +39,12 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: /usr/share/miniconda3/envs/nos-${{ matrix.os }}-${{ matrix.python-version }}
-          key: conda-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('conda/envs/base-cpu/env.yml') }}-${{ hashFiles('pyproject.toml') }}-${{ env.CACHE_NUMBER }}
+          key: conda-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('conda/envs/base-gpu/env.yml') }}-${{ hashFiles('pyproject.toml') }}-${{ env.CACHE_NUMBER }}
         id: cache
-      - name: Install dependencies
-        run: make develop-cpu
+      - name: Install dependencies (GPU)
+        run: make develop
         if: steps.cache.outputs.cache-hit != 'true'
       - name: Quality Check
         run: make lint
-      - name: Test
-        run: make test-cpu
+      - name: Test (GPU)
+        run: make test-benchmarks
