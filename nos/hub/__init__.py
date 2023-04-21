@@ -12,6 +12,12 @@ class TorchHubConfig:
     checkpoint: str = None
 
 
+@dataclass(frozen=True)
+class HuggingFaceHubConfig:
+    model_name: str
+    checkpoint: str = None
+
+
 class Hub:
     """Registry for models."""
 

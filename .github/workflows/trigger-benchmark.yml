@@ -5,6 +5,7 @@ on:
 
 jobs:
   call-benchmark:
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v3 # Necessary to access local action
       - name: Trigger benchmark workflow
