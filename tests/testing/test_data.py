@@ -1,6 +1,6 @@
 import cv2
 
-from nos.test_utils import NOS_TEST_AUDIO, NOS_TEST_IMAGE, NOS_TEST_VIDEO
+from nos.test.utils import NOS_TEST_AUDIO, NOS_TEST_IMAGE, NOS_TEST_VIDEO
 
 
 def test_image():
