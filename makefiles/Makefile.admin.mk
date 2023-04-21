@@ -1,6 +1,6 @@
 # Copyright 2022- Autonomi AI, Inc. All rights reserved.
 #
-NOS_VERSION := $(shell python -c 'from nos._version import __version__; print(__version__)')
+NOS_VERSION := $(shell python -c 'from nos.version import __version__; print(__version__)')
 
 create-pypi-release-test:  ## package and upload a release
 	twine upload --repository testpypi dist/autonomi_nos-${NOS_VERSION}-py3-none-any.whl --
