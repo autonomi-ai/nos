@@ -1,0 +1,9 @@
+name: Pull request comment to benchmark (/benchmark)
+on:
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  call-benchmark:
+    uses: autonomi-ai/nos/.github/workflows/benchmark.yml
+    if: contains(github.event.comment.body, '/benchmark') && github.event.issue.pull_request    # check if the comments come from pull request, exclude those from issue.

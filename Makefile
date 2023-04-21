@@ -33,7 +33,7 @@ develop: ## Install GPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
 	pip install --upgrade pip setuptools
 	pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
-	pip install --editable '.[dev,hf,docs]'
+	pip install --editable '.[dev,test,docs]'
 	make post-install-check
 
 develop-cpu: ## Install CPU dependencies and package in developer/editable-mode
@@ -53,10 +53,11 @@ test: ## Basic testing using pytest (see pytest.ini)
 	pytest -sv tests -k "not (skip)"
 
 test-cpu: ## Basic CPU testing using pytest (see pytest.ini)
-	CUDA_VISIBLE_DEVICES="" make test
+	CUDA_VISIBLE_DEVICES="" \
+	make test
 
 test-benchmarks: ## Testing with benchmarks
-	NOS_TEST_BENCHMARK=1 make test
+	make test NOS_TEST_BENCHMARK=1
 
 dist: clean ## builds source and wheel package
 	python -m build --sdist --wheel

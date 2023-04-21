@@ -5,6 +5,7 @@ from typing import Optional
 import psutil
 import torch
 import typer
+from loguru import logger
 from rich.console import Console
 from rich.panel import Panel
 
@@ -22,6 +23,7 @@ def sh(command: str) -> None:
         output = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
         return output.stdout.strip()
     except subprocess.CalledProcessError:
+        logger.error(f"Failed to execute command: {command}")
         return None
 
 
@@ -73,6 +75,7 @@ def _system_info() -> None:
                 torch_gpu_info += "\n" if i > 0 else ""
                 torch_gpu_info += f"""[{i}] Device Properties: ({torch.cuda.get_device_properties(i)})"""
     except ModuleNotFoundError:
+        logger.error("Failed to fetch torch versions")
         torch_gpu_info = "GPU: None"
     console.print(Panel(torch_gpu_info, title="Torch"))
 
@@ -87,6 +90,7 @@ def _system_info() -> None:
             nvidia_docker_gpu_info += "\n" if i > 0 else ""
             nvidia_docker_gpu_info += f"{log.strip().decode()}"
         container.stop()
-    except (APIError, ModuleNotFoundError):
+    except (APIError, ModuleNotFoundError, Exception):
+        logger.error("Failed to run nvidia-smi within docker container")
         nvidia_docker_gpu_info = "Failed to run nvidia-smi within docker container"
     console.print(Panel(nvidia_docker_gpu_info, title="nvidia-smi (docker)"))
