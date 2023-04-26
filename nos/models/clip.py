@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Union
 
+import numpy as np
 import torch
 from PIL import Image
 
@@ -42,13 +43,13 @@ class CLIP:
         self.tokenizer = CLIPTokenizer.from_pretrained(model_name)
         self.processor = CLIPProcessor.from_pretrained(model_name)
 
-    def encode_image(self, images: Union[Image.Image, List[Image.Image]]):
+    def encode_image(self, images: Union[Image.Image, List[Image.Image]]) -> np.ndarray:
         with torch.inference_mode():
             inputs = self.processor(images=images, return_tensors="pt").to(self.device)
             image_features = self.model.get_image_features(**inputs)
-            return image_features
+            return image_features.cpu().numpy()
 
-    def encode_text(self, text: Union[str, List[str]]):
+    def encode_text(self, text: Union[str, List[str]]) -> np.ndarray:
         with torch.inference_mode():
             if isinstance(text, str):
                 text = [
@@ -60,24 +61,9 @@ class CLIP:
                 return_tensors="pt",
             ).to(self.device)
             text_features = self.model.get_text_features(**inputs)
-            return text_features
+            return text_features.cpu().numpy()
 
 
-@hub.register("openai/clip-vit-base-patch32")
-def clip_vit_base_patch32():
-    return CLIP(model_name="openai/clip-vit-base-patch32")
-
-
-@hub.register("openai/clip-vit-large-patch14")
-def clip_vit_large_patch14():
-    return CLIP(model_name="openai/clip-vit-large-patch14")
-
-
-@hub.register("laion/CLIP-ViT-H-14-laion2B-s32B-b79K")
-def clip_vit_h_14_laion2b_s32b_b79k():
-    return CLIP(model_name="laion/CLIP-ViT-H-14-laion2B-s32B-b79K")
-
-
-@hub.register("laion/CLIP-ViT-L-14-laion2B-s32B-b82K")
-def clip_vit_l_14_laion2b_s32b_b82k():
-    return CLIP(model_name="laion/CLIP-ViT-L-14-laion2B-s32B-b82K")
+# Register all CLIP models
+for model_name in CLIP.configs:
+    hub.register(model_name, "txt2vec", CLIP, args=(model_name,))
