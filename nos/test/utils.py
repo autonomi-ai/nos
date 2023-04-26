@@ -29,7 +29,6 @@ def benchmark(test_case):
 
     These tests are triggered when `NOS_TEST_BENCHMARK=1`, and defaults to False.
     """
-    print(f"benchmark: {bool(os.getenv('NOS_TEST_BENCHMARK', default=False))}")
     return unittest.skipUnless(
         bool(os.getenv("NOS_TEST_BENCHMARK", default=False)),
         "test requires NOS_TEST_BENCHMARK=1",

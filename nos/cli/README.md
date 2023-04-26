@@ -29,3 +29,30 @@ nos opt optimize -m stabilityai/stable-diffusion-2
 # Serve the model for inference (WIP)
 nos serve -m stabilityai/stable-diffusion-2 --device auto
 ```
+
+
+## Getting Started
+
+To get started, install the `nos` CLI using `pip`:
+
+```bash
+pip install nos
+```
+
+## Demo
+
+Let's walk through a demo of how to use the `nos` CLI to download, optimize, and serve a model.
+
+Currently supported models include:
+ - `openai/clip-*`
+ - `stabilityai/stable-diffusion-*`
+
+Deploy the model using the following command:
+```bash
+nos serve deploy -m stabilityai/stable-diffusion-2 --min-replicas 1
+```
+
+On the client side, you can use the following command to query the model:
+```bash
+nos serve predict -m txt2img -i 'overhead imagery of trees'
+```

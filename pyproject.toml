@@ -26,14 +26,16 @@ dependencies = [
     "psutil>=5.9.5",
     "rich>=12.5.1",
     "typer>=0.7.0",
-    # CV
+    # cv-related
     "av>=10.0.0",
     "opencv-python-headless==4.6.0.66",
-    # Huggingface-related packages
+    # huggingface
     "transformers>=4.27.0",
     "diffusers>=0.14.0",
     "accelerate>=0.18.0",
     "huggingface_hub",
+    # ray
+    "ray[serve]>=2.4.0",
 ]
 
 [project.urls]

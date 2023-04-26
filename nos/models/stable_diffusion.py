@@ -53,6 +53,8 @@ class StableDiffusion2:
         num_images: int = 1,
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
+        height: int = None,
+        width: int = None,
     ) -> List[Image.Image]:
         with torch.inference_mode():
             with torch.autocast("cuda"):
@@ -60,9 +62,21 @@ class StableDiffusion2:
                     [prompt] * num_images,
                     num_inference_steps=num_inference_steps,
                     guidance_scale=guidance_scale,
+                    height=height,
+                    width=width,
                 ).images
 
 
-@hub.register("stabilityai/stable-diffusion-2")
-def stable_diffusion_2_ddim_fp16():
-    return StableDiffusion2("stabilityai/stable-diffusion-2", scheduler="ddim", dtype=torch.float16)
+# Register the model with the hub
+# TODO (spillai): Ideally, we should do this via a decorator
+# @hub.register("stabilityai/stable-diffusion-2")
+# def stable_diffusion_2_ddim_fp16():
+#     return StableDiffusion2("stabilityai/stable-diffusion-2", scheduler="ddim", dtype=torch.float16)
+#
+hub.register(
+    "stabilityai/stable-diffusion-2",
+    "txt2img",
+    StableDiffusion2,
+    args=("stabilityai/stable-diffusion-2",),
+    kwargs={"scheduler": "ddim", "dtype": torch.float16},
+)
