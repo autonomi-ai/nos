@@ -13,8 +13,8 @@ from ray.serve.exceptions import RayServeException
 from ray.serve.handle import RayServeDeploymentHandle
 from rich.console import Console
 
+from nos.executors.ray import RayExecutor
 from nos.hub import ModelSpec
-from nos.logging import LOGGING_LEVEL
 from nos.serve.ingress import APIIngress
 
 
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 console = Console()
 
 
-NOS_SERVE_NS = os.getenv("NOS_SERVE_NS", "nos-dev")
 NOS_SERVE_DEFAULT_HTTP_HOST = "127.0.0.1"
 NOS_SERVE_DEFAULT_HTTP_PORT = 6169
 
@@ -30,20 +29,6 @@ NOS_SERVE_DEFAULT_HTTP_PORT = 6169
 def get_deployment_name(model_name: str = None) -> str:
     """Get the deployment name from the model name."""
     return re.sub(r"[^a-zA-Z0-9_]", "_", model_name)
-
-
-def ray_init(daemon: bool = True) -> None:
-    """Initialize ray."""
-    level = getattr(logging, LOGGING_LEVEL)
-    ray.init(
-        address=os.environ.get("RAY_ADDRESS", None),
-        namespace=NOS_SERVE_NS,
-        runtime_env=None,
-        ignore_reinit_error=True,
-        configure_logging=True,
-        logging_level=LOGGING_LEVEL,
-        log_to_driver=level <= logging.INFO,
-    )
 
 
 def list():
@@ -92,7 +77,7 @@ def deployment(
                     return {"status": "ok"}
 
                 @app.post("/predict")
-                async def generate(self, request: Request):
+                async def generate(self, request: PredictionRequest):
                     ...
 
            entrypoint = APIIngress.bind(deployment.bind())
@@ -101,48 +86,50 @@ def deployment(
     # Create the serve deployment from the model handle
     model_cls = model_spec.cls
     deployment = serve.deployment(**deployment_config)(model_cls)
+    deployment_handle: RayServeDeploymentHandle = deployment.bind(*model_spec.args, **model_spec.kwargs)
 
     # Bind the deployment to the API ingress
-    entrypoint = APIIngress.bind(deployment.bind(*model_spec.args, **model_spec.kwargs))
+    entrypoint = APIIngress.bind(deployment_handle)
 
     # Run the API ingress (optionally as a daemon)
     deployment_name = get_deployment_name(model_name)
 
     # Setting the runtime_env here will set defaults for the deployments.
-    console.print(f"[bold green]🔥 Deploying ... \\[name={model_name}] [/bold green]")
-    with console.status("[bold green] => Deploying ... [/bold green]") as status:
-        # Start the Ray Serve instance
-        # TODO (spillai): Add support for custom runtime-env and working-dir
-        status.update("[bold green] Initializing ray ... [/bold green]")
-        ray_init()
+    # TODO (spillai): Add support for custom runtime-env and working-dir
+    executor = RayExecutor.get()
+    executor.init()
 
-        # Start the Ray Serve instance (in detached mode)
-        status.update("[bold green] Starting serve ... [/bold green]")
+    # Start the Ray Serve instance (in detached mode)
+    with console.status("[bold green] Starting ray serve ... [/bold green]"):
         _private_api.serve_start(
             detached=True,
             http_options={"host": host, "port": port, "location": "EveryNode"},
         )
+        console.print("[bold green] ✓ Ray serve started. [/bold green]")
 
+    # Start the Ray Serve instance (in detached mode)
+    with console.status(f"[bold green] Deploying \[name={model_name}] [/bold green]") as status:  # noqa
         # Run the deployment (optionally as a daemon)
         try:
             serve.run(entrypoint, host=host, port=port, name=deployment_name)
-            status.update(
-                f"[bold green]🚀 Deployment complete. \\[address=http://{host}:{port}, name={model_name}, id={deployment_name}] [/bold green]"
+            console.print(
+                f"[bold green] ✓ Deployment complete. \[address=http://{host}:{port}, name={model_name}, id={deployment_name}] [/bold green]",  # noqa
             )
+            status.stop()
             if not daemon:
                 while True:
                     time.sleep(10)
 
         # Graceful shutdown with KeyboardInterrupt
         except KeyboardInterrupt:
-            status.update("[yellow] KeyboardInterrupt, shutting down deployment ... [/yellow]")
+            console.print("[yellow] KeyboardInterrupt, shutting down deployment ... [/yellow]")
             serve.shutdown()
             sys.exit()
 
         # Graceful shutdown with unexpected error
         except Exception:
             traceback.print_exc()
-            status.update(
+            console.print(
                 "[red] ⁉️ Received unexpected error, see console logs for more details. Shutting " "down...[/red]"
             )
             serve.shutdown()
