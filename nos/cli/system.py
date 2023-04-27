@@ -8,8 +8,8 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-import docker
 from docker.errors import APIError
+from nos.executors.docker import DockerExecutor
 from nos.logging import logger
 
 
@@ -82,15 +82,18 @@ def _system_info() -> None:
     # Check if GPU is available
     CUDA_RUNTIME_IMAGE = "nvidia/cuda:11.8.0-base-ubuntu22.04"
     nvidia_docker_gpu_info = ""
+
+    executor = DockerExecutor()
     try:
         # Get the output of nvidia-smi running in the container
-        client = docker.from_env()
-        container = client.containers.run(CUDA_RUNTIME_IMAGE, "nvidia-smi", detach=True)
+        container = executor.start(
+            image=CUDA_RUNTIME_IMAGE, container_name="nos-server-gpu-test", command="nvidia-smi", detach=True, gpu=True
+        )
         for i, log in enumerate(container.logs(stream=True)):
             nvidia_docker_gpu_info += "\n" if i > 0 else ""
             nvidia_docker_gpu_info += f"{log.strip().decode()}"
         container.stop()
-    except (APIError, ModuleNotFoundError, Exception):
-        logger.error("Failed to run nvidia-smi within docker container")
+    except (APIError, ModuleNotFoundError, Exception) as exc:
+        logger.error(f"Failed to run nvidia-smi within docker container: {exc}")
         nvidia_docker_gpu_info = "Failed to run nvidia-smi within docker container"
     console.print(Panel(nvidia_docker_gpu_info, title="nvidia-smi (docker)"))

@@ -67,7 +67,7 @@ class DynamicProtobufCompiler:
 
         # Load the module
         module_path = f"{Path(self.cache_dir) / module_name}.py"
-        logger.info(f"Loading module: {module_path}")
+        logger.debug(f"Loading module: {module_path}")
         spec = importlib.util.spec_from_file_location(module_name, module_path)
 
         module = importlib.util.module_from_spec(spec)

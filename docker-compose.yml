@@ -12,7 +12,7 @@ services:
     network_mode: host
     environment:
       - NOS_HOME=/app/.nos
-      - NOS_LOGGING=DEBUG
+      - NOS_LOGGING_LEVEL=DEBUG
     volumes:
       - ~/.nos_docker:/app/.nos
       - /tmp/docker:/tmp

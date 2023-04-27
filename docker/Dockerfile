@@ -58,5 +58,3 @@ ENV HF_HOME ${NOS_HOME}/cache/transformers
 ENV PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}
 RUN echo "export PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}" >> ~/.bashrc
 RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
-
-CMD ["nos" "serve"]
