@@ -19,6 +19,7 @@ import rich.status
 import rich.table
 import typer
 from google.protobuf import empty_pb2
+from tqdm import tqdm
 
 from nos.cli.utils import AsyncTyper
 from nos.experimental.grpc import import_module
@@ -26,7 +27,6 @@ from nos.experimental.grpc import import_module
 
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
-
 
 serve_grpc_cli = AsyncTyper(name="serve-grpc", help="NOS gRPC Serve CLI.", no_args_is_help=True)
 console = rich.console.Console()
@@ -46,7 +46,6 @@ def grpc_config(
 ):
     """Common gRPC options"""
     ctx.obj = gRPCConfig(address)
-
     # TODO (spillai): Deploy the gRPC server here in the background (as a docker daemon)
     # TOOD (spillai): Ping the gRPC server otherwise raise an error
 
@@ -99,29 +98,33 @@ async def _predict_img2vec(
         help="Name of the model to use (e.g. openai/clip-vit-base-patch32).",
     ),
     filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
+    benchmark: int = typer.Option(1, "-b", "--benchmark", help="Run benchmark."),
 ) -> None:
     from PIL import Image
 
     img = Image.open(filename)
 
     st = time.perf_counter()
-    with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
+    with rich.status.Status("[bold green] Generating embedding ...[/bold green]") as status:
         async with grpc.aio.insecure_channel(ctx.obj.address) as channel:
             stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
             try:
-                response = await stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method="img2vec",
-                        model_name=model_name,
-                        image_request=nos_service_pb2.ImageRequest(image_bytes=ray.cloudpickle.dumps(img)),
+                if benchmark > 1:
+                    status.stop()
+                for _ in tqdm(range(benchmark), disable=benchmark <= 1):
+                    response = await stub.Predict(
+                        nos_service_pb2.InferenceRequest(
+                            method="img2vec",
+                            model_name=model_name,
+                            image_request=nos_service_pb2.ImageRequest(image_bytes=ray.cloudpickle.dumps(img)),
+                        )
                     )
-                )
                 response = ray.cloudpickle.loads(response.result)
             except grpc.RpcError as e:
                 console.print(f"[red] ✗ Failed to encode image (text={e}).[/red]")
                 return
     console.print(
-        f"[bold green] ✓ Generated embedding ({response['embedding'][..., :4]}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
+        f"[bold green] ✓ Generated embedding ({response['embedding'][..., :4]}..., time={(time.perf_counter() - st) * 1e3/benchmark:.1f}ms) [/bold green]"
     )
 
 
@@ -137,25 +140,29 @@ async def _predict_txt2vec(
     prompt: str = typer.Option(
         ..., "-i", "--input", help="Prompt to generate image. (e.g. a cat dancing on the grass.)"
     ),
+    benchmark: int = typer.Option(1, "-b", "--benchmark", help="Benchmark the inference time (upto N requests)."),
 ) -> None:
     st = time.perf_counter()
-    with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
+    with rich.status.Status("[bold green] Generating embedding ...[/bold green]") as status:
         async with grpc.aio.insecure_channel(ctx.obj.address) as channel:
             stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
             try:
-                response = await stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method="txt2vec",
-                        model_name=model_name,
-                        text_request=nos_service_pb2.TextRequest(text=prompt),
+                if benchmark > 1:
+                    status.stop()
+                for _ in tqdm(range(benchmark), disable=benchmark <= 1):
+                    response = await stub.Predict(
+                        nos_service_pb2.InferenceRequest(
+                            method="txt2vec",
+                            model_name=model_name,
+                            text_request=nos_service_pb2.TextRequest(text=prompt),
+                        )
                     )
-                )
                 response = ray.cloudpickle.loads(response.result)
             except grpc.RpcError as e:
                 console.print(f"[red] ✗ Failed to generate image (text={e}).[/red]")
                 return
     console.print(
-        f"[bold green] ✓ Generated embedding ({response['embedding'][..., :4]}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
+        f"[bold green] ✓ Generated embedding ({response['embedding'][..., :4]}..., time={(time.perf_counter() - st) * 1e3/benchmark:.1f}ms) [/bold green]"
     )
 
 
@@ -172,25 +179,29 @@ async def _predict_txt2img(
         ..., "-i", "--input", help="Prompt to generate image. (e.g. a cat dancing on the grass.)"
     ),
     img_size: int = typer.Option(512, "-s", "--img-size", help="Image size to generate."),
+    benchmark: int = typer.Option(1, "-b", "--benchmark", help="Benchmark the inference time (upto N requests)."),
 ) -> None:
     st = time.perf_counter()
-    with rich.status.Status("[bold green] Generating image ...[/bold green]"):
+    with rich.status.Status("[bold green] Generating image ...[/bold green]") as status:
         async with grpc.aio.insecure_channel(ctx.obj.address) as channel:
             stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
             try:
-                response = await stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method="txt2img",
-                        model_name=model_name,
-                        text_request=nos_service_pb2.TextRequest(text=prompt),
+                if benchmark > 1:
+                    status.stop()
+                for _ in tqdm(range(benchmark), disable=benchmark <= 1):
+                    response = await stub.Predict(
+                        nos_service_pb2.InferenceRequest(
+                            method="txt2img",
+                            model_name=model_name,
+                            text_request=nos_service_pb2.TextRequest(text=prompt),
+                        )
                     )
-                )
                 response = ray.cloudpickle.loads(response.result)
             except grpc.RpcError as e:
                 console.print(f"[red] ✗ Failed to generate image (text={e}).[/red]")
                 return
     console.print(
-        f"[bold green] ✓ Generated image ({response['img']}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
+        f"[bold green] ✓ Generated image ({response['img']}..., time={(time.perf_counter() - st) * 1e3/benchmark:.1f}ms) [/bold green]"
     )
 
 
@@ -204,6 +215,7 @@ async def _predict_img2bbox(
         help="Name of the model to use (e.g. open-mmlab/efficientdet-d3).",
     ),
     filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
+    benchmark: int = typer.Option(1, "-b", "--benchmark", help="Benchmark the inference time (upto N requests)."),
 ) -> None:
     from PIL import Image
 
@@ -214,17 +226,18 @@ async def _predict_img2bbox(
             stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
             st = time.perf_counter()
             try:
-                response = await stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method="img2bbox",
-                        model_name=model_name,
-                        image_request=nos_service_pb2.ImageRequest(image_bytes=ray.cloudpickle.dumps(img)),
+                for _ in tqdm(range(benchmark), disable=True):
+                    response = await stub.Predict(
+                        nos_service_pb2.InferenceRequest(
+                            method="img2bbox",
+                            model_name=model_name,
+                            image_request=nos_service_pb2.ImageRequest(image_bytes=ray.cloudpickle.dumps(img)),
+                        )
                     )
-                )
                 response = ray.cloudpickle.loads(response.result)
                 scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
                 console.print(
-                    f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes.shape}, scores={scores.shape}, labels={labels.shape}, time={time.perf_counter() - st:.3f}s) [/bold green]"
+                    f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes.shape}, scores={scores.shape}, labels={labels.shape}, time={(time.perf_counter() - st) * 1e3/benchmark:.1f}ms) [/bold green]"
                 )
             except grpc.RpcError as e:
                 console.print(f"[red] ✗ Failed to predict bounding boxes (text={e}).[/red]")

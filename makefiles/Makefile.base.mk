@@ -22,27 +22,27 @@ DOCKER_CMD :=
 		${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET} \
 		${DOCKER_CMD}
 
-docker-build-py3-cpu:
+docker-build-cpu:
 	make .docker-build TARGET=cpu \
 	BASE_IMAGE=python:3.8.10-slim
 
-docker-build-py3-gpu:
+docker-build-gpu:
 	make .docker-build \
 	TARGET=gpu \
 	BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
 
 docker-build-all: \
-	docker-build-py3-cpu docker-build-py3-gpu
+	docker-build-cpu docker-build-gpu
 
-docker-compose-upd-py3-gpu: docker-build-py3-gpu
+docker-compose-upd-gpu: docker-build-gpu
 	docker compose -f docker-compose.gpu.yml up
 
-docker-test-cpu: docker-build-py3-cpu
+docker-test-cpu: docker-build-cpu
 	make .docker-run TARGET=cpu \
 	DOCKER_ARGS="-v $(shell pwd):/nos" \
 	DOCKER_CMD="make test-cpu"
 
-docker-test-gpu: docker-build-py3-gpu
+docker-test-gpu: docker-build-gpu
 	make .docker-run TARGET=gpu \
 	DOCKER_ARGS="-v $(shell pwd):/nos --gpus all" \
 	DOCKER_CMD="make test"

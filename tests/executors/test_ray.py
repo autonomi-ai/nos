@@ -9,6 +9,10 @@ def test_ray_executor():
     """Test ray executor singleton."""
     # Test singleton
     executor = RayExecutor.get()
+    executor_ = RayExecutor.get()
+    assert executor is executor_
+
+    # Check if Ray is initialized
     assert not executor.is_initialized()
     executor_ = RayExecutor.get()
     assert executor is executor_
@@ -23,7 +27,7 @@ def test_ray_executor():
     assert pid is not None
     assert isinstance(pid, int)
 
-    # # Stop Ray executor
+    # Stop Ray executor
     executor.stop()
     pid = executor.pid
     assert pid is None
@@ -40,10 +44,11 @@ def test_start_ray_executor():
     assert pid is not None
     assert isinstance(pid, int)
 
-    # re-start Ray executor
+    # Re-start Ray executor
     # this should avoid starting a new executor gracefully
-    pid = executor.start()
+    pid_ = executor.start()
     assert pid is not None
+    assert pid == pid_
 
 
 @benchmark
@@ -53,7 +58,7 @@ def test_stop_ray_executor():
     assert not executor.is_initialized()
 
     pid = executor.stop()
-    assert pid is not None
+    assert pid is None
 
 
 @pytest.mark.skip(reason="Not yet implemented.")

@@ -9,6 +9,7 @@ from PIL import Image
 
 import grpc
 from nos import hub
+from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.exceptions import ModelNotFoundError
 from nos.experimental.grpc import import_module
 from nos.hub import MethodType
