@@ -43,7 +43,7 @@ class CLIP:
         self.tokenizer = CLIPTokenizer.from_pretrained(model_name)
         self.processor = CLIPProcessor.from_pretrained(model_name)
 
-    def encode_image(self, images: Union[Image.Image, List[Image.Image]]) -> np.ndarray:
+    def encode_image(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
         with torch.inference_mode():
             inputs = self.processor(images=images, return_tensors="pt").to(self.device)
             image_features = self.model.get_image_features(**inputs)
