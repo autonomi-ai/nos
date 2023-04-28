@@ -1,20 +1,14 @@
 version: "3.8"
 
-x-nos-common-gpu:
-  &nos-common-gpu
-  deploy:
-    resources:
-      reservations:
-        devices:
-          - capabilities: [gpu]
-
 services:
   grpc-server:
-    # <<: *nos-common-gpu
-    image: autonomi-ai/nos:latest-gpu-base
-    # entrypoint: bash # python -m nos.experimental.grpc.grpc_server
-    # command: grpc-serve
-    command: bash
+    image: autonomi-ai/nos:latest-gpu
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        - BASE_IMAGE=nvidia/cuda:11.8.0-runtime-ubuntu22.04
+    entrypoint: nos-grpc-server
     network_mode: host
     environment:
       - NOS_HOME=/data/nos
@@ -22,3 +16,8 @@ services:
     volumes:
       - ~/.nos:/data/nos
       - /tmp:/tmp
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]

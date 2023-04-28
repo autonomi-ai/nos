@@ -147,7 +147,11 @@ async def grpc_server(address: str = "[::]:50051") -> None:
         console.print("Server stopped")
 
 
-if __name__ == "__main__":
+def main():
     import asyncio
 
     asyncio.run(grpc_server())
+
+
+if __name__ == "__main__":
+    main()

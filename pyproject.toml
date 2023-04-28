@@ -52,6 +52,7 @@ docs = [
 
 [project.scripts]
 nos = "nos.cli.cli:app_cli"
+nos-grpc-server = "nos.experimental.grpc.grpc_server:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "nos.version.__version__"}
@@ -59,10 +60,10 @@ dependencies = {file = ["requirements/requirements.txt"]}
 
 # for specifying additional pypi index urls
 # see https://setuptools.pypa.io/en/latest/userguide/dependency_management.html
-# [options]
-# dependency_links = [
-#     "https://download.pytorch.org/whl/cu117",
-# ]
+[options]
+dependency_links = [
+    "https://download.pytorch.org/whl/cu117",
+]
 
 [tool.setuptools.packages.find]
 include = ["nos*","scripts*"]
