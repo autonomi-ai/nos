@@ -80,7 +80,6 @@ def _nos_grpc():
                 ray.cloudpickle.loads(response.result)
 
         # TXT2IMG
-        # Create init model request
         method, model_name = "txt2img", "stabilityai/stable-diffusion-2"
         async with remote_model(model_name=model_name) as stub:
             for _ in tqdm(range(10), desc=f"Bench [method{method}, model_name={model_name}]"):

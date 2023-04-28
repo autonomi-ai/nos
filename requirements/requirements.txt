@@ -2,7 +2,7 @@ accelerate>=0.18.0
 av>=10.0.0
 diffusers>=0.15.0
 docker>=6.0.0
-grpcio-tools>=1.54.0
+grpcio-tools>=1.51.0,<1.51.3
 huggingface_hub
 loguru>=0.7.0
 opencv-python-headless==4.6.0.66
