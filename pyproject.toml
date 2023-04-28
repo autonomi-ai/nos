@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "autonomi-nos"
 description = "Nitrous oxide system (NOS) for computer-vision."
 license = {file = "LICENSE"}
-dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.8.10"
 classifiers = [
@@ -19,24 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
 ]
-dependencies = [
-    "docker>=6.0.0",
-    "loguru>=0.7.0",
-    "pandas>=1.5.0",
-    "psutil>=5.9.5",
-    "rich>=12.5.1",
-    "typer>=0.7.0",
-    # cv-related
-    "av>=10.0.0",
-    "opencv-python-headless==4.6.0.66",
-    # huggingface
-    "transformers>=4.27.0",
-    "diffusers>=0.14.0",
-    "accelerate>=0.18.0",
-    "huggingface_hub",
-    # ray
-    "ray[serve]>=2.4.0",
-]
+dynamic = ["version", "dependencies"]
 
 [project.urls]
 "Documentation" = "https://autonomi-ai.github.io/nos/"
@@ -73,6 +55,7 @@ nos = "nos.cli.cli:app_cli"
 
 [tool.setuptools.dynamic]
 version = {attr = "nos.version.__version__"}
+dependencies = {file = ["requirements/requirements.txt"]}
 
 # for specifying additional pypi index urls
 # see https://setuptools.pypa.io/en/latest/userguide/dependency_management.html

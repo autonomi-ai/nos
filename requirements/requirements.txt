@@ -1,0 +1,16 @@
+accelerate>=0.18.0
+# cv-related
+av>=10.0.0
+diffusers>=0.15.0
+docker>=6.0.0
+huggingface_hub
+loguru>=0.7.0
+opencv-python-headless==4.6.0.66
+pandas>=1.5.0
+psutil>=5.9.5
+# ray
+ray[serve]>=2.4.0
+rich>=12.5.1
+# huggingface
+transformers>=4.28.1
+typer>=0.7.0

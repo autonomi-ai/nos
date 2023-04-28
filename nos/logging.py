@@ -25,10 +25,6 @@ def build_logger(name: str = None, level: str = LOGGING_LEVEL):
 
     # Remove the default logger
     _logger.remove()
-    # Add a file logging handler
-    # _logger.add(filename, rotation=LOGGING_ROTATION)
-    # Add a stdout/stderr logging handlers
-    _logger.add(sys.stderr, level=LOGGING_LEVEL)
     _logger.add(sys.stdout, level=LOGGING_LEVEL)
     return _logger
 
