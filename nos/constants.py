@@ -7,7 +7,7 @@ NOS_CACHE_DIR = NOS_HOME / "cache"
 NOS_MODELS_DIR = NOS_HOME / "models"
 NOS_LOG_DIR = NOS_HOME / "logs"
 NOS_TMP_DIR = NOS_HOME / "tmp"
-
+NOS_PATH = Path(__file__).parent
 
 NOS_HOME.mkdir(parents=True, exist_ok=True)
 NOS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
