@@ -15,5 +15,5 @@ services:
       - NOS_LOGGING=DEBUG
     volumes:
       - ~/.nos_docker:/app/.nos
-      - /tmp:/tmp
+      - /tmp/docker:/tmp
     shm_size: 2G

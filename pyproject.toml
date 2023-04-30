@@ -39,6 +39,7 @@ dev = [
 test = [
     "pytest==7.1.2",
     "pytest-xdist==2.5.0",
+    "pytest-asyncio==0.21.0",
     "typeguard==2.13.3",
 ]
 
@@ -52,7 +53,7 @@ docs = [
 
 [project.scripts]
 nos = "nos.cli.cli:app_cli"
-nos-grpc-server = "nos.experimental.grpc.grpc_server:main"
+nos-grpc-server = "nos.experimental.grpc.server:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "nos.version.__version__"}
@@ -135,7 +136,7 @@ max-complexity = 10
 
 [tool.pytest.ini_options]
 markers = [
-    "flaky", # Flaky tests that needs attention
+    "e2e", # End-to-end integration tests
     "benchmark", # Benchmark tests that is slow for basic CI
     "asyncio", # Async IO tests
 
