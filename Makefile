@@ -50,7 +50,7 @@ lint: ## Format source code automatically
 	pre-commit run --all-files # Uses pyproject.toml
 
 test: ## Basic testing using pytest (see pytest.ini)
-	pytest -sv tests -k "not (skip)"
+	pytest -sv tests -k "not (skip) and not (e2e)"
 
 test-cpu: ## Basic CPU testing using pytest (see pytest.ini)
 	CUDA_VISIBLE_DEVICES="" \
@@ -58,6 +58,9 @@ test-cpu: ## Basic CPU testing using pytest (see pytest.ini)
 
 test-benchmarks: ## Testing with benchmarks
 	make test NOS_TEST_BENCHMARK=1
+
+test-e2e:
+	pytest -sv tests -k "not (skip) and e2e"
 
 dist: clean ## builds source and wheel package
 	python -m build --sdist --wheel

@@ -2,6 +2,7 @@ import itertools
 import sys
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import List
 
@@ -74,6 +75,7 @@ class DynamicProtobufCompiler:
         return module
 
 
+@lru_cache(maxsize=None)
 def import_module(module_name: str):
     """Import the specified module and return the imported module object."""
     compiler = DynamicProtobufCompiler.get()
