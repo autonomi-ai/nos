@@ -1,8 +1,11 @@
+from typing import Union
+
 import numpy as np
 import ray
 import rich.console
 import rich.status
 from google.protobuf import empty_pb2
+from PIL import Image
 
 import grpc
 from nos import hub
@@ -94,10 +97,11 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
         """Main model prediction interface."""
         logger.debug(f"Received request: {request.method}, {request.model_name}")
         if not self.model_spec or not self.model_handle:
-            context.abort(context, grpc.StatusCode.FAILED_PRECONDITION, "Model not initialized")
+            self.init_model(request.model_name)
 
         if self.model_spec.name != request.model_name:
-            context.abort(context, grpc.StatusCode.FAILED_PRECONDITION, "Model multiplexing not supported yet")
+            self.delete_model(self.model_spec.name)
+            self.init_model(request.model_name)
 
         # TODO (spillai): This is inconsistent for CLIP which supports both (txt2vec, img2vec)
         # assert self.model_spec.method.value == request.method
@@ -119,8 +123,8 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.IMG2VEC.value:
-            img: np.ndarray = ray.cloudpickle.loads(request.image_request.image_bytes)
-            logger.debug(f"Encoding img: {img.shape}")
+            img: Union[np.ndarray, Image.Image] = ray.cloudpickle.loads(request.image_request.image_bytes)
+            logger.debug(f"Encoding img: {img.shape if isinstance(img, np.ndarray) else img.size}")
 
             response_ref = self.model_handle.encode_image.remote(img)
             embedding = await response_ref

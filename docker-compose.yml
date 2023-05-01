@@ -16,7 +16,7 @@ services:
     volumes:
       - ~/.nos_docker:/app/.nos
       - /tmp/docker:/tmp
-    shm_size: 2G
+    shm_size: 4G
     deploy:
       resources:
         reservations:
