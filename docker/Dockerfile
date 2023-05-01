@@ -41,7 +41,6 @@ ADD requirements requirements
 RUN pip install --upgrade pip && \
     pip install -r requirements/requirements.txt
 ADD nos nos
-RUN pip install -e . --no-deps
 
 # NOS environment
 ENV NOS_HOME /app/.nos
@@ -53,8 +52,6 @@ ENV RAY_CONDA_HOME=${CONDA_PATH}
 ENV TORCH_HOME ${NOS_HOME}/cache/torch
 ENV TRANSFORMERS_CACHE ${NOS_HOME}/cache/transformers
 ENV HF_HOME ${NOS_HOME}/cache/transformers
-
-
 
 ENV PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}
 RUN echo "export PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}" >> ~/.bashrc

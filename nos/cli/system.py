@@ -80,7 +80,7 @@ def _system_info() -> None:
     console.print(Panel(torch_gpu_info, title="Torch"))
 
     # Check if GPU is available
-    CUDA_RUNTIME_IMAGE = "nvidia/cuda:11.0.3-runtime-ubuntu18.04"
+    CUDA_RUNTIME_IMAGE = "nvidia/cuda:11.8.0-base-ubuntu22.04"
     nvidia_docker_gpu_info = ""
     try:
         # Get the output of nvidia-smi running in the container
