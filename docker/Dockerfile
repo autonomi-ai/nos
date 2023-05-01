@@ -42,6 +42,7 @@ ADD requirements requirements
 RUN pip install -r requirements/requirements.txt \
   && rm -rf ~/.cache/pip
 ADD nos nos
+RUN pip install -e . --no-deps
 
 # NOS environment
 ENV NOS_HOME /app/.nos
@@ -58,5 +59,4 @@ ENV PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}
 RUN echo "export PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}" >> ~/.bashrc
 RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
 
-# ENTRYPOINT ["nos"]
-# CMD ["serve"]
+CMD ["nos" "serve"]
