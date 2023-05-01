@@ -29,10 +29,20 @@ docker-build-py3-cpu:
 docker-build-py3-gpu:
 	make .docker-build \
 	TARGET=gpu \
-	BASE_IMAGE=nvidia/cuda:11.8.0-runtime-ubuntu22.04
+	BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
 
 docker-build-all: \
 	docker-build-py3-cpu docker-build-py3-gpu
 
 docker-compose-upd-py3-gpu: docker-build-py3-gpu
 	docker compose -f docker-compose.gpu.yml up
+
+docker-test-cpu: docker-build-py3-cpu
+	make .docker-run TARGET=cpu \
+	DOCKER_ARGS="-v $(shell pwd):/nos" \
+	DOCKER_CMD="make test-cpu"
+
+docker-test-gpu: docker-build-py3-gpu
+	make .docker-run TARGET=gpu \
+	DOCKER_ARGS="-v $(shell pwd):/nos --gpus all" \
+	DOCKER_CMD="make test"
