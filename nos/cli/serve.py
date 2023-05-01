@@ -1,3 +1,14 @@
+"""REST-based Client CLI for NOS.
+
+Usage:
+    $ nos serve-grpc --help
+    $ nos serve-grpc list
+    $ nos serve-grpc deploy -m stabilityai/stable-diffusion-v2
+    $ nos serve-grpc img2vec -i tests/test_data/test.jpg
+    $ nos serve-grpc txt2vec -i 'Hello World!'
+    $ nos serve-grpc txt2img -i 'a cat dancing on the grass'
+
+"""
 import time
 
 import rich.console
