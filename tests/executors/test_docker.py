@@ -4,13 +4,11 @@ import pytest
 from loguru import logger
 
 from nos.executors.docker import DockerExecutor
-from nos.experimental.grpc.client import NOS_DOCKER_IMAGE_CPU, NOS_DOCKER_IMAGE_GPU, NOS_GRPC_SERVER_CMD
-from nos.test.utils import benchmark, requires_torch_cuda
+from nos.experimental.grpc.server.runtime import NOS_DOCKER_IMAGE_CPU, NOS_DOCKER_IMAGE_GPU, NOS_GRPC_SERVER_CMD
+from nos.test.utils import requires_torch_cuda
 
 
-pytestmark = pytest.mark.skipif(not benchmark)
-
-
+@pytest.mark.e2e
 def test_docker_executor_singleton():
     """Test DockerExecutor singleton."""
     executor = DockerExecutor.get()
@@ -18,6 +16,7 @@ def test_docker_executor_singleton():
     assert executor is executor_
 
 
+@pytest.mark.e2e
 def test_docker_executor_cpu():
     """Test DockerExecutor for CPU."""
     executor = DockerExecutor.get()
@@ -75,6 +74,7 @@ def test_docker_executor_cpu():
     assert status is None or status == "exited"
 
 
+@pytest.mark.e2e
 @requires_torch_cuda
 def test_docker_executor_gpu():
     """Test DockerExecutor for GPU."""
@@ -113,6 +113,7 @@ def test_docker_executor_gpu():
     assert status is None or status == "exited"
 
 
+@pytest.mark.e2e
 def test_docker_executor_logs():
     """Test DockerExecutor logs."""
     executor = DockerExecutor.get()

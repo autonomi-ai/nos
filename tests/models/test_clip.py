@@ -3,7 +3,7 @@ from PIL import Image
 
 from nos.models import CLIP
 from nos.test.benchmark import run_benchmark
-from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, benchmark, requires_torch_cuda
+from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, requires_torch_cuda
 
 
 pytestmark = pytest.mark.skipif(not requires_torch_cuda, reason="Requires CUDA")
@@ -48,7 +48,6 @@ def test_clip_encode_image(model):
     _test_clip_encode_image(model)
 
 
-@benchmark
 @requires_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.HUB)
 def test_clip_model_variants():
@@ -69,7 +68,6 @@ def test_clip_model_variants():
     _test_clip_encode_image(model, D=768)
 
 
-@benchmark
 @requires_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
 @pytest.mark.parametrize(

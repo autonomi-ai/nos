@@ -1,4 +1,6 @@
-from nos.test.utils import benchmark, requires_torch_cuda
+import pytest
+
+from nos.test.utils import requires_torch_cuda
 
 
 @requires_torch_cuda
@@ -9,7 +11,7 @@ def test_torch_cuda():
     assert torch.cuda.is_available()
 
 
-@benchmark
+@pytest.mark.benchmark
 def test_benchmark():
     """This test is demarkated as a benchmark (slow), and will only run when NOS_TEST_BENCHMARK=1."""
     assert True

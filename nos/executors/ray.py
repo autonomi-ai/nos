@@ -24,6 +24,7 @@ from nos.logging import LOGGING_LEVEL
 
 logger = logging.getLogger(__name__)
 
+
 NOS_RAY_ADDRESS = os.environ.get("RAY_ADDRESS", "auto")
 NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
 NOS_RAY_RUNTIME_ENV = os.getenv("NOS_RAY_ENV", None)
@@ -83,17 +84,18 @@ class RayExecutor:
         while time.time() - st <= timeout and attempt < max_attempts:
             # Attempt to connect to an existing ray cluster in the background.
             try:
-                with console.status("[bold green] Connecting to ray cluster ... [/bold green]"):
+                with console.status("[bold green] Connecting to backend ... [/bold green]"):
                     ray.init(
                         address=self.spec.address,
                         namespace=self.spec.namespace,
                         runtime_env=self.spec.runtime_env,
                         ignore_reinit_error=True,
                         configure_logging=True,
-                        logging_level=LOGGING_LEVEL,
-                        log_to_driver=level <= logging.INFO,
+                        logging_level=logging.ERROR,
+                        log_to_driver=level <= logging.ERROR,
                     )
-                    console.print(f"[bold green] ✓ Connected to ray cluster: {self.spec.address}[/bold green]")
+                    console.print("[bold green] ✓ Connected to backend [/bold green]")
+                    logger.info(f"Connected to backend (address={self.spec.address}).")
                 return True
             except ConnectionError:
                 # If Ray head is not running (this results in a ConnectionError),
@@ -125,7 +127,10 @@ class RayExecutor:
             proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(wait)
             if proc.poll() != 0:
-                raise RuntimeError("Failed to start Ray.")
+                # Get the process output
+                stdout, stderr = proc.communicate()
+                raise RuntimeError(f"Failed to start Ray stdout={stdout}, stderr={stderr}.")
+            console.print("[bold green] ✓ Ray head started. [/bold green]")
             return self.pid
 
     def stop(self, wait: int = 5) -> Optional[int]:

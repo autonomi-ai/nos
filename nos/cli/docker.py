@@ -1,25 +1,37 @@
+import rich.console
+import rich.status
 import typer
 
-from nos.experimental.grpc.client import NOS_GRPC_SERVER_CMD, InferenceRuntime
-from nos.logging import logger
+from nos.experimental.grpc.server.runtime import NOS_GRPC_SERVER_CMD, InferenceServiceRuntime
 
 
 docker_cli = typer.Typer(name="docker", help="NOS Docker CLI.", no_args_is_help=True)
+console = rich.console.Console()
 
 
 @docker_cli.command("start", help="Start NOS inference engine.")
 def _docker_start(
     command: str = typer.Option(NOS_GRPC_SERVER_CMD, "-c", "--command", help="Command to run in the container."),
     gpu: bool = typer.Option(False, "--gpu", help="Start the container with GPU support."),
+    shm_size: str = typer.Option("4g", "--shm-size", help="Size of /dev/shm."),
 ):
     """Start the NOS inference engine.
 
     Usage:
         $ nos docker start
     """
-    runtime = InferenceRuntime()
-    runtime.start(detach=True, gpu=gpu)
-    logger.info("NOS inference engine started.")
+    with rich.status.Status("[bold green] Starting inference client ...[/bold green]") as status:
+        client = InferenceServiceRuntime()
+        if client.ready():
+            status.stop()
+            id = client.id()
+            console.print(
+                f"[bold green] ✓ Inference client already running (id={id[:12] if id else None}).[/bold green]"
+            )
+            return
+        client.start(detach=True, gpu=gpu, shm_size=shm_size, command=command)
+        id = client.id()
+    console.print(f"[bold green] ✓ Inference client started (id={id[:12] if id else None}). [/bold green]")
 
 
 @docker_cli.command("stop", help="Stop NOS inference engine.")
@@ -29,8 +41,10 @@ def _docker_stop():
     Usage:
         $ nos docker stop
     """
-    runtime = InferenceRuntime()
-    runtime.stop()
+    with rich.status.Status("[bold green] Stopping inference client ...[/bold green]"):
+        client = InferenceServiceRuntime()
+        client.stop()
+    console.print("[bold green] ✓ Inference client stopped.[/bold green]")
 
 
 @docker_cli.command("logs", help="Get NOS inference engine logs.")
@@ -40,7 +54,8 @@ def _docker_logs():
     Usage:
         $ nos docker logs
     """
-
-    runtime = InferenceRuntime()
-    logs = runtime.get_logs()
+    client = InferenceServiceRuntime()
+    id = client.id()
+    with rich.status.Status(f"[bold green] Fetching client logs (id={id[:12] if id else None}) ...[/bold green]"):
+        logs = client.get_logs()
     print(logs)

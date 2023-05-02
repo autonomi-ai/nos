@@ -22,8 +22,7 @@ message ImageRequest {
 
 message InitModelRequest {
   string model_name = 1;
-  optional int32 min_replicas = 2;
-  optional int32 max_replicas = 3;
+  optional int32 num_replicas = 2;
 }
 
 
