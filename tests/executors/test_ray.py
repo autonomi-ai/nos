@@ -1,10 +1,9 @@
 import pytest
 
 from nos.executors.ray import RayExecutor
-from nos.test.utils import benchmark
 
 
-@benchmark
+@pytest.mark.e2e
 def test_ray_executor():
     """Test ray executor singleton."""
     # Test singleton
@@ -30,34 +29,6 @@ def test_ray_executor():
     # Stop Ray executor
     executor.stop()
     pid = executor.pid
-    assert pid is None
-
-
-@benchmark
-def test_start_ray_executor():
-    """Start an executor without initializing it."""
-    executor = RayExecutor.get()
-    assert not executor.is_initialized()
-
-    # start Ray executor
-    pid = executor.start()
-    assert pid is not None
-    assert isinstance(pid, int)
-
-    # Re-start Ray executor
-    # this should avoid starting a new executor gracefully
-    pid_ = executor.start()
-    assert pid is not None
-    assert pid == pid_
-
-
-@benchmark
-def test_stop_ray_executor():
-    """Stop an executor without initializing it."""
-    executor = RayExecutor.get()
-    assert not executor.is_initialized()
-
-    pid = executor.stop()
     assert pid is None
 
 

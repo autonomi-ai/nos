@@ -2,7 +2,10 @@ from typing import List
 
 import pytest
 
-from nos.test.utils import PyTestGroup, benchmark, requires_torch_cuda
+from nos.test.utils import PyTestGroup, requires_torch_cuda
+
+
+pytestmark = pytest.mark.skipif(requires_torch_cuda, reason="Requires CUDA")
 
 
 @pytest.fixture(scope="module")
@@ -13,7 +16,6 @@ def model():
     yield StableDiffusion2(model_name="stabilityai/stable-diffusion-2", scheduler="ddim")
 
 
-@requires_torch_cuda
 def test_stable_diffusion(model):
     from PIL import Image
 
@@ -28,8 +30,6 @@ def test_stable_diffusion(model):
     assert image.size == (768, 768)
 
 
-@benchmark
-@requires_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
 def test_stable_diffusion_benchmark(model):
     from nos.test.benchmark import run_benchmark

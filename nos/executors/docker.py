@@ -71,9 +71,10 @@ class DockerExecutor:
         environment: Optional[Dict[str, str]] = None,
         volumes: Optional[Dict[str, str]] = None,
         detach: bool = True,
+        shm_size: str = "4g",
         **kwargs: Any,
     ) -> docker.models.containers.Container:
-        """Start container."""
+        """Start docker container."""
         container = self.get_container(container_name)
 
         # If container is already running, return it
@@ -93,6 +94,13 @@ class DockerExecutor:
 
         # Try starting the container, if it fails, remove it and try again
         logger.info(f"Starting container: {container_name}")
+        logger.debug(f"\timage: {image}")
+        logger.debug(f"\tports: {ports}")
+        logger.debug(f"\tcommand: {command}")
+        logger.debug(f"\tenvironment: {environment}")
+        logger.debug(f"\tvolumes: {volumes}")
+        logger.debug(f"\tshm_size: {shm_size}")
+        logger.debug(f"\tdevice: {device_requests}")
         try:
             container = self._client.containers.run(
                 image,
@@ -103,6 +111,7 @@ class DockerExecutor:
                 volumes=volumes,
                 device_requests=device_requests,
                 environment=environment,
+                shm_size=shm_size,
             )
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             if container is not None:
@@ -110,11 +119,11 @@ class DockerExecutor:
             logger.error(f"Failed to start container: {exc}")
             raise exc
         logger.info(f"Started container: {container_name}")
-        logger.info(f"Get logs using `docker logs -f {container.id}`")
+        logger.info(f"Get logs using `docker logs -f {container.id[:12]}`")
         return container
 
     def stop(self, container_name: str, timeout: int = 30) -> docker.models.containers.Container:
-        """Stop container."""
+        """Stop docker container."""
         try:
             container = self.get_container(container_name)
             if container is None:

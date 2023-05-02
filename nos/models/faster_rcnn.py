@@ -3,6 +3,7 @@ from typing import Dict, List, Union
 
 import numpy as np
 import torch
+import torchvision.transforms.functional as F
 from PIL import Image
 
 from nos import hub
@@ -30,8 +31,7 @@ class FasterRCNN:
         self.cfg = FasterRCNN.configs.get(model_name)
         model_name = self.cfg.model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        # initialize fasterrcnn with pretrained weights
-        self.model = fasterrcnn_mobilenet_v3_large_320_fpn(pretrained=True)
+        self.model = fasterrcnn_mobilenet_v3_large_320_fpn(weights="DEFAULT").to(self.device)
         self.model.eval()
 
     def predict(
@@ -45,8 +45,9 @@ class FasterRCNN:
             elif isinstance(images, list):
                 raise ValueError("Batching not yet supported")
 
-            tensor = torch.as_tensor(images.astype("float32")).permute(2, 0, 1)
-            predictions = self.model([tensor])
+            img = F.to_tensor(images)
+            img = img.to(self.device)
+            predictions = self.model([img])
             return {
                 "scores": predictions[0]["boxes"].cpu().numpy(),
                 "labels": predictions[0]["labels"].cpu().numpy(),

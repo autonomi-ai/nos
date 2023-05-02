@@ -134,3 +134,6 @@ dmypy.json
 *.png
 *.gif
 *.mp4
+
+# pytorch
+*.pt

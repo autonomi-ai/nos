@@ -1,9 +1,9 @@
 import pytest  # noqa: F401
 
-from nos.test.utils import benchmark, requires_torch_cuda
+from nos.test.utils import requires_torch_cuda
 
 
-@benchmark
+@pytest.mark.benchmark
 @requires_torch_cuda
 def test_deployment():
     from threading import Thread

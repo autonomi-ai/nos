@@ -1,5 +1,8 @@
+from collections import OrderedDict
+from dataclasses import dataclass
 from typing import Union
 
+import grpc
 import numpy as np
 import ray
 import rich.console
@@ -7,17 +10,44 @@ import rich.status
 from google.protobuf import empty_pb2
 from PIL import Image
 
-import grpc
 from nos import hub
 from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.exceptions import ModelNotFoundError
+from nos.executors.ray import RayExecutor
 from nos.experimental.grpc import import_module
-from nos.hub import MethodType
+from nos.hub import MethodType, ModelSpec
 from nos.logging import logger
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
+
+
+class FixedLengthDict(OrderedDict):
+    """Fixed length dictionary."""
+
+    def __init__(self, *args, **kwargs):
+        self._maxlen = kwargs.pop("_maxlen", None)
+        super().__init__(*args, **kwargs)
+
+    def __setitem__(self, key, value):
+        if len(self.keys()) >= self._maxlen:
+            self.popitem(last=False)
+        super().__setitem__(key, value)
+
+    @property
+    def maxlen(self):
+        return self._maxlen
+
+
+@dataclass(frozen=True)
+class ModelHandle:
+    """Model handles for serving models."""
+
+    spec: ModelSpec
+    """Model specification."""
+    handle: Union[ray.remote, ray.actor.ActorHandle]
+    """Ray actor handle."""
 
 
 class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
@@ -31,52 +61,63 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
     """
 
     def __init__(self):
-        self.models = hub.list()
-        self.model_spec = None
-        self.model_handle = None
+        self.model_handle = FixedLengthDict(_maxlen=4)
+        self.executor = RayExecutor.get()
+        try:
+            self.executor.init()
+        except Exception as e:
+            logger.error(f"Failed to initialize executor: {e}")
 
     def init_model(self, model_name: str):
         """Initialize the model."""
+        assert model_name not in self.model_handle, f"Model already initialized: {model_name}"
+
         # Load the model spec
         try:
-            self.model_spec = hub.load_spec(model_name)
-            logger.info(f"Loaded model spec: {self.model_spec}")
+            spec = hub.load_spec(model_name)
+            logger.debug(f"Loaded model spec: {spec}")
         except Exception as e:
             raise ModelNotFoundError(f"Failed to load model spec: {model_name}, {e}")
 
+        # If the model handle is full, pop the oldest model
+        if len(self.model_handle) >= self.model_handle.maxlen:
+            spec = self.model_handle.popitem(last=False)
+            self.delete_model(spec.model_name)
+            logger.info(f"Deleting oldest model: {model_name}")
+        logger.info(f"Initializing model: {model_name}")
+
         # Create the serve deployment from the model handle
-        model_cls = self.model_spec.cls
+        model_cls = spec.cls
         actor_options = {"num_gpus": 1}
-        logger.info(f"Creating actor: {actor_options}")
+        logger.debug(f"Creating actor: {actor_options}")
         actor_cls = ray.remote(**actor_options)(model_cls)
-        self.model_handle = actor_cls.remote(*self.model_spec.args, **self.model_spec.kwargs)
-        logger.info(f"Created actor: {self.model_handle}, type={type(self.model_handle)}")
+        # TOOD(spillai): Currently only one model per model-name is supported.
+        self.model_handle[spec.name] = ModelHandle(spec, actor_cls.remote(*spec.args, **spec.kwargs))
+        logger.info(f"Created actor: {self.model_handle[spec.name]}, type={type(self.model_handle[spec.name])}")
+        logger.info(f"Models ({len(self.model_handle)}): {self.model_handle.keys()}")
 
     def delete_model(self, model_name: str):
         """Delete the model."""
-        logger.info(f"Deleting model: {model_name}")
-        ray.kill(self.model_handle)
-        del self.model_handle
-        self.model_spec = None
-        self.model_handle = None
+        assert model_name in self.model_handle, f"Model not initialized: {model_name}"
 
-    async def ListModels(
+        logger.info(f"Deleting model: {model_name}")
+        model_handle = self.model_handle[model_name]
+        ray.kill(model_handle.handle)
+        self.model_handle.pop(model_name)
+        logger.info(f"Deleted model: {model_name}")
+
+    def ListModels(
         self, request: empty_pb2.Empty, context: grpc.aio.ServicerContext
     ) -> nos_service_pb2.ModelListResponse:
         """List all models."""
-        return nos_service_pb2.ModelListResponse(models=self.models)
+        return nos_service_pb2.ModelListResponse(models=hub.list())
 
-    async def InitModel(
+    def InitModel(
         self, request: nos_service_pb2.InitModelRequest, context: grpc.aio.ServicerContext
     ) -> nos_service_pb2.InitModelResponse:
         """Initialize the model."""
-        if self.model_spec and self.model_spec.name == request.model_name:
+        if request.model_name in self.model_handle:
             return nos_service_pb2.InitModelResponse(result="ok")
-
-        if self.model_spec and self.model_spec.name != request.model_name:
-            self.delete_model(self.model_spec.model_name)
-            logger.info(f"Resetting model: {request.model_name}")
-        logger.info(f"Initializing model: {request.model_name}")
 
         # Load the model spec
         try:
@@ -85,87 +126,89 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
             context.abort(context, grpc.StatusCode.NOT_FOUND, str(e))
         return nos_service_pb2.InitModelResponse(result="ok")
 
-    async def DeleteModel(
+    def DeleteModel(
         self, request: nos_service_pb2.DeleteModelRequest, context: grpc.aio.ServicerContext
     ) -> nos_service_pb2.DeleteModelResponse:
         """Delete the model."""
-        self.delete_model(self.model_spec.name)
+        self.delete_model(request.model_name)
         return nos_service_pb2.DeleteModelResponse(result="ok")
 
-    async def Predict(
+    def Predict(
         self, request: nos_service_pb2.InferenceRequest, context: grpc.aio.ServicerContext
     ) -> nos_service_pb2.InferenceResponse:
         """Main model prediction interface."""
         logger.debug(f"Received request: {request.method}, {request.model_name}")
-        if not self.model_spec or not self.model_handle:
-            self.init_model(request.model_name)
-
-        if self.model_spec.name != request.model_name:
-            self.delete_model(self.model_spec.name)
+        if request.model_name not in self.model_handle:
             self.init_model(request.model_name)
 
         # TODO (spillai): This is inconsistent for CLIP which supports both (txt2vec, img2vec)
         # assert self.model_spec.method.value == request.method
+        handle = self.model_handle.get(request.model_name).handle
 
         if request.method == MethodType.TXT2IMG.value:
             prompt = request.text_request.text
             logger.debug(f"Generating image with prompt: {prompt}")
-            response_ref = self.model_handle.__call__.remote(prompt, height=512, width=512)
-            (img,) = await response_ref
+            response_ref = handle.__call__.remote(prompt, height=512, width=512)
+            (img,) = ray.get(response_ref)
             ref_bytes = ray.cloudpickle.dumps({"image": img})
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.TXT2VEC.value:
             prompt = request.text_request.text
             logger.debug(f"Encoding text: {prompt}")
-            response_ref = self.model_handle.encode_text.remote(prompt)
-            embedding = await response_ref
+            response_ref = handle.encode_text.remote(prompt)
+            embedding = ray.get(response_ref)
             ref_bytes = ray.cloudpickle.dumps({"embedding": embedding})
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.IMG2VEC.value:
             img: Union[np.ndarray, Image.Image] = ray.cloudpickle.loads(request.image_request.image_bytes)
-            logger.debug(f"Encoding img: {img.shape if isinstance(img, np.ndarray) else img.size}")
+            logger.debug(f"Encoding img (type={type(img)})")
 
-            response_ref = self.model_handle.encode_image.remote(img)
-            embedding = await response_ref
+            response_ref = handle.encode_image.remote(img)
+            embedding = ray.get(response_ref)
             ref_bytes = ray.cloudpickle.dumps({"embedding": embedding})
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.IMG2BBOX.value:
             img: Union[np.ndarray, Image.Image] = ray.cloudpickle.loads(request.image_request.image_bytes)
-            logger.debug(f"Encoding img: {img.shape if isinstance(img, np.ndarray) else img.size}")
+            logger.debug(f"Encoding img (type={type(img)})")
 
-            response_ref = self.model_handle.predict.remote(img)
-            prediction = await response_ref
-            # prediction is a dict of 'scores', 'labels', 'bboxes'
+            response_ref = handle.predict.remote(img)
+            prediction = ray.get(response_ref)
+            # prediction: {'scores': np.ndarray, 'labels': np.ndarray, 'bboxes': np.ndarray}
             ref_bytes = ray.cloudpickle.dumps(prediction)
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
         else:
             context.abort(context, grpc.StatusCode.INVALID_ARGUMENT, f"Invalid method {request.method}")
 
 
-async def grpc_server(address: str = "[::]:50051") -> None:
-    server = grpc.aio.server()
+def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 1) -> None:
+    """Start the gRPC server."""
+    from concurrent import futures
+
+    options = [
+        ("grpc.max_message_length", 512 * 1024 * 1024),
+        ("grpc.max_send_message_length", 512 * 1024 * 1024),
+        ("grpc.max_receive_message_length", 512 * 1024 * 1024),
+    ]
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers), options=options)
     nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceService(), server)
-    listen_addr = address
-    server.add_insecure_port(listen_addr)
+    server.add_insecure_port(address)
 
     console = rich.console.Console()
-    with console.status(f"[bold green] Starting server on {listen_addr}[/bold green]") as status:
-        await server.start()
+    with console.status(f"[bold green] Starting server on {address}[/bold green]") as status:
+        server.start()
         console.print(
-            f"[bold green] ✓ Deployment complete. [/bold green]",  # noqa
+            f"[bold green] ✓ Deployment complete [/bold green]",  # noqa
         )
         status.stop()
-        await server.wait_for_termination()
+        server.wait_for_termination()
         console.print("Server stopped")
 
 
 def main():
-    import asyncio
-
-    asyncio.run(grpc_server())
+    serve()
 
 
 if __name__ == "__main__":
