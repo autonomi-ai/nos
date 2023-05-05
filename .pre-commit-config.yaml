@@ -16,7 +16,7 @@ repos:
     rev: 22.3.0
     hooks:
     - id: black
-      exclude: nos/models/openmmlab/configs|^tests/test_data$
+      exclude: nos/models/openmmlab/mmdetection/configs|^tests/test_data$
       args: [--config=./pyproject.toml]
 
   - repo: https://github.com/kynan/nbstripout
