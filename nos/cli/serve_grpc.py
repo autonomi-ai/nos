@@ -192,3 +192,38 @@ async def _predict_txt2img(
     console.print(
         f"[bold green] ✓ Generated image ({response['img']}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
     )
+
+@serve_grpc_cli.async_command("img2bbox", help="Predict bounding boxes from image.")
+async def _predict_img2bbox(
+    ctx: typer.Context,
+    model_name: str = typer.Option(
+        "open-mmlab/efficientdet-d3",
+        "-m",
+        "--model-name",
+        help="Name of the model to use (e.g. open-mmlab/efficientdet-d3).",
+    ),
+    filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
+) -> None:
+    from PIL import Image
+
+    img = Image.open(filename)
+
+    st = time.perf_counter()
+    with rich.status.Status("[bold green] Predict bounding boxes ...[/bold green]"):
+        async with grpc.aio.insecure_channel(ctx.obj.address) as channel:
+            stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
+            try:
+                response = await stub.Predict(
+                    nos_service_pb2.InferenceRequest(
+                        method="img2bbox",
+                        model_name=model_name,
+                        image_request=nos_service_pb2.ImageRequest(image_bytes=ray.cloudpickle.dumps(img)),
+                    )
+                )
+                response = ray.cloudpickle.loads(response.result)
+            except grpc.RpcError as e:
+                console.print(f"[red] ✗ Failed to predict bounding boxes (text={e}).[/red]")
+                return
+    console.print(
+        f"[bold green] ✓ Predicted bounding boxes ({response['embedding'][..., :4]}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
+    )
