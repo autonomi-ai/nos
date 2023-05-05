@@ -19,7 +19,7 @@ class MMDetection:
 
     configs = {
         "open-mmlab/efficientdet-d3": MMDetectionConfig(
-            config="configs/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco.py",
+            config="configs/efficientdet/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v3.0/efficientdet/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco_20230223_122457-e6f7a833.pth",
         ),
     }
@@ -28,7 +28,7 @@ class MMDetection:
         from mmdet.apis import inference_detector, init_detector
 
         self.cfg = MMDetection.configs.get(model_name)
-        # checkpoint = self.cfg.cached_checkpoint()
+        checkpoint = self.cfg.cached_checkpoint()
         config = str(Path(__file__).parent / self.cfg.config)
         print(f"Model config path: {config}")
         assert Path(config).exists(), f"Config {config} does not exist."
