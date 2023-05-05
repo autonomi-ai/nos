@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional, Type
 
-from nos.hub.config import HuggingFaceHubConfig, NosHubConfig, TorchHubConfig, MMLabConfig  # noqa: F401
+from nos.hub.config import HuggingFaceHubConfig, MMLabConfig, NosHubConfig, TorchHubConfig  # noqa: F401
 from nos.hub.spec import MethodType, ModelSpec  # noqa: F401
 from nos.logging import logger
 

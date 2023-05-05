@@ -130,7 +130,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
             embedding = await response_ref
             ref_bytes = ray.cloudpickle.dumps({"embedding": embedding})
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
-        
+
         elif request.method == MethodType.IMG2BBOX.value:
             img: Union[np.ndarray, Image.Image] = ray.cloudpickle.loads(request.image_request.image_bytes)
             logger.debug(f"Encoding img: {img.shape if isinstance(img, np.ndarray) else img.size}")

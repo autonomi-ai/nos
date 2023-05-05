@@ -193,6 +193,7 @@ async def _predict_txt2img(
         f"[bold green] ✓ Generated image ({response['img']}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
     )
 
+
 @serve_grpc_cli.async_command("img2bbox", help="Predict bounding boxes from image.")
 async def _predict_img2bbox(
     ctx: typer.Context,
