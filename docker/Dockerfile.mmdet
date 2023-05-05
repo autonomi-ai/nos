@@ -46,29 +46,24 @@ RUN pip install future tensorboard
 # BEGIN NOS INSTALLATION
 
 # NOS dependencies
-
-# This seems to be causing problems with mmdetection deps
 ENV PROJECT nos
 WORKDIR /app/$PROJECT
 ADD pyproject.toml .
-# ADD requirements requirements
-# RUN pip install -r requirements/requirements.txt \
-#   && rm -rf ~/.cache/pip
-# ADD nos nos
-# RUN pip install --upgrade pip
-# RUN pip install -e . --no-deps
+ADD nos nos
+RUN pip install --upgrade pip
+RUN pip install -e . --no-deps
 
 # NOS environment
-# ENV NOS_HOME /app/.nos
-# ENV NOS_LOGGING_LEVEL INFO
+ENV NOS_HOME /app/.nos
+ENV NOS_LOGGING_LEVEL INFO
 
-# ENV RAY_USAGE_STATS_ENABLED 0
-# ENV RAY_DATA_DISABLE_PROGRESS_BARS 1
-# ENV RAY_CONDA_HOME=${CONDA_PATH}
-# ENV TORCH_HOME ${NOS_HOME}/cache/torch
-# ENV TRANSFORMERS_CACHE ${NOS_HOME}/cache/transformers
-# ENV HF_HOME ${NOS_HOME}/cache/transformers
+ENV RAY_USAGE_STATS_ENABLED 0
+ENV RAY_DATA_DISABLE_PROGRESS_BARS 1
+ENV RAY_CONDA_HOME=${CONDA_PATH}
+ENV TORCH_HOME ${NOS_HOME}/cache/torch
+ENV TRANSFORMERS_CACHE ${NOS_HOME}/cache/transformers
+ENV HF_HOME ${NOS_HOME}/cache/transformers
 
-# ENV PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}
-# RUN echo "export PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}" >> ~/.bashrc
-# RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
+ENV PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}
+RUN echo "export PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}" >> ~/.bashrc
+RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
