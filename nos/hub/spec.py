@@ -7,6 +7,7 @@ class MethodType(Enum):
     TXT2IMG = "txt2img"
     TXT2VEC = "txt2vec"
     IMG2VEC = "img2vec"
+    IMG2BBOX = "img2bbox"
 
 
 @dataclass(frozen=True)
