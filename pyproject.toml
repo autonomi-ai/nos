@@ -75,6 +75,21 @@ include = ["nos*","scripts*"]
 [tool.black]
 line-length = 119
 target-version = ['py38']
+exclude = '''
+    /(
+        \.eggs
+      | \.git
+      | \.hg
+      | \.mypy_cache
+      | \.tox
+      | \.venv
+      | _build
+      | buck-out
+      | build
+      | dist
+      | nos/models/openmmlab/configs/mmdetection/
+    )/
+'''
 
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
@@ -119,6 +134,7 @@ exclude = [
     "build",
     "dist",
     "venv",
+    "nos/models/openmmlab/configs",
 ]
 
 # Allow unused variables when underscore-prefixed.
@@ -126,6 +142,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]
+"nos/models/openmmlab/configs/*.py" = ["F401"]
 
 [tool.ruff.isort]
 lines-after-imports = 2
