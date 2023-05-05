@@ -209,10 +209,10 @@ async def _predict_img2bbox(
 
     img = Image.open(filename)
 
-    st = time.perf_counter()
     with rich.status.Status("[bold green] Predict bounding boxes ...[/bold green]"):
         async with grpc.aio.insecure_channel(ctx.obj.address) as channel:
             stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
+            st = time.perf_counter()
             try:
                 response = await stub.Predict(
                     nos_service_pb2.InferenceRequest(
@@ -222,9 +222,10 @@ async def _predict_img2bbox(
                     )
                 )
                 response = ray.cloudpickle.loads(response.result)
+                scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
+                console.print(
+                    f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes.shape}, scores={scores.shape}, labels={labels.shape}, time={time.perf_counter() - st:.3f}s) [/bold green]"
+                )
             except grpc.RpcError as e:
                 console.print(f"[red] ✗ Failed to predict bounding boxes (text={e}).[/red]")
                 return
-    console.print(
-        f"[bold green] ✓ Predicted bounding boxes ({response['embedding'][..., :4]}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
-    )

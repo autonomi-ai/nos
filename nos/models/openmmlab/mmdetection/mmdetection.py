@@ -30,7 +30,6 @@ class MMDetection:
         self.cfg = MMDetection.configs.get(model_name)
         checkpoint = self.cfg.cached_checkpoint()
         config = str(Path(__file__).parent / self.cfg.config)
-        print(f"Model config path: {config}")
         assert Path(config).exists(), f"Config {config} does not exist."
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = init_detector(config, checkpoint, device=self.device)
@@ -40,6 +39,13 @@ class MMDetection:
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
     ) -> Dict[str, np.ndarray]:
         with torch.inference_mode():
+            if isinstance(images, np.ndarray):
+                pass
+            elif isinstance(images, Image.Image):
+                images = np.asarray(images)
+            elif isinstance(images, list):
+                raise ValueError("Batching not yet supported")
+
             predictions = self.inference_detector(self.model, images)
             return {
                 "scores": predictions.pred_instances.scores.cpu().numpy(),

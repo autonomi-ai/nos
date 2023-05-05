@@ -134,8 +134,8 @@ exclude = [
     "build",
     "dist",
     "venv",
-    "nos/models/openmmlab/configs",
-]
+    "nos/models/openmmlab/mmdetection/configs",
+    ]
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
