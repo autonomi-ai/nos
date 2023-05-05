@@ -2,6 +2,7 @@
 .PHONY: default clean clean-build clean-pyc clean-test test test-coverage develop install style
 
 include makefiles/Makefile.base.mk
+include makefiles/Makefile.mmdet.mk
 
 default: test;
 
