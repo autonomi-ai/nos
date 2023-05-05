@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import List, Union
+from pathlib import Path
+from typing import Dict, List, Union
 
 import numpy as np
 import torch
@@ -8,14 +9,11 @@ from PIL import Image
 from nos import hub
 from nos.hub import MMLabConfig
 
-from pathlib import Path
-
-from typing import Dict
-
 
 @dataclass(frozen=True)
 class MMDetectionConfig(MMLabConfig):
     score_threshold: float = 0.3
+
 
 class MMDetection:
 
@@ -36,10 +34,16 @@ class MMDetection:
         self.model = init_detector(config, checkpoint, device=self.device)
         self.inference_detector = inference_detector
 
-    def predict(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> Dict[str, np.ndarray]:
+    def predict(
+        self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
+    ) -> Dict[str, np.ndarray]:
         with torch.inference_mode():
             predictions = self.inference_detector(self.model, images)
-            return {"scores" : predictions.pred_instances.scores.cpu().numpy(), "labels" : predictions.pred_instances.labels.cpu().numpy(), "bboxes" : predictions.pred_instances.bboxes.cpu().numpy()}
+            return {
+                "scores": predictions.pred_instances.scores.cpu().numpy(),
+                "labels": predictions.pred_instances.labels.cpu().numpy(),
+                "bboxes": predictions.pred_instances.bboxes.cpu().numpy(),
+            }
 
 
 hub.register(

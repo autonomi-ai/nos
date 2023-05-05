@@ -15,7 +15,7 @@ DOCKER_CMD :=
 		-t ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-mmdet-${TARGET} \
 		--build-arg BASE_IMAGE=${BASE_IMAGE} \
 		--build-arg TARGET=${TARGET} \
-		. 
+		.
 
 docker-build-mmdet-gpu:
 	make .docker-build-mmdet \

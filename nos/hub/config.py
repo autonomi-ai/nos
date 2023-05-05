@@ -3,6 +3,7 @@ from pathlib import Path
 
 from nos.constants import NOS_MODELS_DIR
 
+
 @dataclass(frozen=True)
 class NosHubConfig:
     """NOS Hub configuration."""
@@ -33,6 +34,7 @@ class HuggingFaceHubConfig:
     """Model name (e.g. bert-base-uncased)."""
     checkpoint: str = None
     """Checkpoint name (e.g. bert-base-uncased-pytorch_model.bin)."""
+
 
 @dataclass(frozen=True)
 class MMLabConfig:
