@@ -105,6 +105,8 @@ RUN cd /root/workspace/mmdeploy &&\
 
 ENV LD_LIBRARY_PATH="/root/workspace/mmdeploy/build/lib:${BACKUP_LD_LIBRARY_PATH}"
 
+# Base dockerfile doesn't add the onnx libs here for sme reason
+ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${ONNXRUNTIME_DIR}/lib
 
 # Load dependencies for converting mmdet faster-rcnn
 # Install MMDetection
@@ -116,6 +118,13 @@ RUN git clone https://github.com/open-mmlab/mmdetection.git \
 RUN pip install future tensorboard
 
 COPY run_model.py /root/workspace/run_model.py
-COPY convert_faster_rcnn.sh /root/workspace/convert_faster_rcnn.sh
+COPY convert_to_onnx.sh /root/workspace/convert_to_onnx.sh
+COPY convert_to_trt.sh /root/workspace/convert_to_trt.sh
+COPY benchmark_onnx.sh /root/workspace/benchmark_onnx.sh
+COPY benchmark_trt.sh /root/workspace/benchmark_trt.sh
 COPY test.jpg /root/workspace/test.jpg
 COPY checkpoints/* /root/workspace/checkpoints/
+
+# copy coco data for benchmarking
+COPY ./data/coco/annotations /root/workspace/data/coco/annotations/
+COPY ./data/coco/val2017 /root/workspace/data/coco/val2017/
