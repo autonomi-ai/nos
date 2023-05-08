@@ -189,9 +189,14 @@ async def _predict_txt2img(
             except grpc.RpcError as e:
                 console.print(f"[red] ✗ Failed to generate image (text={e}).[/red]")
                 return
+            
     console.print(
-        f"[bold green] ✓ Generated image ({response['img']}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
+        f"[bold green] ✓ Generated image ({response['image']}..., time={time.perf_counter() - st:.3f}s) [/bold green]"
     )
+
+    filename = f"{prompt.replace(' ', '_')}.png"
+    response["image"].save(filename)
+    print(f"✓ Saved image to {filename}")
 
 
 @serve_grpc_cli.async_command("img2bbox", help="Predict bounding boxes from image.")
