@@ -209,7 +209,7 @@ async def _predict_txt2img(
 async def _predict_img2bbox(
     ctx: typer.Context,
     model_name: str = typer.Option(
-        "open-mmlab/efficientdet-d3",
+        "open-mmlab/faster-rcnn",
         "-m",
         "--model-name",
         help="Name of the model to use (e.g. open-mmlab/efficientdet-d3).",
