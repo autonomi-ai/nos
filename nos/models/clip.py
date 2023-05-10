@@ -32,8 +32,7 @@ class CLIP:
         ),
     }
 
-    # def __init__(self, model_name: str = "openai/clip-vit-base-patch32"):
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str = "openai/clip-vit-base-patch32"):
         from transformers import CLIPModel, CLIPProcessor, CLIPTokenizer
 
         self.cfg = CLIP.configs.get(model_name)
