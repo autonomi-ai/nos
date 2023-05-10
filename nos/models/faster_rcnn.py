@@ -44,13 +44,13 @@ class FasterRCNN:
                 images = np.asarray(images)
             elif isinstance(images, list):
                 raise ValueError("Batching not yet supported")
-            
+
             tensor = torch.as_tensor(images.astype("float32")).permute(2, 0, 1)
             predictions = self.model([tensor])
             return {
-                "scores": predictions[0]['boxes'].cpu().numpy(),
-                "labels": predictions[0]['labels'].cpu().numpy(),
-                "bboxes": predictions[0]['boxes'].cpu().numpy(),
+                "scores": predictions[0]["boxes"].cpu().numpy(),
+                "labels": predictions[0]["labels"].cpu().numpy(),
+                "bboxes": predictions[0]["boxes"].cpu().numpy(),
             }
 
 
