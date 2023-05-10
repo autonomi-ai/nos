@@ -49,7 +49,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
         actor_options = {"num_gpus": 1}
         logger.info(f"Creating actor: {actor_options}")
         actor_cls = ray.remote(**actor_options)(model_cls)
-        self.model_handle = actor_cls.remote()
+        self.model_handle = actor_cls.remote(*self.model_spec.args, **self.model_spec.kwargs)
         logger.info(f"Created actor: {self.model_handle}, type={type(self.model_handle)}")
 
     def delete_model(self, model_name: str):
