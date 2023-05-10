@@ -28,5 +28,5 @@ docker-build-mmdet-gpu:
 
 docker-run-mmdet-grpc-server: docker-build-mmdet-gpu
 	make .docker-run-mmdet TARGET=gpu \
-	DOCKER_ARGS="--gpus all -v $(shell pwd):/nos -v ${HOME}/.nos_docker:/app/.nos -p 50051:50051" \
+	DOCKER_ARGS="--gpus all -v $(shell pwd):/nos -v ${HOME}/.nos_docker:/app/.nos -p 50051:50051 -p 8265:8265" \
 	DOCKER_CMD="nos-grpc-server"
