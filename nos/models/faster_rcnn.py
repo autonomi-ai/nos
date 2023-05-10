@@ -15,7 +15,7 @@ class FasterRCNNConfig(TorchHubConfig):
 
 
 class FasterRCNN:
-    """CLIP model for image and text encoding."""
+    """FasterRCNN model from torchvision"""
 
     configs = {
         "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn": FasterRCNNConfig(
@@ -35,10 +35,17 @@ class FasterRCNN:
         self.model.eval()
 
     def predict(
-        self, image: Union[Image.Image, np.ndarray]
+        self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
     ) -> Dict[str, np.ndarray]:
         with torch.inference_mode():
-            tensor = torch.as_tensor(np.asarray(image).astype("float32")).reshape([3, image.size[1], image.size[0]])
+            if isinstance(images, np.ndarray):
+                pass
+            elif isinstance(images, Image.Image):
+                images = np.asarray(images)
+            elif isinstance(images, list):
+                raise ValueError("Batching not yet supported")
+            
+            tensor = torch.as_tensor(images.astype("float32")).permute(2, 0, 1)
             predictions = self.model([tensor])
             return {
                 "scores": predictions[0]['boxes'].cpu().numpy(),
