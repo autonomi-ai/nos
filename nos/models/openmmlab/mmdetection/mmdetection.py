@@ -23,12 +23,12 @@ class MMDetection:
             checkpoint="https://download.openmmlab.com/mmdetection/v3.0/efficientdet/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco_20230223_122457-e6f7a833.pth",
         ),
         "open-mmlab/faster-rcnn": MMDetectionConfig(
-            config="configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py",
+            config="configs/faster-rcnn/faster-rcnn_r50_fpn_1x_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth",
         ),
     }
 
-    def __init__(self, model_name):
+    def __init__(self, model_name: str):
         from mmdet.apis import inference_detector, init_detector
 
         self.cfg = MMDetection.configs.get(model_name)
