@@ -12,14 +12,13 @@ Usage:
 import time
 from dataclasses import dataclass
 
-import grpc
-import ray
 import rich.console
 import rich.status
 import rich.table
 import typer
-from google.protobuf import empty_pb2
 
+from nos.client.exceptions import NosClientException
+from nos.client.grpc import InferenceClient
 from nos.experimental.grpc import import_module
 
 
@@ -35,6 +34,7 @@ class gRPCConfig:
     """Common gRPC options"""
 
     address: str
+    client: InferenceClient
 
 
 @serve_grpc_cli.callback()
@@ -43,7 +43,8 @@ def grpc_config(
     address: str = typer.Option("localhost:50051", "-a", "--address", help="Address of the gRPC server."),
 ):
     """Common gRPC options"""
-    ctx.obj = gRPCConfig(address)
+    client = InferenceClient(address)
+    ctx.obj = gRPCConfig(address, client)
     # TODO (spillai): Deploy the gRPC server here in the background (as a docker daemon)
     # TOOD (spillai): Ping the gRPC server otherwise raise an error
 
@@ -51,14 +52,11 @@ def grpc_config(
 @serve_grpc_cli.command("list", help="List all gRPC deployments.")
 def _grpc_serve_list(ctx: typer.Context):
     """List all gRPC deployments."""
-
-    with grpc.insecure_channel(ctx.obj.address) as channel:
-        stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
-        try:
-            response: nos_service_pb2.ModelListResponse = stub.ListModels(empty_pb2.Empty())
-            console.print(response.models)
-        except grpc.RpcError as e:
-            console.print(f"[red] ✗ Failed to list models ({e}).[/red]")
+    try:
+        models = ctx.obj.client.ListModels()
+        console.print(models)
+    except NosClientException as exc:
+        console.print(f"[red] ✗ Failed to list models ({exc}).[/red]")
 
 
 @serve_grpc_cli.command("img2vec", help="Encode image into an embedding.")
@@ -78,20 +76,11 @@ def _predict_img2vec(
 
     st = time.perf_counter()
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
-        with grpc.insecure_channel(ctx.obj.address) as channel:
-            stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
-            try:
-                response = stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method="img2vec",
-                        model_name=model_name,
-                        image_request=nos_service_pb2.ImageRequest(image_bytes=ray.cloudpickle.dumps(img)),
-                    )
-                )
-                response = ray.cloudpickle.loads(response.result)
-            except grpc.RpcError as exc:
-                console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold white]{exc}[/bold white]")
-                return
+        try:
+            response = ctx.obj.client.Predict(method="img2vec", model_name=model_name, img=img)
+        except NosClientException as exc:
+            console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
+            return
     console.print(
         f"[bold green] ✓ Generated embedding ((1, {response['embedding'].shape[-1]}), time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
     )
@@ -112,20 +101,11 @@ def _predict_txt2vec(
 ) -> None:
     st = time.perf_counter()
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
-        with grpc.insecure_channel(ctx.obj.address) as channel:
-            stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
-            try:
-                response = stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method="txt2vec",
-                        model_name=model_name,
-                        text_request=nos_service_pb2.TextRequest(text=prompt),
-                    )
-                )
-                response = ray.cloudpickle.loads(response.result)
-            except grpc.RpcError as exc:
-                console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold white]{exc}[/bold white]")
-                return
+        try:
+            response = ctx.obj.client.Predict(method="txt2vec", model_name=model_name, text=prompt)
+        except NosClientException as exc:
+            console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
+            return
     console.print(
         f"[bold green] ✓ Generated embedding ({response['embedding'][..., :].shape}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
     )
@@ -147,20 +127,11 @@ def _predict_txt2img(
 ) -> None:
     st = time.perf_counter()
     with rich.status.Status("[bold green] Generating image ...[/bold green]"):
-        with grpc.insecure_channel(ctx.obj.address) as channel:
-            stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
-            try:
-                response = stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method="txt2img",
-                        model_name=model_name,
-                        text_request=nos_service_pb2.TextRequest(text=prompt),
-                    )
-                )
-                response = ray.cloudpickle.loads(response.result)
-            except grpc.RpcError as exc:
-                console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold white]{exc}[/bold white]")
-                return
+        try:
+            response = ctx.obj.client.Predict(method="txt2img", model_name=model_name, text=prompt)
+        except NosClientException as exc:
+            console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
+            return
     console.print(
         f"[bold green] ✓ Generated image ({response['image']}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
     )
@@ -181,22 +152,18 @@ def _predict_img2bbox(
 
     img = Image.open(filename).resize((640, 480))
     with rich.status.Status("[bold green] Predict bounding boxes ...[/bold green]"):
-        with grpc.insecure_channel(ctx.obj.address) as channel:
-            stub = nos_service_pb2_grpc.InferenceServiceStub(channel)
-            st = time.perf_counter()
-            try:
-                response = stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method="img2bbox",
-                        model_name=model_name,
-                        image_request=nos_service_pb2.ImageRequest(image_bytes=ray.cloudpickle.dumps(img)),
-                    )
-                )
-                response = ray.cloudpickle.loads(response.result)
-                scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
-                console.print(
-                    f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes.shape}, scores={scores.shape}, labels={labels.shape}, time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
-                )
-            except grpc.RpcError as exc:
-                console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold white]{exc}[/bold white]")
-                return
+
+        st = time.perf_counter()
+        try:
+            response = ctx.obj.client.Predict(
+                method="img2bbox",
+                model_name=model_name,
+                img=img,
+            )
+            scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
+            console.print(
+                f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes.shape}, scores={scores.shape}, labels={labels.shape}, time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
+            )
+        except NosClientException as exc:
+            console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold red]{exc}[/bold red]")
+            return

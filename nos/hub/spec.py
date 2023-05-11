@@ -29,6 +29,6 @@ class ModelSpec:
     kwargs: Dict[str, Any]
     """Keyword arguments to initialize the model instance."""
 
-    def create(self) -> Any:
+    def create(self, *args, **kwargs) -> Any:
         """Create a model instance."""
         return self.cls(*self.args, **self.kwargs)
