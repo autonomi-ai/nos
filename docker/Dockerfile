@@ -39,7 +39,9 @@ ENV PROJECT nos
 WORKDIR /app/$PROJECT
 ADD pyproject.toml .
 ADD requirements requirements
-RUN pip install -r requirements/requirements.txt \
+RUN pip install \
+  -r requirements/requirements.txt \
+  -r requirements/requirements.server.txt \
   && rm -rf ~/.cache/pip
 ADD nos nos
 RUN pip install -e . --no-deps
@@ -59,3 +61,5 @@ ENV HF_HOME ${NOS_HOME}/cache/transformers
 ENV PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}
 RUN echo "export PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}" >> ~/.bashrc
 RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
+
+ENTRYPOINT ["nos-grpc-server"]

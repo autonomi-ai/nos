@@ -1,17 +1,10 @@
-accelerate>=0.18.0
 av>=10.0.0
-diffusers>=0.15.0
+cloudpickle>=2.2.1
 docker>=6.0.0
 grpcio-tools>=1.32.0,<=1.49.1  # from ray[serve]==2.4.0
-huggingface_hub
 loguru>=0.7.0
-opencv-python-headless==4.6.0.66
+opencv-python-headless>=4.6.0.66
 pandas
 psutil>=5.9.5
-pyarrow>=12.0.0
-ray[serve]>=2.4.0
 rich>=12.5.1
-torch>=1.12.1,<2.0.0
-torchvision>=0.13.0
-transformers>=4.28.1
 typer>=0.7.0

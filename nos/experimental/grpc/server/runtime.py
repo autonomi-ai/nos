@@ -5,7 +5,7 @@ from typing import Optional
 
 from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.executors.docker import DockerExecutor
-from nos.experimental.grpc import import_module
+from nos.experimental.grpc.protoc import import_module
 from nos.logging import LOGGING_LEVEL, logger
 
 

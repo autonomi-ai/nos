@@ -2,7 +2,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Union
 
-import grpc
+import cloudpickle
 import numpy as np
 import ray
 import rich.console
@@ -10,11 +10,12 @@ import rich.status
 from google.protobuf import empty_pb2
 from PIL import Image
 
+import grpc
 from nos import hub
 from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor
-from nos.experimental.grpc import import_module
+from nos.experimental.grpc.protoc import import_module
 from nos.hub import MethodType, ModelSpec
 from nos.logging import logger
 
@@ -106,14 +107,12 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
         self.model_handle.pop(model_name)
         logger.info(f"Deleted model: {model_name}")
 
-    def ListModels(
-        self, request: empty_pb2.Empty, context: grpc.aio.ServicerContext
-    ) -> nos_service_pb2.ModelListResponse:
+    def ListModels(self, request: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.ModelListResponse:
         """List all models."""
         return nos_service_pb2.ModelListResponse(models=hub.list())
 
     def InitModel(
-        self, request: nos_service_pb2.InitModelRequest, context: grpc.aio.ServicerContext
+        self, request: nos_service_pb2.InitModelRequest, context: grpc.ServicerContext
     ) -> nos_service_pb2.InitModelResponse:
         """Initialize the model."""
         if request.model_name in self.model_handle:
@@ -127,14 +126,14 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
         return nos_service_pb2.InitModelResponse(result="ok")
 
     def DeleteModel(
-        self, request: nos_service_pb2.DeleteModelRequest, context: grpc.aio.ServicerContext
+        self, request: nos_service_pb2.DeleteModelRequest, context: grpc.ServicerContext
     ) -> nos_service_pb2.DeleteModelResponse:
         """Delete the model."""
         self.delete_model(request.model_name)
         return nos_service_pb2.DeleteModelResponse(result="ok")
 
     def Predict(
-        self, request: nos_service_pb2.InferenceRequest, context: grpc.aio.ServicerContext
+        self, request: nos_service_pb2.InferenceRequest, context: grpc.ServicerContext
     ) -> nos_service_pb2.InferenceResponse:
         """Main model prediction interface."""
         logger.debug(f"Received request: {request.method}, {request.model_name}")
@@ -150,7 +149,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
             logger.debug(f"Generating image with prompt: {prompt}")
             response_ref = handle.__call__.remote(prompt, height=512, width=512)
             (img,) = ray.get(response_ref)
-            ref_bytes = ray.cloudpickle.dumps({"image": img})
+            ref_bytes = cloudpickle.dumps({"image": img})
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.TXT2VEC.value:
@@ -158,26 +157,26 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
             logger.debug(f"Encoding text: {prompt}")
             response_ref = handle.encode_text.remote(prompt)
             embedding = ray.get(response_ref)
-            ref_bytes = ray.cloudpickle.dumps({"embedding": embedding})
+            ref_bytes = cloudpickle.dumps({"embedding": embedding})
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.IMG2VEC.value:
-            img: Union[np.ndarray, Image.Image] = ray.cloudpickle.loads(request.image_request.image_bytes)
+            img: Union[np.ndarray, Image.Image] = cloudpickle.loads(request.image_request.image_bytes)
             logger.debug(f"Encoding img (type={type(img)})")
 
             response_ref = handle.encode_image.remote(img)
             embedding = ray.get(response_ref)
-            ref_bytes = ray.cloudpickle.dumps({"embedding": embedding})
+            ref_bytes = cloudpickle.dumps({"embedding": embedding})
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.IMG2BBOX.value:
-            img: Union[np.ndarray, Image.Image] = ray.cloudpickle.loads(request.image_request.image_bytes)
+            img: Union[np.ndarray, Image.Image] = cloudpickle.loads(request.image_request.image_bytes)
             logger.debug(f"Encoding img (type={type(img)})")
 
             response_ref = handle.predict.remote(img)
             prediction = ray.get(response_ref)
             # prediction: {'scores': np.ndarray, 'labels': np.ndarray, 'bboxes': np.ndarray}
-            ref_bytes = ray.cloudpickle.dumps(prediction)
+            ref_bytes = cloudpickle.dumps(prediction)
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
         else:
             context.abort(context, grpc.StatusCode.INVALID_ARGUMENT, f"Invalid method {request.method}")

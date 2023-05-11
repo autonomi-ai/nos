@@ -24,6 +24,9 @@ dynamic = ["version", "dependencies"]
 "Documentation" = "https://autonomi-ai.github.io/nos/"
 "Source Code" = "https://github.com/autonomi-ai/nos"
 
+[tool.setuptools.dynamic.optional-dependencies]
+server = {file = ["requirements/requirements.server.txt"]}
+
 [project.optional-dependencies]
 
 # Development related packages
@@ -57,7 +60,7 @@ nos-grpc-server = "nos.experimental.grpc.server.service:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "nos.version.__version__"}
-dependencies = {file = ["requirements/requirements.txt"]}
+dependencies = {file = ["requirements/requirements.txt","requirements/requirements.server.txt"]}
 
 # for specifying additional pypi index urls
 # see https://setuptools.pypa.io/en/latest/userguide/dependency_management.html
