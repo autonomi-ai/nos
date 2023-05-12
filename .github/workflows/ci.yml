@@ -11,7 +11,7 @@ env:
 
 jobs:
   conda-test-cpu:
-    name: Test env (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Test conda env (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -50,3 +50,21 @@ jobs:
         run: make lint
       - name: Test
         run: make test-cpu
+  docker-test-cpu:
+    name: Test conda env in docker (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"] # , "macos-latest", "windows-latest"
+        python-version: ["3.8"]
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@master
+      - name: Build cpu docker container
+        run: make docker-build-cpu
+        if: steps.cache.outputs.cache-hit != 'true'
