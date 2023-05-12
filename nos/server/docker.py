@@ -43,12 +43,12 @@ class DeviceRequest:
 
 
 @dataclass
-class DockerExecutor:
+class DockerRuntime:
     """
-    Docker executor for running containerized inference workloads.
+    Docker runtime for running containerized inference workloads.
     """
 
-    _instance: "DockerExecutor" = None
+    _instance: "DockerRuntime" = None
     _client: docker.DockerClient = None
 
     def __init__(self):
@@ -56,8 +56,8 @@ class DockerExecutor:
         self._client = docker.from_env()
 
     @classmethod
-    def get(cls: "DockerExecutor") -> "DockerExecutor":
-        """Get DockerExecutor instance."""
+    def get(cls: "DockerRuntime") -> "DockerRuntime":
+        """Get DockerRuntime instance."""
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance

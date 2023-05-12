@@ -2,7 +2,7 @@ import rich.console
 import rich.status
 import typer
 
-from nos.experimental.grpc.server.runtime import NOS_GRPC_SERVER_CMD, InferenceServiceRuntime
+from nos.server.runtime import InferenceServiceRuntime
 
 
 docker_cli = typer.Typer(name="docker", help="NOS Docker CLI.", no_args_is_help=True)
@@ -11,7 +11,6 @@ console = rich.console.Console()
 
 @docker_cli.command("start", help="Start NOS inference engine.")
 def _docker_start(
-    command: str = typer.Option(NOS_GRPC_SERVER_CMD, "-c", "--command", help="Command to run in the container."),
     gpu: bool = typer.Option(False, "--gpu", help="Start the container with GPU support."),
     shm_size: str = typer.Option("4g", "--shm-size", help="Size of /dev/shm."),
 ):
@@ -29,7 +28,7 @@ def _docker_start(
                 f"[bold green] ✓ Inference client already running (id={id[:12] if id else None}).[/bold green]"
             )
             return
-        client.start(detach=True, gpu=gpu, shm_size=shm_size, command=command)
+        client.start(detach=True, gpu=gpu, shm_size=shm_size)
         id = client.id()
     console.print(f"[bold green] ✓ Inference client started (id={id[:12] if id else None}). [/bold green]")
 

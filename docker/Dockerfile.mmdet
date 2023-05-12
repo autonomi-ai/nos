@@ -28,8 +28,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 ADD requirements requirements
-RUN pip install -r requirements/requirements.txt \
-  && rm -rf ~/.cache/pip
+RUN pip install \
+    -r requirements/requirements.txt \
+    -r requirements/requirements.server.txt \
+    && rm -rf ~/.cache/pip
 
 # Install MMEngine and MMCV
 RUN pip install openmim && \

@@ -12,7 +12,7 @@ from nos.constants import NOS_CACHE_DIR, NOS_PATH
 from nos.logging import logger
 
 
-PROTO_PATHS = [NOS_PATH / "experimental/proto"]
+PROTO_PATHS = [NOS_PATH / "proto"]
 
 
 @dataclass

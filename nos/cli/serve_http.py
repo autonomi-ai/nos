@@ -16,8 +16,8 @@ import rich.status
 import rich.table
 import typer
 
-from nos.serve.client import NOS_SERVE_DEFAULT_HTTP_HOST, NOS_SERVE_DEFAULT_HTTP_PORT, SimpleClient
-from nos.serve.service import PredictionRequest, PredictionResponse
+from nos.experimental.http.client import NOS_SERVE_DEFAULT_HTTP_HOST, NOS_SERVE_DEFAULT_HTTP_PORT, SimpleClient
+from nos.experimental.http.service import PredictionRequest, PredictionResponse
 
 
 serve_cli = typer.Typer(name="serve", help="NOS Serve CLI.", no_args_is_help=True)

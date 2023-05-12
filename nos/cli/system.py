@@ -9,8 +9,8 @@ from rich.console import Console
 from rich.panel import Panel
 
 from docker.errors import APIError
-from nos.executors.docker import DockerExecutor
 from nos.logging import logger
+from nos.server.docker import DockerRuntime
 
 
 system_cli = typer.Typer(name="system", help="NOS System CLI.", no_args_is_help=True)
@@ -83,7 +83,7 @@ def _system_info() -> None:
     CUDA_RUNTIME_IMAGE = "nvidia/cuda:11.8.0-base-ubuntu22.04"
     nvidia_docker_gpu_info = ""
 
-    executor = DockerExecutor()
+    executor = DockerRuntime()
     try:
         # Get the output of nvidia-smi running in the container
         container = executor.start(

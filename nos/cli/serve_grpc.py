@@ -17,9 +17,9 @@ import rich.status
 import rich.table
 import typer
 
+from nos.client import InferenceClient
 from nos.client.exceptions import NosClientException
-from nos.client.grpc import InferenceClient
-from nos.experimental.grpc import import_module
+from nos.protoc import import_module
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
