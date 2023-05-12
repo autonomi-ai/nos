@@ -11,7 +11,7 @@ env:
 
 jobs:
   conda-test-cpu:
-    name: Test env (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Test conda env (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -51,7 +51,7 @@ jobs:
       - name: Test
         run: make test-cpu
   docker-test-cpu:
-    name: Test env (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Test conda env in docker (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
