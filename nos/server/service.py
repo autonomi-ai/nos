@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Union
 
 import cloudpickle
+import grpc
 import numpy as np
 import ray
 import rich.console
@@ -10,14 +11,13 @@ import rich.status
 from google.protobuf import empty_pb2
 from PIL import Image
 
-import grpc
 from nos import hub
 from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor
-from nos.experimental.grpc.protoc import import_module
 from nos.hub import MethodType, ModelSpec
 from nos.logging import logger
+from nos.protoc import import_module
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
@@ -149,7 +149,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
             logger.debug(f"Generating image with prompt: {prompt}")
             response_ref = handle.__call__.remote(prompt, height=512, width=512)
             (img,) = ray.get(response_ref)
-            ref_bytes = cloudpickle.dumps({"image": img})
+            ref_bytes = cloudpickle.dumps({"image": img}, protocol=4)
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.TXT2VEC.value:
@@ -157,7 +157,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
             logger.debug(f"Encoding text: {prompt}")
             response_ref = handle.encode_text.remote(prompt)
             embedding = ray.get(response_ref)
-            ref_bytes = cloudpickle.dumps({"embedding": embedding})
+            ref_bytes = cloudpickle.dumps({"embedding": embedding}, protocol=4)
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.IMG2VEC.value:
@@ -166,7 +166,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
 
             response_ref = handle.encode_image.remote(img)
             embedding = ray.get(response_ref)
-            ref_bytes = cloudpickle.dumps({"embedding": embedding})
+            ref_bytes = cloudpickle.dumps({"embedding": embedding}, protocol=4)
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
 
         elif request.method == MethodType.IMG2BBOX.value:
@@ -176,7 +176,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
             response_ref = handle.predict.remote(img)
             prediction = ray.get(response_ref)
             # prediction: {'scores': np.ndarray, 'labels': np.ndarray, 'bboxes': np.ndarray}
-            ref_bytes = cloudpickle.dumps(prediction)
+            ref_bytes = cloudpickle.dumps(prediction, protocol=4)
             return nos_service_pb2.InferenceResponse(result=ref_bytes)
         else:
             context.abort(context, grpc.StatusCode.INVALID_ARGUMENT, f"Invalid method {request.method}")

@@ -8,15 +8,15 @@ from dataclasses import dataclass
 from typing import List, Union
 
 import cloudpickle
+import grpc
 import numpy as np
 from google.protobuf import empty_pb2
 from PIL import Image
 
-import grpc
 from nos.client.exceptions import NosClientException
 from nos.constants import DEFAULT_GRPC_PORT
-from nos.experimental.grpc.protoc import import_module
 from nos.logging import logger
+from nos.protoc import import_module
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
@@ -149,7 +149,7 @@ class InferenceClient:
                     nos_service_pb2.InferenceRequest(
                         method=method,
                         model_name=model_name,
-                        image_request=nos_service_pb2.ImageRequest(image_bytes=cloudpickle.dumps(img)),
+                        image_request=nos_service_pb2.ImageRequest(image_bytes=cloudpickle.dumps(img, protocol=4)),
                     )
                 )
             response = cloudpickle.loads(response.result)

@@ -3,9 +3,9 @@ from concurrent import futures
 import grpc
 import pytest
 
-from nos.client.grpc import DEFAULT_GRPC_PORT, InferenceClient
-from nos.experimental.grpc.protoc import import_module
-from nos.experimental.grpc.server import InferenceService
+from nos.client import DEFAULT_GRPC_PORT, InferenceClient
+from nos.protoc import import_module
+from nos.server import InferenceService
 
 
 GRPC_TEST_PORT = DEFAULT_GRPC_PORT + 1

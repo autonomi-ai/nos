@@ -56,7 +56,7 @@ docs = [
 
 [project.scripts]
 nos = "nos.cli.cli:app_cli"
-nos-grpc-server = "nos.experimental.grpc.server.service:main"
+nos-grpc-server = "nos.server.service:main"
 
 [tool.setuptools.dynamic]
 version = {attr = "nos.version.__version__"}

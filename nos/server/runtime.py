@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Optional
 
 from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
-from nos.executors.docker import DockerExecutor
-from nos.experimental.grpc.protoc import import_module
 from nos.logging import LOGGING_LEVEL, logger
+from nos.protoc import import_module
+from nos.server.docker import DockerRuntime
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
@@ -24,12 +24,12 @@ NOS_GRPC_SERVER_CMD = "nos-grpc-server"
 class InferenceServiceRuntime:
     """Inference service runtime."""
 
-    _executor: DockerExecutor = None
+    _executor: DockerRuntime = None
     """Singleton DockerExecutor instance to run inference."""
 
     def __init__(self):
         """Initialize the runtime."""
-        self._executor = DockerExecutor.get()
+        self._executor = DockerRuntime.get()
         logger.info(f"Initialized runtime: {self._executor}")
 
     def ready(self) -> bool:

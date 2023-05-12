@@ -9,10 +9,11 @@ NOS_LOG_DIR = NOS_HOME / "logs"
 NOS_TMP_DIR = NOS_HOME / "tmp"
 NOS_PATH = Path(__file__).parent
 
-DEFAULT_GRPC_PORT = 50051
-
 NOS_HOME.mkdir(parents=True, exist_ok=True)
 NOS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 NOS_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 NOS_LOG_DIR.mkdir(parents=True, exist_ok=True)
 NOS_TMP_DIR.mkdir(parents=True, exist_ok=True)
+
+DEFAULT_GRPC_PORT = 50051
+DEFAULT_HTTP_PORT = 8000

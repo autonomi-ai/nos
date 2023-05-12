@@ -3,23 +3,23 @@ import time
 import pytest
 from loguru import logger
 
-from nos.executors.docker import DockerExecutor
-from nos.experimental.grpc.server.runtime import NOS_DOCKER_IMAGE_CPU, NOS_DOCKER_IMAGE_GPU, NOS_GRPC_SERVER_CMD
+from nos.server.docker import DockerRuntime
+from nos.server.runtime import NOS_DOCKER_IMAGE_CPU, NOS_DOCKER_IMAGE_GPU, NOS_GRPC_SERVER_CMD
 from nos.test.utils import requires_torch_cuda
 
 
 @pytest.mark.e2e
 def test_docker_executor_singleton():
     """Test DockerExecutor singleton."""
-    executor = DockerExecutor.get()
-    executor_ = DockerExecutor.get()
+    executor = DockerRuntime.get()
+    executor_ = DockerRuntime.get()
     assert executor is executor_
 
 
 @pytest.mark.e2e
 def test_docker_executor_cpu():
     """Test DockerExecutor for CPU."""
-    executor = DockerExecutor.get()
+    executor = DockerRuntime.get()
     container_name = "nos-cpu-test"
 
     # Force stop any existing containers
@@ -78,7 +78,7 @@ def test_docker_executor_cpu():
 @requires_torch_cuda
 def test_docker_executor_gpu():
     """Test DockerExecutor for GPU."""
-    executor = DockerExecutor.get()
+    executor = DockerRuntime.get()
 
     # Test GPU support
     container_name = "nos-gpu-test"
@@ -116,7 +116,7 @@ def test_docker_executor_gpu():
 @pytest.mark.e2e
 def test_docker_executor_logs():
     """Test DockerExecutor logs."""
-    executor = DockerExecutor.get()
+    executor = DockerRuntime.get()
 
     # Test CPU support
     container_name = "nos-cpu-test"
