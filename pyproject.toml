@@ -50,6 +50,9 @@ dependency_links = [
 
 [tool.setuptools.packages.find]
 include = ["nos*","scripts*"]
+exclude = [
+    "nos*experimental*",
+]
 
 [tool.setuptools.package-data]
 "*" = ["*.json", "py.typed", "setup.bash", "setup.zsh"]
