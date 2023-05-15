@@ -1,9 +1,8 @@
 """Various test utilities."""
-import os
-import unittest
 from enum import Enum
 from pathlib import Path
 
+import pytest
 import torch
 
 
@@ -23,25 +22,25 @@ class PyTestGroup(Enum):
     BENCHMARK_MODELS = "benchmark-models"
 
 
-def benchmark(test_case):
-    """
-    Decorator marking a test that is a benchmark (slow).
-
-    These tests are triggered when `NOS_TEST_BENCHMARK=1`, and defaults to False.
-    """
-    return unittest.skipUnless(
-        bool(os.getenv("NOS_TEST_BENCHMARK", default=False)),
-        "test requires NOS_TEST_BENCHMARK=1",
-    )(test_case)
-
-
-def requires_torch_cuda(test_case):
-    """
-    Decorator marking a test that requires torch cuda devices.
+def skip_if_no_torch_cuda(test_case):
+    """Decorator marking a test that requires torch cuda devices.
 
     These tests are skipped when torch.cuda.is_available() is set to False. If
     `CUDA_VISIBLE_DEVICES=""` then, the decorated test is not run.
     """
-    return unittest.skipUnless(torch.cuda.is_available(), "test requires torch.cuda.is_available() to be True")(
-        test_case
-    )
+    return pytest.mark.skipif(not torch.cuda.is_available(), reason="Requires CUDA")(test_case)
+
+
+def skip_all_if_no_torch_cuda():
+    """Decorator sugar to mark all tests in a file that requires torch cuda devices.
+
+    Usage:
+
+        To mark all tests in a file that requires torch cuda devices,
+        add the following:
+
+        ```python
+        pytestmark = skip_all_if_no_torch_cuda()
+        ```
+    """
+    return pytest.mark.skipif(not torch.cuda.is_available(), reason="Requires CUDA")

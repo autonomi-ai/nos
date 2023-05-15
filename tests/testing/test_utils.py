@@ -1,9 +1,9 @@
 import pytest
 
-from nos.test.utils import requires_torch_cuda
+from nos.test.utils import skip_if_no_torch_cuda
 
 
-@requires_torch_cuda
+@skip_if_no_torch_cuda
 def test_torch_cuda():
     """This test is skipped when torch.cuda.is_available() is False."""
     import torch

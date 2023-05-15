@@ -1,10 +1,10 @@
 import pytest  # noqa: F401
 
-from nos.test.utils import requires_torch_cuda
+from nos.test.utils import skip_if_no_torch_cuda
 
 
-@pytest.mark.benchmark
-@requires_torch_cuda
+@skip_if_no_torch_cuda
+@pytest.mark.skip(reason="Not yet implemented.")
 def test_deployment():
     from threading import Thread
 

@@ -3,10 +3,7 @@ from PIL import Image
 
 from nos.models import CLIP
 from nos.test.benchmark import run_benchmark
-from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, requires_torch_cuda
-
-
-pytestmark = pytest.mark.skipif(not requires_torch_cuda, reason="Requires CUDA")
+from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
 
 MODEL_NAME = "openai/clip-vit-base-patch32"
@@ -38,17 +35,15 @@ def _test_clip_encode_image(_model, D: int = 512):
     assert embed_im.shape == (2, D)
 
 
-@requires_torch_cuda
 def test_clip_encode_text(model):
     _test_clip_encode_text(model)
 
 
-@requires_torch_cuda
 def test_clip_encode_image(model):
     _test_clip_encode_image(model)
 
 
-@requires_torch_cuda
+@skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.HUB)
 def test_clip_model_variants():
     model = CLIP(model_name="openai/clip-vit-base-patch32")
@@ -68,7 +63,7 @@ def test_clip_model_variants():
     _test_clip_encode_image(model, D=768)
 
 
-@requires_torch_cuda
+@skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
 @pytest.mark.parametrize(
     "model_name",
