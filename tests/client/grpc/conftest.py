@@ -4,6 +4,7 @@ import grpc
 import pytest
 
 from nos.client import DEFAULT_GRPC_PORT, InferenceClient
+from nos.executors.ray import RayExecutor
 from nos.protoc import import_module
 from nos.server import InferenceService
 
@@ -14,8 +15,9 @@ nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
+@pytest.mark.e2e
 @pytest.fixture(scope="session")
-def test_server():
+def test_server(ray_executor: RayExecutor):
     from loguru import logger
 
     logger.info(f"Starting gRPC test server on port: {GRPC_TEST_PORT}")

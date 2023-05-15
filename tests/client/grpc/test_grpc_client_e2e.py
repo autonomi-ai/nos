@@ -13,7 +13,9 @@ from tqdm import tqdm
 from nos.test.utils import NOS_TEST_IMAGE
 
 
-@pytest.mark.e2e
+pytestmark = pytest.mark.e2e
+
+
 def test_e2e_grpc_client_and_server(test_server, test_client):
     img = Image.open(NOS_TEST_IMAGE)
     img = np.array(img)

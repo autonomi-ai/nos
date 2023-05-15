@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   grpc-server:
-    image: autonomi-ai/nos:latest-cpu
+    image: autonomi/nos:latest-cpu
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -9,11 +9,12 @@ services:
         - TARGET=cpu
         - BASE_IMAGE=python:3.8.10-slim
     entrypoint: nos-grpc-server
-    network_mode: host
+    ports:
+      - 50051:50051
     environment:
       - NOS_HOME=/app/.nos
-      - NOS_LOGGING=DEBUG
+      - NOS_LOGGING_LEVEL=DEBUG
     volumes:
-      - ~/.nos_docker:/app/.nos
+      - ~/.nosd:/app/.nos
       - /tmp/docker:/tmp
     shm_size: 4G

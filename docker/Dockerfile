@@ -1,8 +1,9 @@
 ARG BASE_IMAGE
-FROM ${BASE_IMAGE}
+FROM ${BASE_IMAGE} as base
 
 ARG TARGET
-ENV PYENV=py3_${TARGET}
+ENV PROJECT nos
+ENV PYENV=${PROJECT}_${TARGET}
 ENV DEBIAN_FRONTEND="noninteractive"
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
@@ -34,32 +35,42 @@ RUN curl -sLo ~/mambaforge.sh https://github.com/conda-forge/miniforge/releases/
   && /opt/conda/bin/mamba clean -ya \
   && rm -rf /opt/conda/pkgs/*
 
-# NOS dependencies
-ENV PROJECT nos
+# NOS dependencies and install
 WORKDIR /app/$PROJECT
 ADD pyproject.toml .
 ADD requirements requirements
 RUN pip install \
   -r requirements/requirements.txt \
-  -r requirements/requirements.server.txt \
+  -r requirements/requirements.server.${TARGET}.txt \
   && rm -rf ~/.cache/pip
 ADD nos nos
 RUN pip install -e . --no-deps
 
 # NOS environment
+WORKDIR /app/$PROJECT
 ENV NOS_HOME /app/.nos
-ENV NOS_LOGGING_LEVEL WARN
+ENV NOS_LOGGING_LEVEL WARNING
 
+# Torch, HF, Transformers cache
+ENV TORCH_HOME ${NOS_HOME}/cache/torch
+ENV HF_HOME ${NOS_HOME}/cache/transformers
+ENV TRANSFORMERS_CACHE ${NOS_HOME}/cache/transformers
+
+# Ray environment
 ENV RAY_LOG_TO_STDERR 0
 ENV RAY_USAGE_STATS_ENABLED 0
 ENV RAY_DATA_DISABLE_PROGRESS_BARS 1
 ENV RAY_CONDA_HOME=${CONDA_PATH}
-ENV TORCH_HOME ${NOS_HOME}/cache/torch
-ENV TRANSFORMERS_CACHE ${NOS_HOME}/cache/transformers
-ENV HF_HOME ${NOS_HOME}/cache/transformers
 
 ENV PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}
 RUN echo "export PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}" >> ~/.bashrc
 RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
 
-ENTRYPOINT ["nos-grpc-server"]
+# Test environment
+FROM base as test
+RUN apt-get update \
+  && apt-get install make
+ADD tests tests
+ADD makefiles makefiles
+ADD Makefile .
+RUN pip install -e '.[test]'

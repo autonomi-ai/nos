@@ -160,7 +160,6 @@ markers = [
     "e2e", # End-to-end integration tests
     "benchmark", # Benchmark tests that is slow for basic CI
     "asyncio", # Async IO tests
-
 ]
 filterwarnings = [
     "error",

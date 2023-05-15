@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   grpc-server:
-    image: autonomi-ai/nos:latest-gpu
+    image: autonomi/nos:latest-gpu
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -9,12 +9,13 @@ services:
         - TARGET=gpu
         - BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
     entrypoint: nos-grpc-server
-    network_mode: host
+    ports:
+      - 50051:50051
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL=DEBUG
     volumes:
-      - ~/.nos_docker:/app/.nos
+      - ~/.nosd:/app/.nos
       - /tmp/docker:/tmp
     shm_size: 4G
     deploy:

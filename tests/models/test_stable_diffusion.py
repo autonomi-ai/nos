@@ -2,10 +2,10 @@ from typing import List
 
 import pytest
 
-from nos.test.utils import PyTestGroup, requires_torch_cuda
+from nos.test.utils import PyTestGroup, skip_all_if_no_torch_cuda
 
 
-pytestmark = pytest.mark.skipif(requires_torch_cuda, reason="Requires CUDA")
+pytestmark = skip_all_if_no_torch_cuda()
 
 
 @pytest.fixture(scope="module")

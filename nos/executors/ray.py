@@ -25,7 +25,8 @@ from nos.logging import LOGGING_LEVEL
 logger = logging.getLogger(__name__)
 
 
-NOS_RAY_ADDRESS = os.environ.get("RAY_ADDRESS", "auto")
+NOS_RAY_ADDRESS = os.environ.get("NOS_RAY_ADDRESS", "auto")
+NOS_RAY_GCS_PORT = os.environ.get("NOS_RAY_GCS_PORT", 6379)
 NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
 NOS_RAY_RUNTIME_ENV = os.getenv("NOS_RAY_ENV", None)
 
@@ -84,7 +85,9 @@ class RayExecutor:
         while time.time() - st <= timeout and attempt < max_attempts:
             # Attempt to connect to an existing ray cluster in the background.
             try:
-                with console.status("[bold green] Connecting to backend ... [/bold green]"):
+                with console.status(
+                    f"[bold green] {self.__class__.__name__} :: Connecting to backend ... [/bold green]"
+                ) as status:
                     ray.init(
                         address=self.spec.address,
                         namespace=self.spec.namespace,
@@ -94,8 +97,10 @@ class RayExecutor:
                         logging_level=logging.ERROR,
                         log_to_driver=level <= logging.ERROR,
                     )
-                    console.print("[bold green] ✓ Connected to backend [/bold green]")
-                    logger.info(f"Connected to backend (address={self.spec.address}).")
+                    status.stop()
+                    console.print(
+                        f"[bold green] ✓ {self.__class__.__name__} :: Connected to backend. (address={self.spec.address}) [/bold green]"
+                    )
                 return True
             except ConnectionError:
                 # If Ray head is not running (this results in a ConnectionError),
@@ -115,39 +120,52 @@ class RayExecutor:
             wait: Time to wait for Ray to start. Defaults to 5 seconds.
         """
         console = rich.console.Console()
-        with console.status("[bold green] Starting ray head (as daemon) ... [/bold green]"):
+        with console.status(
+            f"[bold green] {self.__class__.__name__} :: Starting ray head (as daemon) ... [/bold green]"
+        ) as status:
             # Check if Ray head is already running
             if self.pid:
-                console.print("[bold yellow] Ray head is already running. [/bold yellow]")
+                status.stop()
+                console.print(
+                    f"[bold yellow] {self.__class__.__name__} :: Ray head is already running. [/bold yellow]"
+                )
                 return self.pid
             # Start Ray head if not running
             RAY_TMP_DIR = NOS_TMP_DIR / "ray"
             RAY_TMP_DIR.mkdir(parents=True, exist_ok=True)
-            cmd = f"ray start --head --storage {RAY_TMP_DIR}"
+            cmd = f"ray start --head --node-ip-address localhost --port={NOS_RAY_GCS_PORT} --storage {RAY_TMP_DIR} --no-monitor"
             proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             time.sleep(wait)
             if proc.poll() != 0:
                 # Get the process output
                 stdout, stderr = proc.communicate()
                 raise RuntimeError(f"Failed to start Ray stdout={stdout}, stderr={stderr}.")
-            console.print("[bold green] ✓ Ray head started. [/bold green]")
+            status.stop()
+            console.print(f"[bold green] ✓ {self.__class__.__name__} :: Ray head started. [/bold green]")
             return self.pid
 
     def stop(self, wait: int = 5) -> Optional[int]:
         """Stop Ray head."""
         console = rich.console.Console()
-        with console.status("[bold green] Stopping ray head... [/bold green]"):
-            # Check if Ray head is running
-            if not self.pid:
-                console.print("[bold yellow] Ray head is not running.[/bold yellow]")
-                return
-            # Stop Ray head if pid is valid
-            cmd = "ray stop -f"
-            proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            time.sleep(wait)
-            if proc.poll() != 0:
-                raise RuntimeError("Failed to stop Ray.")
-            return self.pid
+        attempt, max_attempts = 0, 5
+        while attempt < max_attempts:
+            with console.status(f"[bold green] {self.__class__.__name__} :: Stopping ray head ... [/bold green]"):
+                # Check if Ray head is running
+                if not self.pid:
+                    console.print("[bold yellow] Ray head is not running.[/bold yellow]")
+                    return
+                # Stop Ray head if pid is valid
+                cmd = "ray stop -f"
+                proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                time.sleep(wait)
+                if proc.poll() == 0:
+                    console.print(f"[bold green] ✓ {self.__class__.__name__} :: Ray head stopped. [/bold green]")
+                    return self.pid
+            attempt += 1
+            console.print(
+                f"[bold yellow] {self.__class__.__name__} :: Failed to stop Ray head. Retrying {attempt}/{max_attempts} after {wait}s ... [/bold yellow]"
+            )
+        raise RuntimeError("Failed to stop Ray.")
 
     @property
     def pid(self) -> Optional[int]:

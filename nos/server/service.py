@@ -8,6 +8,7 @@ import numpy as np
 import ray
 import rich.console
 import rich.status
+import torch
 from google.protobuf import empty_pb2
 from PIL import Image
 
@@ -89,7 +90,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
 
         # Create the serve deployment from the model handle
         model_cls = spec.cls
-        actor_options = {"num_gpus": 1}
+        actor_options = {"num_gpus": 1 if torch.cuda.is_available() else 0}
         logger.debug(f"Creating actor: {actor_options}")
         actor_cls = ray.remote(**actor_options)(model_cls)
         # TOOD(spillai): Currently only one model per model-name is supported.

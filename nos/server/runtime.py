@@ -13,8 +13,8 @@ nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
-NOS_DOCKER_IMAGE_GPU = "autonomi-ai/nos:latest-gpu"
-NOS_DOCKER_IMAGE_CPU = "autonomi-ai/nos:latest-cpu"
+NOS_DOCKER_IMAGE_CPU = "autonomi/nos:latest-cpu"
+NOS_DOCKER_IMAGE_GPU = "autonomi/nos:latest-gpu"
 
 NOS_GRPC_SERVER_CONTAINER_NAME = "nos-grpc-server"
 NOS_GRPC_SERVER_CMD = "nos-grpc-server"
@@ -24,13 +24,13 @@ NOS_GRPC_SERVER_CMD = "nos-grpc-server"
 class InferenceServiceRuntime:
     """Inference service runtime."""
 
-    _executor: DockerRuntime = None
+    _runtime: DockerRuntime = None
     """Singleton DockerExecutor instance to run inference."""
 
     def __init__(self):
         """Initialize the runtime."""
-        self._executor = DockerRuntime.get()
-        logger.info(f"Initialized runtime: {self._executor}")
+        self._runtime = DockerRuntime.get()
+        logger.info(f"Initialized runtime: {self._runtime}")
 
     def ready(self) -> bool:
         """Check if the inference runtime is ready."""
@@ -39,7 +39,7 @@ class InferenceServiceRuntime:
 
     def id(self) -> Optional[str]:
         """Get the inference runtime container ID."""
-        container = self._executor.get_container(NOS_GRPC_SERVER_CONTAINER_NAME)
+        container = self._runtime.get_container(NOS_GRPC_SERVER_CONTAINER_NAME)
         return container.id if container else None
 
     def start(self, detach: bool = True, gpu: bool = False, shm_size: str = "4g", **kwargs):
@@ -50,8 +50,7 @@ class InferenceServiceRuntime:
         """
         image = NOS_DOCKER_IMAGE_GPU if gpu else NOS_DOCKER_IMAGE_CPU
         logger.info(f"Starting inference runtime with image: {image}")
-        nos_docker_path = Path.home() / ".nos_docker"
-        self._executor.start(
+        self._runtime.start(
             image=image,
             container_name=NOS_GRPC_SERVER_CONTAINER_NAME,
             command=[NOS_GRPC_SERVER_CMD],
@@ -60,8 +59,8 @@ class InferenceServiceRuntime:
                 "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
             },
             volumes={
-                str(nos_docker_path): {"bind": "/app/.nos", "mode": "rw"},
-                "/tmp/docker": {"bind": "/tmp", "mode": "rw"},
+                str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},
+                str(Path.home() / ".nosd" / "tmp"): {"bind": "/tmp", "mode": "rw"},
             },
             shm_size=shm_size,
             detach=detach,
@@ -69,17 +68,17 @@ class InferenceServiceRuntime:
             gpu=gpu,
             **kwargs,
         )
-        logger.info(f"Started inference runtime: {self._executor}")
+        logger.info(f"Started inference runtime: {self._runtime}")
 
     def stop(self) -> None:
         """Stop the inference runtime."""
-        self._executor.stop(NOS_GRPC_SERVER_CONTAINER_NAME)
-        logger.info(f"Stopped inference runtime: {self._executor}")
+        self._runtime.stop(NOS_GRPC_SERVER_CONTAINER_NAME)
+        logger.info(f"Stopped inference runtime: {self._runtime}")
 
     def get_logs(self) -> Optional[str]:
         """Get the inference runtime logs."""
-        return self._executor.get_logs(NOS_GRPC_SERVER_CONTAINER_NAME)
+        return self._runtime.get_logs(NOS_GRPC_SERVER_CONTAINER_NAME)
 
     def get_status(self) -> Optional[str]:
         """Get the inference runtime status."""
-        return self._executor.get_container_status(NOS_GRPC_SERVER_CONTAINER_NAME)
+        return self._runtime.get_container_status(NOS_GRPC_SERVER_CONTAINER_NAME)

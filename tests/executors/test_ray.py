@@ -1,39 +1,25 @@
 import pytest
 
 from nos.executors.ray import RayExecutor
+from nos.test.conftest import ray_executor  # noqa: F401
 
 
-@pytest.mark.e2e
-def test_ray_executor():
+def test_ray_executor(ray_executor: RayExecutor):  # noqa: F811
     """Test ray executor singleton."""
+    assert ray_executor.is_initialized()
+
     # Test singleton
-    executor = RayExecutor.get()
-    executor_ = RayExecutor.get()
-    assert executor is executor_
-
-    # Check if Ray is initialized
-    assert not executor.is_initialized()
-    executor_ = RayExecutor.get()
-    assert executor is executor_
-
-    # Initialize Ray executor
-    success = executor.init()
-    assert success
-    assert executor.is_initialized()
+    ray_executor_ = RayExecutor.get()
+    assert ray_executor is ray_executor_
 
     # Get raylet pid
-    pid = executor.pid
+    pid = ray_executor.pid
     assert pid is not None
     assert isinstance(pid, int)
 
-    # Stop Ray executor
-    executor.stop()
-    pid = executor.pid
-    assert pid is None
-
 
 @pytest.mark.skip(reason="Not yet implemented.")
-def test_ray_hub_compatibility():
+def test_ray_load_spec_compatibility(ray_executor: RayExecutor):  # noqa: F811
     """Test hub.load_spec compatibility with RayExecutor"""
     import ray
 

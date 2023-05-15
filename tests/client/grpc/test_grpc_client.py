@@ -1,4 +1,4 @@
-def test_client_cloudpickle_serialization(test_server, test_client):
+def test_client_cloudpickle_serialization(test_client):
     """Test cloudpickle serialization."""
     import cloudpickle
 
