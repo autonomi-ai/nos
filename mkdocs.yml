@@ -1,0 +1,64 @@
+site_name: NOS Docs
+site_url: https://nos.autonomi.ai
+site_author: Sudeep Pillai
+repo_url: https://github.com/autonomi-ai/nos
+docs_dir: .
+site_dir: site
+nav:
+- <strong>🏠 Home</strong>: README.md
+- <strong>📚 API Documentation</strong>:
+  - client: docs/api/client.md
+  - hub: docs/api/hub.md
+  - server: docs/api/server.md
+  - executors: docs/api/executors.md
+- <strong>🧾 Release Notes</strong>: docs/RELEASE-NOTES.md
+- <strong>🧑‍💻 Contributing</strong>: docs/CONTRIBUTING.md
+- <strong>❓ Support</strong>: docs/SUPPORT.md
+
+plugins:
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [.]
+- same-dir
+- search
+- exclude:
+    glob:
+      - nos/cli/README.md
+      - build/*
+      - conda/*
+      - docker/*
+      - makefiles/*
+      - requirements/*
+      - tests/*
+      - nos/experimental/*
+    regex:
+      - '.*\.(tmp|bin|tar)$'
+
+markdown_extensions:
+- md_in_html
+- admonition
+- pymdownx.highlight
+- pymdownx.extra
+- pymdownx.emoji:
+    emoji_index: !!python/name:materialx.emoji.twemoji
+    emoji_generator: !!python/name:materialx.emoji.to_svg
+- pymdownx.tabbed:
+    alternate_style: true
+
+theme:
+  name: material
+  custom_dir: docs/overrides
+  features:
+    - navigation.expand
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+
+extra:
+  analytics:
+    provider: google
+    property: G-J38LQZWLM3
+
+copyright: >
+  Copyright &copy; 2022 - 2023 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
