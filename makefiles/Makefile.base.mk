@@ -1,13 +1,3 @@
-export DOCKER_BUILDKIT ?= 1
-export COMPOSE_DOCKER_CLI_BUILD ?= 1
-
-NOS_VERSION := $(shell sed -n 's/^__version__ = "\([0-9.]\+\)"/\1/p' nos/version.py)
-NOS_VERSION_TAG := ${NOS_VERSION}
-DOCKER_IMAGE_NAME := autonomi/nos
-DOCKER_TARGET := base
-DOCKER_ARGS :=
-DOCKER_CMD :=
-
 help-base:
 	@echo "nos 🔥: Nitrous Oxide System (NOS) for Computer Vision"
 	@echo ""

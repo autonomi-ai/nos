@@ -1,6 +1,16 @@
+export DOCKER_BUILDKIT ?= 1
+export COMPOSE_DOCKER_CLI_BUILD ?= 1
+
 .DEFAULT_GOAL := help
 .PHONY: default clean clean-build clean-pyc clean-test test test-coverage develop install style
 SHELL := /bin/bash
+
+NOS_VERSION := $(shell python -c "exec(open('nos/version.py').read().strip()); print(__version__)")
+NOS_VERSION_TAG = ${NOS_VERSION}
+DOCKER_IMAGE_NAME := autonomi/nos
+DOCKER_TARGET := base
+DOCKER_ARGS :=
+DOCKER_CMD :=
 
 include makefiles/Makefile.base.mk
 include makefiles/Makefile.mmdet.mk

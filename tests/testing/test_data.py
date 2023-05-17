@@ -1,4 +1,5 @@
 import cv2
+import pytest
 
 from nos.test.utils import NOS_TEST_AUDIO, NOS_TEST_IMAGE, NOS_TEST_VIDEO
 
@@ -26,6 +27,7 @@ def test_video():
         assert H * W > 0
 
 
+@pytest.mark.skip(reason="torchaudio is not installed")
 def test_audio():
     import torchaudio
 
