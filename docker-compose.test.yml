@@ -32,8 +32,7 @@ services:
     command: ${DOCKER_CMD:-make test-cpu}
 
   test-gpu:
-    <<: *nos-common-test
-    <<: *nos-common-gpu-test
+    <<: [*nos-common-test, *nos-common-gpu-test]
     image: autonomi/nos:latest-gpu-test
     build:
       context: .
