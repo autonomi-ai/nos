@@ -31,30 +31,16 @@
  - 🔌 **Interfaces:** NOS comes with a REST/gRPC API out-of-the-box to help you use your models.
  - 📈 **Benchmarks**: NOS comes with a suite of benchmarks to help you compare performance of your models.
 
-## Hardware Support
+## Roadmap
 We currently plan to support the following hardware:
- - [ ] GPU (NVIDIA GPUs, AMD GPUs)
-   - [ ] AWS (g4/g5dn/p3/p4dn)
-   - [ ] GCP (g2/a1/n1)
- - [ ] AWS Inferentia inf1/inf2
- - [ ] Intel Habana Gaudi
- - [ ] Google TPUv3
 
+- GPU (NVIDIA GPUs, AMD GPUs)
+    - AWS (g4/g5dn/p3/p4dn)
+    - GCP (g2/a1/n1)
+- AWS Inferentia inf1/inf2
+- Intel Habana Gaudi
+- Google TPUv3
 
-## Lint
-```bash
-make lint  # Runs all the linters using ruff/pre-commit
-```
-
-## Test
-```bash
-make test  # Runs all the basic tests using pytest
-```
-
-## Benchmark
-```bash
-make test-benchmarks  # Runs all the benchmarks setting NOS_TEST_BENCHMARK=1
-```
 
 ## Contribute
-We welcome contributions! Please see our [contributing guide](CONTRIBUTING.md) for more information.
+We welcome contributions! Please see our [contributing guide](docs/CONTRIBUTING.md) for more information.

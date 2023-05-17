@@ -12,7 +12,7 @@ Commands are organized into subcommands, which are organized into groups. For ex
 | [docker](./docker.py)       | `nos docker`    | Docker-related commands to pull, initialize and run the nos docker runtime container. |
 | [hub](./hub.py)             | `nos hub`       | Hub-related commands to pull, push, and manage ML models.                             |
 | [benchmark](./benchmark.py) | `nos benchmark` | Benchmark-related commands to run benchmarks on your models.                          |
-| [serve](./serve.py)         | `nos serve`     | ML model serving related comamnds serve your ML models via a REST/gRPC API.           |
+| [serve](./serve_grpc.py)         | `nos serve-grpc`     | ML model serving related comamnds serve your ML models via a gRPC API.           |
 
 ## Examples
 

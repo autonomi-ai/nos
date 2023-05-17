@@ -24,8 +24,17 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
 @contextmanager
-def InferenceSession(stub, model_name: str, num_replicas: int = 1):
-    """Remote model context manager."""
+def InferenceSession(stub: nos_service_pb2_grpc.InferenceServiceStub, model_name: str, num_replicas: int = 1):
+    """Remote model context manager.
+
+    Args:
+        stub (nos_service_pb2_grpc.InferenceServiceStub): gRPC stub.
+        model_name (str): Name of the model to init.
+        num_replicas (int): Number of replicas to init.
+
+    Yields:
+        None (NoneType): Nothing.
+    """
     # Create inference stub and init model
     request = nos_service_pb2.InitModelRequest(model_name=model_name, num_replicas=num_replicas)
     response: nos_service_pb2.InitModelResponse = stub.InitModel(request)
@@ -51,22 +60,24 @@ class InferenceClient:
     """Simple gRPC client for NOS service.
 
     Usage:
+        ```py
         # Create client
-        >>> client = InferenceClient(address="localhost:50051")
+        client = InferenceClient(address="localhost:50051")
 
         # List all models registered with the server
-        >>> models client.ListModels()
-        ['openai/clip-vit-base-patch32', ...]
+        models = models client.ListModels()
+        # models = ['openai/clip-vit-base-patch32', ...]
 
         # Encode "Hello world!" with the CLIP text encoder
-        >>> client.Predict(method=MethodType.TXT2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
+        client.Predict(method=MethodType.TXT2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
 
         # Encode img with the CLIP visual encoder
-        >>> client.Predict(method=MethodType.IMG2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
+        client.Predict(method=MethodType.IMG2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
 
         # Predict bounding-boxes from with FastRCNN
-        >>> img = Image.open("test.jpg")
-        >>> client.Predict(method=MethodType.IMG2BBOX, model_name="torchvision/fasterrcnn_mobilenet_v3_large_320_fpn", img=img)
+        img = Image.open("test.jpg")
+        client.Predict(method=MethodType.IMG2BBOX, model_name="torchvision/fasterrcnn_mobilenet_v3_large_320_fpn", img=img)
+        ```
     """
 
     address: str = f"[::]:{DEFAULT_GRPC_PORT}"
@@ -105,7 +116,11 @@ class InferenceClient:
         return self._stub
 
     def ListModels(self) -> List[str]:
-        """List all models."""
+        """List all models.
+
+        Returns:
+            List[str]: List of model names.
+        """
         try:
             response: nos_service_pb2.ModelListResponse = self.stub.ListModels(empty_pb2.Empty())
             logger.debug(response.models)
@@ -131,6 +146,9 @@ class InferenceClient:
             img (Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]):
                 Image or text to predict on.
             text (str): Prompt text to use for text-generation or embedding.
+
+        Returns:
+            nos_service_pb2.InferenceResponse: Inference response.
         """
         if method not in ("txt2vec", "img2vec", "img2bbox", "txt2img"):
             raise NosClientException(f"Invalid method {method}")
