@@ -39,9 +39,10 @@ RUN curl -sLo ~/mambaforge.sh https://github.com/conda-forge/miniforge/releases/
 WORKDIR /app/$PROJECT
 ADD pyproject.toml .
 ADD requirements requirements
+RUN pip install -r requirements/requirements.torch.${TARGET}.txt
 RUN pip install \
   -r requirements/requirements.txt \
-  -r requirements/requirements.server.${TARGET}.txt \
+  -r requirements/requirements.server.txt \
   && rm -rf ~/.cache/pip
 ADD nos nos
 RUN pip install -e . --no-deps
