@@ -32,6 +32,24 @@ help-base:
 		--build-arg TARGET=${TARGET} \
 		.
 
+.docker-build-and-push-multiplatform:
+	@echo "🛠️ Building docker image"
+	@echo "BASE_IMAGE: ${BASE_IMAGE}"
+	@echo "TARGET: ${TARGET}"
+	@echo "DOCKER_TARGET: ${DOCKER_TARGET}"
+	@echo "IMAGE: ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET}"
+	@echo ""
+	docker buildx create --use
+	docker buildx build -f docker/Dockerfile \
+		--platform linux/amd64,linux/arm64 \
+		--target ${DOCKER_TARGET} \
+		-t ${DOCKER_IMAGE_NAME}:latest-${TARGET} \
+		-t ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET} \
+		--build-arg BASE_IMAGE=${BASE_IMAGE} \
+		--build-arg TARGET=${TARGET} \
+		--push \
+		.
+
 .docker-run:
 	docker run -it ${DOCKER_ARGS} --rm \
 		${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET} \
@@ -52,6 +70,12 @@ docker-build-gpu:
 	TARGET=gpu \
 	DOCKER_TARGET=${DOCKER_TARGET} \
 	BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
+
+docker-build-and-push-multiplatform-cpu:
+	make .docker-build-and-push-multiplatform \
+	TARGET=cpu \
+	DOCKER_TARGET=${DOCKER_TARGET} \
+	BASE_IMAGE=python:3.8.10-slim
 
 docker-build-all: \
 	docker-build-cpu docker-build-gpu
