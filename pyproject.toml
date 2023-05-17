@@ -18,49 +18,28 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
 ]
-dynamic = ["version", "dependencies"]
+dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [project.urls]
 "Documentation" = "https://autonomi-ai.github.io/nos/"
 "Source Code" = "https://github.com/autonomi-ai/nos"
 
-[tool.setuptools.dynamic.optional-dependencies]
-server = {file = ["requirements/requirements.server.txt"]}
+[tool.setuptools.dynamic]
+version = {attr = "nos.version.__version__"}
+dependencies = {file = [
+    "requirements/requirements.txt",
+    "requirements/requirements.server.txt",
+    ]}
 
-[project.optional-dependencies]
-
-# Development related packages
-# Note: Currently torch depdendencies are not included here as they are not
-# available on pypi and require an extra-index-url to be specified.
-dev = [
-    "black[jupyter]==22.3.0",
-    "build==0.10.0",
-    "pre-commit==3.2.2",
-    "ruff==0.0.262",
-]
-
-test = [
-    "pytest==7.1.2",
-    "pytest-xdist==2.5.0",
-    "pytest-asyncio==0.21.0",
-    "typeguard==2.13.3",
-]
-
-# Documentation related packages
-docs = [
-    "mkdocs==1.4.2",
-    "mkdocs-material==9.0.14",
-    "mkdocstrings==0.20.0",
-    "mkdocstrings-python==0.8.3",
-]
+  [tool.setuptools.dynamic.optional-dependencies]
+    torch = {file = ["requirements/requirements.torch.gpu.txt"]}
+    dev = {file = ["requirements/requirements.dev.txt"]}
+    test = {file = ["requirements/requirements.test.txt"]}
+    docs = {file = ["requirements/requirements.docs.txt"]}
 
 [project.scripts]
 nos = "nos.cli.cli:app_cli"
 nos-grpc-server = "nos.server.service:main"
-
-[tool.setuptools.dynamic]
-version = {attr = "nos.version.__version__"}
-dependencies = {file = ["requirements/requirements.txt","requirements/requirements.server.txt"]}
 
 # for specifying additional pypi index urls
 # see https://setuptools.pypa.io/en/latest/userguide/dependency_management.html

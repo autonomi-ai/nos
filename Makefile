@@ -52,17 +52,17 @@ clean-test: ## remove test and coverage artifacts
 post-install-check: ## Post-install checks (check version, etc)
 	python -c 'from nos.version import __version__; print(f"nos=={__version__}")'
 
-develop: ## Install GPU dependencies and package in developer/editable-mode
+develop-gpu: ## Install GPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
-	pip install --upgrade pip setuptools
-	pip install torch==1.13.1+cu117 torchvision==0.14.1+cu117 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 	pip install --editable '.[dev,test,docs]'
 	make post-install-check
 
 develop-cpu: ## Install CPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
-	pip install --upgrade pip setuptools
-	pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1
+	pip install -r requirements/requirements.torch.cpu.txt
+	pip install \
+		-r requirements/requirements.txt \
+		-r requirements/requirements.server.txt
 	pip install --editable '.[dev,test,docs]'
 	make post-install-check
 

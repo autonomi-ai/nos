@@ -50,6 +50,7 @@ jobs:
         run: make lint
       - name: Test
         run: make test-cpu
+
   docker-test-cpu:
     name: Test conda env in docker (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
