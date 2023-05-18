@@ -1,0 +1,25 @@
+# Roadmap
+We currently plan to support the following hardware:
+
+- GPU (NVIDIA GPUs, AMD GPUs)
+    - AWS (g4/g5dn/p3/p4dn)
+    - GCP (g2/a1/n1)
+- AWS Inferentia inf1/inf2
+- Intel Habana Gaudi
+- Google TPUv3
+
+
+## Model Hub
+ - **Text-to-Image:** [Stable Diffusion v1.5](runwayml/stable-diffusion-v1-5), [Stable Diffusion v2.0](stabilityai/stable-diffusion-2)
+ - **Image/Text-to-Vec:** [OpenAI CLIP ViT](openai/clip-vit-base-patch32), [Laion CLIP ViT](laion/CLIP-ViT-H-14-laion2B-s32B-b79K)
+ - **Object Detection:** [FasterRCNN](https://pytorch.org/vision/main/models/faster_rcnn.html), [EfficientDet (OpenMMLab)](https://github.com/open-mmlab/mmdetection/tree/main/projects/EfficientDet), [FasterRCNN (OpenMMLab)](https://github.com/open-mmlab/mmdetection/blob/main/mmdet/models/detectors/faster_rcnn.py)
+
+
+### Model Hub: Coming Soon
+
+ - **Audio-to-Text:** [OpenAI Whisper](openai/whisper-large-v2), [WhisperX](https://github.com/m-bain/whisperX)
+ - **Object Tracking:** [MMtracking (OpenMMLab)](https://github.com/open-mmlab/mmtracking)
+
+## Model Optimizations
+ - [**NVIDIA TensorRT**](https://developer.nvidia.com/tensorrt)
+ - [**Facebook AITemplate**](https://github.com/facebookincubator/AITemplate)

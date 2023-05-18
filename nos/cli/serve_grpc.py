@@ -19,11 +19,7 @@ import typer
 
 from nos.client import InferenceClient
 from nos.client.exceptions import NosClientException
-from nos.protoc import import_module
 
-
-nos_service_pb2 = import_module("nos_service_pb2")
-nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 serve_grpc_cli = typer.Typer(name="serve-grpc", help="NOS gRPC Serve CLI.", no_args_is_help=True)
 console = rich.console.Console()
