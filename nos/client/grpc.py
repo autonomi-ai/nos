@@ -1,8 +1,4 @@
-"""
-Simple gRPC client for NOS service.
-
-Used for testing purposes and in conjunction with the NOS gRPC server (grpc_server.py).
-"""
+"""gRPC client for NOS service."""
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import List, Union
@@ -55,44 +51,60 @@ class InferenceClientState:
     """Address for the gRPC server."""
 
 
-@dataclass
 class InferenceClient:
-    """Simple gRPC client for NOS service.
+    """Main gRPC client for NOS inference service.
+
+    Parameters:
+        address (str): Address for the gRPC server.
 
     Usage:
         ```py
         # Create client
-        client = InferenceClient(address="localhost:50051")
+        >>> client = InferenceClient(address="localhost:50051")
 
         # List all models registered with the server
-        models = models client.ListModels()
         # models = ['openai/clip-vit-base-patch32', ...]
+        >>> models = models client.ListModels()
 
         # Encode "Hello world!" with the CLIP text encoder
-        client.Predict(method=MethodType.TXT2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
+        >>> client.Predict(method=MethodType.TXT2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
 
         # Encode img with the CLIP visual encoder
-        client.Predict(method=MethodType.IMG2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
+        >>> client.Predict(method=MethodType.IMG2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
 
         # Predict bounding-boxes from with FastRCNN
-        img = Image.open("test.jpg")
-        client.Predict(method=MethodType.IMG2BBOX, model_name="torchvision/fasterrcnn_mobilenet_v3_large_320_fpn", img=img)
+        >>> img = Image.open("test.jpg")
+        >>> client.Predict(method=MethodType.IMG2BBOX, model_name="torchvision/fasterrcnn_mobilenet_v3_large_320_fpn", img=img)
         ```
     """
 
-    address: str = f"[::]:{DEFAULT_GRPC_PORT}"
-    """Default address for the gRPC server."""
-    _channel: grpc.Channel = None
-    """gRPC channel."""
-    _stub: nos_service_pb2_grpc.InferenceServiceStub = None
-    """gRPC stub."""
+    def __init__(self, address: str = f"[::]:{DEFAULT_GRPC_PORT}"):
+        """Initializes the gRPC client.
+
+        Args:
+            address (str): Address for the gRPC server. Defaults to f"[::]:{DEFAULT_GRPC_PORT}".
+        """
+        self.address: str = address
+        self._channel: grpc.Channel = None
+        self._stub: nos_service_pb2_grpc.InferenceServiceStub = None
 
     def __getstate__(self) -> InferenceClientState:
-        """Returns the state of the client for serialization purposes."""
+        """Returns the state of the client for serialization purposes.
+
+        Returns:
+            InferenceClientState: State of the client.
+        """
         return InferenceClientState(address=self.address)
 
     def __setstate__(self, state: InferenceClientState) -> None:
-        """Sets the state of the client for de-serialization purposes."""
+        """Sets the state of the client for de-serialization purposes.
+
+        Args:
+            state (InferenceClientState): State of the client.
+
+        Returns:
+            None (NoneType): Nothing.
+        """
         self.address = state.address
         self._channel = None
         self._stub = None
@@ -124,9 +136,20 @@ class InferenceClient:
         try:
             response: nos_service_pb2.ModelListResponse = self.stub.ListModels(empty_pb2.Empty())
             logger.debug(response.models)
-            return response.models
+            return list(response.models)
         except grpc.RpcError as e:
             logger.error(f"Failed to list models ({e})")
+
+    def GetModelInfo(self, model_name: str):
+        """Get the relevant model information from the model name.
+
+        Note: This may be possible only after initialization, as we need to inspect the
+        HW to understand the configurable image resolutions, batch sizes etc.
+
+        Args:
+            model_name (str): Model identifier (e.g. openai/clip-vit-base-patch32).
+        """
+        raise NotImplementedError()
 
     def Predict(
         self,

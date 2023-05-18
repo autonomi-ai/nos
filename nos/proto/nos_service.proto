@@ -10,6 +10,14 @@ message ModelListResponse {
 }
 
 
+message ModelInfoRequest {
+  string model_name = 1;
+}
+
+message ModelInfoResponse {
+}
+
+
 message TextRequest {
   string text = 1;
 }
@@ -65,6 +73,9 @@ service InferenceService {
 
   // Delete model from deployment
   rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {}
+
+  // Get model information from the deployment
+  rpc GetModelInfo(ModelInfoRequest) returns (ModelInfoResponse) {};
 
   // Perform text-to-vector prediction
   rpc Predict(InferenceRequest) returns (InferenceResponse) {}

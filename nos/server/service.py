@@ -25,8 +25,11 @@ nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
-class FixedLengthDict(OrderedDict):
-    """Fixed length dictionary."""
+class FixedLengthFIFODict(OrderedDict):
+    """Fixed length FIFO dictionary.
+
+    Note: Needs to be refactored to be more generic with FIFO/LRU options.
+    """
 
     def __init__(self, *args, **kwargs):
         self._maxlen = kwargs.pop("_maxlen", None)
@@ -63,7 +66,7 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
     """
 
     def __init__(self):
-        self.model_handle = FixedLengthDict(_maxlen=4)
+        self.model_handle = FixedLengthFIFODict(_maxlen=4)
         self.executor = RayExecutor.get()
         try:
             self.executor.init()
@@ -132,6 +135,12 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
         """Delete the model."""
         self.delete_model(request.model_name)
         return nos_service_pb2.DeleteModelResponse(result="ok")
+
+    def GetModelInfo(
+        self, request: nos_service_pb2.ModelInfoRequest, context: grpc.ServicerContext
+    ) -> nos_service_pb2.ModelInfoResponse:
+        """Get model information."""
+        raise NotImplementedError()
 
     def Predict(
         self, request: nos_service_pb2.InferenceRequest, context: grpc.ServicerContext

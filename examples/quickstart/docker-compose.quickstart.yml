@@ -1,6 +1,7 @@
 version: "3.8"
+
 services:
-  grpc-server:
+  nos-server:
     image: autonomi/nos:0.0.0-cpu
     command: nos-grpc-server
     ports:
@@ -12,10 +13,6 @@ services:
       - ~/.nosd:/app/.nos
       - tmp:/tmp
     shm_size: 4G
+
 volumes:
   tmp:
-    driver: local
-    driver_opts:
-      type: tmpfs
-      device: tmpfs
-      o: size=8G,uid=1000

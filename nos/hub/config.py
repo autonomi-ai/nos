@@ -38,10 +38,16 @@ class HuggingFaceHubConfig:
 
 @dataclass(frozen=True)
 class MMLabConfig:
+    """OpenMMlab configuration."""
+
     config: str
+    """Model configuration file."""
+
     checkpoint: str
+    """Model checkpoint file."""
 
     def validate(self):
+        """Validate the configuration."""
         if not Path(self.config).exists():
             raise IOError(f"Failed to load config={self.config}.")
         if not Path(self.checkpoint).exists():
@@ -49,10 +55,20 @@ class MMLabConfig:
         return self
 
     @property
-    def model_name(self):
+    def model_name(self) -> str:
+        """Model name.
+
+        Returns:
+            str: Model name.
+        """
         return Path(self.config).stem
 
-    def cached_checkpoint(self):
+    def cached_checkpoint(self) -> str:
+        """Download the checkpoint and return the local path.
+
+        Returns:
+            str: Local path to the checkpoint.
+        """
         from torchvision.datasets.utils import download_url
 
         # Download the checkpoint and place it in the model directory (with the same filename)

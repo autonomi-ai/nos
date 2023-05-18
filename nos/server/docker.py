@@ -65,7 +65,7 @@ class DockerRuntime:
     def start(
         self,
         image: str,
-        container_name: List[str],
+        container_name: str,
         ports: Optional[Dict[int, int]] = None,
         command: Optional[List[str]] = None,
         environment: Optional[Dict[str, str]] = None,

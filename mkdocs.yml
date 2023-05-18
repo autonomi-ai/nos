@@ -6,12 +6,13 @@ docs_dir: .
 site_dir: site
 nav:
 - <strong>🏠 Home</strong>: README.md
-- <strong>🔥 Quickstart</strong>: docs/quickstart/QUICKSTART.md
+- <strong>🔥 Quickstart</strong>: docs/QUICKSTART.md
 - <strong>📚 API Documentation</strong>:
-  - client: docs/api/client.md
-  - hub: docs/api/hub.md
-  - server: docs/api/server.md
-  - executors: docs/api/executors.md
+  - nos.client: docs/api/client.md
+  - nos.executors: docs/api/executors.md
+  - nos.hub: docs/api/hub.md
+  - nos.server: docs/api/server.md
+- <strong>🏁 Roadmap</strong>: docs/ROADMAP.md
 - <strong>🧾 Release Notes</strong>: docs/RELEASE-NOTES.md
 - <strong>🧑‍💻 Contributing</strong>: docs/CONTRIBUTING.md
 - <strong>❓ Support</strong>: docs/SUPPORT.md
@@ -52,9 +53,6 @@ theme:
   custom_dir: docs/overrides
   features:
     - navigation.expand
-    - navigation.sections
-    - navigation.tabs
-    - navigation.tabs.sticky
 
 extra:
   analytics:

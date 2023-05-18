@@ -18,28 +18,18 @@
 **NOS** is a PyTorch library for optimizing and running lightning-fast inference of popular computer vision models. NOS inherits its name from "Nitrous Oxide System", the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
 
 ## Why NOS?
-- ⚡️ **Fast**: NOS is built on top of PyTorch and is designed to run models faster.
-- 🔥 **Out-of-the-box Performance**: Run stable diffusion or object detection in under 5 lines, 2-3x faster than vanilla PyTorch.
-- 👩‍💻 **Reduce barrier-to-entry**: NOS is designed to be easy to use. No ML optimizations or compilers knowledge necessary.
-- 📦 **Modular**: NOS is designed to be modular and easy to extend. Optimize Pytorch models in a few lines of code.
-- ⚙️ **HW-accelerated:** NOS is designed to leverage hardware-acceleration down to the metal (GPUs, TPUs, ASICs etc).
-- ☁️ **Cloud-agnostic:** NOS is designed to run on any cloud (AWS, GCP, Azure, Lambda Labs, on-prem, etc.).
+- ⚡️ **Fast**: Built for PyTorch and designed to optimize/run models faster
+- 🔥 **Performant**: Run models such as SDv2 or object detection 2-3x faster out-of-the-box
+- 👩‍💻 **No PhD required**: Optimize models for maximum HW performance without a PhD in ML
+- 📦 **Extensible**: Easily add optimization and HW-support for custom models
+- ⚙️ **HW-accelerated:** Take full advantage of your HW (GPUs, ASICs) without compromise
+- ☁️ **Cloud-agnostic:** Run on any cloud HW (AWS, GCP, Azure, Lambda Labs, On-Prem)
 
 ## Batteries Included
- - 💪 **SOTA Model Support:** NOS comes with support for popular CV models such as Stable Diffusion, ViT, CLIP, and more.
- - 🐳 **Docker:** NOS comes with optimized docker images for accelerated CV workloads (runtime libs, drivers, optimized models).
- - 🔌 **Interfaces:** NOS comes with a REST/gRPC API out-of-the-box to help you use your models.
- - 📈 **Benchmarks**: NOS comes with a suite of benchmarks to help you compare performance of your models.
-
-## Roadmap
-We currently plan to support the following hardware:
-
-- GPU (NVIDIA GPUs, AMD GPUs)
-    - AWS (g4/g5dn/p3/p4dn)
-    - GCP (g2/a1/n1)
-- AWS Inferentia inf1/inf2
-- Intel Habana Gaudi
-- Google TPUv3
+ - 💪 **SOTA Model Support:** NOS provides out-of-the-box support for popular CV models such as [Stable Diffusion](stabilityai/stable-diffusion-2), [OpenAI CLIP](openai/clip-vit-base-patch32), [OpenMMLab](https://github.com/open-mmlab/) object detection, tracking and more
+ - 🔌 **APIs:** NOS provides out-of-the-box APIs and avoids all the ML model deployment hassles
+ - 🐳 **Docker:** NOS ships with docker images to run accelerated and scalable CV workloads
+ - 📈 **Multi-Platform**: NOS allows you to run models on different HW (NVIDIA, custom ASICs) without any model compilation or runtime management.
 
 
 ## Contribute
