@@ -16,10 +16,17 @@ services:
       - NOS_LOGGING_LEVEL=DEBUG
     volumes:
       - ~/.nosd:/app/.nos
-      - /tmp/docker:/tmp
+      - tmp:/tmp
     shm_size: 4G
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
+volumes:
+  tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=8G,uid=1000
