@@ -1,5 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: default clean clean-build clean-pyc clean-test test test-coverage develop install style
+SHELL := /bin/bash
 
 include makefiles/Makefile.base.mk
 include makefiles/Makefile.mmdet.mk
@@ -90,3 +91,11 @@ test-e2e: ## End-to-end testing (all GPUs)
 dist: clean ## builds source and wheel package
 	python -m build --sdist --wheel
 	ls -lh dist
+
+update-conda: ## Export conda environment
+	if [ ! -e "conda/envs/$(CONDA_DEFAULT_ENV)/env.yml" ]; then \
+		## create the file if it doesn't exist \
+		mkdir -p conda/envs/$(CONDA_DEFAULT_ENV); \
+		touch conda/envs/$(CONDA_DEFAULT_ENV)/env.yml; \
+	fi
+	conda env export --file conda/envs/$(CONDA_DEFAULT_ENV)/env.yml;
