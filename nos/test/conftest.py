@@ -7,19 +7,12 @@ from nos.client import DEFAULT_GRPC_PORT, InferenceClient
 from nos.executors.ray import RayExecutor
 from nos.protoc import import_module
 from nos.server import InferenceService
-from nos.server.docker import DockerRuntime
 
 
 GRPC_TEST_PORT = DEFAULT_GRPC_PORT + 1
 
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
-
-
-@pytest.fixture(scope="session")
-def docker_runtime():
-    runtime = DockerRuntime.get()
-    yield runtime
 
 
 @pytest.fixture(scope="session")
