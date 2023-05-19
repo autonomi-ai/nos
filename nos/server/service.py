@@ -71,7 +71,8 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
         try:
             self.executor.init()
         except Exception as e:
-            logger.error(f"Failed to initialize executor: {e}")
+            logger.info(f"Failed to initialize executor: {e}")
+            raise RuntimeError(f"Failed to initialize executor: {e}")
 
     def init_model(self, model_name: str):
         """Initialize the model."""
@@ -209,7 +210,7 @@ def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 1) -> N
     with console.status(f"[bold green] Starting server on {address}[/bold green]") as status:
         server.start()
         console.print(
-            f"[bold green] ✓ Deployment complete [/bold green]",  # noqa
+            f"[bold green] ✓ InferenceService :: Deployment complete [/bold green]",  # noqa
         )
         status.stop()
         server.wait_for_termination()

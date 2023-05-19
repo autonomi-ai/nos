@@ -7,7 +7,6 @@ computation and containerize them in docker to isolate the environment.
 """
 import logging
 import os
-import subprocess
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -18,23 +17,17 @@ import rich.console
 import rich.panel
 import rich.status
 
-from nos.constants import NOS_TMP_DIR
 from nos.logging import LOGGING_LEVEL
 
 
 logger = logging.getLogger(__name__)
 
-
-NOS_RAY_ADDRESS = os.environ.get("NOS_RAY_ADDRESS", "auto")
-NOS_RAY_GCS_PORT = os.environ.get("NOS_RAY_GCS_PORT", 6379)
 NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
 NOS_RAY_RUNTIME_ENV = os.getenv("NOS_RAY_ENV", None)
 
 
 @dataclass
 class RayRuntimeSpec:
-    address: str = NOS_RAY_ADDRESS
-    """Address of Ray head."""
     namespace: str = NOS_RAY_NS
     """Namespace for Ray runtime."""
     runtime_env: str = NOS_RAY_RUNTIME_ENV
@@ -62,12 +55,17 @@ class RayExecutor:
         return ray.is_initialized()
 
     def init(self, max_attempts: int = 5, timeout: int = 60, retry_interval: int = 5) -> None:
-        """Initialize Ray exector (as a daemon).
+        """Initialize Ray exector.
 
-        Currently, this method will first attempt to connect to an existing
-        Ray cluster (address="auto"). If it fails, it will start a Ray head
-        as a daemon, attempt to re-connect (upto a maximum of 5
-        attempts, or if timeout of 60 seconds is reached).
+        This implementation forces Ray to start a new cluster instance via
+        `ray.init(address="local")` and then connecting to the
+        server via `ray.init(address="auto")`. The first call to
+        `ray.init(address="auto")` raises a `ConnectionError` and proceeds to
+        force-start a new ray cluster instance, followed by a second call to
+        `ray.init(address="auto")` which successfully connects to the server.
+
+        In the case of a Ray cluster already running, the first call to
+        `ray.init(address="auto")` will successfully connect to the server.
 
         Args:
             max_attempts: Number of retries to attempt to connect to an existing
@@ -75,6 +73,10 @@ class RayExecutor:
             retry_interval: Time to wait between retries. Defaults to 5 seconds.
         """
         level = getattr(logging, LOGGING_LEVEL)
+
+        # Ignore predefined RAY_ADDRESS environment variable.
+        if "RAY_ADDRESS" in os.environ:
+            del os.environ["RAY_ADDRESS"]
 
         st = time.time()
         attempt = 0
@@ -86,10 +88,10 @@ class RayExecutor:
             # Attempt to connect to an existing ray cluster in the background.
             try:
                 with console.status(
-                    f"[bold green] {self.__class__.__name__} :: Connecting to backend ... [/bold green]"
+                    "[bold green] InferenceExecutor :: Connecting to backend ... [/bold green]"
                 ) as status:
                     ray.init(
-                        address=self.spec.address,
+                        address="auto",
                         namespace=self.spec.namespace,
                         runtime_env=self.spec.runtime_env,
                         ignore_reinit_error=True,
@@ -98,74 +100,57 @@ class RayExecutor:
                         log_to_driver=level <= logging.ERROR,
                     )
                     status.stop()
-                    console.print(
-                        f"[bold green] ✓ {self.__class__.__name__} :: Connected to backend. (address={self.spec.address}) [/bold green]"
-                    )
+                    console.print("[bold green] ✓ InferenceExecutor :: Connected to backend. [/bold green]")
                 return True
-            except ConnectionError:
+            except ConnectionError as exc:
                 # If Ray head is not running (this results in a ConnectionError),
                 # start it in a background subprocess.
+                if attempt > 0:
+                    logger.error(
+                        f"Failed to connect to InferenceExecutor.\n"
+                        f"{exc}\n"
+                        f"Retrying {attempt}/{max_attempts} after {retry_interval}s..."
+                    )
                 self.start()
                 attempt += 1
-                logger.info(
-                    f"Failed to connect to Ray head. Retrying {attempt}/{max_attempts} after {retry_interval}s..."
-                )
+
                 time.sleep(retry_interval)
         return False
 
-    def start(self, wait: int = 5) -> Optional[int]:
-        """Start Ray head as daemon.
+    def start(self) -> None:
+        """Force-start a local instance of Ray head."""
+        level = getattr(logging, LOGGING_LEVEL)
 
-        Args:
-            wait: Time to wait for Ray to start. Defaults to 5 seconds.
-        """
         console = rich.console.Console()
         with console.status(
-            f"[bold green] {self.__class__.__name__} :: Starting ray head (as daemon) ... [/bold green]"
+            "[bold green] InferenceExecutor :: Backend initializing (as daemon) ... [/bold green]"
         ) as status:
-            # Check if Ray head is already running
-            if self.pid:
-                status.stop()
-                console.print(
-                    f"[bold yellow] {self.__class__.__name__} :: Ray head is already running. [/bold yellow]"
+            try:
+                ray.init(
+                    _node_name="nos-executor",
+                    address="local",
+                    namespace=self.spec.namespace,
+                    runtime_env=self.spec.runtime_env,
+                    ignore_reinit_error=False,
+                    include_dashboard=False,
+                    configure_logging=True,
+                    logging_level=logging.ERROR,
+                    log_to_driver=level <= logging.ERROR,
                 )
-                return self.pid
-            # Start Ray head if not running
-            RAY_TMP_DIR = NOS_TMP_DIR / "ray"
-            RAY_TMP_DIR.mkdir(parents=True, exist_ok=True)
-            cmd = f"ray start --head --node-ip-address localhost --port={NOS_RAY_GCS_PORT} --storage {RAY_TMP_DIR} --no-monitor"
-            proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            time.sleep(wait)
-            if proc.poll() != 0:
-                # Get the process output
-                stdout, stderr = proc.communicate()
-                raise RuntimeError(f"Failed to start Ray stdout={stdout}, stderr={stderr}.")
-            status.stop()
-            console.print(f"[bold green] ✓ {self.__class__.__name__} :: Ray head started. [/bold green]")
-            return self.pid
+                status.stop()
+            except ConnectionError as exc:
+                raise RuntimeError(f"Failed to start executor: exc={exc}.")
+            console.print("[bold green] ✓ InferenceExecutor :: Backend initialized. [/bold green]")
 
-    def stop(self, wait: int = 5) -> Optional[int]:
+    def stop(self) -> None:
         """Stop Ray head."""
         console = rich.console.Console()
-        attempt, max_attempts = 0, 5
-        while attempt < max_attempts:
-            with console.status(f"[bold green] {self.__class__.__name__} :: Stopping ray head ... [/bold green]"):
-                # Check if Ray head is running
-                if not self.pid:
-                    console.print("[bold yellow] Ray head is not running.[/bold yellow]")
-                    return
-                # Stop Ray head if pid is valid
-                cmd = "ray stop -f"
-                proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                time.sleep(wait)
-                if proc.poll() == 0:
-                    console.print(f"[bold green] ✓ {self.__class__.__name__} :: Ray head stopped. [/bold green]")
-                    return self.pid
-            attempt += 1
-            console.print(
-                f"[bold yellow] {self.__class__.__name__} :: Failed to stop Ray head. Retrying {attempt}/{max_attempts} after {wait}s ... [/bold yellow]"
-            )
-        raise RuntimeError("Failed to stop Ray.")
+        with console.status("[bold green] InferenceExecutor :: Backend stopping ... [/bold green]"):
+            try:
+                ray.shutdown()
+            except Exception as exc:
+                raise RuntimeError(f"Failed to stop executor: exc={exc}.")
+            console.print("[bold green] ✓ InferenceExecutor :: Backend stopped. [/bold green]")
 
     @property
     def pid(self) -> Optional[int]:
