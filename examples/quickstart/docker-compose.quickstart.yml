@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   nos-server:
-    image: autonomi/nos:0.0.0-cpu
+    image: autonomi/nos:latest-cpu
     command: nos-grpc-server
     ports:
       - 50051:50051

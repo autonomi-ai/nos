@@ -1,5 +1,6 @@
 mkdocs
 mkdocs-exclude
+mkdocs-include-markdown-plugin
 mkdocs-material
 mkdocs-pymdownx-material-extras
 mkdocs-same-dir
