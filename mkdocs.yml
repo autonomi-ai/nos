@@ -18,6 +18,7 @@ nav:
 - <strong>❓ Support</strong>: docs/SUPPORT.md
 
 plugins:
+- include-markdown
 - mkdocstrings:
     handlers:
       python:
@@ -38,15 +39,21 @@ plugins:
       - '.*\.(tmp|bin|tar)$'
 
 markdown_extensions:
-- md_in_html
 - admonition
-- pymdownx.highlight
-- pymdownx.extra
+- attr_list
+- md_in_html
 - pymdownx.emoji:
     emoji_index: !!python/name:materialx.emoji.twemoji
     emoji_generator: !!python/name:materialx.emoji.to_svg
+- pymdownx.extra
+- pymdownx.highlight
+- pymdownx.superfences
 - pymdownx.tabbed:
     alternate_style: true
+- pymdownx.tasklist:
+    custom_checkbox: true
+- tables
+
 
 theme:
   name: material
