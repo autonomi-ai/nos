@@ -6,6 +6,7 @@ docs_dir: .
 site_dir: site
 nav:
 - <strong>🏠 Home</strong>: README.md
+- <strong>🔥 Quickstart</strong>: docs/quickstart/QUICKSTART.md
 - <strong>📚 API Documentation</strong>:
   - client: docs/api/client.md
   - hub: docs/api/hub.md
