@@ -5,7 +5,6 @@ x-nos-common:
   volumes:
     - ~/.nosd:/app/.nos
     - /tmp/docker:/tmp
-    - /dev/shm:/dev/shm
   environment:
     - NOS_LOGGING=DEBUG
   shm_size: 4G

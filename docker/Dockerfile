@@ -23,37 +23,43 @@ RUN apt-get -y update \
 ENV CONDA_PATH=/opt/conda/envs/${PYENV}
 ENV CONDA_PREFIX=${CONDA_PATH}
 ENV CONDA_EXE=${CONDA_PATH}/bin/conda
-ENV PATH=${CONDA_PATH}/bin:$PATH
+ENV PATH=${CONDA_PATH}/bin:/opt/conda/bin:$PATH
+ENV CONDA_DEFAULT_ENV ${PYENV}
 
 # Install mambaforge
-COPY ./conda/envs/base-${TARGET}/env.yml /tmp/conda/envs/base-${TARGET}/env.yml
 RUN curl -sLo ~/mambaforge.sh "https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-$(uname)-$(uname -m).sh" \
   && chmod +x ~/mambaforge.sh \
   && ~/mambaforge.sh -b -p /opt/conda \
   && /opt/conda/bin/mamba init bash \
   && /opt/conda/bin/mamba create -n ${PYENV} python=${PYTHON_VERSION} -y \
-  && rm ~/mambaforge.sh \
-  && rm /tmp/conda/envs/base-${TARGET}/env.yml  \
-  && /opt/conda/bin/mamba clean -ya \
-  && rm -rf /opt/conda/pkgs/*
+  && rm ~/mambaforge.sh
 
 # NOS dependencies and install
-WORKDIR /app/$PROJECT
+WORKDIR /tmp/$PROJECT
 ADD pyproject.toml .
 ADD requirements requirements
+
 # Install torch (cpu/gpu) based on target
-RUN if [ "${TARGET}" = "cpu" ]; then \
-  /opt/conda/bin/mamba install -y pytorch torchvision cpuonly -c pytorch; \
+RUN --mount=type=cache,target=/opt/conda/pkgs/ \
+  if [ "${TARGET}" = "cpu" ]; then \
+    mamba install -yv pytorch torchvision cpuonly -c pytorch; \
   else \
-  /opt/conda/bin/mamba install -y pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia; \
+    mamba install -yv pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia; \
   fi
-# Iinstall client/server dependencies
-RUN pip install \
+
+# Install client/server dependencies
+RUN --mount=type=cache,target=~/.cache/pip \
+  pip install \
   -r requirements/requirements.txt \
-  -r requirements/requirements.server.txt \
-  && rm -rf ~/.cache/pip
+  -r requirements/requirements.server.txt
 ADD nos nos
-RUN pip install -e . --no-deps
+RUN pip install . --no-deps
+
+# Cleanup
+RUN /opt/conda/bin/mamba clean -ya \
+  && rm -rf /opt/conda/pkgs/* \
+  && rm -rf ~/.cache/pip \
+  && rm -rf /tmp/$PROJECT
 
 # NOS environment
 WORKDIR /app/$PROJECT
@@ -71,9 +77,10 @@ ENV RAY_USAGE_STATS_ENABLED 0
 ENV RAY_DATA_DISABLE_PROGRESS_BARS 1
 ENV RAY_CONDA_HOME=${CONDA_PATH}
 
-ENV PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}
-RUN echo "export PYTHONPATH=${PYTHONPATH}:/app/${PROJECT}" >> ~/.bashrc
+RUN echo "export CONDA_PATH=/opt/conda/envs/${PYENV}" >> ~/.bashrc
 RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
+RUN echo "export CONDA_DEFAULT_ENV=${PYENV}" >> ~/.bashrc
+RUN echo "mamba activate ${PYENV}" > ~/.bashrc
 
 CMD ["nos-grpc-server"]
 
@@ -81,7 +88,10 @@ CMD ["nos-grpc-server"]
 FROM base as test
 RUN apt-get update \
   && apt-get install make
-ADD tests tests
+ADD pyproject.toml .
+ADD requirements requirements
 ADD makefiles makefiles
 ADD Makefile .
+ADD nos nos
+ADD tests tests
 RUN pip install -e '.[test]'

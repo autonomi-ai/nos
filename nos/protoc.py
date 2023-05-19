@@ -29,6 +29,7 @@ class DynamicProtobufCompiler:
         sys.path.append(str(self.cache_dir))
 
         # Compile all proto files from all paths
+        logger.debug(f"Compiling protos from: {PROTO_PATHS}")
         for path in itertools.chain.from_iterable(Path(path).glob("*.proto") for path in PROTO_PATHS):
             logger.debug(f"Compiling {path}")
             self.compile(str(path))
