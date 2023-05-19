@@ -55,7 +55,7 @@ exclude = [
 ]
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "py.typed", "setup.bash", "setup.zsh"]
+"*" = ["*.json", "*.proto"]
 
 [tool.black]
 line-length = 119
