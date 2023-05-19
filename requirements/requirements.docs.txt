@@ -1,4 +1,8 @@
 mkdocs
+mkdocs-exclude
 mkdocs-material
+mkdocs-pymdownx-material-extras
+mkdocs-same-dir
 mkdocstrings
 mkdocstrings-python
+mkdocstrings[python]
