@@ -11,8 +11,7 @@ services:
       - NOS_LOGGING_LEVEL=INFO
     volumes:
       - ~/.nosd:/app/.nos
-      - tmp:/tmp
+      - /tmp:/tmp
     shm_size: 4G
-
 volumes:
   tmp:
