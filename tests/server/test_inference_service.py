@@ -1,7 +1,7 @@
 import pytest
 
 from nos.executors.ray import RayExecutor
-from nos.server import InferenceService
+from nos.server.service import InferenceService
 from nos.test.conftest import ray_executor  # noqa: F401
 
 

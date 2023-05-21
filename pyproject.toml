@@ -26,13 +26,11 @@ dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [tool.setuptools.dynamic]
 version = {attr = "nos.version.__version__"}
-dependencies = {file = [
-    "requirements/requirements.txt",
-    "requirements/requirements.server.txt",
-    ]}
+dependencies = {file = ["requirements/requirements.txt"]}
 
   [tool.setuptools.dynamic.optional-dependencies]
     torch = {file = ["requirements/requirements.torch.gpu.txt"]}
+    server = {file = ["requirements/requirements.server.txt","requirements/requirements.torch.gpu.txt"]}
     dev = {file = ["requirements/requirements.dev.txt"]}
     test = {file = ["requirements/requirements.test.txt"]}
     docs = {file = ["requirements/requirements.docs.txt"]}
@@ -51,7 +49,7 @@ dependency_links = [
 [tool.setuptools.packages.find]
 include = ["nos*","scripts*"]
 exclude = [
-    "nos*experimental*",
+    "nos*experimental",
 ]
 
 [tool.setuptools.package-data]
@@ -137,8 +135,9 @@ lines-after-imports = 2
 max-complexity = 10
 
 [tool.pytest.ini_options]
-addopts = "-sv -m 'not (skip) and not (benchmark) and not (e2e)'"
+addopts = "-sv -m 'not (skip) and not (client) and not (benchmark) and not (e2e)'"
 markers = [
+    "client", # Client-side tests
     "e2e", # End-to-end integration tests
     "benchmark", # Benchmark tests that is slow for basic CI
     "asyncio", # Async IO tests

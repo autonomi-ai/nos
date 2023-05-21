@@ -92,11 +92,18 @@ test-gpu: ## Basic GPU testing with single GPU
 	CUDA_VISIBLE_DEVICES="0" \
 	pytest -sv tests
 
+test-client: ## Basic client-side testing
+	CUDA_VISIBLE_DEVICES="" \
+	pytest -sv tests/client -m "client"
+
 test-benchmark: ## Testing with benchmarks (all GPUs)
 	pytest -sv tests -m "benchmark"
 
 test-e2e: ## End-to-end testing (all GPUs)
 	pytest -sv tests -m "e2e"
+
+test-all:  ## ALl tests including CPU, GPU, client, and e2e
+	make test-cpu test-gpu test-client test-e2e
 
 dist: clean ## builds source and wheel package
 	python -m build --sdist --wheel
