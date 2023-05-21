@@ -3,7 +3,6 @@ from enum import Enum
 from pathlib import Path
 
 import pytest
-import torch
 
 
 NOS_TEST_DATA_DIR = Path(__file__).parent.parent.parent / "tests/test_data"
@@ -28,6 +27,8 @@ def skip_if_no_torch_cuda(test_case):
     These tests are skipped when torch.cuda.is_available() is set to False. If
     `CUDA_VISIBLE_DEVICES=""` then, the decorated test is not run.
     """
+    import torch
+
     return pytest.mark.skipif(not torch.cuda.is_available(), reason="Requires CUDA")(test_case)
 
 
@@ -43,4 +44,6 @@ def skip_all_if_no_torch_cuda():
         pytestmark = skip_all_if_no_torch_cuda()
         ```
     """
+    import torch
+
     return pytest.mark.skipif(not torch.cuda.is_available(), reason="Requires CUDA")

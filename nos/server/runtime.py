@@ -60,7 +60,7 @@ class InferenceServiceRuntime:
             },
             volumes={
                 str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},
-                str(Path.home() / ".nosd" / "tmp"): {"bind": "/tmp", "mode": "rw"},
+                "/tmp": {"bind": "/tmp", "mode": "rw"},
             },
             shm_size=shm_size,
             detach=detach,

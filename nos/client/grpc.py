@@ -138,7 +138,7 @@ class InferenceClient:
             logger.debug(response.models)
             return list(response.models)
         except grpc.RpcError as e:
-            logger.error(f"Failed to list models ({e})")
+            raise NosClientException(f"Failed to list models ({e})")
 
     def GetModelInfo(self, model_name: str):
         """Get the relevant model information from the model name.
@@ -197,5 +197,4 @@ class InferenceClient:
             logger.debug(response)
             return response
         except grpc.RpcError as e:
-            logger.error(f"Failed to predict with model {model_name} ({e})")
             raise NosClientException(f"Failed to predict with model {model_name} ({e})")
