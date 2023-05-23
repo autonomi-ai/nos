@@ -120,19 +120,28 @@ class InferenceClient:
 
         Returns:
             nos_service_pb2_grpc.InferenceServiceStub: gRPC stub.
+
+        Raises:
+            NosClientException: If the server fails to respond to the connection request.
         """
         if not self._stub:
             self._channel = grpc.insecure_channel(self.address)
-            self._stub = nos_service_pb2_grpc.InferenceServiceStub(self._channel)
+            try:
+                self._stub = nos_service_pb2_grpc.InferenceServiceStub(self._channel)
+            except Exception as e:
+                raise NosClientException(f"Failed to connect to server ({e})")
         assert self._channel
         assert self._stub
         return self._stub
 
-    def GetServiceVersion(self) -> nos_service_pb2.ServiceInfoResponse:
+    def GetServiceVersion(self) -> str:
         """Get service version.
 
         Returns:
-            nos_service_pb2.ServiceInfoResponse: Service information.
+            str: Service version (e.g. 0.0.4).
+
+        Raises:
+            NosClientException: If the server fails to respond to the request.
         """
         try:
             response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
@@ -145,6 +154,9 @@ class InferenceClient:
 
         Returns:
             bool: True if the server is running, False otherwise.
+
+        Raises:
+            NosClientException: If the server fails to respond to the ping.
         """
         try:
             response: nos_service_pb2.PingResponse = self.stub.Ping(empty_pb2.Empty())
@@ -161,6 +173,9 @@ class InferenceClient:
 
         Returns:
             bool: True if the server is running, False otherwise.
+
+        Raises:
+            NosClientException: If the server fails to respond to the ping or times out.
         """
         exc = None
         st = time.time()
@@ -177,6 +192,9 @@ class InferenceClient:
 
         Returns:
             List[str]: List of model names.
+
+        Raises:
+            NosClientException: If the server fails to respond to the request.
         """
         try:
             response: nos_service_pb2.ModelListResponse = self.stub.ListModels(empty_pb2.Empty())
@@ -217,6 +235,9 @@ class InferenceClient:
 
         Returns:
             nos_service_pb2.InferenceResponse: Inference response.
+
+        Raises:
+            NosClientException: If the server fails to respond to the request.
         """
         if method not in ("txt2vec", "img2vec", "img2bbox", "txt2img"):
             raise NosClientException(f"Invalid method {method}")

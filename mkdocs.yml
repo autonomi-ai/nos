@@ -9,9 +9,7 @@ nav:
 - <strong>🔥 Quickstart</strong>: docs/QUICKSTART.md
 - <strong>📚 API Documentation</strong>:
   - nos.client: docs/api/client.md
-  - nos.executors: docs/api/executors.md
   - nos.hub: docs/api/hub.md
-  - nos.server: docs/api/server.md
 - <strong>🏁 Roadmap</strong>: docs/ROADMAP.md
 - <strong>🧾 Release Notes</strong>: docs/RELEASE-NOTES.md
 - <strong>🧑‍💻 Contributing</strong>: docs/CONTRIBUTING.md
@@ -19,10 +17,20 @@ nav:
 
 plugins:
 - include-markdown
+- autorefs
 - mkdocstrings:
+    enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
+    default_handler: python
     handlers:
       python:
         paths: [.]
+        options:
+          members_order: source
+          show_source: false
+          show_root_heading: yes
+          separate_signature: true
+          line_length: 80
+          show_bases: false
 - same-dir
 - search
 - exclude:
@@ -53,13 +61,20 @@ markdown_extensions:
 - pymdownx.tasklist:
     custom_checkbox: true
 - tables
+- toc:
+    permalink: True
+    toc_depth: 3
 
 
 theme:
   name: material
   custom_dir: docs/overrides
   features:
+    - navigation.path
     - navigation.expand
+    - navigation.indexes
+    - navigation.tabs
+    - navigation.tabs.sticky
 
 extra:
   analytics:
