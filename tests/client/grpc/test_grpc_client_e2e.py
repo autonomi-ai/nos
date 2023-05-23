@@ -28,6 +28,17 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     img = Image.open(NOS_TEST_IMAGE)
     img = np.array(img)
 
+    # Test client health
+    assert client.IsHealthy()
+
+    # Test waiting for server to start
+    # This call should be instantaneous as the server is already ready for the test
+    assert client.WaitForServer(timeout=180, retry_interval=5)
+
+    # Get service info
+    version = client.GetServiceVersion()
+    assert version is not None
+
     # List models
     models = client.ListModels()
     assert isinstance(models, list)
@@ -72,6 +83,13 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
 
     img = Image.open(NOS_TEST_IMAGE)
     img = np.array(img)
+
+    # Test client health
+    assert client.IsHealthy()
+
+    # Test waiting for server to start
+    # This call should be instantaneous as the server is already ready for the test
+    assert client.WaitForServer(timeout=180, retry_interval=5)
 
     # List models
     models = client.ListModels()

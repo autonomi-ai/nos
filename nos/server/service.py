@@ -112,6 +112,18 @@ class InferenceService(nos_service_pb2_grpc.InferenceServiceServicer):
         self.model_handle.pop(model_name)
         logger.info(f"Deleted model: {model_name}")
 
+    def Ping(self, request: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.PingResponse:
+        """Health check."""
+        return nos_service_pb2.PingResponse(status="ok")
+
+    def GetServiceInfo(
+        self, request: empty_pb2.Empty, context: grpc.ServicerContext
+    ) -> nos_service_pb2.ServiceInfoResponse:
+        """Get information on the service."""
+        from nos.version import __version__
+
+        return nos_service_pb2.ServiceInfoResponse(version=__version__)
+
     def ListModels(self, request: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.ModelListResponse:
         """List all models."""
         return nos_service_pb2.ModelListResponse(models=hub.list())
