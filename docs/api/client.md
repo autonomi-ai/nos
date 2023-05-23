@@ -1,10 +1,12 @@
-# NOS Inference Client
-
-::: nos.client.grpc
+## ::: nos.client.grpc.InferenceClient
+    handler: python
     options:
       members:
-      - InferenceClient
-      - InferenceClientState
-      - InferenceSession
+        - __init__
+        - IsHealthy
+        - WaitForServer
+        - GetServiceInfo
+        - GetModelInfo
+        - Predict
 
-::: nos.client.exceptions
+## ::: nos.client.grpc.InferenceSession

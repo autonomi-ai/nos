@@ -1,7 +1,11 @@
-# Hub
+## ::: nos.hub.Hub
 
-::: nos.hub
+## ::: nos.hub.config.NosHubConfig
 
-::: nos.hub.config
+## ::: nos.hub.config.TorchHubConfig
 
-::: nos.hub.spec
+## ::: nos.hub.config.HuggingFaceHubConfig
+
+## ::: nos.hub.config.MMLabConfig
+
+## ::: nos.hub.spec.ModelSpec
