@@ -1,4 +1,5 @@
 """gRPC client for NOS service."""
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import List, Union
@@ -126,6 +127,50 @@ class InferenceClient:
         assert self._channel
         assert self._stub
         return self._stub
+
+    def GetServiceVersion(self) -> nos_service_pb2.ServiceInfoResponse:
+        """Get service version.
+
+        Returns:
+            nos_service_pb2.ServiceInfoResponse: Service information.
+        """
+        try:
+            response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
+            return response.version
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to get service info ({e})")
+
+    def IsHealthy(self) -> bool:
+        """Check if the gRPC server is healthy.
+
+        Returns:
+            bool: True if the server is running, False otherwise.
+        """
+        try:
+            response: nos_service_pb2.PingResponse = self.stub.Ping(empty_pb2.Empty())
+            return response.status == "ok"
+        except grpc.RpcError as exc:
+            raise NosClientException(f"Failed to ping server ({exc})")
+
+    def WaitForServer(self, timeout: int = 60, retry_interval: int = 5) -> None:
+        """Ping the gRPC server for health.
+
+        Args:
+            timeout (int, optional): Timeout in seconds. Defaults to 60.
+            retry_interval (int, optional): Retry interval in seconds. Defaults to 5.
+
+        Returns:
+            bool: True if the server is running, False otherwise.
+        """
+        exc = None
+        st = time.time()
+        while time.time() - st <= timeout:
+            try:
+                return self.IsHealthy()
+            except Exception:
+                logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
+                time.sleep(retry_interval)
+        raise NosClientException(f"Failed to ping server ({exc})")
 
     def ListModels(self) -> List[str]:
         """List all models.

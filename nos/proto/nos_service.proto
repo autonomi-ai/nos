@@ -10,6 +10,8 @@ message ModelListResponse {
 }
 
 
+// Model information request specification
+// Currently, we provide batch size and number of replicas
 message ModelInfoRequest {
   string model_name = 1;
 }
@@ -49,9 +51,13 @@ message DeleteModelResponse {
 }
 
 
+// Inference request specification
 message InferenceRequest {
+  // Method to use for inference
   string method = 1;
+  // Model name to use for inference
   string model_name = 2;
+  // Input data (text or image)
   oneof request {
     TextRequest text_request = 3;
     ImageRequest image_request = 4;
@@ -63,8 +69,24 @@ message InferenceResponse {
   bytes result = 1;
 }
 
+
+// Nos server Ping / health response
+message PingResponse {
+    string status = 1;  // (e.g. "ok" or "not_ok")
+}
+
+message ServiceInfoResponse {
+    string version = 1;  // (e.g. "0.1.0")
+}
+
 // Service definition
 service InferenceService {
+  // Check health status of the inference server.
+  rpc Ping(google.protobuf.Empty) returns (PingResponse) {}
+
+  // Get service information (version, release date etc.)
+  rpc GetServiceInfo(google.protobuf.Empty) returns (ServiceInfoResponse) {}
+
   // List available models from Hugging Face Hub
   rpc ListModels(google.protobuf.Empty) returns (ModelListResponse) {};
 
