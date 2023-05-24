@@ -2,7 +2,7 @@ import pytest
 from typer.testing import CliRunner
 
 from nos.cli.cli import app_cli
-from nos.test.conftest import grpc_server_docker_runtime_cpu, grpc_server_docker_runtime_gpu    # noqa: F401
+from nos.test.conftest import grpc_server_docker_runtime_cpu, grpc_server_docker_runtime_gpu  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
 
 
