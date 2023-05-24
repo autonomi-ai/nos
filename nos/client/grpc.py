@@ -1,8 +1,8 @@
 """gRPC client for NOS service."""
 import time
-from contextlib import contextmanager
-from dataclasses import dataclass
-from typing import List, Union
+from dataclasses import dataclass, field
+from functools import lru_cache
+from typing import Any, Callable, Dict, List, Union
 
 import cloudpickle
 import grpc
@@ -11,37 +11,15 @@ from google.protobuf import empty_pb2
 from PIL import Image
 
 from nos.client.exceptions import NosClientException
+from nos.common import ModelSpec, TaskType
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
 from nos.protoc import import_module
+from nos.version import __version__
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
-
-
-@contextmanager
-def InferenceSession(stub: nos_service_pb2_grpc.InferenceServiceStub, model_name: str, num_replicas: int = 1):
-    """Remote model context manager.
-
-    Args:
-        stub (nos_service_pb2_grpc.InferenceServiceStub): gRPC stub.
-        model_name (str): Name of the model to init.
-        num_replicas (int): Number of replicas to init.
-
-    Yields:
-        None (NoneType): Nothing.
-    """
-    # Create inference stub and init model
-    request = nos_service_pb2.InitModelRequest(model_name=model_name, num_replicas=num_replicas)
-    response: nos_service_pb2.InitModelResponse = stub.InitModel(request)
-    logger.info(f"Init Model response: {response}")
-    # Yield so that the model inference can be done
-    yield
-    # Delete model
-    request = nos_service_pb2.DeleteModelRequest(model_name=model_name)
-    response: nos_service_pb2.DeleteModelResponse = stub.DeleteModel(request)
-    logger.info(f"Delete Model response: {response}")
 
 
 @dataclass
@@ -60,22 +38,22 @@ class InferenceClient:
 
     Usage:
         ```py
-        # Create client
-        >>> client = InferenceClient(address="localhost:50051")
 
-        # List all models registered with the server
-        # models = ['openai/clip-vit-base-patch32', ...]
-        >>> models = models client.ListModels()
+        >>> client = InferenceClient(address="localhost:50051")  # create client
+        >>> client.WaitForServer()  # wait for server to start
+        >>> client.CheckCompatibility()  # check compatibility with server
 
-        # Encode "Hello world!" with the CLIP text encoder
-        >>> client.Predict(method=MethodType.TXT2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
+        >>> client.ListModels()  # list all models registered
 
-        # Encode img with the CLIP visual encoder
-        >>> client.Predict(method=MethodType.IMG2VEC, model_name="openai/clip-vit-base-patch32", text="Hello world!")
+        >>> text_model = client.Module(TaskType.TEXT_EMBEDDING, "openai/clip-vit-base-patch32")  # instantiate CLIP module
+        >>> text_model(text="Hello world!")  # predict with CLIP
 
-        # Predict bounding-boxes from with FastRCNN
         >>> img = Image.open("test.jpg")
-        >>> client.Predict(method=MethodType.IMG2BBOX, model_name="torchvision/fasterrcnn_mobilenet_v3_large_320_fpn", img=img)
+        >>> visual_model = client.Module(TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32")  # instantiate CLIP module
+        >>> visual_model(images=img)  # predict with CLIP
+
+        >>> fastrcnn_model = client.Module(TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn")  # instantiate FasterRCNN module
+        >>> fastrcnn_model(images=img)
         ```
     """
 
@@ -102,7 +80,6 @@ class InferenceClient:
 
         Args:
             state (InferenceClientState): State of the client.
-
         Returns:
             None (NoneType): Nothing.
         """
@@ -120,7 +97,6 @@ class InferenceClient:
 
         Returns:
             nos_service_pb2_grpc.InferenceServiceStub: gRPC stub.
-
         Raises:
             NosClientException: If the server fails to respond to the connection request.
         """
@@ -134,27 +110,11 @@ class InferenceClient:
         assert self._stub
         return self._stub
 
-    def GetServiceVersion(self) -> str:
-        """Get service version.
-
-        Returns:
-            str: Service version (e.g. 0.0.4).
-
-        Raises:
-            NosClientException: If the server fails to respond to the request.
-        """
-        try:
-            response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
-            return response.version
-        except grpc.RpcError as e:
-            raise NosClientException(f"Failed to get service info ({e})")
-
     def IsHealthy(self) -> bool:
         """Check if the gRPC server is healthy.
 
         Returns:
             bool: True if the server is running, False otherwise.
-
         Raises:
             NosClientException: If the server fails to respond to the ping.
         """
@@ -170,10 +130,8 @@ class InferenceClient:
         Args:
             timeout (int, optional): Timeout in seconds. Defaults to 60.
             retry_interval (int, optional): Retry interval in seconds. Defaults to 5.
-
         Returns:
             bool: True if the server is running, False otherwise.
-
         Raises:
             NosClientException: If the server fails to respond to the ping or times out.
         """
@@ -187,80 +145,194 @@ class InferenceClient:
                 time.sleep(retry_interval)
         raise NosClientException(f"Failed to ping server ({exc})")
 
-    def ListModels(self) -> List[str]:
+    def GetServiceVersion(self) -> str:
+        """Get service version.
+
+        Returns:
+            str: Service version (e.g. 0.0.4).
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
+            return response.version
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to get service info ({e})")
+
+    def CheckCompatibility(self) -> bool:
+        """Check if the service version is compatible with the client.
+
+        Returns:
+            bool: True if the service version is compatible, False otherwise.
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        # TODO (spillai): For now, we enforce strict version matching
+        # until we have tests for client-server compatibility.
+        is_compatible = self.GetServiceVersion() == __version__
+        if not is_compatible:
+            raise NosClientException(
+                f"Client-Server version mismatch (client={__version__}, server={self.GetServiceVersion()})"
+            )
+        return is_compatible
+
+    def ListModels(self) -> List[ModelSpec]:
         """List all models.
 
         Returns:
-            List[str]: List of model names.
-
+            List[ModelInfo]: List of ModelInfo (name, task).
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
         try:
             response: nos_service_pb2.ModelListResponse = self.stub.ListModels(empty_pb2.Empty())
             logger.debug(response.models)
-            return list(response.models)
+            return [ModelSpec(name=minfo.name, task=TaskType(minfo.task)) for minfo in response.models]
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to list models ({e})")
 
-    def GetModelInfo(self, model_name: str):
+    def GetModelInfo(self, model_spec: ModelSpec) -> ModelSpec:
         """Get the relevant model information from the model name.
 
         Note: This may be possible only after initialization, as we need to inspect the
         HW to understand the configurable image resolutions, batch sizes etc.
 
         Args:
-            model_name (str): Model identifier (e.g. openai/clip-vit-base-patch32).
+            model_spec (ModelSpec): Model specification.
         """
-        raise NotImplementedError()
+        try:
+            response: nos_service_pb2.ModelInfoResponse = self.stub.GetModelInfo(
+                nos_service_pb2.ModelInfoRequest(
+                    request=nos_service_pb2.ModelInfo(task=model_spec.task.value, name=model_spec.name)
+                )
+            )
+            logger.debug(response)
+            spec: ModelSpec = cloudpickle.loads(response.response_bytes)
+            return spec
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to get model info ({e})")
 
-    def Predict(
+    @lru_cache(maxsize=32)  # noqa: B019
+    def Module(self, task: TaskType, model_name: str) -> "InferenceModule":
+        """Instantiate a model module.
+
+        Args:
+            task (TaskType): Task used for prediction.
+            model_name (str): Name of the model to init.
+        Returns:
+            InferenceModule: Inference module.
+        """
+        return InferenceModule(task, model_name, self)
+
+    @lru_cache(maxsize=32)  # noqa: B019
+    def ModuleFromSpec(self, spec: ModelSpec) -> "InferenceModule":
+        """Instantiate a model module from a model spec.
+
+        Args:
+            spec (ModelSpec): Model specification.
+        Returns:
+            InferenceModule: Inference module.
+        """
+        return InferenceModule(spec.task, spec.name, self)
+
+    def ModuleFromCls(self, cls: Callable) -> "InferenceModule":
+        raise NotImplementedError("ModuleFromCls not implemented yet.")
+
+    def Run(
         self,
-        method: str,
+        task: TaskType,
         model_name: str,
         img: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]] = None,
         text: str = None,
     ) -> nos_service_pb2.InferenceResponse:
-        """Predict with model identifier.
+        """Run module.
 
         Args:
-            method (str):
-                Method to use for prediction (one of MethodType.TXT2VEC, MethodType.IMG2VEC,
-                MethodType.IMG2BBOX, MethodType.TXT2IMG).
+            task (TaskType): Task used for prediction.
+                Tasks supported:
+                    (TaskType.OBJECT_DETECTION_2D, TaskType.IMAGE_SEGMENTATION_2D,
+                    TaskType.IMAGE_CLASSIFICATION, TaskType.IMAGE_GENERATION,
+                    TaskType.IMAGE_EMBEDDING, TaskType.TEXT_EMBEDDING)
             model_name (str):
                 Model identifier (e.g. openai/clip-vit-base-patch32).
             img (Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]):
                 Image or text to predict on.
             text (str): Prompt text to use for text-generation or embedding.
-
         Returns:
             nos_service_pb2.InferenceResponse: Inference response.
-
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
-        if method not in ("txt2vec", "img2vec", "img2bbox", "txt2img"):
-            raise NosClientException(f"Invalid method {method}")
+        module: InferenceModule = self.Module(task, model_name)
+        return module(img=img, text=text)
 
+
+@dataclass
+class InferenceModule:
+    """Inference module for remote model execution.
+
+    Usage:
+        ```python
+        # Create client
+        >>> client = InferenceClient()
+        # Instantiate new task module with specific model name
+        >>> model = client.Module(TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32")
+        # Predict with model using `__call__`
+        >>> predictions = model({"images": img})
+        ```
+    """
+
+    task: TaskType
+    """Task used for prediction.
+       (TaskType.OBJECT_DETECTION_2D, TaskType.IMAGE_SEGMENTATION_2D,
+        TaskType.IMAGE_CLASSIFICATION, TaskType.IMAGE_GENERATION,
+        TaskType.IMAGE_EMBEDDING, TaskType.TEXT_EMBEDDING)
+    """
+    model_name: str
+    """Model identifier (e.g. openai/clip-vit-base-patch32)."""
+    _client: InferenceClient
+    """gRPC client."""
+    _spec: ModelSpec = field(init=False)
+    """Model specification for this module."""
+
+    def __post_init__(self):
+        """Initialize the spec."""
+        self._spec = self._client.GetModelInfo(ModelSpec(name=self.model_name, task=self.task))
+
+    @property
+    def stub(self):
+        return self._client.stub
+
+    def GetModelInfo(self) -> ModelSpec:
+        """Get the relevant model information from the model name."""
+        return self._spec
+
+    def __call__(self, **inputs: Dict[str, Any]) -> nos_service_pb2.InferenceResponse:
+        """Call the instantiated module/model.
+
+        Args:
+            **inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
+                defined in the ModelSpec.signature.inputs.
+        Returns:
+            nos_service_pb2.InferenceResponse: Inference response.
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        # Check if the input dictionary is consistent
+        # with inputs/outputs defined in `spec.signature`
+        # and then encode it.
+        inputs = self._spec.signature.encode_inputs(inputs)
+        request = nos_service_pb2.InferenceRequest(
+            model=nos_service_pb2.ModelInfo(
+                task=self.task.value,
+                name=self.model_name,
+            ),
+            inputs=inputs,
+        )
         try:
-            if method in ("txt2vec", "txt2img"):
-                response = self.stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method=method,
-                        model_name=model_name,
-                        text_request=nos_service_pb2.TextRequest(text=text),
-                    )
-                )
-            elif method in ("img2vec", "img2bbox"):
-                response = self.stub.Predict(
-                    nos_service_pb2.InferenceRequest(
-                        method=method,
-                        model_name=model_name,
-                        image_request=nos_service_pb2.ImageRequest(image_bytes=cloudpickle.dumps(img, protocol=4)),
-                    )
-                )
-            response = cloudpickle.loads(response.result)
+            response = self.stub.Run(request)
+            response = cloudpickle.loads(response.response_bytes)
             logger.debug(response)
             return response
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to predict with model {model_name} ({e})")
+            raise NosClientException(f"Failed to run model {self.model_name} ({e})")

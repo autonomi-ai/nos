@@ -46,21 +46,10 @@ def test_clip_encode_image(model):
 @skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.HUB)
 def test_clip_model_variants():
-    model = CLIP(model_name="openai/clip-vit-base-patch32")
-    _test_clip_encode_text(model, D=512),
-    _test_clip_encode_image(model, D=512)
-
-    model = CLIP(model_name="openai/clip-vit-large-patch14")
-    _test_clip_encode_text(model, D=768),
-    _test_clip_encode_image(model, D=768)
-
-    model = CLIP(model_name="laion/CLIP-ViT-H-14-laion2B-s32B-b79K")
-    _test_clip_encode_text(model, D=1024),
-    _test_clip_encode_image(model, D=1024)
-
-    model = CLIP(model_name="laion/CLIP-ViT-L-14-laion2B-s32B-b82K")
-    _test_clip_encode_text(model, D=768),
-    _test_clip_encode_image(model, D=768)
+    for model_name in CLIP.configs.keys():
+        model = CLIP(model_name=model_name)
+        _test_clip_encode_text(model, D=model.cfg.D)
+        _test_clip_encode_image(model, D=model.cfg.D)
 
 
 @skip_if_no_torch_cuda

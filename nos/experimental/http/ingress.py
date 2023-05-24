@@ -6,7 +6,7 @@ from ray import serve
 from ray.serve.handle import RayServeDeploymentHandle
 from rich.console import Console
 
-from nos.hub import MethodType
+from nos.hub import TaskType
 from nos.serve.service import (
     Image2VecRequest,
     ImageResponse,
@@ -39,7 +39,7 @@ class APIIngress:
     async def predict(self, request: PredictionRequest):
         """Predict using the model."""
         logger.error(f"Received request: {request}")
-        if request.method == MethodType.TXT2IMG.value:
+        if request.method == TaskType.IMAGE_GENERATION.value:
             req: Text2ImageRequest = request.request
             if not len(req.prompt):
                 raise HTTPException(status_code=400, detail="Prompt cannot be empty.")
@@ -50,14 +50,14 @@ class APIIngress:
             image.save(file_stream, "PNG")
             return PredictionResponse(response=ImageResponse.from_pil(image))
 
-        elif request.method == MethodType.TXT2VEC.value:
+        elif request.method == TaskType.TEXT_EMBEDDING.value:
             req: Text2VecRequest = request.request
             logger.info(f"Encoding text: {req.text}")
             response_ref = await self.handle.encode_text.remote(req.text)
             embedding = await response_ref
             return PredictionResponse(response=VecResponse.from_numpy(embedding.ravel()))
 
-        elif request.method == MethodType.IMG2VEC.value:
+        elif request.method == TaskType.IMAGE_EMBEDDING.value:
             req: Image2VecRequest = request.request
             response_ref = await self.handle.encode_image.remote(req.image)
             embedding = await response_ref

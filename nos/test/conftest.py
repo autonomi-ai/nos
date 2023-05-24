@@ -37,7 +37,7 @@ def grpc_server():
     """Test gRPC server (Port: 50052)."""
     from loguru import logger
 
-    from nos.server.service import InferenceService
+    from nos.server.service import InferenceServiceImpl
 
     logger.info(f"Starting gRPC test server on port: {GRPC_TEST_PORT}")
     options = [
@@ -46,7 +46,7 @@ def grpc_server():
         ("grpc.max_receive_message_length", 512 * 1024 * 1024),
     ]
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=1), options=options)
-    nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceService(), server)
+    nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)
     server.add_insecure_port(f"[::]:{GRPC_TEST_PORT}")
     server.start()
     yield server

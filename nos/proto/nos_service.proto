@@ -5,76 +5,64 @@ import "google/protobuf/empty.proto";
 package nos.inference;
 
 
-message ModelListResponse {
-  repeated string models = 1;
-}
-
-
-// Model information request specification
-// Currently, we provide batch size and number of replicas
-message ModelInfoRequest {
-  string model_name = 1;
-}
-
-message ModelInfoResponse {
-}
-
-
+// Base text request
 message TextRequest {
   string text = 1;
 }
 
 
+// Base image request
 message ImageRequest {
   bytes image_bytes = 1;
 }
 
 
-message InitModelRequest {
-  string model_name = 1;
-  optional int32 num_replicas = 2;
+// Model information
+message ModelInfo {
+  // Task identifier (e.g. "image_generation", "image_embedding", "object_detection" etc)
+  string task = 1;
+  // Model identifier (e.g. "openai/clip-vit-large-patch14")
+  string name = 2;
 }
 
-
-message InitModelResponse {
-  string result = 1;
+// ModelList response
+message ModelListResponse {
+  repeated ModelInfo models = 1;
 }
 
-
-message DeleteModelRequest {
-  string model_name = 1;
+// Model information request
+message ModelInfoRequest {
+  ModelInfo request = 1;
 }
 
-
-message DeleteModelResponse {
-  string result = 1;
+// Model information response
+// Note (spillai): We cloudpickle `ModelSpec` and return the bytes.
+message ModelInfoResponse {
+  bytes response_bytes = 1;
 }
-
 
 // Inference request specification
+// Note (spillai): We cloudpickle the input dictionary values (image, etc)
+// and do not support any other serialization methods.
 message InferenceRequest {
-  // Method to use for inference
-  string method = 1;
-  // Model name to use for inference
-  string model_name = 2;
-  // Input data (text or image)
-  oneof request {
-    TextRequest text_request = 3;
-    ImageRequest image_request = 4;
-  }
+  ModelInfo model = 1;
+  map <string, bytes> inputs = 2;
 }
 
-
+// Inference response specification
+// Note (spillai): We serialize all the outputs with cloudpickle
+// and do not support any other serialization methods.
 message InferenceResponse {
-  bytes result = 1;
+  bytes response_bytes = 1;
 }
 
 
-// Nos server Ping / health response
+// Ping / healthcheck response
 message PingResponse {
     string status = 1;  // (e.g. "ok" or "not_ok")
 }
 
+// Service information repsonse
 message ServiceInfoResponse {
     string version = 1;  // (e.g. "0.1.0")
 }
@@ -90,15 +78,17 @@ service InferenceService {
   // List available models from Hugging Face Hub
   rpc ListModels(google.protobuf.Empty) returns (ModelListResponse) {};
 
-  // Load model from Hugging Face Hub
-  rpc InitModel(InitModelRequest) returns (InitModelResponse) {}
-
-  // Delete model from deployment
-  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {}
-
   // Get model information from the deployment
   rpc GetModelInfo(ModelInfoRequest) returns (ModelInfoResponse) {};
 
-  // Perform text-to-vector prediction
-  rpc Predict(InferenceRequest) returns (InferenceResponse) {}
+  // Run the inference request
+  rpc Run(InferenceRequest) returns (InferenceResponse) {}
+
+  // Load model from Hugging Face Hub
+  // TODO (spillai): To be implemented later (for power-users)
+  // rpc InitModel(InitModelRequest) returns (InitModelResponse) {}
+
+  // Delete model from deployment
+  // TODO (spillai): To be implemented later (for power-users)
+  // rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {}
 }

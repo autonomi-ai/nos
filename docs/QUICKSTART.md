@@ -46,7 +46,7 @@
     ```python
     from nos.client import InferenceClient
 
-    client = InferenceClient("localhost:50051")
+    client = InferenceClient()
     response = client.Predict(
         method="txt2img",
         model="stabilityai/stable-diffusion-2",
