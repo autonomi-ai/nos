@@ -9,4 +9,10 @@
         - GetModelInfo
         - Predict
 
-## ::: nos.client.grpc.InferenceSession
+## ::: nos.client.grpc.InferenceModule
+    handler: python
+    options:
+      members:
+        - __init__
+        - GetModelInfo
+        - __call__

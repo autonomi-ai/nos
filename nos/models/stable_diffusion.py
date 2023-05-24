@@ -1,9 +1,10 @@
-from typing import List
+from typing import List, Union
 
 import torch
 from PIL import Image
 
 from nos import hub
+from nos.common import TaskType, TensorSpec
 
 
 class StableDiffusion2:
@@ -49,22 +50,26 @@ class StableDiffusion2:
 
     def __call__(
         self,
-        prompt: str,
+        prompts: Union[str, List[str]],
         num_images: int = 1,
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
         height: int = None,
         width: int = None,
     ) -> List[Image.Image]:
+        """Generate images from text prompt."""
+        if isinstance(prompts, str):
+            prompts = [prompts]
         with torch.inference_mode():
             with torch.autocast("cuda"):
-                return self.pipe(
-                    [prompt] * num_images,
+                images = self.pipe(
+                    prompts * num_images,
                     num_inference_steps=num_inference_steps,
                     guidance_scale=guidance_scale,
                     height=height,
                     width=width,
                 ).images
+                return images
 
 
 # Register the model with the hub
@@ -75,8 +80,11 @@ class StableDiffusion2:
 #
 hub.register(
     "stabilityai/stable-diffusion-2",
-    "txt2img",
+    TaskType.IMAGE_GENERATION,
     StableDiffusion2,
-    args=("stabilityai/stable-diffusion-2",),
-    kwargs={"scheduler": "ddim", "dtype": torch.float16},
+    init_args=("stabilityai/stable-diffusion-2",),
+    init_kwargs={"scheduler": "ddim", "dtype": torch.float16},
+    method_name="__call__",
+    inputs={"prompts": List[str]},
+    outputs={"images": TensorSpec(shape=(1, None, None, 3), dtype="uint8")},
 )

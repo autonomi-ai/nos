@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from PIL import Image
 
-from nos import hub
 from nos.hub import MMLabConfig
 
 
@@ -58,16 +57,12 @@ class MMDetection:
             }
 
 
-hub.register(
-    "open-mmlab/efficientdet-d3",
-    "img2bbox",
-    MMDetection,
-    args=("open-mmlab/efficientdet-d3",),
-)
-
-hub.register(
-    "open-mmlab/faster-rcnn",
-    "img2bbox",
-    MMDetection,
-    args=("open-mmlab/faster-rcnn",),
-)
+# TODO (spillai): Skip registration until new mmlab docker runtime is available
+# for model_name in MMDetection.configs:
+#     hub.register(
+#         model_name,
+#         TaskType.OBJECT_DETECTION_2D,
+#         MMDetection,
+#         init_args=(model_name,),
+#         method_name="predict",
+#     )

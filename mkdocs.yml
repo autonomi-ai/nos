@@ -9,6 +9,7 @@ nav:
 - <strong>🔥 Quickstart</strong>: docs/QUICKSTART.md
 - <strong>📚 API Documentation</strong>:
   - nos.client: docs/api/client.md
+  - nos.common: docs/api/common.md
   - nos.hub: docs/api/hub.md
 - <strong>🏁 Roadmap</strong>: docs/ROADMAP.md
 - <strong>🧾 Release Notes</strong>: docs/RELEASE-NOTES.md
@@ -63,7 +64,7 @@ markdown_extensions:
 - tables
 - toc:
     permalink: True
-    toc_depth: 3
+    toc_depth: 4
 
 
 theme:

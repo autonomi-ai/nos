@@ -15,6 +15,6 @@
 
 ::: nos.server.service.ModelHandle
 
-::: nos.server.service.InferenceService
+::: nos.server.service.InferenceServiceImpl
 
 ::: nos.server.service.serve

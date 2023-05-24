@@ -46,8 +46,10 @@ clean-build: ## remove build artifacts
 	rm -fr build/
 	rm -fr dist/
 	rm -fr .eggs/
+	rm -fr site/
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
+
 
 clean-pyc: ## remove Python file artifacts
 	find . -name '*.pyc' -exec rm -f {} +
@@ -92,7 +94,7 @@ test-gpu: ## Basic GPU testing with single GPU
 	CUDA_VISIBLE_DEVICES="0" \
 	pytest -sv tests
 
-test-client: ## Basic client-side testing
+test-client: docker-build-cpu docker-build-gpu ## Basic client-side testing
 	CUDA_VISIBLE_DEVICES="" \
 	pytest -sv tests/client -m "client"
 

@@ -90,6 +90,7 @@ class RayExecutor:
                 with console.status(
                     "[bold green] InferenceExecutor :: Connecting to backend ... [/bold green]"
                 ) as status:
+                    logger.debug(f"Connecting to executor: namespace={self.spec.namespace}")
                     ray.init(
                         address="auto",
                         namespace=self.spec.namespace,
@@ -101,6 +102,9 @@ class RayExecutor:
                     )
                     status.stop()
                     console.print("[bold green] ✓ InferenceExecutor :: Connected to backend. [/bold green]")
+                    logger.debug(
+                        f"Connected to executor: namespace={self.spec.namespace} (time={time.time() - st:.2f}s)"
+                    )
                 return True
             except ConnectionError as exc:
                 # If Ray head is not running (this results in a ConnectionError),
@@ -111,21 +115,26 @@ class RayExecutor:
                         f"{exc}\n"
                         f"Retrying {attempt}/{max_attempts} after {retry_interval}s..."
                     )
+                else:
+                    logger.debug("No executor found, starting a new one")
                 self.start()
                 attempt += 1
 
                 time.sleep(retry_interval)
+        logger.error(f"Failed to connect to InferenceExecutor: namespace={self.spec.namespace}.")
         return False
 
     def start(self) -> None:
         """Force-start a local instance of Ray head."""
         level = getattr(logging, LOGGING_LEVEL)
 
+        st = time.time()
         console = rich.console.Console()
         with console.status(
             "[bold green] InferenceExecutor :: Backend initializing (as daemon) ... [/bold green]"
         ) as status:
             try:
+                logger.debug(f"Starting executor: namespace={self.spec.namespace}")
                 ray.init(
                     _node_name="nos-executor",
                     address="local",
@@ -137,18 +146,24 @@ class RayExecutor:
                     logging_level=logging.ERROR,
                     log_to_driver=level <= logging.ERROR,
                 )
+                logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - st:.2f}s)")
                 status.stop()
             except ConnectionError as exc:
+                logger.error(f"Failed to start executor: exc={exc}.")
                 raise RuntimeError(f"Failed to start executor: exc={exc}.")
             console.print("[bold green] ✓ InferenceExecutor :: Backend initialized. [/bold green]")
+            logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - st}s)")
 
     def stop(self) -> None:
         """Stop Ray head."""
         console = rich.console.Console()
         with console.status("[bold green] InferenceExecutor :: Backend stopping ... [/bold green]"):
             try:
+                logger.debug(f"Stopping executor: namespace={self.spec.namespace}")
                 ray.shutdown()
+                logger.debug(f"Stopped executor: namespace={self.spec.namespace}")
             except Exception as exc:
+                logger.error(f"Failed to stop executor: exc={exc}.")
                 raise RuntimeError(f"Failed to stop executor: exc={exc}.")
             console.print("[bold green] ✓ InferenceExecutor :: Backend stopped. [/bold green]")
 
@@ -163,5 +178,6 @@ class RayExecutor:
 
 def init(*args, **kwargs) -> bool:
     """Initialize Ray executor."""
+    logger.debug(f"Initializing executor: args={args}, kwargs={kwargs}")
     exector = RayExecutor.get()
     return exector.init(*args, **kwargs)
