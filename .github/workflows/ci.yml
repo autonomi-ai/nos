@@ -11,7 +11,8 @@ env:
 
 jobs:
   conda-test-cpu:
-    name: Test conda env (${{ matrix.python-version }}, ${{ matrix.os }})
+    # name: Test conda env (${{ matrix.python-version }}, ${{ matrix.os }})
+  name: Test conda env
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
