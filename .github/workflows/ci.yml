@@ -11,7 +11,7 @@ env:
 
 jobs:
   conda-test-cpu:
-    # name: Test conda env (${{ matrix.python-version }}, ${{ matrix.os }})
+  # This needs to have a non-parametrized name to show up in gating actions
   name: Test conda env
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -53,7 +53,7 @@ jobs:
         run: make test-cpu
 
   docker-test-cpu:
-    name: Test conda env in docker (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Test conda env in docker
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
