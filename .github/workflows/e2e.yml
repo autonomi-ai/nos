@@ -8,8 +8,8 @@ env:
 
 jobs:
   docker-test-e2e:
-    name: Self-hosted Test env (${{ matrix.python-version }}, ${{ matrix.os }})
-    runs-on: self-hosted
+    name: End-to-end tests (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -39,10 +39,8 @@ jobs:
           path: /usr/share/miniconda3/envs/nos-${{ matrix.os }}-${{ matrix.python-version }}
           key: conda-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('conda/envs/base-gpu/env.yml') }}-${{ hashFiles('pyproject.toml') }}-${{ env.CACHE_NUMBER }}
         id: cache
-      - name: Install dependencies (GPU)
-        run: make develop
+      - name: Install dependencies (e2e)
+        run: pip install .[server,torch,test]
         if: steps.cache.outputs.cache-hit != 'true'
-      - name: Quality Check
-        run: make lint
-      - name: Test (GPU)
+      - name: Test (e2e)
         run: make test-e2e

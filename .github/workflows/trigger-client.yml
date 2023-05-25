@@ -5,7 +5,7 @@ on:
 
 jobs:
   call-benchmark:
-    runs-on: self-hosted
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3 # Necessary to access local action
       - name: Trigger benchmark workflow
