@@ -1,0 +1,13 @@
+name: Pull request comment to run client tests
+on:
+  issue_comment:
+    types: [created, edited]
+
+jobs:
+  call-benchmark:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3 # Necessary to access local action
+      - name: Trigger benchmark workflow
+        uses: ./.github/workflows/client
+        if: contains(github.event.comment.body, '/benchmark') && github.event.issue.pull_request    # check if the comments come from pull request, exclude those from issue.

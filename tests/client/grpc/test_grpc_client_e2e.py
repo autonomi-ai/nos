@@ -70,6 +70,12 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
         assert isinstance(response, dict)
         assert "image" in response
 
+    # IMG2BBOX
+    method, model_name = "img2bbox", "open-mmlab/faster-rcnn"
+    for _ in tqdm(range(1), desc=f"Bench [method{method}, model_name={model_name}]"):
+        response = client.Predict(method=method, model_name=model_name, img=img)
+        assert isinstance(response, dict)
+
 
 @pytest.mark.client
 def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: F811
@@ -120,3 +126,9 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     for _ in tqdm(range(1), desc=f"Bench [method{method}, model_name={model_name}]"):
         with pytest.raises(Exception):
             response = client.Predict(method=method, model_name=model_name, text="a cat dancing on the grass.")
+
+    # IMG2BBOX
+    method, model_name = "img2bbox", "open-mmlab/faster-rcnn"
+    for _ in tqdm(range(1), desc=f"Bench [method{method}, model_name={model_name}]"):
+        with pytest.raises(Exception):
+            response = client.Predict(method=method, model_name=model_name, img=img)
