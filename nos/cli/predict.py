@@ -170,3 +170,36 @@ def _predict_img2bbox(
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold red]{exc}[/bold red]")
             return
+        
+
+@predict_cli.command("segmentation", help="Propose a zero-shot segmentation for this image.")
+def _predict_segmentation(
+    ctx: typer.Context,
+    model_name: str = typer.Option(
+        "facebook/sam-vit-large",
+        "-m",
+        "--model-name",
+        help="Name of the model to use (e.g. torchvision/fasterrcnn_mobilenet_v3_large_320_fpn).",
+    ),
+    filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
+) -> None:
+    from PIL import Image
+
+    img = Image.open(filename).resize((640, 480))
+    with rich.status.Status("[bold green] Predict segmentations ...[/bold green]"):
+
+        st = time.perf_counter()
+        try:
+            masks = ctx.obj.client.Predict(
+                method="segmentation",
+                model_name=model_name,
+                img=img,
+            )
+        except NosClientException as exc:
+            console.print(f"[red] ✗ Failed to predict segmentations. [/red]\n[bold red]{exc}[/bold red]")
+            return
+
+    console.print(
+        f"[bold green] ✓ Generated masks ({masks['image']}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
+    )
+
