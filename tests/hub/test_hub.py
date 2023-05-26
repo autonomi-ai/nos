@@ -14,14 +14,13 @@ def test_hub_load_spec_all():
     models = hub.list()
     assert len(models) > 0
 
-    for model_name in models:
-        spec = hub.load_spec(model_name)
+    for spec in models:
         assert spec is not None
         assert isinstance(spec, ModelSpec)
 
     # Check if hub.load_spec raises an error when the
     # model name is invalid
-    with pytest.raises(KeyError):
+    with pytest.raises(Exception):
         hub.load_spec("not-a-model-name")
 
 

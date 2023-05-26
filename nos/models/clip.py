@@ -6,29 +6,38 @@ import torch
 from PIL import Image
 
 from nos import hub
+from nos.common import EmbeddingSpec, ImageSpec, TaskType
 from nos.hub import HuggingFaceHubConfig
 
 
 @dataclass(frozen=True)
 class CLIPConfig(HuggingFaceHubConfig):
-    pass
+    D: int = 512
 
 
 class CLIP:
     """CLIP model for image and text encoding."""
 
     configs = {
+        "openai/clip": CLIPConfig(
+            model_name="openai/clip-vit-base-patch32",
+            D=512,
+        ),
         "openai/clip-vit-base-patch32": CLIPConfig(
             model_name="openai/clip-vit-base-patch32",
+            D=512,
         ),
         "openai/clip-vit-large-patch14": CLIPConfig(
             model_name="openai/clip-vit-large-patch14",
+            D=768,
         ),
         "laion/CLIP-ViT-H-14-laion2B-s32B-b79K": CLIPConfig(
             model_name="laion/CLIP-ViT-H-14-laion2B-s32B-b79K",
+            D=1024,
         ),
         "laion/CLIP-ViT-L-14-laion2B-s32B-b82K": CLIPConfig(
             model_name="laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
+            D=768,
         ),
     }
 
@@ -44,19 +53,21 @@ class CLIP:
         self.processor = CLIPProcessor.from_pretrained(model_name)
 
     def encode_image(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
+        """Encode image into an embedding."""
         with torch.inference_mode():
+            if isinstance(images, (np.ndarray, Image.Image)):
+                images = [images]
             inputs = self.processor(images=images, return_tensors="pt").to(self.device)
             image_features = self.model.get_image_features(**inputs)
             return image_features.cpu().numpy()
 
-    def encode_text(self, text: Union[str, List[str]]) -> np.ndarray:
+    def encode_text(self, texts: Union[str, List[str]]) -> np.ndarray:
+        """Encode text into an embedding."""
         with torch.inference_mode():
-            if isinstance(text, str):
-                text = [
-                    text,
-                ]
+            if isinstance(texts, str):
+                texts = [texts]
             inputs = self.tokenizer(
-                text,
+                texts,
                 padding=True,
                 return_tensors="pt",
             ).to(self.device)
@@ -64,6 +75,24 @@ class CLIP:
             return text_features.cpu().numpy()
 
 
-# Register all CLIP models
+# Register all CLIP models (for both tasks img2vec and txt2vec)
 for model_name in CLIP.configs:
-    hub.register(model_name, "txt2vec", CLIP, args=(model_name,))
+    cfg = CLIP.configs[model_name]
+    hub.register(
+        model_name,
+        TaskType.TEXT_EMBEDDING,
+        CLIP,
+        init_args=(model_name,),
+        method_name="encode_text",
+        inputs={"texts": List[str]},
+        outputs={"embedding": EmbeddingSpec(shape=(None, cfg.D), dtype="float32")},
+    )
+    hub.register(
+        model_name,
+        TaskType.IMAGE_EMBEDDING,
+        CLIP,
+        init_args=(model_name,),
+        method_name="encode_image",
+        inputs={"images": ImageSpec(shape=(None, None, None, 3), dtype="uint8")},
+        outputs={"embedding": EmbeddingSpec(shape=(None, cfg.D), dtype="float32")},
+    )

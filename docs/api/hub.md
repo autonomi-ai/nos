@@ -7,5 +7,3 @@
 ## ::: nos.hub.config.HuggingFaceHubConfig
 
 ## ::: nos.hub.config.MMLabConfig
-
-## ::: nos.hub.spec.ModelSpec

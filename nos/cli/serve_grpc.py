@@ -19,6 +19,7 @@ import typer
 
 from nos.client import InferenceClient
 from nos.client.exceptions import NosClientException
+from nos.common import TaskType
 
 
 serve_grpc_cli = typer.Typer(name="serve-grpc", help="NOS gRPC Serve CLI.", no_args_is_help=True)
@@ -36,7 +37,7 @@ class gRPCConfig:
 @serve_grpc_cli.callback()
 def grpc_config(
     ctx: typer.Context,
-    address: str = typer.Option("localhost:50051", "-a", "--address", help="Address of the gRPC server."),
+    address: str = typer.Option("[::]:50051", "-a", "--address", help="Address of the gRPC server."),
 ):
     """Common gRPC options"""
     client = InferenceClient(address)
@@ -71,12 +72,13 @@ def _predict_img2vec(
     img = Image.open(filename)
 
     st = time.perf_counter()
-    with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
-        try:
-            response = ctx.obj.client.Predict(method="img2vec", model_name=model_name, img=img)
-        except NosClientException as exc:
-            console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
-            return
+    # with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
+    try:
+        model = ctx.obj.client.Module(task=TaskType.IMAGE_EMBEDDING, model_name=model_name)
+        response = model(images=img)
+    except NosClientException as exc:
+        console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
+        return
     console.print(
         f"[bold green] ✓ Generated embedding ((1, {response['embedding'].shape[-1]}), time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
     )
@@ -98,7 +100,8 @@ def _predict_txt2vec(
     st = time.perf_counter()
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
         try:
-            response = ctx.obj.client.Predict(method="txt2vec", model_name=model_name, text=prompt)
+            model = ctx.obj.client.Module(task=TaskType.TEXT_EMBEDDING, model_name=model_name)
+            response = model(texts=prompt)
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
             return
@@ -124,12 +127,13 @@ def _predict_txt2img(
     st = time.perf_counter()
     with rich.status.Status("[bold green] Generating image ...[/bold green]"):
         try:
-            response = ctx.obj.client.Predict(method="txt2img", model_name=model_name, text=prompt)
+            model = ctx.obj.client.Module(task=TaskType.IMAGE_GENERATION, model_name=model_name)
+            response = model(prompts=prompt)
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
             return
     console.print(
-        f"[bold green] ✓ Generated image ({response['image']}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
+        f"[bold green] ✓ Generated image ({response['images']}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
     )
 
 
@@ -151,11 +155,8 @@ def _predict_img2bbox(
 
         st = time.perf_counter()
         try:
-            response = ctx.obj.client.Predict(
-                method="img2bbox",
-                model_name=model_name,
-                img=img,
-            )
+            model = ctx.obj.client.Module(task=TaskType.OBJECT_DETECTION_2D, model_name=model_name)
+            response = model(images=img)
             scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
             console.print(
                 f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes.shape}, scores={scores.shape}, labels={labels.shape}, time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"

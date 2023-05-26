@@ -7,6 +7,7 @@ import torchvision.transforms.functional as F
 from PIL import Image
 
 from nos import hub
+from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.hub import TorchHubConfig
 
 
@@ -57,7 +58,14 @@ class FasterRCNN:
 
 hub.register(
     "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
-    "img2bbox",
+    TaskType.OBJECT_DETECTION_2D,
     FasterRCNN,
-    args=("torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",),
+    init_args=("torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",),
+    method_name="predict",
+    inputs={"images": ImageSpec(shape=(None, None, None, 3), dtype="uint8")},
+    outputs={
+        "scores": TensorSpec(shape=(None, None), dtype="float32"),
+        "labels": TensorSpec(shape=(None, None), dtype="float32"),
+        "bboxes": TensorSpec(shape=(None, None, 4), dtype="float32"),
+    },
 )
