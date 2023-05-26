@@ -33,10 +33,11 @@ class SAM:
         self.model.eval()
         self.processor = SamProcessor.from_pretrained(model_name)
 
-    def segment_image(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
+    def predict(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
         with torch.inference_mode():
             # empty points for now
-            inputs = self.processor(images=images, input_points = [], return_tensors="pt").to(self.device)
+            input_points = [[[10, 10]]]
+            inputs = self.processor(images=images, input_points=input_points, return_tensors="pt").to(self.device)
             outputs = self.model(**inputs)
             masks = self.processor.post_process_masks(outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu())
             return masks.cpu().numpy()
