@@ -1,24 +1,25 @@
 from itertools import product
-from typing import List
 
+import numpy as np
 import pytest
+from PIL import Image
 from pydantic import ValidationError
 
 from nos import hub
 from nos.common.spec import FunctionSignature, ModelSpec
 from nos.common.tasks import TaskType
-from nos.common.types import EmbeddingSpec, ImageSpec, TensorSpec
+from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT
 
 
 EMBEDDING_SHAPES = [
-    (1, 512),
-    (None, 512),
+    (512,),
+    (512,),
 ]
 IMAGE_SHAPES = [
-    (1, 224, 224, 3),
-    (None, 224, 224, 3),
-    (1, None, None, 3),
-    (None, None, None, 3),
+    (224, 224, 3),
+    (224, 224, 3),
+    (None, None, 3),
+    (None, None, 3),
 ]
 TENSOR_SHAPES = [
     *EMBEDDING_SHAPES,
@@ -43,8 +44,6 @@ def test_common_tensor_spec_invalid_shapes():
         (None, 224, 224, 3, 3),
         (1, 224, 224, 1, 2, 3),
         (None, 224, 224, 1, 2, 3),
-        (1,),
-        (None,),
         (None, None, None, None, None),
     ]
     for shape in INVALID_SHAPES:
@@ -63,15 +62,15 @@ def test_common_image_spec_valid_shapes():
 def test_common_embedding_spec_valid_shapes():
     """Test valid embedding shapes."""
     for shape, dtype in product(EMBEDDING_SHAPES, DTYPES):
-        spec = ImageSpec(shape=shape, dtype=dtype)
+        spec = EmbeddingSpec(shape=shape, dtype=dtype)
         assert spec is not None
 
 
 @pytest.fixture
 def img2vec_signature():
     yield FunctionSignature(
-        inputs={"img": ImageSpec(shape=(None, None, None, 3), dtype="uint8")},
-        outputs={"embedding": EmbeddingSpec(shape=(None, 512), dtype="float32")},
+        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
 
 
@@ -123,36 +122,36 @@ def test_common_model_spec(img2vec_signature):
 
 def test_common_model_spec_variations():
     # Create signatures for all tasks (without func_or_cls, init_args, init_kwargs, method_name)
-    ImageSpec(shape=(None, None, None, 3), dtype="uint8")
+    ImageSpec(shape=(None, None, 3), dtype="uint8")
 
     # Image embedding (img2vec)
     img2vec_signature = FunctionSignature(
-        inputs={"images": ImageSpec(shape=(None, None, None, 3), dtype="uint8")},
-        outputs={"embedding": EmbeddingSpec(shape=(None, 512), dtype="float32")},
+        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
     assert img2vec_signature is not None
 
     # Text embedding (txt2vec)
     txt2vec_signature = FunctionSignature(
-        inputs={"texts": List[str]},
-        outputs={"embedding": EmbeddingSpec(shape=(None, 512), dtype="float32")},
+        inputs={"texts": str},
+        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
     assert txt2vec_signature is not None
 
     # Object detection (img2bbox)
     img2bbox_signature = FunctionSignature(
-        inputs={"images": ImageSpec(shape=(None, None, None, 3), dtype="uint8")},
+        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
         outputs={
-            "scores": TensorSpec(shape=(None, None), dtype="uint8"),
-            "labels": TensorSpec(shape=(None, None), dtype="uint8"),
-            "bboxes": TensorSpec(shape=(None, None), dtype="uint8"),
+            "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
+            "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
+            "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
         },
     )
     assert img2bbox_signature is not None
 
     # Image generation (txt2img)
     txt2img_signature = FunctionSignature(
-        inputs={"texts": List[str]},
-        outputs={"images": ImageSpec(shape=(None, None, None, 3), dtype="uint8")},
+        inputs={"texts": Batch[str]},
+        outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )
     assert txt2img_signature is not None

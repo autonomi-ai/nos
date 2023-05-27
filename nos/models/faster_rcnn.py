@@ -8,6 +8,7 @@ from PIL import Image
 
 from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
+from nos.common.types import Batch, ImageT, TensorT
 from nos.hub import TorchHubConfig
 
 
@@ -40,19 +41,19 @@ class FasterRCNN:
     ) -> Dict[str, np.ndarray]:
         with torch.inference_mode():
             if isinstance(images, np.ndarray):
-                pass
+                images = [images]
             elif isinstance(images, Image.Image):
-                images = np.asarray(images)
+                images = [np.asarray(images)]
             elif isinstance(images, list):
-                raise ValueError("Batching not yet supported")
+                pass
 
-            img = F.to_tensor(images)
-            img = img.to(self.device)
-            predictions = self.model([img])
+            images = torch.stack([F.to_tensor(image) for image in images])
+            images = images.to(self.device)
+            predictions = self.model(images)
             return {
-                "scores": predictions[0]["boxes"].cpu().numpy(),
-                "labels": predictions[0]["labels"].cpu().numpy(),
-                "bboxes": predictions[0]["boxes"].cpu().numpy(),
+                "scores": [pred["boxes"].cpu().numpy() for pred in predictions],
+                "labels": [pred["labels"].cpu().numpy() for pred in predictions],
+                "bboxes": [pred["boxes"].cpu().numpy() for pred in predictions],
             }
 
 
@@ -62,10 +63,16 @@ hub.register(
     FasterRCNN,
     init_args=("torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",),
     method_name="predict",
-    inputs={"images": ImageSpec(shape=(None, None, None, 3), dtype="uint8")},
+    inputs={
+        "images": Union[
+            Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 8],
+            Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 4],
+            Batch[ImageT[Image.Image, ImageSpec(shape=(1080, 1920, 3), dtype="uint8")], 1],
+        ]
+    },
     outputs={
-        "scores": TensorSpec(shape=(None, None), dtype="float32"),
-        "labels": TensorSpec(shape=(None, None), dtype="float32"),
-        "bboxes": TensorSpec(shape=(None, None, 4), dtype="float32"),
+        "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
+        "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
+        "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
     },
 )

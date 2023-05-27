@@ -1,22 +1,22 @@
 from dataclasses import field
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
-import cloudpickle
 from pydantic import validator
 from pydantic.dataclasses import dataclass
 
+from nos.common.cloudpickle import dumps, loads
 from nos.common.tasks import TaskType
 from nos.common.types import EmbeddingSpec, ImageSpec, TensorSpec  # noqa: F401
 
 
-@dataclass(frozen=True)
+@dataclass
 class FunctionSignature:
     """Function signature."""
 
     # TOFIX (spillai): Remove Any type, and explicitly define input/output types.
-    inputs: Dict[str, Union[TensorSpec, Type[int], Type[str], Type[float], Any]]
+    inputs: Dict[str, Union[Type[int], Type[str], Type[float], Any]]
     """Mapping of input names to dtypes."""
-    outputs: Dict[str, Union[TensorSpec, Type[int], Type[str], Type[float], Any]]
+    outputs: Dict[str, Union[Type[int], Type[str], Type[float], Any]]
     """Mapping of output names to dtypes."""
 
     """The remaining private fields are used to instantiate a model and execute it."""
@@ -39,15 +39,15 @@ class FunctionSignature:
     def encode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Encode inputs based on defined signature."""
         inputs = self.validate_inputs(inputs)
-        return {k: cloudpickle.dumps(v) for k, v in inputs.items()}
+        return {k: dumps(v) for k, v in inputs.items()}
 
     def decode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Decode inputs based on defined signature."""
         inputs = self.validate_inputs(inputs)
-        return {k: cloudpickle.loads(v) for k, v in inputs.items()}
+        return {k: loads(v) for k, v in inputs.items()}
 
 
-@dataclass(frozen=True)
+@dataclass
 class ModelSpec:
     """Model specification for the registry.
 
