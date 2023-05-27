@@ -6,7 +6,8 @@ import torch
 from PIL import Image
 
 from nos import hub
-from nos.common import EmbeddingSpec, ImageSpec, TaskType
+from nos.common import EmbeddingSpec, TaskType
+from nos.common.types import Batch, ImageT, TensorT
 from nos.hub import HuggingFaceHubConfig
 
 
@@ -84,8 +85,8 @@ for model_name in CLIP.configs:
         CLIP,
         init_args=(model_name,),
         method_name="encode_text",
-        inputs={"texts": List[str]},
-        outputs={"embedding": EmbeddingSpec(shape=(None, cfg.D), dtype="float32")},
+        inputs={"texts": Batch[str]},
+        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
     )
     hub.register(
         model_name,
@@ -93,6 +94,6 @@ for model_name in CLIP.configs:
         CLIP,
         init_args=(model_name,),
         method_name="encode_image",
-        inputs={"images": ImageSpec(shape=(None, None, None, 3), dtype="uint8")},
-        outputs={"embedding": EmbeddingSpec(shape=(None, cfg.D), dtype="float32")},
+        inputs={"images": Batch[ImageT[Image.Image]]},
+        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
     )

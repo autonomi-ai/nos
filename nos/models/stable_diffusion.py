@@ -4,7 +4,8 @@ import torch
 from PIL import Image
 
 from nos import hub
-from nos.common import TaskType, TensorSpec
+from nos.common import TaskType
+from nos.common.types import Batch, ImageSpec, ImageT
 
 
 class StableDiffusion2:
@@ -85,6 +86,6 @@ hub.register(
     init_args=("stabilityai/stable-diffusion-2",),
     init_kwargs={"scheduler": "ddim", "dtype": torch.float16},
     method_name="__call__",
-    inputs={"prompts": List[str]},
-    outputs={"images": TensorSpec(shape=(1, None, None, 3), dtype="uint8")},
+    inputs={"prompts": Batch[str], "num_images": int, "height": int, "width": int},
+    outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
 )

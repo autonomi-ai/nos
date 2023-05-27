@@ -2,16 +2,13 @@
 import time
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List
 
-import cloudpickle
 import grpc
-import numpy as np
 from google.protobuf import empty_pb2
-from PIL import Image
 
 from nos.client.exceptions import NosClientException
-from nos.common import ModelSpec, TaskType
+from nos.common import ModelSpec, TaskType, loads
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
 from nos.protoc import import_module
@@ -207,7 +204,7 @@ class InferenceClient:
                 )
             )
             logger.debug(response)
-            spec: ModelSpec = cloudpickle.loads(response.response_bytes)
+            spec: ModelSpec = loads(response.response_bytes)
             return spec
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to get model info ({e})")
@@ -242,8 +239,7 @@ class InferenceClient:
         self,
         task: TaskType,
         model_name: str,
-        img: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]] = None,
-        text: str = None,
+        **inputs: Dict[str, Any],
     ) -> nos_service_pb2.InferenceResponse:
         """Run module.
 
@@ -255,16 +251,15 @@ class InferenceClient:
                     TaskType.IMAGE_EMBEDDING, TaskType.TEXT_EMBEDDING)
             model_name (str):
                 Model identifier (e.g. openai/clip-vit-base-patch32).
-            img (Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]):
-                Image or text to predict on.
-            text (str): Prompt text to use for text-generation or embedding.
+            **inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
+                defined in the ModelSpec.signature.inputs.
         Returns:
             nos_service_pb2.InferenceResponse: Inference response.
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
         module: InferenceModule = self.Module(task, model_name)
-        return module(img=img, text=text)
+        return module(**inputs)
 
 
 @dataclass
@@ -331,7 +326,7 @@ class InferenceModule:
         )
         try:
             response = self.stub.Run(request)
-            response = cloudpickle.loads(response.response_bytes)
+            response = loads(response.response_bytes)
             logger.debug(response)
             return response
         except grpc.RpcError as e:

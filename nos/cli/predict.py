@@ -1,12 +1,11 @@
 """gRPC-based Client CLI for NOS.
 
 Usage:
-    $ nos serve-grpc --help
-    $ nos serve-grpc list
-    $ nos serve-grpc deploy -m stabilityai/stable-diffusion-v2
-    $ nos serve-grpc img2vec -i tests/test_data/test.jpg
-    $ nos serve-grpc txt2vec -i 'Hello World!'
-    $ nos serve-grpc txt2img -i 'a cat dancing on the grass'
+    $ nos predict --help
+    $ nos predict list
+    $ nos predict img2vec -i tests/test_data/test.jpg
+    $ nos predict txt2vec -i 'Hello World!'
+    $ nos predict txt2img -i 'a cat dancing on the grass'
 
 """
 import time
@@ -22,7 +21,7 @@ from nos.client.exceptions import NosClientException
 from nos.common import TaskType
 
 
-serve_grpc_cli = typer.Typer(name="serve-grpc", help="NOS gRPC Serve CLI.", no_args_is_help=True)
+predict_cli = typer.Typer(name="predict", help="NOS gRPC Serve CLI.", no_args_is_help=True)
 console = rich.console.Console()
 
 
@@ -34,7 +33,7 @@ class gRPCConfig:
     client: InferenceClient
 
 
-@serve_grpc_cli.callback()
+@predict_cli.callback()
 def grpc_config(
     ctx: typer.Context,
     address: str = typer.Option("[::]:50051", "-a", "--address", help="Address of the gRPC server."),
@@ -46,8 +45,8 @@ def grpc_config(
     # TOOD (spillai): Ping the gRPC server otherwise raise an error
 
 
-@serve_grpc_cli.command("list", help="List all gRPC deployments.")
-def _grpc_serve_list(ctx: typer.Context):
+@predict_cli.command("list", help="List all gRPC deployments.")
+def _list_models(ctx: typer.Context):
     """List all gRPC deployments."""
     try:
         models = ctx.obj.client.ListModels()
@@ -56,7 +55,7 @@ def _grpc_serve_list(ctx: typer.Context):
         console.print(f"[red] ✗ Failed to list models ({exc}).[/red]")
 
 
-@serve_grpc_cli.command("img2vec", help="Encode image into an embedding.")
+@predict_cli.command("img2vec", help="Encode image into an embedding.")
 def _predict_img2vec(
     ctx: typer.Context,
     model_name: str = typer.Option(
@@ -75,7 +74,7 @@ def _predict_img2vec(
     # with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
     try:
         model = ctx.obj.client.Module(task=TaskType.IMAGE_EMBEDDING, model_name=model_name)
-        response = model(images=img)
+        response = model(images=[img])
     except NosClientException as exc:
         console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
         return
@@ -84,7 +83,7 @@ def _predict_img2vec(
     )
 
 
-@serve_grpc_cli.command("txt2vec", help="Generate an embedding from a text prompt.")
+@predict_cli.command("txt2vec", help="Generate an embedding from a text prompt.")
 def _predict_txt2vec(
     ctx: typer.Context,
     model_name: str = typer.Option(
@@ -101,7 +100,7 @@ def _predict_txt2vec(
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
         try:
             model = ctx.obj.client.Module(task=TaskType.TEXT_EMBEDDING, model_name=model_name)
-            response = model(texts=prompt)
+            response = model(texts=[prompt])
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
             return
@@ -110,7 +109,7 @@ def _predict_txt2vec(
     )
 
 
-@serve_grpc_cli.command("txt2img", help="Generate an image from a text prompt.")
+@predict_cli.command("txt2img", help="Generate an image from a text prompt.")
 def _predict_txt2img(
     ctx: typer.Context,
     model_name: str = typer.Option(
@@ -128,7 +127,7 @@ def _predict_txt2img(
     with rich.status.Status("[bold green] Generating image ...[/bold green]"):
         try:
             model = ctx.obj.client.Module(task=TaskType.IMAGE_GENERATION, model_name=model_name)
-            response = model(prompts=prompt)
+            response = model(prompts=[prompt])
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
             return
@@ -137,7 +136,7 @@ def _predict_txt2img(
     )
 
 
-@serve_grpc_cli.command("img2bbox", help="Predict bounding boxes from image.")
+@predict_cli.command("img2bbox", help="Predict bounding boxes from image.")
 def _predict_img2bbox(
     ctx: typer.Context,
     model_name: str = typer.Option(
@@ -156,10 +155,14 @@ def _predict_img2bbox(
         st = time.perf_counter()
         try:
             model = ctx.obj.client.Module(task=TaskType.OBJECT_DETECTION_2D, model_name=model_name)
-            response = model(images=img)
+            response = model(
+                images=[
+                    img,
+                ]
+            )
             scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
             console.print(
-                f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes.shape}, scores={scores.shape}, labels={labels.shape}, time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
+                f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes[0].shape}, scores={scores[0].shape}, labels={labels[0].shape}, time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
             )
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold red]{exc}[/bold red]")

@@ -1,3 +1,4 @@
+import copy
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Union
@@ -91,7 +92,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
             spec: ModelSpec = self.model_handle.popitem(last=False)
             self.delete_model(spec.name, task=spec.task)
             logger.info(f"Deleting oldest model: {model_name}")
-        logger.info(f"Initializing model: {model_name}")
+        logger.info(f"Initializing model with spec: {spec}")
 
         # Create the serve deployment from the model handle
         model_cls = spec.signature.func_or_cls
@@ -145,6 +146,11 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
         try:
             model_info = request.request
             spec: ModelSpec = hub.load_spec(model_info.name, task=TaskType(model_info.task))
+            spec = copy.deepcopy(spec)
+            spec.signature.func_or_cls = None
+            spec.signature.init_args = ()
+            spec.signature.init_kwargs = {}
+            spec.signature.method_name = None
         except KeyError as e:
             context.abort(context, grpc.StatusCode.NOT_FOUND, str(e))
         return nos_service_pb2.ModelInfoResponse(

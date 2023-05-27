@@ -143,7 +143,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(text="a cat dancing on the grass.")
+        response = model(texts="a cat dancing on the grass.")
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -153,7 +153,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(img=img)
+        response = model(images=img)
         assert isinstance(response, dict)
         assert "embedding" in response
 
