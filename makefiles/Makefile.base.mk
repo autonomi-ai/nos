@@ -38,8 +38,7 @@ help-base:
 	@echo "TARGET: ${TARGET}"
 	@echo "DOCKER_TARGET: ${DOCKER_TARGET}"
 	@echo "IMAGE: ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET}"
-	@echo ""
-	docker buildx create --use
+	@echo "docker buildx create --use"
 	docker buildx build -f docker/Dockerfile \
 		--platform linux/amd64,linux/arm64 \
 		--target ${DOCKER_TARGET} \

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Type
 
 from nos.common import FunctionSignature, ModelSpec, TaskType  # noqa: F401
 from nos.hub.config import HuggingFaceHubConfig, MMLabConfig, NosHubConfig, TorchHubConfig  # noqa: F401
@@ -69,7 +69,7 @@ class Hub:
         return spec.cls(*spec.args, **spec.kwargs)
 
     @classmethod
-    def register(cls, model_name: str, task: TaskType, func_or_cls: Type[Any], **kwargs) -> None:
+    def register(cls, model_name: str, task: TaskType, func_or_cls: Callable, **kwargs) -> None:
         """Model registry decorator.
 
         Args:

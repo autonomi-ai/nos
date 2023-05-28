@@ -97,7 +97,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
         # Create the serve deployment from the model handle
         model_cls = spec.signature.func_or_cls
         actor_options = {"num_gpus": 1 if torch.cuda.is_available() else 0}
-        logger.debug(f"Creating actor: {actor_options}")
+        logger.debug(f"Creating actor: {actor_options}, {model_cls}")
         actor_cls = ray.remote(**actor_options)(model_cls)
         # Note: Currently one model per (model-name, task) is supported.
         self.model_handle[spec.id] = ModelHandle(
