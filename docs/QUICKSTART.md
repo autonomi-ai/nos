@@ -39,17 +39,17 @@
 
     **Via CLI**
     ```bash
-    nos serve-grpc txt2img -i "dog riding horse"
+    nos predict txt2img -i "dog riding horse"
     ```
 
     **Via [Python SDK](https://pypi.org/project/autonomi-nos)**
     ```python
-    from nos.client import InferenceClient
+    from nos.client import InferenceClient, TaskType
 
     client = InferenceClient()
-    response = client.Predict(
-        method="txt2img",
+    response = client.Run(
+        task=TaskType.IMAGE_GENERATION
         model="stabilityai/stable-diffusion-2",
-        text="dog riding horse")
+        texts=["dog riding horse"])
     img = response["image"]
     ```

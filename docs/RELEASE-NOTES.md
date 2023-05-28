@@ -1,5 +1,9 @@
 # 🗒 Release Notes
 
+## 0.0.4a3 (05-27-2022)
+
+* `ListModels()`, `GetModelInfo()`, `client.Run()`, `client.Module(task, model_name)`
+
 ## 0.0.4a (05-22-2023)
 
 * `IsHealthy()` and `WaitForServer()` API for health checks and server-readiness [#108](https://github.com/autonomi-ai/nos/pull/108)

@@ -8,10 +8,7 @@ services:
       - 50051:50051
     environment:
       - NOS_HOME=/app/.nos
-      - NOS_LOGGING_LEVEL=INFO
+      - NOS_LOGGING_LEVEL=ERROR
     volumes:
       - ~/.nosd:/app/.nos
-      - /tmp:/tmp
     shm_size: 4G
-volumes:
-  tmp:

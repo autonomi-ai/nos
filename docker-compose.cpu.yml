@@ -17,8 +17,5 @@ services:
       - NOS_LOGGING_LEVEL=DEBUG
     volumes:
       - ~/.nosd:/app/.nos
-      - tmp:/tmp
+      - /tmp:/tmp
     shm_size: 4G
-
-volumes:
-  tmp:
