@@ -6,7 +6,7 @@ from pydantic.dataclasses import dataclass
 
 from nos.common.cloudpickle import dumps, loads
 from nos.common.tasks import TaskType
-from nos.common.types import EmbeddingSpec, ImageSpec, TensorSpec  # noqa: F401
+from nos.common.types import Batch, EmbeddingSpec, ImageSpec, TensorSpec  # noqa: F401
 
 
 @dataclass

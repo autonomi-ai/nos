@@ -100,25 +100,19 @@ class Batch(Generic[T]):
         """
         if not isinstance(params, tuple):
             params = (params, None)
-        _, batch_size = params
+        if len(params) != 2:
+            raise TypeError(f"Invalid Batch parameters (T, batch_size), provided params={params}.")
+        object_type, batch_size = params
         if batch_size is not None:
             if isinstance(batch_size, int):
                 if batch_size < 1 or batch_size >= 65536:
                     raise ValueError(f"Invalid batch size [batch_size={batch_size}].")
             else:
                 raise TypeError(f"Invalid batch size type [type(batch_size)={type(batch_size)}].")
-        return Annotated[cls, params]
+        return Annotated[cls, object_type, batch_size]
 
 
 class TensorT(Generic[T]):
-    """Generic annotation/type-hint for batched data.
-
-    Inherits from typing.Annotated[T, x] (PEP 593) where T is the type,
-    and x is the metadata. The metadata is tpyically ignored,
-    but can be used to allow additional type checks and annotations
-    on the type.
-    """
-
     __slots__ = ()
 
     @typing._tp_cache
@@ -128,14 +122,41 @@ class TensorT(Generic[T]):
         Annotated requires atleast 2 parameters [type, tensor_spec].
         Here `tensor_spec` is optional (i.e. TensorT[T],
         is equivalent to TensorT[T, None]).
+
+        Examples:
+            TensorT[np.ndarray, TensorSpec()] := Annotated[TensorT, np.ndarray, TensorSpec()]
+            TensorT[torch.Tensor, TensorSpec()] := Annotated[TensorT, torch.Tensor, TensorSpec()]
         """
         if not isinstance(params, tuple):
             params = (params, TensorSpec())
-        _, tensor_spec = params
+        if len(params) != 2:
+            raise TypeError(f"Invalid TensorT parameters (T, tensort_spec), provided params={params}.")
+        object_type, tensor_spec = params
         if tensor_spec is not None:
             if not isinstance(tensor_spec, TensorSpec):
                 raise TypeError(f"Invalid tensor_spec metadata [tensor_spec={type(tensor_spec)}].")
-        return Annotated[cls, params]
+        return Annotated[cls, object_type, tensor_spec]
 
 
-ImageT = TensorT
+class ImageT(Generic[T]):
+    __slots__ = ()
+
+    @typing._tp_cache
+    def __class_getitem__(cls, params):
+        """Support TensorT[type, image_spec].
+
+        Annotated requires atleast 2 parameters [type, image_spec].
+        Here `image_spec` is optional (i.e. ImageT[T], is equivalent to TensorT[T, ImageSpec()]).
+
+        Examples:
+            ImageT[PIL.Image.Image, ImageSpec()] := Annotated[ImageT, Image, ImageSpec()]
+        """
+        if not isinstance(params, tuple):
+            params = (params, ImageSpec())
+        if len(params) != 2:
+            raise TypeError(f"Invalid ImageT parameters (T, tensort_spec), provided params={params}.")
+        object_type, image_spec = params
+        if image_spec is not None:
+            if not isinstance(image_spec, ImageSpec):
+                raise TypeError(f"Invalid image_spec metadata [tensor_spec={type(image_spec)}].")
+        return Annotated[cls, object_type, image_spec]
