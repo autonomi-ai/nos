@@ -8,9 +8,11 @@ nav:
 - <strong>🏠 Home</strong>: README.md
 - <strong>🔥 Quickstart</strong>: docs/QUICKSTART.md
 - <strong>📚 API Documentation</strong>:
-  - nos.client: docs/api/client.md
-  - nos.common: docs/api/common.md
-  - nos.hub: docs/api/hub.md
+  - InferenceClient: docs/api/client.md
+  - ModelSpec: docs/api/common/spec.md
+  - Types: docs/api/common/types.md
+  - Tasks: docs/api/common/tasks.md
+  - Hub: docs/api/hub.md
 - <strong>🏁 Roadmap</strong>: docs/ROADMAP.md
 - <strong>🧾 Release Notes</strong>: docs/RELEASE-NOTES.md
 - <strong>🧑‍💻 Contributing</strong>: docs/CONTRIBUTING.md

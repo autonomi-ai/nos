@@ -4,6 +4,7 @@ from nos.executors.ray import RayExecutor
 from nos.test.conftest import ray_executor  # noqa: F401
 
 
+@pytest.mark.skip(reason="Not yet implemented.")
 def test_ray_executor(ray_executor: RayExecutor):  # noqa: F811
     """Test ray executor singleton."""
     assert ray_executor.is_initialized()

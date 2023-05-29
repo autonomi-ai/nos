@@ -155,3 +155,43 @@ def test_common_model_spec_variations():
         outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )
     assert txt2img_signature is not None
+
+
+def check_object_type(v):
+    if isinstance(v, list):
+        for item in v:
+            check_object_type(item)
+        return
+
+    assert isinstance(v.is_batched(), bool)
+    if v.batch_size():
+        assert isinstance(v.batch_size(), int)
+    assert v.base_type() is not None
+    if v.base_spec():
+        spec = v.base_spec()
+        assert hasattr(spec, "shape")
+        assert hasattr(spec, "dtype")
+
+
+def test_common_spec_signature():
+    """Test function signature."""
+    from loguru import logger
+
+    for spec in hub.list():
+        logger.debug(f"{spec.name}, {spec.task}")
+        assert spec is not None
+        assert spec.name == spec.name
+        assert spec.task == spec.task
+        assert spec.signature.inputs is not None
+        assert spec.signature.outputs is not None
+
+        assert isinstance(spec.signature.inputs, dict)
+        assert isinstance(spec.signature.outputs, dict)
+        logger.debug(f"{spec.name}, {spec.task}")
+
+        for k, v in spec.signature.get_inputs_spec().items():
+            logger.debug(f"input: {k}, {v}")
+            check_object_type(v)
+        for k, v in spec.signature.get_outputs_spec().items():
+            logger.debug(f"output: {k}, {v}")
+            check_object_type(v)

@@ -1,4 +1,3 @@
-import copy
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Union
@@ -13,11 +12,10 @@ from google.protobuf import empty_pb2
 from PIL import Image
 
 from nos import hub
-from nos.common import dumps
+from nos.common import ModelSpec, TaskType, dumps
 from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor
-from nos.hub import ModelSpec, TaskType
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -96,7 +94,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
 
         # Create the serve deployment from the model handle
         model_cls = spec.signature.func_or_cls
-        actor_options = {"num_gpus": 1 if torch.cuda.is_available() else 0}
+        actor_options = {"num_gpus": 0.5 if torch.cuda.is_available() else 0}
         logger.debug(f"Creating actor: {actor_options}, {model_cls}")
         actor_cls = ray.remote(**actor_options)(model_cls)
         # Note: Currently one model per (model-name, task) is supported.
@@ -146,16 +144,9 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
         try:
             model_info = request.request
             spec: ModelSpec = hub.load_spec(model_info.name, task=TaskType(model_info.task))
-            spec = copy.deepcopy(spec)
-            spec.signature.func_or_cls = None
-            spec.signature.init_args = ()
-            spec.signature.init_kwargs = {}
-            spec.signature.method_name = None
         except KeyError as e:
             context.abort(context, grpc.StatusCode.NOT_FOUND, str(e))
-        return nos_service_pb2.ModelInfoResponse(
-            response_bytes=dumps(spec),
-        )
+        return spec._to_proto(public=True)
 
     @logger.catch
     def Run(
@@ -173,7 +164,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
         model_handle: ModelHandle = self.model_handle[model_id]
         model_spec: ModelSpec = model_handle.spec
         # TODO (spillai): Validate the inputs
-        model_inputs = model_spec.signature.decode_inputs(request.inputs)
+        model_inputs = model_spec.signature._decode_inputs(request.inputs)
         actor_handle = model_handle.handle
         # Get the method function (i.e. `__call__`, or `predict`)
         actor_method_func = getattr(actor_handle, model_spec.signature.method_name)

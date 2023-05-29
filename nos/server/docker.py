@@ -112,6 +112,7 @@ class DockerRuntime:
                 device_requests=device_requests,
                 environment=environment,
                 shm_size=shm_size,
+                **kwargs,
             )
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             if container is not None:
@@ -136,7 +137,6 @@ class DockerRuntime:
             logger.info(f"Removed container: {container_name}")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             logger.error(f"Failed to stop container: {exc}")
-            raise exc
         return container
 
     def get_container(self, container_name: str) -> docker.models.containers.Container:

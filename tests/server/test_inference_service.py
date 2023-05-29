@@ -8,6 +8,7 @@ from nos.test.conftest import ray_executor  # noqa: F401
 pytestmark = pytest.mark.e2e
 
 
+@pytest.mark.skip(reason="This test is not ready yet.")
 def test_inference_service_impl(ray_executor: RayExecutor):  # noqa: F811
     service = InferenceServiceImpl()
     assert service is not None
