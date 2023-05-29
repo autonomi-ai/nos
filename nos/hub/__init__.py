@@ -66,7 +66,8 @@ class Hub:
             Any: Instantiated model.
         """
         spec: ModelSpec = cls.load_spec(model_name, task=task)
-        return spec.cls(*spec.args, **spec.kwargs)
+        sig: FunctionSignature = spec.signature
+        return sig.func_or_cls(*sig.init_args, **sig.init_kwargs)
 
     @classmethod
     def register(cls, model_name: str, task: TaskType, func_or_cls: Callable, **kwargs) -> None:

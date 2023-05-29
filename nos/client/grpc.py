@@ -177,7 +177,7 @@ class InferenceClient:
         """List all models.
 
         Returns:
-            List[ModelInfo]: List of ModelInfo (name, task).
+            List[ModelSpec]: List of ModelInfo (name, task).
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
@@ -188,24 +188,24 @@ class InferenceClient:
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to list models ({e})")
 
-    def GetModelInfo(self, model_spec: ModelSpec) -> ModelSpec:
+    def GetModelInfo(self, spec: ModelSpec) -> ModelSpec:
         """Get the relevant model information from the model name.
 
         Note: This may be possible only after initialization, as we need to inspect the
         HW to understand the configurable image resolutions, batch sizes etc.
 
         Args:
-            model_spec (ModelSpec): Model specification.
+            spec (ModelSpec): Model information.
         """
         try:
             response: nos_service_pb2.ModelInfoResponse = self.stub.GetModelInfo(
                 nos_service_pb2.ModelInfoRequest(
-                    request=nos_service_pb2.ModelInfo(task=model_spec.task.value, name=model_spec.name)
+                    request=nos_service_pb2.ModelInfo(task=spec.task.value, name=spec.name)
                 )
             )
             logger.debug(response)
-            spec: ModelSpec = loads(response.response_bytes)
-            return spec
+            model_spec: ModelSpec = loads(response.response_bytes)
+            return model_spec
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to get model info ({e})")
 
@@ -316,7 +316,7 @@ class InferenceModule:
         # Check if the input dictionary is consistent
         # with inputs/outputs defined in `spec.signature`
         # and then encode it.
-        inputs = self._spec.signature.encode_inputs(inputs)
+        inputs = self._spec.signature._encode_inputs(inputs)
         request = nos_service_pb2.InferenceRequest(
             model=nos_service_pb2.ModelInfo(
                 task=self.task.value,

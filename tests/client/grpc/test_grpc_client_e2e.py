@@ -4,6 +4,8 @@ The test spins up a gRPC inferennce server and then sends requests to it using t
 
 """
 
+from typing import List
+
 import numpy as np
 import pytest
 from PIL import Image
@@ -12,7 +14,7 @@ from tqdm import tqdm
 
 pytestmark = pytest.mark.client
 
-from nos.common import TaskType  # noqa: E402
+from nos.common import ModelSpec, TaskType  # noqa: E402
 from nos.test.utils import NOS_TEST_IMAGE  # noqa: E402
 
 
@@ -45,18 +47,24 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert client.CheckCompatibility()
 
     # List models
-    models = client.ListModels()
+    models: List[ModelSpec] = client.ListModels()
     assert isinstance(models, list)
     assert len(models) >= 1
 
     # Check GetModelInfo for all models registered
     for spec in models:
-        spec = client.GetModelInfo(spec)
+        assert spec.signature is None
+        spec: ModelSpec = client.GetModelInfo(spec)
         assert spec.task and spec.name
         assert isinstance(spec.signature.inputs, dict)
         assert isinstance(spec.signature.outputs, dict)
         assert len(spec.signature.inputs) >= 1
         assert len(spec.signature.outputs) >= 1
+
+        inputs = spec.signature.get_inputs_spec()
+        outputs = spec.signature.get_outputs_spec()
+        assert isinstance(inputs, dict)
+        assert isinstance(outputs, dict)
 
     # TXT2VEC
     task, model_name = TaskType.TEXT_EMBEDDING, "openai/clip-vit-base-patch32"
@@ -64,7 +72,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(text="a cat dancing on the grass.")
+        response = model(texts=["a cat dancing on the grass."])
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -84,7 +92,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(img=img)
+        response = model(images=[img])
         assert isinstance(response, dict)
 
         assert "bboxes" in response
@@ -95,9 +103,9 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(text="a cat dancing on the grass.")
+        response = model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)
         assert isinstance(response, dict)
-        assert "image" in response
+        assert "images" in response
 
 
 @pytest.mark.client
@@ -124,18 +132,24 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert client.CheckCompatibility()
 
     # List models
-    models = client.ListModels()
+    models: List[ModelSpec] = client.ListModels()
     assert isinstance(models, list)
     assert len(models) >= 1
 
     # Check GetModelInfo for all models registered
     for spec in models:
-        spec = client.GetModelInfo(spec)
+        assert spec.signature is None
+        spec: ModelSpec = client.GetModelInfo(spec)
         assert spec.task and spec.name
         assert isinstance(spec.signature.inputs, dict)
         assert isinstance(spec.signature.outputs, dict)
         assert len(spec.signature.inputs) >= 1
         assert len(spec.signature.outputs) >= 1
+
+        inputs = spec.signature.get_inputs_spec()
+        outputs = spec.signature.get_outputs_spec()
+        assert isinstance(inputs, dict)
+        assert isinstance(outputs, dict)
 
     # TXT2VEC
     task, model_name = TaskType.TEXT_EMBEDDING, "openai/clip-vit-base-patch32"
@@ -143,7 +157,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(texts="a cat dancing on the grass.")
+        response = model(texts=["a cat dancing on the grass."])
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -153,19 +167,21 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(images=img)
+        response = model(images=[img])
         assert isinstance(response, dict)
         assert "embedding" in response
 
-    # # IMG2BBOX
-    # task, model_name = TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"
-    # model = client.Module(task=task, model_name=model_name)
-    # assert model is not None
-    # assert model.GetModelInfo() is not None
-    # for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-    #     response = model(img=img)
-    #     assert isinstance(response, dict)
-    #     assert "bboxes" in response
+    # IMG2BBOX
+    task, model_name = TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
+        response = model(images=[img])
+        assert isinstance(response, dict)
+        assert "bboxes" in response
+        assert "labels" in response
+        assert "scores" in response
 
     # TXT2IMG (not supported in CPU yet)
     task, model_name = TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2"
@@ -174,4 +190,4 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
         with pytest.raises(Exception):
-            response = model(text="a cat dancing on the grass.")
+            response = model(prompts=["a cat dancing on the grass."])

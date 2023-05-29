@@ -30,7 +30,7 @@ def test_hub_load():
     assert len(models) > 0
 
     # Load the model with the first model name
-    model = hub.load(models[0])
+    model = hub.load(models[0].name, task=models[0].task)
     assert model is not None
 
     # Check if hub.load raises an error when the

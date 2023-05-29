@@ -102,7 +102,6 @@ def grpc_server_docker_runtime_cpu():
         },
         volumes={
             str(Path.home() / ".nosd_test"): {"bind": "/app/.nos", "mode": "rw"},
-            "/tmp": {"bind": "/tmp", "mode": "rw"},
         },
         detach=True,
         gpu=False,
@@ -157,7 +156,6 @@ def grpc_server_docker_runtime_gpu():
         },
         volumes={
             str(Path.home() / ".nosd_test"): {"bind": "/app/.nos", "mode": "rw"},
-            "/tmp": {"bind": "/tmp", "mode": "rw"},
         },
         detach=True,
         gpu=True,
