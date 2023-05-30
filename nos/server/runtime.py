@@ -1,8 +1,10 @@
 """gRPC server runtime using docker executor."""
-from dataclasses import dataclass
+import copy
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
 
+import docker
 from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.logging import LOGGING_LEVEL, logger
 from nos.protoc import import_module
@@ -16,69 +18,135 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 NOS_DOCKER_IMAGE_CPU = "autonomi/nos:latest-cpu"
 NOS_DOCKER_IMAGE_GPU = "autonomi/nos:latest-gpu"
 
-NOS_GRPC_SERVER_CONTAINER_NAME = "nos-grpc-server"
-NOS_GRPC_SERVER_CMD = "nos-grpc-server"
+NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
+NOS_INFERENCE_SERVICE_CMD = "nos-grpc-server"
 
 
 @dataclass
+class InferenceServiceRuntimeConfig:
+    """Inference service configuration."""
+
+    image: str
+    """Docker image."""
+
+    name: str = NOS_INFERENCE_SERVICE_CONTAINER_NAME
+    """Container name (unique)."""
+
+    command: Union[str, List[str]] = field(default_factory=lambda: [NOS_INFERENCE_SERVICE_CMD])
+    """Command to run."""
+
+    ports: Dict[int, int] = field(default_factory=lambda: {DEFAULT_GRPC_PORT: DEFAULT_GRPC_PORT})
+    """Ports to expose."""
+
+    environment: Dict[str, str] = field(default_factory=lambda: {"NOS_LOGGING_LEVEL": LOGGING_LEVEL})
+    """Environment variables."""
+
+    volumes: Dict[str, Dict[str, str]] = field(
+        default_factory=lambda: {
+            str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},
+        }
+    )
+    """Volumes to mount."""
+
+    shm_size: str = "4g"
+    """Size of /dev/shm."""
+
+    detach: bool = True
+    """Whether to run the container in detached mode."""
+
+    gpu: bool = False
+    """Whether to start the container with GPU support."""
+
+    kwargs: Dict[str, Any] = field(default_factory=dict)
+    """Additional keyword-arguments to pass to `DockerRuntime.start`."""
+
+
 class InferenceServiceRuntime:
-    """Inference service runtime."""
+    """Inference service runtime.
 
-    _runtime: DockerRuntime = None
-    """Singleton DockerExecutor instance to run inference."""
+    This class is responsible for handling the lifecycle of the
+    inference service docker runtime.
 
-    def __init__(self):
-        """Initialize the runtime."""
+    Parameters:
+        cfg (InferenceServiceConfig): Inference service configuration.
+    """
+
+    configs = {
+        "cpu": InferenceServiceRuntimeConfig(
+            image=NOS_DOCKER_IMAGE_CPU,
+            name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-cpu",
+            gpu=False,
+        ),
+        "gpu": InferenceServiceRuntimeConfig(
+            image=NOS_DOCKER_IMAGE_GPU,
+            name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-gpu",
+            gpu=True,
+        ),
+    }
+
+    def __init__(self, runtime: str = "cpu", name: str = NOS_INFERENCE_SERVICE_CONTAINER_NAME):
+        """Initialize the inference runtime.
+
+        Args:
+            runtime (str, optional): Inference runtime. Defaults to "cpu".
+            name (str, optional): Inference runtime name. Defaults to "nos-inference-service".
+        """
+        if runtime not in self.configs:
+            raise ValueError(f"Invalid inference runtime: {runtime}, available: {list(self.configs.keys())}")
+        self.cfg = copy.deepcopy(self.configs[runtime])
+        self.cfg.name = name
+
         self._runtime = DockerRuntime.get()
-        logger.info(f"Initialized runtime: {self._runtime}")
 
-    def ready(self) -> bool:
-        """Check if the inference runtime is ready."""
-        status = self.get_status()
-        return status and status == "running"
+    def __repr__(self) -> str:
+        return f"InferenceServiceRuntime(image={self.cfg.image}, name={self.cfg.name}, gpu={self.cfg.gpu})"
 
-    def id(self) -> Optional[str]:
-        """Get the inference runtime container ID."""
-        container = self._runtime.get_container(NOS_GRPC_SERVER_CONTAINER_NAME)
-        return container.id if container else None
-
-    def start(self, detach: bool = True, gpu: bool = False, shm_size: str = "4g", **kwargs):
+    def start(self, **kwargs):
         """Start the inference runtime.
 
         Args:
-            gpu (bool, optional): Whether to start the runtime with GPU support. Defaults to False.
+            **kwargs: Additional keyword-arguments to pass to `DockerRuntime.start`.
         """
-        image = NOS_DOCKER_IMAGE_GPU if gpu else NOS_DOCKER_IMAGE_CPU
-        logger.info(f"Starting inference runtime with image: {image}")
-        self._runtime.start(
-            image=image,
-            container_name=NOS_GRPC_SERVER_CONTAINER_NAME,
-            command=[NOS_GRPC_SERVER_CMD],
-            ports={DEFAULT_GRPC_PORT: DEFAULT_GRPC_PORT},
-            environment={
-                "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
-            },
-            volumes={
-                str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},
-                "/tmp": {"bind": "/tmp", "mode": "rw"},
-            },
-            shm_size=shm_size,
-            detach=detach,
-            remove=True,
-            gpu=gpu,
-            **kwargs,
+        logger.info(f"Starting inference runtime with image: {self.cfg.image}")
+
+        # Override config with supplied kwargs
+        for k in list(kwargs.keys()):
+            value = kwargs[k]
+            if hasattr(self.cfg, k):
+                setattr(self.cfg, k, value)
+            else:
+                self.cfg.kwargs[k] = value
+                logger.debug(f"Overriding inference runtime config: {k}={value}")
+
+        # Start inference runtime
+        retval = self._runtime.start(
+            image=self.cfg.image,
+            name=self.cfg.name,
+            command=self.cfg.command,
+            ports=self.cfg.ports,
+            environment=self.cfg.environment,
+            volumes=self.cfg.volumes,
+            detach=self.cfg.detach,
+            gpu=self.cfg.gpu,
+            **self.cfg.kwargs,
         )
-        logger.info(f"Started inference runtime: {self._runtime}")
+        logger.info(f"Started inference runtime: {self}")
+        return retval
 
-    def stop(self) -> None:
-        """Stop the inference runtime."""
-        self._runtime.stop(NOS_GRPC_SERVER_CONTAINER_NAME)
-        logger.info(f"Stopped inference runtime: {self._runtime}")
+    def stop(self, timeout: int = 30) -> docker.models.containers.Container:
+        return self._runtime.stop(self.cfg.name, timeout=timeout)
 
-    def get_logs(self) -> Optional[str]:
-        """Get the inference runtime logs."""
-        return self._runtime.get_logs(NOS_GRPC_SERVER_CONTAINER_NAME)
+    def get_container(self) -> docker.models.containers.Container:
+        return self._runtime.get_container(self.cfg.name)
 
-    def get_status(self) -> Optional[str]:
-        """Get the inference runtime status."""
-        return self._runtime.get_container_status(NOS_GRPC_SERVER_CONTAINER_NAME)
+    def get_container_name(self) -> Optional[str]:
+        return self._runtime.get_container(self.cfg.name).name
+
+    def get_container_id(self) -> Optional[str]:
+        return self._runtime.get_container_id(self.cfg.name)
+
+    def get_container_status(self) -> Optional[str]:
+        return self._runtime.get_container_status(self.cfg.name)
+
+    def get_container_logs(self, **kwargs) -> Iterable[str]:
+        return self._runtime.get_container_logs(self.cfg.name, **kwargs)

@@ -35,8 +35,9 @@ help:
 	@echo "  lint                Format source code automatically"
 	@echo "  test                Basic GPU/CPU testing with a single GPU"
 	@echo "  test-cpu            Basic CPU testing"
+	@echo "  test-client         Basic client-side testing"
+	@echo "  test-server         Server-side testing (all GPUs)"
 	@echo "  test-benchmark      Testing with benchmarks (all GPUs)"
-	@echo "  test-e2e            End-to-end testing (all GPUs)"
 	@echo "  dist                Builds source and wheel package"
 	@echo ""
 
@@ -101,11 +102,11 @@ test-client: docker-build-cpu docker-build-gpu ## Basic client-side testing
 test-benchmark: ## Testing with benchmarks (all GPUs)
 	pytest -sv tests -m "benchmark"
 
-test-e2e: ## End-to-end testing (all GPUs)
-	pytest -sv tests -m "e2e"
+test-server: ## Server-side testing (all GPUs)
+	pytest -sv tests -m "server"
 
-test-all:  ## ALl tests including CPU, GPU, client, and e2e
-	make test-cpu test-gpu test-client test-e2e
+test-all:  ## ALl tests including CPU, GPU, client, and server
+	make test-cpu test-gpu test-client test-server
 
 dist: clean ## builds source and wheel package
 	python -m build --sdist --wheel

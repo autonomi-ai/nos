@@ -87,7 +87,7 @@ def _system_info() -> None:
     try:
         # Get the output of nvidia-smi running in the container
         container = executor.start(
-            image=CUDA_RUNTIME_IMAGE, container_name="nos-server-gpu-test", command="nvidia-smi", detach=True, gpu=True
+            image=CUDA_RUNTIME_IMAGE, name="nos-server-gpu-test", command="nvidia-smi", detach=True, gpu=True
         )
         for i, log in enumerate(container.logs(stream=True)):
             nvidia_docker_gpu_info += "\n" if i > 0 else ""

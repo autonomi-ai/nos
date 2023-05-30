@@ -74,14 +74,14 @@ def grpc_client_gpu():
     """Test gRPC client to be used with GPU docker runtime (Port: 50054)."""
     from nos.client import InferenceClient
 
-    yield InferenceClient(f"localhost:{GRPC_TEST_PORT_GPU}")
+    yield InferenceClient(f"[::]:{GRPC_TEST_PORT_GPU}")
 
 
 @pytest.fixture(scope="session")
 def grpc_server_docker_runtime_cpu():
     """Test DockerRuntime CPU (Port: 50053)."""
     from nos.server.docker import DockerRuntime
-    from nos.server.runtime import NOS_DOCKER_IMAGE_CPU, NOS_GRPC_SERVER_CMD
+    from nos.server.runtime import NOS_DOCKER_IMAGE_CPU, NOS_INFERENCE_SERVICE_CMD
 
     docker_runtime = DockerRuntime.get()
 
@@ -94,9 +94,9 @@ def grpc_server_docker_runtime_cpu():
     # Start grpc server runtime (CPU)
     container = docker_runtime.start(
         image=NOS_DOCKER_IMAGE_CPU,
-        container_name=CPU_CONTAINER_NAME,
-        command=[NOS_GRPC_SERVER_CMD],
-        ports={DEFAULT_GRPC_PORT: GRPC_TEST_PORT_CPU},
+        name=CPU_CONTAINER_NAME,
+        command=[NOS_INFERENCE_SERVICE_CMD],
+        ports={f"{DEFAULT_GRPC_PORT}/tcp": GRPC_TEST_PORT_CPU},
         environment={
             "NOS_LOGGING_LEVEL": "DEBUG",
         },
@@ -135,7 +135,7 @@ def grpc_server_docker_runtime_cpu():
 def grpc_server_docker_runtime_gpu():
     """Test DockerRuntime GPU (Port: 50054)."""
     from nos.server.docker import DockerRuntime
-    from nos.server.runtime import NOS_DOCKER_IMAGE_GPU, NOS_GRPC_SERVER_CMD
+    from nos.server.runtime import NOS_DOCKER_IMAGE_GPU, NOS_INFERENCE_SERVICE_CMD
 
     docker_runtime = DockerRuntime.get()
 
@@ -148,9 +148,9 @@ def grpc_server_docker_runtime_gpu():
     # Start grpc server runtime (GPU)
     container = docker_runtime.start(
         image=NOS_DOCKER_IMAGE_GPU,
-        container_name=GPU_CONTAINER_NAME,
-        command=[NOS_GRPC_SERVER_CMD],
-        ports={DEFAULT_GRPC_PORT: GRPC_TEST_PORT_GPU},
+        name=GPU_CONTAINER_NAME,
+        command=[NOS_INFERENCE_SERVICE_CMD],
+        ports={f"{DEFAULT_GRPC_PORT}/tcp": GRPC_TEST_PORT_GPU},
         environment={
             "NOS_LOGGING_LEVEL": "DEBUG",
         },

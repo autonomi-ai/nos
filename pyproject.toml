@@ -135,10 +135,10 @@ lines-after-imports = 2
 max-complexity = 10
 
 [tool.pytest.ini_options]
-addopts = "-sv -m 'not (skip) and not (client) and not (benchmark) and not (e2e)'"
+addopts = "-sv -m 'not (skip) and not (client) and not (benchmark) and not (server)'"
 markers = [
-    "client", # Client-side tests
-    "e2e", # End-to-end integration tests
+    "client", # Client-side (integration) tests
+    "server", # Server-side tests
     "benchmark", # Benchmark tests that is slow for basic CI
     "asyncio", # Async IO tests
 ]
