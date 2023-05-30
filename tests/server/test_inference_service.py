@@ -5,7 +5,7 @@ from nos.server.service import InferenceServiceImpl
 from nos.test.conftest import ray_executor  # noqa: F401
 
 
-pytestmark = pytest.mark.e2e
+pytestmark = pytest.mark.server
 
 
 @pytest.mark.skip(reason="This test is not ready yet.")

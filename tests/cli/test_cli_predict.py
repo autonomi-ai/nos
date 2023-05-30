@@ -6,10 +6,10 @@ from nos.test.conftest import grpc_server_docker_runtime_cpu, grpc_server_docker
 from nos.test.utils import NOS_TEST_IMAGE
 
 
+pytestmark = pytest.mark.client
 runner = CliRunner()
 
 
-@pytest.mark.e2e
 def test_cli_predict_list(grpc_server_docker_runtime_cpu):  # noqa: F811
     from nos.test.conftest import GRPC_TEST_PORT_CPU
 
@@ -17,7 +17,6 @@ def test_cli_predict_list(grpc_server_docker_runtime_cpu):  # noqa: F811
     assert result.exit_code == 0
 
 
-@pytest.mark.e2e
 def test_cli_predict_txt2vec(grpc_server_docker_runtime_cpu):  # noqa: F811
     from nos.test.conftest import GRPC_TEST_PORT_CPU
 
@@ -27,7 +26,6 @@ def test_cli_predict_txt2vec(grpc_server_docker_runtime_cpu):  # noqa: F811
     assert result.exit_code == 0
 
 
-@pytest.mark.e2e
 def test_cli_predict_img2vec(grpc_server_docker_runtime_cpu):  # noqa: F811
     from nos.test.conftest import GRPC_TEST_PORT_CPU
 
@@ -37,7 +35,6 @@ def test_cli_predict_img2vec(grpc_server_docker_runtime_cpu):  # noqa: F811
     assert result.exit_code == 0
 
 
-@pytest.mark.e2e
 def test_cli_predict_img2bbox(grpc_server_docker_runtime_gpu):  # noqa: F811
     from nos.test.conftest import GRPC_TEST_PORT_GPU
 
@@ -47,7 +44,6 @@ def test_cli_predict_img2bbox(grpc_server_docker_runtime_gpu):  # noqa: F811
     assert result.exit_code == 0
 
 
-@pytest.mark.e2e
 def test_cli_predict_txt2img(grpc_server_docker_runtime_gpu):  # noqa: F811
     from nos.test.conftest import GRPC_TEST_PORT_GPU
 
