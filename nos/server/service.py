@@ -3,13 +3,11 @@ from dataclasses import dataclass
 from typing import Union
 
 import grpc
-import numpy as np
 import ray
 import rich.console
 import rich.status
 import torch
 from google.protobuf import empty_pb2
-from PIL import Image
 
 from nos import hub
 from nos.common import ModelSpec, TaskType, dumps
@@ -155,6 +153,13 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
         """Main model prediction interface."""
         model_request = request.model
         logger.debug(f"Received request: {model_request.task}, {model_request.name}")
+        if model_request.task not in (
+            TaskType.IMAGE_GENERATION.value,
+            TaskType.IMAGE_EMBEDDING.value,
+            TaskType.TEXT_EMBEDDING.value,
+            TaskType.OBJECT_DETECTION_2D.value,
+        ):
+            context.abort(context, grpc.StatusCode.INVALID_ARGUMENT, f"Invalid task {model_request.task}")
 
         model_id = ModelSpec.get_id(model_request.name, task=TaskType(model_request.task))
         if model_id not in self.model_handle:
@@ -163,57 +168,25 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
         # Get the model handle (model_spec, actor_handle)
         model_handle: ModelHandle = self.model_handle[model_id]
         model_spec: ModelSpec = model_handle.spec
+
         # TODO (spillai): Validate the inputs
         model_inputs = model_spec.signature._decode_inputs(request.inputs)
         actor_handle = model_handle.handle
+
         # Get the method function (i.e. `__call__`, or `predict`)
         actor_method_func = getattr(actor_handle, model_spec.signature.method_name)
         logger.debug(f"Actor method function: {actor_method_func}")
         logger.debug(f"Actor handle: {actor_handle}")
         logger.debug(f"Model spec: {model_spec}")
 
-        if model_request.task == TaskType.IMAGE_GENERATION.value:
-            prompts = model_inputs["prompts"]
-            logger.debug(f"Generating image with prompt: {prompts}")
+        # Call the method function
+        response_ref = actor_method_func.remote(**model_inputs)
+        response = ray.get(response_ref)
 
-            response_ref = actor_method_func.remote(prompts, height=512, width=512)
-            images = ray.get(response_ref)
-
-            assert "images" in model_spec.signature.outputs
-            return nos_service_pb2.InferenceResponse(response_bytes=dumps({"images": images}))
-
-        elif model_request.task == TaskType.TEXT_EMBEDDING.value:
-            texts = model_inputs["texts"]
-            logger.debug(f"Encoding text: {texts}")
-
-            response_ref = actor_method_func.remote(texts)
-            embedding = ray.get(response_ref)
-
-            assert "embedding" in model_spec.signature.outputs
-            return nos_service_pb2.InferenceResponse(response_bytes=dumps({"embedding": embedding}))
-
-        elif model_request.task == TaskType.IMAGE_EMBEDDING.value:
-            images: Union[np.ndarray, Image.Image] = model_inputs["images"]
-            logger.debug(f"Encoding images (type={type(images)})")
-
-            response_ref = actor_method_func.remote(images)
-            embedding = ray.get(response_ref)
-
-            assert "embedding" in model_spec.signature.outputs
-            return nos_service_pb2.InferenceResponse(response_bytes=dumps({"embedding": embedding}))
-
-        elif model_request.task == TaskType.OBJECT_DETECTION_2D.value:
-            images: Union[np.ndarray, Image.Image] = model_inputs["images"]
-            logger.debug(f"Encoding images (type={type(images)})")
-
-            response_ref = actor_method_func.remote(images)
-            prediction = ray.get(response_ref)
-
-            for key in prediction.keys():
-                assert key in model_spec.signature.outputs
-            return nos_service_pb2.InferenceResponse(response_bytes=dumps(prediction))
-        else:
-            context.abort(context, grpc.StatusCode.INVALID_ARGUMENT, f"Invalid method {request.method}")
+        # If the response is a single value, wrap it in a dict with the appropriate key
+        if len(model_spec.signature.outputs) == 1:
+            response = {k: response for k in model_spec.signature.outputs}
+        return nos_service_pb2.InferenceResponse(response_bytes=dumps(response))
 
 
 def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 1) -> None:

@@ -70,16 +70,16 @@ def _predict_img2vec(
 
     img = Image.open(filename)
 
-    st = time.perf_counter()
-    # with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
-    try:
-        model = ctx.obj.client.Module(task=TaskType.IMAGE_EMBEDDING, model_name=model_name)
-        response = model(images=[img])
-    except NosClientException as exc:
-        console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
-        return
+    with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
+        try:
+            st = time.perf_counter()
+            response = ctx.obj.client.Run(task=TaskType.IMAGE_EMBEDDING, model_name=model_name, images=[img])
+            end = time.perf_counter()
+        except NosClientException as exc:
+            console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
+            return
     console.print(
-        f"[bold green] ✓ Generated embedding ((1, {response['embedding'].shape[-1]}), time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
+        f"[bold green] ✓ Generated embedding ((1, {response['embedding'].shape[-1]}), time=~{(end - st) * 1e3:.1f}ms) [/bold green]"
     )
 
 
@@ -96,16 +96,16 @@ def _predict_txt2vec(
         ..., "-i", "--input", help="Prompt to generate image. (e.g. a cat dancing on the grass.)"
     ),
 ) -> None:
-    st = time.perf_counter()
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
         try:
-            model = ctx.obj.client.Module(task=TaskType.TEXT_EMBEDDING, model_name=model_name)
-            response = model(texts=[prompt])
+            st = time.perf_counter()
+            response = ctx.obj.client.Run(task=TaskType.TEXT_EMBEDDING, model_name=model_name, texts=[prompt])
+            end = time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
             return
     console.print(
-        f"[bold green] ✓ Generated embedding ({response['embedding'][..., :].shape}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
+        f"[bold green] ✓ Generated embedding ({response['embedding'][..., :].shape}..., time=~{(end - st) * 1e3:.1f}ms) [/bold green]"
     )
 
 
@@ -122,17 +122,25 @@ def _predict_txt2img(
         ..., "-i", "--input", help="Prompt to generate image. (e.g. a cat dancing on the grass.)"
     ),
     img_size: int = typer.Option(512, "-s", "--img-size", help="Image size to generate."),
+    num_images: int = typer.Option(1, "-n", "--num-images", help="Number of images to generate."),
 ) -> None:
-    st = time.perf_counter()
     with rich.status.Status("[bold green] Generating image ...[/bold green]"):
         try:
-            model = ctx.obj.client.Module(task=TaskType.IMAGE_GENERATION, model_name=model_name)
-            response = model(prompts=[prompt])
+            st = time.perf_counter()
+            response = ctx.obj.client.Run(
+                task=TaskType.IMAGE_GENERATION,
+                model_name=model_name,
+                prompts=[prompt],
+                height=img_size,
+                width=img_size,
+                num_images=num_images,
+            )
+            end = time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
             return
     console.print(
-        f"[bold green] ✓ Generated image ({response['images']}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
+        f"[bold green] ✓ Generated image ({response['images']}..., time=~{(end - st) * 1e3:.1f}ms) [/bold green]"
     )
 
 
@@ -151,18 +159,13 @@ def _predict_img2bbox(
 
     img = Image.open(filename).resize((640, 480))
     with rich.status.Status("[bold green] Predict bounding boxes ...[/bold green]"):
-
-        st = time.perf_counter()
         try:
-            model = ctx.obj.client.Module(task=TaskType.OBJECT_DETECTION_2D, model_name=model_name)
-            response = model(
-                images=[
-                    img,
-                ]
-            )
+            st = time.perf_counter()
+            response = ctx.obj.client.Run(task=TaskType.OBJECT_DETECTION_2D, model_name=model_name, images=[img])
             scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
+            end = time.perf_counter()
             console.print(
-                f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes[0].shape}, scores={scores[0].shape}, labels={labels[0].shape}, time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
+                f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes[0].shape}, scores={scores[0].shape}, labels={labels[0].shape}, time=~{(end - st) * 1e3:.1f}ms) [/bold green]"
             )
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold red]{exc}[/bold red]")
