@@ -203,7 +203,6 @@ class InferenceClient:
                     request=nos_service_pb2.ModelInfo(task=spec.task.value, name=spec.name)
                 )
             )
-            logger.debug(response)
             model_spec: ModelSpec = loads(response.response_bytes)
             return model_spec
         except grpc.RpcError as e:
@@ -302,14 +301,14 @@ class InferenceModule:
         """Get the relevant model information from the model name."""
         return self._spec
 
-    def __call__(self, **inputs: Dict[str, Any]) -> nos_service_pb2.InferenceResponse:
+    def __call__(self, **inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Call the instantiated module/model.
 
         Args:
             **inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.inputs.
         Returns:
-            nos_service_pb2.InferenceResponse: Inference response.
+            Dict[str, Any]: Inference response.
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
@@ -325,9 +324,9 @@ class InferenceModule:
             inputs=inputs,
         )
         try:
+
             response = self.stub.Run(request)
             response = loads(response.response_bytes)
-            logger.debug(response)
             return response
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to run model {self.model_name} ({e})")
