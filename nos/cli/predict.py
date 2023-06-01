@@ -170,7 +170,7 @@ def _predict_img2bbox(
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold red]{exc}[/bold red]")
             return
-        
+
 
 @predict_cli.command("segmentation", help="Propose a zero-shot segmentation for this image.")
 def _predict_segmentation(
@@ -190,7 +190,7 @@ def _predict_segmentation(
         try:
             st = time.perf_counter()
             response = ctx.obj.client.Run(task=TaskType.IMAGE_SEGMENTATION_2D, model_name=model_name, images=[img])
-            end = time.perf_counter()
+            time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to predict segmentations. [/red]\n[bold red]{exc}[/bold red]")
             return
@@ -198,4 +198,3 @@ def _predict_segmentation(
     console.print(
         f"[bold green] ✓ Generated masks ({response['masks']}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
     )
-
