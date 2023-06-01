@@ -6,6 +6,8 @@ import torch
 from PIL import Image
 
 from nos import hub
+from nos.common import EmbeddingSpec, TaskType
+from nos.common.types import Batch, ImageT, TensorT
 from nos.hub import HuggingFaceHubConfig
 
 
@@ -40,9 +42,17 @@ class SAM:
             inputs = self.processor(images=images, input_points=input_points, return_tensors="pt").to(self.device)
             outputs = self.model(**inputs)
             masks = self.processor.post_process_masks(outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu())
-            return masks.cpu().numpy()
+            assert len(masks) > 0
+            return [masks[0].cpu().numpy()]
 
 
 # Register all SAM models
 for model_name in SAM.configs:
-    hub.register(model_name, "segmentation", SAM, args=(model_name,))
+    hub.register(model_name, 
+                 TaskType.IMAGE_SEGMENTATION_2D , 
+                 SAM, 
+                 init_args=(model_name,),
+                 method_name="predict",
+                 inputs={"images": Batch[ImageT[Image.Image]]},
+                 outputs={"masks": Batch[ImageT[Image.Image]]},
+    )
