@@ -103,6 +103,20 @@ def test_common_model_spec(img2vec_signature):
     )
     assert spec is not None
 
+    # Test serialization
+    minfo = spec._to_proto()
+    spec_ = ModelSpec._from_proto(minfo)
+    assert spec_.signature.inputs is not None
+    assert spec_.signature.outputs is not None
+    assert spec_.signature.func_or_cls is not None
+
+    # Test serialization (public)
+    minfo = spec._to_proto(public=True)
+    spec_ = ModelSpec._from_proto(minfo)
+    assert spec_.signature.inputs is not None
+    assert spec_.signature.outputs is not None
+    assert spec_.signature.func_or_cls is None
+
     # Create a model spec with a wrong method name
     with pytest.raises(ValidationError):
         spec = ModelSpec(
