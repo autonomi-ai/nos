@@ -224,12 +224,17 @@ class ModelSpec:
         """Convert the model spec to proto."""
         if public:
             spec = copy.deepcopy(self)
-            spec.func_or_cls = None
-            spec.init_args = ()
-            spec.init_kwargs = {}
-            spec.method_name = None
+            spec.signature.func_or_cls = None
+            spec.signature.init_args = ()
+            spec.signature.init_kwargs = {}
+            spec.signature.method_name = None
         else:
             spec = self
         return nos_service_pb2.ModelInfoResponse(
             response_bytes=dumps(spec),
         )
+
+    @staticmethod
+    def _from_proto(minfo: nos_service_pb2.ModelInfoResponse) -> "ModelSpec":
+        """Convert the model info response back to the spec."""
+        return loads(minfo.response_bytes)
