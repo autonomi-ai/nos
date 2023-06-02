@@ -158,6 +158,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer):
             TaskType.IMAGE_EMBEDDING.value,
             TaskType.TEXT_EMBEDDING.value,
             TaskType.OBJECT_DETECTION_2D.value,
+            TaskType.IMAGE_SEGMENTATION_2D.value,
         ):
             context.abort(context, grpc.StatusCode.INVALID_ARGUMENT, f"Invalid task {model_request.task}")
 
