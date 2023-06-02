@@ -110,7 +110,7 @@ class InferenceServiceRuntime:
     def __repr__(self) -> str:
         return f"InferenceServiceRuntime(image={self.cfg.image}, name={self.cfg.name}, gpu={self.cfg.gpu})"
 
-    def start(self, **kwargs):
+    def start(self, **kwargs) -> docker.models.containers.Container:
         """Start the inference runtime.
 
         Args:
@@ -128,7 +128,7 @@ class InferenceServiceRuntime:
                 logger.debug(f"Overriding inference runtime config: {k}={value}")
 
         # Start inference runtime
-        retval = self._runtime.start(
+        container = self._runtime.start(
             image=self.cfg.image,
             name=self.cfg.name,
             command=self.cfg.command,
@@ -140,7 +140,7 @@ class InferenceServiceRuntime:
             **self.cfg.kwargs,
         )
         logger.info(f"Started inference runtime: {self}")
-        return retval
+        return container
 
     def stop(self, timeout: int = 30) -> docker.models.containers.Container:
         return self._runtime.stop(self.cfg.name, timeout=timeout)

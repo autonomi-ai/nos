@@ -188,6 +188,6 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        with pytest.raises(Exception):
+    with pytest.raises(Exception):
+        for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
             response = model(prompts=["a cat dancing on the grass."])

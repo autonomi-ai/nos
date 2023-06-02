@@ -69,24 +69,3 @@ def test_fasterrcnn_benchmark(model_name):
         num_iters=1000,
     )
     print(f"BENCHMARK [{model_name}]: {time_ms:.2f} ms / step")
-
-
-@pytest.mark.skip(reason="Not implemented yet")
-def test_fasterrcnn_predict_image(model):
-    from PIL import Image
-
-    img = Image.open(NOS_TEST_IMAGE)
-    predictions = model([img, img])
-    assert predictions is not None
-
-    assert predictions["scores"] is not None
-    assert isinstance(predictions["scores"], list)
-    assert len(predictions["scores"]) == 2
-
-    assert predictions["labels"] is not None
-    assert isinstance(predictions["labels"], list)
-    assert len(predictions["labels"]) == 2
-
-    assert predictions["bboxes"] is not None
-    assert isinstance(predictions["bboxes"], list)
-    assert len(predictions["bboxes"]) == 2
