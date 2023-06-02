@@ -45,9 +45,6 @@ def test_hub_load_all():
     models = hub.list()
     assert len(models) > 0
 
-    for model_name in models:
-        # TODO (spillai): Remove this and handle it directly in hub.load
-        if "open-mmlab" in model_name:
-            continue
-        model = hub.load(model_name)
+    for spec in models:
+        model = hub.load(spec.name, task=spec.task)
         assert model is not None
