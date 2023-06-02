@@ -65,7 +65,7 @@ def test_fasterrcnn_benchmark(model_name):
 
     model = FasterRCNN(model_name=model_name)
     time_ms = run_benchmark(
-        lambda: model.encode_image(img),
+        lambda: model.predict(img),
         num_iters=1000,
     )
     print(f"BENCHMARK [{model_name}]: {time_ms:.2f} ms / step")
