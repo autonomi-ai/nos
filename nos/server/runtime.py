@@ -82,6 +82,15 @@ class InferenceServiceRuntime:
             name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-gpu",
             gpu=True,
         ),
+        "mmdet-dev": InferenceServiceRuntimeConfig(
+            image="autonomi/nos:latest-mmdet-dev",
+            name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-mmdet",
+            gpu=True,
+            environment={
+                "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
+                "NOS_ENV": "mmdet-dev",
+            },
+        ),
     }
 
     def __init__(self, runtime: str = "cpu", name: str = NOS_INFERENCE_SERVICE_CONTAINER_NAME):

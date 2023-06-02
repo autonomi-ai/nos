@@ -12,9 +12,11 @@ from nos.hub import MMLabConfig
 @dataclass(frozen=True)
 class MMDetectionConfig(MMLabConfig):
     score_threshold: float = 0.3
+    """Score threshold for predictions."""
 
 
 class MMDetection:
+    """MMDetection models from open-mmlab."""
 
     configs = {
         "open-mmlab/efficientdet-d3": MMDetectionConfig(
@@ -27,12 +29,16 @@ class MMDetection:
         ),
     }
 
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str = "open-mmlab/efficientdet-d3"):
         from mmdet.apis import inference_detector, init_detector
 
-        self.cfg = MMDetection.configs.get(model_name)
+        try:
+            self.cfg = MMDetection.configs[model_name]
+        except KeyError:
+            raise ValueError(f"Invalid model_name: {model_name}, available models: {MMDetection.configs.keys()}")
         checkpoint = self.cfg.cached_checkpoint()
         config = str(Path(__file__).parent / self.cfg.config)
+        # TODO (spillai): Add config validation
         assert Path(config).exists(), f"Config {config} does not exist."
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = init_detector(config, checkpoint, device=self.device)
@@ -43,17 +49,16 @@ class MMDetection:
     ) -> Dict[str, np.ndarray]:
         with torch.inference_mode():
             if isinstance(images, np.ndarray):
-                pass
+                images = [images]
             elif isinstance(images, Image.Image):
-                images = np.asarray(images)
+                images = [np.asarray(images)]
             elif isinstance(images, list):
-                raise ValueError("Batching not yet supported")
-
+                images = [np.asarray(image) if isinstance(image, Image.Image) else image for image in images]
             predictions = self.inference_detector(self.model, images)
             return {
-                "scores": predictions.pred_instances.scores.cpu().numpy(),
-                "labels": predictions.pred_instances.labels.cpu().numpy(),
-                "bboxes": predictions.pred_instances.bboxes.cpu().numpy(),
+                "scores": [pred.pred_instances.scores.cpu().numpy() for pred in predictions],
+                "labels": [pred.pred_instances.labels.cpu().numpy() for pred in predictions],
+                "bboxes": [pred.pred_instances.bboxes.cpu().numpy() for pred in predictions],
             }
 
 

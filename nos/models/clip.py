@@ -45,7 +45,10 @@ class CLIP:
     def __init__(self, model_name: str = "openai/clip-vit-base-patch32"):
         from transformers import CLIPModel, CLIPProcessor, CLIPTokenizer
 
-        self.cfg = CLIP.configs.get(model_name)
+        try:
+            self.cfg = CLIP.configs[model_name]
+        except KeyError:
+            raise ValueError(f"Invalid model_name: {model_name}, available models: {CLIP.configs.keys()}")
         model_name = self.cfg.model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = CLIPModel.from_pretrained(model_name).to(self.device)

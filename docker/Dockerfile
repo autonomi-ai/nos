@@ -1,3 +1,10 @@
+# Dockerfile for NOS
+# Targets:
+#  - base  : base image for nos dependencies (client/server)
+#  - server: base + nos
+#  - test  : base + nos + tests
+#
+# >>>>>>>>>>>>
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE} as base
 
@@ -36,7 +43,6 @@ RUN curl -sLo ~/mambaforge.sh "https://github.com/conda-forge/miniforge/releases
 
 # NOS dependencies and install
 WORKDIR /tmp/$PROJECT
-ADD pyproject.toml .
 ADD requirements requirements
 
 # Install torch (cpu/gpu) based on target
@@ -52,8 +58,6 @@ RUN --mount=type=cache,target=~/.cache/pip \
   pip install \
   -r requirements/requirements.txt \
   -r requirements/requirements.server.txt
-ADD nos nos
-RUN pip install . --no-deps
 
 # Cleanup
 RUN /opt/conda/bin/mamba clean -ya \
@@ -62,7 +66,6 @@ RUN /opt/conda/bin/mamba clean -ya \
   && rm -rf /tmp/$PROJECT
 
 # NOS environment
-WORKDIR /app/$PROJECT
 ENV NOS_HOME /app/.nos
 ENV NOS_LOGGING_LEVEL WARNING
 
@@ -82,16 +85,34 @@ RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
 RUN echo "export CONDA_DEFAULT_ENV=${PYENV}" >> ~/.bashrc
 RUN echo "mamba activate ${PYENV}" > ~/.bashrc
 
+# >>>>>>>>>>>>>>>>>>>>
+# Install NOS / server
+# >>>>>>>>>>>>>>>>>>>>
+FROM base as server
+
+WORKDIR /tmp/$PROJECT
+ADD pyproject.toml .
+ADD nos nos
+RUN pip install . --no-deps && \
+  rm -rf ~/.cache/pip && \
+  rm -rf /tmp/$PROJECT
+
+WORKDIR /app/$PROJECT
+ENV NOS_ENV ${PYENV}
+
 CMD ["nos-grpc-server"]
 
-# Test environment
-FROM base as test
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# Install NOS test environment
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>
+FROM server as test
+
 RUN apt-get update \
   && apt-get install make
 ADD pyproject.toml .
+ADD nos nos
 ADD requirements requirements
 ADD makefiles makefiles
 ADD Makefile .
-ADD nos nos
 ADD tests tests
 RUN pip install -e '.[test]'
