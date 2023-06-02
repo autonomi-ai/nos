@@ -44,7 +44,6 @@ def test_clip_encode_image(model):
 
 
 @skip_if_no_torch_cuda
-@pytest.mark.benchmark(group=PyTestGroup.HUB)
 def test_clip_model_variants():
     for model_name in CLIP.configs.keys():
         model = CLIP(model_name=model_name)

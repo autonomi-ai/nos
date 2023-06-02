@@ -38,7 +38,7 @@ def openmmlab_runtime():
         "open-mmlab/faster-rcnn",
     ],
 )
-def test_mmdetection_predict_image(model_name):
+def test_mmdetection_predict(model_name):
     from PIL import Image
 
     from nos.models.openmmlab import MMDetection
