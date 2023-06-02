@@ -51,3 +51,12 @@ def test_cli_predict_txt2img(grpc_server_docker_runtime_gpu):  # noqa: F811
         app_cli, ["predict", "-a", f"localhost:{GRPC_TEST_PORT_GPU}", "txt2img", "-i", "Nitrous Oxide System"]
     )
     assert result.exit_code == 0
+
+
+def test_cli_predict_segmentation(grpc_server_docker_runtime_gpu):  # noqa: F811
+    from nos.test.conftest import GRPC_TEST_PORT_GPU
+
+    result = runner.invoke(
+        app_cli, ["predict", "-a", f"localhost:{GRPC_TEST_PORT_GPU}", "segmentation", "-i", NOS_TEST_IMAGE]
+    )
+    assert result.exit_code == 0
