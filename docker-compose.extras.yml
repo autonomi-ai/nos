@@ -1,0 +1,49 @@
+version: "3.8"
+
+x-nos-common:
+  &nos-common
+  volumes:
+    - ~/.nosd:/app/.nos
+  environment:
+    - NOS_LOGGING=DEBUG
+  shm_size: 4G
+
+x-nos-gpu:
+  &nos-common-gpu
+  deploy:
+    resources:
+      reservations:
+        devices:
+          - capabilities: [gpu]
+
+services:
+  base-gpu:
+    <<: [*nos-common, *nos-common-gpu]
+    image: autonomi/nos:latest-gpu
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile
+      args:
+        - TARGET=gpu
+        - DOCKER_TARGET=base
+        - BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
+    volumes:
+    - ~/.nosd:/app/.nos
+    environment:
+      - NOS_CONDA_ENV=nos_trt
+
+  mmdet-dev:
+    <<: [*nos-common, *nos-common-gpu]
+    image: autonomi/nos:latest-mmdet-dev
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.mmdet
+      args:
+        - BASE_IMAGE=autonomi/nos:latest-gpu
+    depends_on:
+      - base-gpu
+
+  test-mmdet-dev:
+    <<: [*nos-common, *nos-common-gpu]
+    image: autonomi/nos:latest-mmdet-dev
+    command: ${DOCKER_CMD:-pytest -sv tests/models/openmmlab}

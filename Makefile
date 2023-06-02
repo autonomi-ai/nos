@@ -8,7 +8,7 @@ SHELL := /bin/bash
 NOS_VERSION := $(shell python -c "exec(open('nos/version.py').read().strip()); print(__version__)")
 NOS_VERSION_TAG = ${NOS_VERSION}
 DOCKER_IMAGE_NAME := autonomi/nos
-DOCKER_TARGET := base
+DOCKER_TARGET := server
 DOCKER_ARGS :=
 DOCKER_CMD :=
 

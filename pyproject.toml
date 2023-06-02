@@ -147,6 +147,8 @@ filterwarnings = [
     "default:Using or importing the ABCs:DeprecationWarning:unittest2.*",
     "default:.*not marked using pytest.hook.*",
     "ignore:.*not marked using pytest.hook.*::xdist.*",
+    "ignore::Warning",
+    "ignore::ImportWarning",
     "ignore::DeprecationWarning",
     "ignore::ResourceWarning",
 ]

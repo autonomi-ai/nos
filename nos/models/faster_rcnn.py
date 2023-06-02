@@ -30,7 +30,10 @@ class FasterRCNN:
     def __init__(self, model_name: str = "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"):
         from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
 
-        self.cfg = FasterRCNN.configs.get(model_name)
+        try:
+            self.cfg = FasterRCNN.configs[model_name]
+        except KeyError:
+            raise ValueError(f"Invalid model_name: {model_name}, available models: {FasterRCNN.configs.keys()}")
         model_name = self.cfg.model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = fasterrcnn_mobilenet_v3_large_320_fpn(weights="DEFAULT").to(self.device)
