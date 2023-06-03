@@ -170,6 +170,34 @@ def _predict_img2bbox(
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold red]{exc}[/bold red]")
             return
+        
+
+@predict_cli.command("img2bbox_trt", help="Predict bounding boxes from image.")
+def _predict_img2bbox(
+    ctx: typer.Context,
+    model_name: str = typer.Option(
+        "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
+        "-m",
+        "--model-name",
+        help="Name of the model to use (e.g. torchvision/fasterrcnn_mobilenet_v3_large_320_fpn).",
+    ),
+    filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
+) -> None:
+    from PIL import Image
+
+    img = Image.open(filename).resize((640, 480))
+    with rich.status.Status("[bold green] Predict bounding boxes ...[/bold green]"):
+        try:
+            st = time.perf_counter()
+            response = ctx.obj.client.Run(task=TaskType.OBJECT_DETECTION_2D_TRT, model_name=model_name, images=[img])
+            scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
+            end = time.perf_counter()
+            console.print(
+                f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes[0].shape}, scores={scores[0].shape}, labels={labels[0].shape}, time=~{(end - st) * 1e3:.1f}ms) [/bold green]"
+            )
+        except NosClientException as exc:
+            console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold red]{exc}[/bold red]")
+            return
 
 
 @predict_cli.command("segmentation", help="Propose a zero-shot segmentation for this image.")

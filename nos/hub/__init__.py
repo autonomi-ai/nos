@@ -1,7 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional, Type
 
 from nos.common import FunctionSignature, ModelSpec, TaskType  # noqa: F401
-from nos.hub.config import HuggingFaceHubConfig, MMLabConfig, NosHubConfig, TorchHubConfig  # noqa: F401
+from nos.hub.config import HuggingFaceHubConfig, MMLabConfig, NosHubConfig, TorchHubConfig, TRTConfig  # noqa: F401
 from nos.logging import logger
 
 

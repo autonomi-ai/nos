@@ -5,6 +5,13 @@ from nos.constants import NOS_MODELS_DIR
 
 
 @dataclass(frozen=True)
+class TRTConfig:
+    """Path to TRT engine file. Eventually this will go away once we can
+    pull these from the model hub"""
+    engine_file: str
+
+
+@dataclass(frozen=True)
 class NosHubConfig:
     """NOS Hub configuration."""
 

@@ -5,6 +5,7 @@ class TaskType(Enum):
     """Task types."""
 
     OBJECT_DETECTION_2D = "object_detection_2d"
+    OBJECT_DETECTION_2D_TRT = "object_detection_2d_trt"
     """2D object detection."""
     IMAGE_SEGMENTATION_2D = "image_segmentation_2d"
     """2D image segmentation."""
