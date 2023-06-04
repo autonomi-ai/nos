@@ -13,7 +13,6 @@ VIDEO_FILES = [NOS_TEST_VIDEO]
 def test_video(filename):
     from itertools import islice
 
-    logger.info(f"Testing video {filename}")
     video = VideoFile(filename)
 
     # Test len()

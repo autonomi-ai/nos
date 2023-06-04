@@ -1,71 +1,86 @@
+import numpy as np
 import pytest
-from loguru import logger
+from PIL import Image
+from tqdm import tqdm
 
-from nos.executors.ray import RayExecutor
-from nos.server.service import InferenceServiceImpl
-from nos.test.conftest import ray_executor  # noqa: F401
+from nos.common import TaskType  # noqa: E402
+from nos.test.utils import NOS_TEST_IMAGE  # noqa: E402
 
 
 pytestmark = pytest.mark.server
 
 
-def test_model_manager(ray_executor: RayExecutor):  # noqa: F811
-    from nos import hub
-    from nos.server.service import ModelHandle, ModelManager
-
-    manager = ModelManager()
-    assert manager is not None
-
-    with pytest.raises(NotImplementedError):
-        manager = ModelManager(policy=ModelManager.EvictionPolicy.LRU)
-
-    # Test adding several models back to back with the same manager.
-    # This should not raise any OOM errors as models are evicted
-    # from the manager's cache.
-    for idx, spec in enumerate(hub.list()):
-        handler: ModelHandle = manager.get(spec)
-        assert handler is not None
-        assert isinstance(handler, ModelHandle)
-
-        logger.info(">" * 80)
-        logger.info(f"idx: {idx}")
-        logger.info(f"Model manager: {manager}, spec: {spec}")
+def test_inference_service_impl(grpc_client_with_server):  # noqa: F811
+    client = grpc_client_with_server
+    assert client is not None
+    assert client.IsHealthy()
 
 
 @pytest.mark.benchmark
-def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
-    """Benchmark inference with a model manager."""
-    from PIL import Image
-    from tqdm import tqdm
+@pytest.mark.parametrize(
+    "model_name",
+    [
+        "openai/clip-vit-base-patch32",
+    ],
+)
+@pytest.mark.parametrize("scale", [1, 8])
+def test_inference_service_shm_transport(model_name, scale, grpc_client_with_server):  # noqa: F811
+    """Benchmark shared memory transport and inference between the client-server.
 
-    from nos import hub
-    from nos.common import TaskType
-    from nos.server.service import ModelHandle, ModelManager
-    from nos.test.utils import NOS_TEST_IMAGE
+    Note: This test is only valid for the local server.
+    """
+    import time
 
-    manager = ModelManager()
-    assert manager is not None
-
-    # Load a model spec
-    spec = hub.load_spec("openai/clip-vit-base-patch32", task=TaskType.IMAGE_EMBEDDING)
-
-    # Add the model to the manager (or via `manager.add()`)
-    handle: ModelHandle = manager.get(spec)
-    assert handle is not None
+    client = grpc_client_with_server
+    assert client is not None
 
     img = Image.open(NOS_TEST_IMAGE)
-    for _ in tqdm(range(10), desc="Inference with len(pool)=1 (warmup)"):
-        result = handle.remote(images=[img] * 8)
-        assert result is not None
+    W, H = 224, 224
+    img = img.resize((W * scale, H * scale))
+    img = np.asarray(img)
 
-    # Run inference
-    img = Image.open(NOS_TEST_IMAGE)
-    for _ in tqdm(range(500), desc="Inference with len(pool)=1"):
-        result = handle.remote(images=[img] * 8)
-        assert result is not None
+    # Load model
+    task = TaskType.IMAGE_EMBEDDING
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
 
+    # Warmup
+    inputs_shm = None
+    for _ in tqdm(range(10), desc=f"Warmup [task={task}, model_name={model_name}]", total=0):
+        inputs = {"images": [img]}
+        if inputs_shm is None:
+            inputs_shm = inputs
+            model.RegisterSystemSharedMemory(inputs)
+        response = model(**inputs)
+        assert isinstance(response, dict)
+        assert "embedding" in response
+        assert isinstance(response["embedding"], np.ndarray)
+    model.UnregisterSystemSharedMemory()
 
-@pytest.mark.skip(reason="This test is not ready yet.")
-def test_inference_service_impl(ray_executor: RayExecutor):  # noqa: F811
-    service = InferenceServiceImpl()
-    assert service is not None
+    # Benchmark (10s)
+    for b in range(0, 8):
+        B = 2**b
+        images = np.stack([img for _ in range(B)])
+        st = time.time()
+        inputs_shm = None
+        for _ in tqdm(
+            range(100_000),
+            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={img.shape}]",
+            unit="images",
+            unit_scale=B,
+            total=0,
+        ):
+            inputs = {"images": images}
+            if inputs_shm is None:
+                inputs_shm = inputs
+                model.RegisterSystemSharedMemory(inputs)
+            response = model(**inputs)
+            assert isinstance(response, dict)
+            assert "embedding" in response
+            assert isinstance(response["embedding"], np.ndarray)
+            N, _ = response["embedding"].shape
+            assert N == B
+            if time.time() - st > 10.0:
+                break
+        model.UnregisterSystemSharedMemory()

@@ -36,6 +36,14 @@ class TensorSpec:
     dtype: str = None
     """Tensor dtype. (uint8, int32, int64, float32, float64)"""
 
+    @property
+    def nbytes(self) -> Optional[int]:
+        """Return the number of bytes required to store the tensor."""
+        try:
+            return np.prod(self.shape) * np.dtype(self.dtype).itemsize
+        except TypeError:
+            return None
+
     @validator("shape")
     def validate_shape(cls, shape: Optional[Tuple[Optional[int], ...]]):
         """Validate the shape."""

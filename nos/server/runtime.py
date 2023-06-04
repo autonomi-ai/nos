@@ -38,18 +38,21 @@ class InferenceServiceRuntimeConfig:
     ports: Dict[int, int] = field(default_factory=lambda: {DEFAULT_GRPC_PORT: DEFAULT_GRPC_PORT})
     """Ports to expose."""
 
-    environment: Dict[str, str] = field(default_factory=lambda: {"NOS_LOGGING_LEVEL": LOGGING_LEVEL})
+    environment: Dict[str, str] = field(
+        default_factory=lambda: {
+            "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
+            "NOS_SHM_ENABLED": 1,
+        }
+    )
     """Environment variables."""
 
     volumes: Dict[str, Dict[str, str]] = field(
         default_factory=lambda: {
-            str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},
+            str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},  # nos cache
+            "/dev/shm": {"bind": "/dev/shm", "mode": "rw"},  # shared-memory transport
         }
     )
     """Volumes to mount."""
-
-    shm_size: str = "4g"
-    """Size of /dev/shm."""
 
     detach: bool = True
     """Whether to run the container in detached mode."""

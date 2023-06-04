@@ -15,9 +15,10 @@ services:
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL=DEBUG
+      - NOS_SHM_ENABLED=1
     volumes:
       - ~/.nosd:/app/.nos
-    shm_size: 4G
+      - /dev/shm:/dev/shm
     deploy:
       resources:
         reservations:

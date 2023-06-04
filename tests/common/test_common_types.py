@@ -20,6 +20,9 @@ def test_common_types():
     import numpy as np
     from PIL import Image
 
+    assert TensorSpec(shape=(None, None, 3), dtype="float32").nbytes is None
+    assert TensorSpec(shape=(480, 640, 3), dtype="float32").nbytes == 480 * 640 * 3 * 4
+
     # Tensor types with TensorSpec metadata
     TensorT[np.ndarray]  # without metadata (just a dyanmic tensor)
     TensorT[np.ndarray, TensorSpec(shape=(480, 640, 3), dtype="float32")]

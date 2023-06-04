@@ -56,6 +56,16 @@ message InferenceResponse {
   bytes response_bytes = 1;
 }
 
+// Register system shared memory request
+message GenericRequest {
+  bytes request_bytes = 1;
+}
+
+// Register system shared memory response
+message GenericResponse {
+  bytes response_bytes = 1;
+}
+
 
 // Ping / healthcheck response
 message PingResponse {
@@ -83,6 +93,12 @@ service InferenceService {
 
   // Run the inference request
   rpc Run(InferenceRequest) returns (InferenceResponse) {}
+
+  // Register shared memory
+  rpc RegisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
+
+  // Unregister shared memory
+  rpc UnregisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
 
   // Load model from Hugging Face Hub
   // TODO (spillai): To be implemented later (for power-users)

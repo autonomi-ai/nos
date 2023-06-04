@@ -11,6 +11,9 @@ from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec
 from nos.protoc import import_module
 
 
+FunctionSignatureType = Union[Type[int], Type[str], Type[float], Any]
+
+
 nos_service_pb2 = import_module("nos_service_pb2")
 
 
@@ -114,9 +117,9 @@ class FunctionSignature:
     initialization `args`/`kwargs`."""
 
     # TOFIX (spillai): Remove Any type, and explicitly define input/output types.
-    inputs: Dict[str, Union[Type[int], Type[str], Type[float], Any]]
+    inputs: Dict[str, FunctionSignatureType]
     """Mapping of input names to dtypes."""
-    outputs: Dict[str, Union[Type[int], Type[str], Type[float], Any]]
+    outputs: Dict[str, FunctionSignatureType]
     """Mapping of output names to dtypes."""
 
     """The remaining private fields are used to instantiate a model and execute it."""
@@ -133,21 +136,22 @@ class FunctionSignature:
         """Return the function signature representation."""
         return f"FunctionSignature(inputs={self.inputs}, outputs={self.outputs}, func_or_cls={self.func_or_cls}, init_args={self.init_args}, init_kwargs={self.init_kwargs}, method_name={self.method_name})"
 
-    def _validate_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        """Validate the input dict against the defined signature and decode it."""
-        if len(set(self.inputs.keys()).symmetric_difference(set(inputs.keys()))) > 0:
-            raise ValueError(f"Invalid inputs, provided={set(inputs.keys())}, expected={set(self.inputs.keys())}.")
+    @staticmethod
+    def validate(inputs: Dict[str, Any], sig: Dict[str, FunctionSignatureType]) -> Dict[str, Any]:
+        """Validate the input dict against the defined signature (input or output)."""
+        if len(set(sig.keys()).symmetric_difference(set(inputs.keys()))) > 0:
+            raise ValueError(f"Invalid inputs, provided={set(inputs.keys())}, expected={set(sig.keys())}.")
         # TODO (spillai): Validate input types and shapes.
         return inputs
 
     def _encode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Encode inputs based on defined signature."""
-        inputs = self._validate_inputs(inputs)
+        inputs = FunctionSignature.validate(inputs, self.inputs)
         return {k: dumps(v) for k, v in inputs.items()}
 
     def _decode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Decode inputs based on defined signature."""
-        inputs = self._validate_inputs(inputs)
+        inputs = FunctionSignature.validate(inputs, self.inputs)
         return {k: loads(v) for k, v in inputs.items()}
 
     def get_inputs_spec(self) -> Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]:

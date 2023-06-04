@@ -6,6 +6,7 @@ Benchmark results (NVIDIA GeForce RTX 2080 Ti):
 - [laion/CLIP-ViT-H-14-laion2B-s32B-b79K]: 51.53 ms / step
 - [laion/CLIP-ViT-L-14-laion2B-s32B-b82K]: 24.50 ms / step
 """
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -32,12 +33,19 @@ def _test_clip_encode_text(_model, D: int = 512):
 def _test_clip_encode_image(_model, D: int = 512):
     from PIL import Image
 
+    # Test single image inference
     im = Image.open(NOS_TEST_IMAGE)
     embed_im = _model.encode_image(im)
     assert embed_im.shape == (1, D)
+    # Test batching: List[PIL.Image]
     embed_im = _model.encode_image([im])
     assert embed_im.shape == (1, D)
+    # Test batching: List[PIL.Image]
     embed_im = _model.encode_image([im, im.rotate(180)])
+    assert embed_im.shape == (2, D)
+    # Test batching: np.ndarray (currently this fails)
+    images = np.stack([np.asarray(im), np.asarray(im)])
+    embed_im = _model.encode_image(images)
     assert embed_im.shape == (2, D)
 
 
@@ -72,10 +80,11 @@ def test_clip_visual_benchmark(model_name):
     """Benchmark CLIP visual encoder."""
 
     img = Image.open(NOS_TEST_IMAGE)
+    img = np.asarray(img)
 
     model = CLIP(model_name=model_name)
     time_ms = run_benchmark(
-        lambda: model.encode_image(img),
-        num_iters=1000,
+        lambda: model.encode_image([img]),
+        num_iters=500,
     )
-    print(f"BENCHMARK [{model_name}]: {time_ms:.2f} ms / step")
+    print(f"BENCHMARK [{model_name}]: fps={1e3/time_ms:.2f} ms, {time_ms:.2f} ms / step")

@@ -11,23 +11,21 @@ import pytest
 from PIL import Image
 from tqdm import tqdm
 
-
-pytestmark = pytest.mark.client
-
 from nos.common import ModelSpec, TaskType  # noqa: E402
 from nos.test.utils import NOS_TEST_IMAGE  # noqa: E402
 
 
-@pytest.mark.skip(reason="This test is not ready yet.")
-@pytest.mark.client
-def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: F811
+pytestmark = pytest.mark.client
+
+
+def test_e2e_grpc_client_and_gpu_server(grpc_server_docker_runtime_gpu):  # noqa: F811
     """Test the gRPC client with GPU docker runtime initialized.
 
     This test spins up a gRPC inference server within a
     GPU docker-runtime environment initialized and then issues
     requests to it using the gRPC client.
     """
-    client = grpc_client_with_gpu_backend
+    client = grpc_server_docker_runtime_gpu
 
     img = Image.open(NOS_TEST_IMAGE)
     img = np.array(img)
@@ -82,7 +80,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(img=img)
+        response = model(images=[img])
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -108,15 +106,14 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
         assert "images" in response
 
 
-@pytest.mark.client
-def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: F811
+def test_e2e_grpc_client_and_cpu_server(grpc_client_with_docker_runtime_server_cpu):  # noqa: F811
     """Test the gRPC client with CPU docker runtime initialized.
 
     This test spins up a gRPC inference server within a
     CPU docker-runtime environment initialized and then issues
     requests to it using the gRPC client.
     """
-    client = grpc_client_with_cpu_backend
+    client = grpc_client_with_docker_runtime_server_cpu
 
     img = Image.open(NOS_TEST_IMAGE)
     img = np.array(img)

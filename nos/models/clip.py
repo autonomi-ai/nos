@@ -59,8 +59,20 @@ class CLIP:
     def encode_image(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
         """Encode image into an embedding."""
         with torch.inference_mode():
-            if isinstance(images, (np.ndarray, Image.Image)):
+            if isinstance(images, np.ndarray):
+                if images.ndim == 3:
+                    images = [images]
+                elif images.ndim == 4:
+                    images = list(images)
+                else:
+                    raise ValueError(f"Invalid image shape: {images.shape}")
+            elif isinstance(images, Image.Image):
                 images = [images]
+            elif isinstance(images, list):
+                pass
+            else:
+                raise ValueError(f"Invalid images type: {type(images)}")
+
             inputs = self.processor(images=images, return_tensors="pt").to(self.device)
             image_features = self.model.get_image_features(**inputs)
             return image_features.cpu().numpy()

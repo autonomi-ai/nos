@@ -1,14 +1,17 @@
 """gRPC client for NOS service."""
 import time
+import uuid
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any, Callable, Dict, List
 
 import grpc
+import numpy as np
 from google.protobuf import empty_pb2
 
 from nos.client.exceptions import NosClientException
-from nos.common import ModelSpec, TaskType, loads
+from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps, loads
+from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
 from nos.protoc import import_module
@@ -63,6 +66,7 @@ class InferenceClient:
         self.address: str = address
         self._channel: grpc.Channel = None
         self._stub: nos_service_pb2_grpc.InferenceServiceStub = None
+        self._uuid: str = str(uuid.uuid4())
 
     def __getstate__(self) -> InferenceClientState:
         """Returns the state of the client for serialization purposes.
@@ -118,8 +122,8 @@ class InferenceClient:
         try:
             response: nos_service_pb2.PingResponse = self.stub.Ping(empty_pb2.Empty())
             return response.status == "ok"
-        except grpc.RpcError as exc:
-            raise NosClientException(f"Failed to ping server ({exc})")
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to ping server ({e})")
 
     def WaitForServer(self, timeout: int = 60, retry_interval: int = 5) -> None:
         """Ping the gRPC server for health.
@@ -288,18 +292,97 @@ class InferenceModule:
     """gRPC client."""
     _spec: ModelSpec = field(init=False)
     """Model specification for this module."""
+    _shm_objects: Dict[str, Any] = field(init=False, default_factory=dict)
+    """Shared memory data."""
 
     def __post_init__(self):
         """Initialize the spec."""
         self._spec = self._client.GetModelInfo(ModelSpec(name=self.model_name, task=self.task))
+        if not NOS_SHM_ENABLED:
+            self._shm_objects = None  # disables shm, and avoids registering/unregistering
 
     @property
     def stub(self):
         return self._client.stub
 
+    @property
+    def uuid(self) -> str:
+        """Correlation ID for this module."""
+        return self._client._uuid
+
+    def _encode(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        """Encode the inputs dictionary for transmission.
+
+        TODO (spillai)
+            - Support middlewares for encoding/decoding.
+            - Validate inputs/outputs with spec signature.
+            - Support shared memory transport.
+            - SerDe before/after transmission.
+
+        Args:
+            inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
+                defined in the ModelSpec.signature.inputs.
+        Returns:
+            Dict[str, Any]: Encoded inputs.
+        """
+        # Validate data with spec signature
+        inputs = FunctionSignature.validate(inputs, self._spec.signature.inputs)
+
+        # Optionally, create/register shm and copy over numpy arrays to shm
+        if self._shm_objects is not None:
+            # Register system shared memory for inputs, if not already registered
+            if not len(self._shm_objects):
+                self.RegisterSystemSharedMemory(inputs)
+        # Copy numpy arrays to shared memory
+        if self._shm_objects is not None:
+            inputs = SharedMemoryTransportManager.copy_to(self._shm_objects, inputs)
+
+        # Pickle the data  for transmission
+        return {k: dumps(v) for k, v in inputs.items()}
+
+    def _decode(self, response_bytes: bytes) -> Any:
+        """Decode the response bytes."""
+        return loads(response_bytes)
+
+    def __del__(self):
+        """Delete the shared memory."""
+        self.UnregisterSystemSharedMemory()
+
     def GetModelInfo(self) -> ModelSpec:
         """Get the relevant model information from the model name."""
         return self._spec
+
+    def RegisterSystemSharedMemory(self, inputs: Dict[str, Any]) -> None:
+        """Register system shared memory for inputs."""
+        # Create shared memory request
+        # We convert the numpy arrays to TensorSpec(s) to let the
+        # server know the shape and dtype of the underlying shm data.
+        shm_request = {}
+        for k, v in inputs.items():
+            if isinstance(v, np.ndarray) or isinstance(v, list):
+                shm_request[k] = (
+                    [TensorSpec(v[0].shape, dtype=str(v[0].dtype))] * len(v)
+                    if isinstance(v, list)
+                    else TensorSpec(v.shape, dtype=str(v.dtype))
+                )
+        logger.debug(f"Registering shared memory: {shm_request}")
+
+        # Request shared memory, fail gracefully if not supported
+        response = self.stub.RegisterSystemSharedMemory(
+            nos_service_pb2.GenericRequest(request_bytes=dumps(shm_request)),
+            metadata=[("client_id", self.uuid), ("spec_id", self._spec.id)],
+        )
+        self._shm_objects = loads(response.response_bytes)
+        logger.debug(f"Successfully registered shared memory: {self._shm_objects}")
+
+    def UnregisterSystemSharedMemory(self) -> None:
+        """Unregister system shared memory."""
+        if self._shm_objects is not None:
+            self.stub.UnregisterSystemSharedMemory(
+                nos_service_pb2.GenericRequest(request_bytes=dumps(self._shm_objects)),
+                metadata=[("client_id", self.uuid), ("spec_id", self._spec.id)],
+            )
+            logger.debug(f"Successfully unregistered shared memory: {self._shm_objects}")
 
     def __call__(self, **inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Call the instantiated module/model.
@@ -315,7 +398,7 @@ class InferenceModule:
         # Check if the input dictionary is consistent
         # with inputs/outputs defined in `spec.signature`
         # and then encode it.
-        inputs = self._spec.signature._encode_inputs(inputs)
+        inputs = self._encode(inputs)
         request = nos_service_pb2.InferenceRequest(
             model=nos_service_pb2.ModelInfo(
                 task=self.task.value,
@@ -324,9 +407,8 @@ class InferenceModule:
             inputs=inputs,
         )
         try:
-
             response = self.stub.Run(request)
-            response = loads(response.response_bytes)
-            return response
+            response = self._decode(response.response_bytes)
+            return {k: loads(v) for k, v in response.items()}
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to run model {self.model_name} ({e})")
