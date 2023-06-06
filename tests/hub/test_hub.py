@@ -42,6 +42,7 @@ def test_hub_load():
 @skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
 def test_hub_load_all():
+    """Benchmark loading all models from the hub."""
     models = hub.list()
     assert len(models) > 0
 

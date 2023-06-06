@@ -3,10 +3,13 @@ from PIL import Image
 
 from nos.models import FasterRCNN
 from nos.test.benchmark import run_benchmark
-from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_all_if_no_torch_cuda, skip_if_no_torch_cuda
+from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
 
-pytestmark = skip_all_if_no_torch_cuda()
+@pytest.fixture(scope="module")
+def model():
+    MODEL_NAME = "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"
+    yield FasterRCNN(model_name=MODEL_NAME)
 
 
 def _test_predict(_model):
@@ -27,21 +30,12 @@ def _test_predict(_model):
     assert len(predictions["bboxes"]) == 2
 
 
-MODEL_NAME = "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"
-
-
-@pytest.fixture(scope="module")
-def model():
-    yield FasterRCNN(model_name=MODEL_NAME)
-
-
 def test_fasterrcnn_predict(model):
     _test_predict(model)
 
 
-@skip_if_no_torch_cuda
-@pytest.mark.benchmark(group=PyTestGroup.HUB)
 def test_fasterrcnn_model_variants():
+    """Test all FasterRCNN model variants."""
     for model_name in FasterRCNN.configs.keys():
         model = FasterRCNN(model_name=model_name)
         _test_predict(model)
@@ -56,10 +50,7 @@ def test_fasterrcnn_model_variants():
     ],
 )
 def test_fasterrcnn_benchmark(model_name):
-    """
-    Benchmark results (NVIDIA GeForce RTX 2080 Ti):
-
-    """
+    """Benchmark FasterRCNN model."""
 
     img = Image.open(NOS_TEST_IMAGE)
 
