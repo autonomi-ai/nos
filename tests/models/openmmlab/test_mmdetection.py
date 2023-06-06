@@ -3,7 +3,7 @@ from loguru import logger
 
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.server.runtime import InferenceServiceRuntime
-from nos.test.utils import NOS_TEST_IMAGE, skip_all_unless_nos_env
+from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_all_unless_nos_env, skip_if_no_torch_cuda
 
 
 # See `nos.server.runtime.InferenceServiceRuntime` for `mmdet-dev` runtime spec
@@ -60,3 +60,18 @@ def test_mmdetection_predict(model_name):
     assert predictions["bboxes"] is not None
     assert isinstance(predictions["bboxes"], list)
     assert len(predictions["bboxes"]) == 2
+
+
+@pytest.mark.skip(reason="mmdetection benchmarking not yet implemented")
+@skip_if_no_torch_cuda
+@pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
+@pytest.mark.parametrize(
+    "model_name",
+    [
+        "open-mmlab/efficientdet-d3",
+        "open-mmlab/faster-rcnn",
+    ],
+)
+def test_mmdetection_benchmark(model_name):
+    """Benchmark mmdetection models."""
+    raise NotImplementedError()

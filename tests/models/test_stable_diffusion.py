@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 
+from nos.models import StableDiffusion2  # noqa: F401
 from nos.test.utils import PyTestGroup, skip_all_if_no_torch_cuda
 
 
@@ -10,10 +11,9 @@ pytestmark = skip_all_if_no_torch_cuda()
 
 @pytest.fixture(scope="module")
 def model():
-    from nos.models import StableDiffusion2  # noqa: F401
-
     # TODO (spillai): @pytest.parametrize("scheduler", ["ddim", "euler-discrete"])
-    yield StableDiffusion2(model_name="stabilityai/stable-diffusion-2", scheduler="ddim")
+    MODEL_NAME = "stabilityai/stable-diffusion-2"
+    yield StableDiffusion2(model_name=MODEL_NAME, scheduler="ddim")
 
 
 def test_stable_diffusion(model):
@@ -32,6 +32,7 @@ def test_stable_diffusion(model):
 
 @pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
 def test_stable_diffusion_benchmark(model):
+    """Benchmark StableDiffusion2 model."""
     from nos.test.benchmark import run_benchmark
 
     steps = 10

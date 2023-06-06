@@ -94,6 +94,7 @@ def test_video_bridge(filename):
 
 @pytest.mark.benchmark
 def test_benchmark_video_loading():
+    """Benchmark VideoFile loading."""
     import time
 
     import requests

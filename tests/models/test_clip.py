@@ -1,3 +1,11 @@
+"""CLIP model tests and benchmarks.
+
+Benchmark results (NVIDIA GeForce RTX 2080 Ti):
+- [openai/clip-vit-base-patch32]: 9.98 ms / step
+- [openai/clip-vit-large-patch14]: 23.84 ms / step
+- [laion/CLIP-ViT-H-14-laion2B-s32B-b79K]: 51.53 ms / step
+- [laion/CLIP-ViT-L-14-laion2B-s32B-b82K]: 24.50 ms / step
+"""
 import pytest
 from PIL import Image
 
@@ -6,11 +14,9 @@ from nos.test.benchmark import run_benchmark
 from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
 
-MODEL_NAME = "openai/clip-vit-base-patch32"
-
-
 @pytest.fixture(scope="module")
 def model():
+    MODEL_NAME = "openai/clip-vit-base-patch32"
     yield CLIP(model_name=MODEL_NAME)
 
 
@@ -43,8 +49,8 @@ def test_clip_encode_image(model):
     _test_clip_encode_image(model)
 
 
-@skip_if_no_torch_cuda
 def test_clip_model_variants():
+    """Test all CLIP model variants."""
     for model_name in CLIP.configs.keys():
         model = CLIP(model_name=model_name)
         _test_clip_encode_text(model, D=model.cfg.D)
@@ -63,13 +69,7 @@ def test_clip_model_variants():
     ],
 )
 def test_clip_visual_benchmark(model_name):
-    """
-    Benchmark results (NVIDIA GeForce RTX 2080 Ti):
-    - [openai/clip-vit-base-patch32]: 9.98 ms / step
-    - [openai/clip-vit-large-patch14]: 23.84 ms / step
-    - [laion/CLIP-ViT-H-14-laion2B-s32B-b79K]: 51.53 ms / step
-    - [laion/CLIP-ViT-L-14-laion2B-s32B-b82K]: 24.50 ms / step
-    """
+    """Benchmark CLIP visual encoder."""
 
     img = Image.open(NOS_TEST_IMAGE)
 

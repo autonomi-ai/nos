@@ -34,6 +34,7 @@ def test_model_manager(ray_executor: RayExecutor):  # noqa: F811
 
 @pytest.mark.benchmark
 def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
+    """Benchmark inference with a model manager."""
     from PIL import Image
     from tqdm import tqdm
 
