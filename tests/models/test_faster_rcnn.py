@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -14,12 +15,15 @@ def model():
 
 def _test_predict(_model):
     img = Image.open(NOS_TEST_IMAGE)
+    W, H = img.size
     predictions = _model.predict([img, img])
     assert predictions is not None
 
     assert predictions["scores"] is not None
     assert isinstance(predictions["scores"], list)
     assert len(predictions["scores"]) == 2
+    for scores in predictions["scores"]:
+        assert np.min(scores) >= 0.0 and np.max(scores) <= 1.0
 
     assert predictions["labels"] is not None
     assert isinstance(predictions["labels"], list)
@@ -28,6 +32,9 @@ def _test_predict(_model):
     assert predictions["bboxes"] is not None
     assert isinstance(predictions["bboxes"], list)
     assert len(predictions["bboxes"]) == 2
+    for bbox in predictions["bboxes"]:
+        assert (bbox[:, 0] >= 0).all() and (bbox[:, 0] <= W).all()
+        assert (bbox[:, 1] >= 0).all() and (bbox[:, 1] <= H).all()
 
 
 def test_fasterrcnn_predict(model):
