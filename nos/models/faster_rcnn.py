@@ -54,7 +54,7 @@ class FasterRCNN:
             images = images.to(self.device)
             predictions = self.model(images)
             return {
-                "scores": [pred["boxes"].cpu().numpy() for pred in predictions],
+                "scores": [pred["scores"].cpu().numpy() for pred in predictions],
                 "labels": [pred["labels"].cpu().numpy() for pred in predictions],
                 "bboxes": [pred["boxes"].cpu().numpy() for pred in predictions],
             }
