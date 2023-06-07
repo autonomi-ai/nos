@@ -5,7 +5,7 @@ x-nos-common:
   volumes:
     - ~/.nosd:/app/.nos
   environment:
-    - NOS_LOGGING=DEBUG
+    - NOS_LOGGING_LEVEL=DEBUG
   shm_size: 4G
 
 x-nos-gpu:

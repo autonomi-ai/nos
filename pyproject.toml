@@ -30,7 +30,12 @@ dependencies = {file = ["requirements/requirements.txt"]}
 
   [tool.setuptools.dynamic.optional-dependencies]
     torch = {file = ["requirements/requirements.torch.gpu.txt"]}
-    server = {file = ["requirements/requirements.server.txt","requirements/requirements.torch.gpu.txt"]}
+    extras = {file = ["requirements/requirements.extras.txt"]}
+    server = {file = [
+        "requirements/requirements.server.txt",
+        "requirements/requirements.torch.gpu.txt",
+        "requirements/requirements.extras.txt"
+    ]}
     dev = {file = ["requirements/requirements.dev.txt"]}
     test = {file = ["requirements/requirements.test.txt"]}
     docs = {file = ["requirements/requirements.docs.txt"]}

@@ -1,6 +1,6 @@
 diffusers
 huggingface_hub
 pyarrow>=12.0.0
-ray[serve]>=2.4.0
+ray[serve]==2.5.0
 tabulate
 transformers>=4.29.2

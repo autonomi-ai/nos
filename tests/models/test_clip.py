@@ -41,10 +41,12 @@ def _test_clip_encode_image(_model, D: int = 512):
     assert embed_im.shape == (2, D)
 
 
+@pytest.mark.benchmark(group=PyTestGroup.HUB)
 def test_clip_encode_text(model):
     _test_clip_encode_text(model)
 
 
+@pytest.mark.benchmark(group=PyTestGroup.HUB)
 def test_clip_encode_image(model):
     _test_clip_encode_image(model)
 
