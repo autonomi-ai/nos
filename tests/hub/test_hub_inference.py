@@ -11,7 +11,13 @@ def hub_image_models():
     return [
         spec
         for spec in models
-        if spec.task in (TaskType.IMAGE_EMBEDDING, TaskType.OBJECT_DETECTION_2D) and not spec.name.endswith("trt")
+        if spec.task
+        in (
+            TaskType.IMAGE_EMBEDDING,
+            TaskType.OBJECT_DETECTION_2D,
+            TaskType.DEPTH_ESTIMATION_2D,
+        )
+        and not spec.name.endswith("-trt")
     ]
 
 
@@ -39,6 +45,7 @@ def test_hub_batched_image_inference():
 
     for spec in hub_image_models():
         logger.debug(f"Testing model [name={spec.name}, task={spec.task}]")
+
         # Run inference for each model (image-based models only)
         model = hub.load(spec.name, spec.task)
         predict = getattr(model, spec.signature.method_name)

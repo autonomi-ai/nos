@@ -118,7 +118,8 @@ def test_object_detection_predict_one(model_name, img_size):
 @skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.HUB)
 @pytest.mark.parametrize("model_name", MODELS)
-def test_object_detection_predict_variants(model_name):
+def test_object_detection_predict_all(model_name):
+    """ "Benchmark load/infer all object detection models."""
     logger.debug(f"Testing model: {model_name}")
     spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
     model = hub.load(spec.name, task=spec.task)
@@ -136,7 +137,7 @@ def test_object_detection_predict_variants(model_name):
     ],
 )
 def test_object_detection_predict_benchmark(model_name, img_size):
-    """object detection models."""
+    """ "Benchmark inference for all object detection models."""
 
     img = Image.open(NOS_TEST_IMAGE)
     img = img.resize(img_size)

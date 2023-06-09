@@ -8,6 +8,8 @@ class TaskType(Enum):
     """2D object detection."""
     IMAGE_SEGMENTATION_2D = "image_segmentation_2d"
     """2D image segmentation."""
+    DEPTH_ESTIMATION_2D = "depth_estimation_2d"
+    """2D depth estimation."""
 
     IMAGE_CLASSIFICATION = "image_classification"
     """Image classification."""
