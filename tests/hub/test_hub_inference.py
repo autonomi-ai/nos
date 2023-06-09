@@ -19,6 +19,7 @@ def test_hub_batched_image_inference():
     from nos.test.utils import NOS_TEST_IMAGE
 
     pil_im = Image.open(NOS_TEST_IMAGE)
+    pil_im = pil_im.resize((640, 480))
     np_im = np.asarray(pil_im)
 
     # Test various batch types for each model

@@ -39,24 +39,30 @@ class FasterRCNN:
         self.model = fasterrcnn_mobilenet_v3_large_320_fpn(weights="DEFAULT").to(self.device)
         self.model.eval()
 
-    def predict(
+    def __call__(
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
     ) -> Dict[str, np.ndarray]:
+        """Predict bounding boxes for images."""
         with torch.inference_mode():
             if isinstance(images, np.ndarray):
                 images = [images]
             elif isinstance(images, Image.Image):
                 images = [np.asarray(images)]
             elif isinstance(images, list):
-                pass
+                if isinstance(images[0], Image.Image):
+                    images = [np.asarray(image) for image in images]
+                elif isinstance(images[0], np.ndarray):
+                    pass
+                else:
+                    raise ValueError(f"Invalid type for images: {type(images[0])}")
 
             images = torch.stack([F.to_tensor(image) for image in images])
             images = images.to(self.device)
             predictions = self.model(images)
             return {
-                "scores": [pred["scores"].cpu().numpy() for pred in predictions],
-                "labels": [pred["labels"].cpu().numpy() for pred in predictions],
                 "bboxes": [pred["boxes"].cpu().numpy() for pred in predictions],
+                "scores": [pred["scores"].cpu().numpy() for pred in predictions],
+                "labels": [pred["labels"].cpu().numpy().astype(np.int32) for pred in predictions],
             }
 
 
@@ -65,7 +71,7 @@ hub.register(
     TaskType.OBJECT_DETECTION_2D,
     FasterRCNN,
     init_args=("torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",),
-    method_name="predict",
+    method_name="__call__",
     inputs={
         "images": Union[
             Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 8],
@@ -74,8 +80,8 @@ hub.register(
         ]
     },
     outputs={
-        "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
-        "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
         "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
+        "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
+        "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
     },
 )

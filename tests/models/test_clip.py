@@ -49,6 +49,7 @@ def test_clip_encode_image(model):
     _test_clip_encode_image(model)
 
 
+@pytest.mark.benchmark(group=PyTestGroup.HUB)
 def test_clip_model_variants():
     """Test all CLIP model variants."""
     for model_name in CLIP.configs.keys():
