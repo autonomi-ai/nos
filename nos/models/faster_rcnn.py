@@ -14,9 +14,13 @@ from nos.hub import TRTConfig
 
 from nos.constants import NOS_MODELS_DIR
 
+# TODO(Scott): Take another look at these dependencies
+import os
 import tensorrt as trt
 import pycuda.driver as cuda
+import pycuda.autoinit
 
+from nos.logging import logger
 
 @dataclass(frozen=True)
 class FasterRCNNConfig(TorchHubConfig, TRTConfig):
@@ -47,12 +51,17 @@ class FasterRCNN:
         self.model = fasterrcnn_mobilenet_v3_large_320_fpn(weights="DEFAULT").to(self.device)
         self.model.eval()
 
-        # Load the TRT engine file if availble
+        # Load the TRT engine file and runtime if availble
         if os.path.exists(self.cfg.engine_file):
-            with open(self.cfg.engine_file, "rb") as engine_file, trt.Runtime(TRT_LOGGER) as runtime:
-                self.engine = runtime.deserialize_cuda_engine(engine_file.read())
-                self.context = self.engine.create_execution_context()
+            logger.info("Found TRT engine file at {self.cfg.engine_file}, initializing runtime and context...") 
+            self.trt_logger = trt.Logger(trt.Logger.WARNING)
+            self.trt_runtime = trt.Runtime(self.trt_logger)
+            with open(self.cfg.engine_file, "rb") as engine_file:
+                self.trt_engine = self.trt_runtime.deserialize_cuda_engine(engine_file.read())
+                self.trt_context = self.trt_engine.create_execution_context()
+                self.cuda_stream = cuda.Stream()
 
+            logger.info("Initialized TRT runtime and context")
 
     def predict(
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
@@ -78,6 +87,15 @@ class FasterRCNN:
     def predict_trt(
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
     ) -> Dict[str, np.ndarray]:
+        logger.info("Run TRT Inference")
+        
+        # Check that we have the trt dependencies set up
+        assert self.trt_logger is not None
+        assert self.trt_runtime is not None
+        assert self.trt_engine is not None
+        assert self.trt_context is not None
+        assert self.cuda_stream is not None
+
         with torch.inference_mode():
             if isinstance(images, np.ndarray):
                 images = [images]
@@ -89,55 +107,29 @@ class FasterRCNN:
             images = torch.stack([F.to_tensor(image) for image in images])
             images = images.to(self.device).contiguous()
 
-            
-            """
-            inputs = []
-            outputs = []
-            allocations = []
-            for i in range(self.engine.num_bindings):
-                name = self.engine.get_binding_name(i)
-                dtype = self.engine.get_binding_dtype(i)
-                shape = self.engine.get_binding_shape(i)
-                if self.engine.binding_is_input(i):
-                    is_input = True
-                if is_input:
-                    assert shape == images.shape,  "Mismatch between ModelSpec and TRT engine input shape"
-                    assert dtype == images.dtype, "Mismatch between ModelSpec and TRT engine input dtype"
-                    self.batch_size = shape[0]
-                size = np.dtype(trt.nptype(dtype)).itemsize
-                for s in shape:
-                    size *= s
-                allocation = cuda.mem_alloc(size)
-                binding = {
-                    'index': i,
-                    'name': name,
-                    'dtype': np.dtype(trt.nptype(dtype)),
-                    'shape': list(shape),
-                    'allocation': allocation,
-                }
-                self.allocations.append(allocation)
-                if self.engine.binding_is_input(i):
-                    self.inputs.append(binding)
-                else:
-                    self.outputs.append(binding)
+            output_shape = (1, 1000, 4)
 
-            # Don't need to specify the cuda stream for async execution?
-            self.context.execute_v2(self.allocations)
-            """
+            # Input/Output allocations
+            logger.info("Setup IO allocations for TRT inference...")
+            input_host = cuda.pagelocked_empty(trt.volume(images.shape), dtype=np.float32)
+            output_host = cuda.pagelocked_empty(trt.volume(output_shape), dtype=np.float32)
+            input_device = cuda.mem_alloc(input_host.nbytes)
+            output_device = cuda.mem_alloc(output_host.nbytes)
+
+            # TODO(Scott): do we want to use execute_async_v2?
+            logger.info("Copy to device and execute...")
+            cuda.memcpy_htod_async(input_device, input_host, self.cuda_stream)
+            self.trt_context.execute_async_v2([int(input_device), int(output_device)], self.cuda_stream.handle, None)
+            cuda.memcpy_dtoh_async(output_host, output_device, self.cuda_stream.handle)
+            self.cuda_stream.synchronize()
+
+            logger.info("Finished TRT execution")
 
             return {
                 "scores": [],
                 "labels": [],
                 "bboxes": [],
             }
-
-            """
-            return {
-                "scores": [output["boxes"].cpu().numpy() for output in outputs],
-                "labels": [output["labels"].cpu().numpy() for output in outputs],
-                "bboxes": [output["boxes"].cpu().numpy() for output in outputs],
-            }
-            """
 
 
 hub.register(
