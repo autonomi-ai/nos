@@ -14,6 +14,7 @@ DOCKER_CMD :=
 
 include makefiles/Makefile.base.mk
 include makefiles/Makefile.mmdet.mk
+include makefiles/Makefile.trt.mk
 include makefiles/Makefile.docs.mk
 
 default: help;
