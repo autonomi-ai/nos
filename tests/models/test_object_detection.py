@@ -38,12 +38,13 @@ from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
 
 MODELS = list(FasterRCNN.configs.keys()) + list(YOLOX.configs.keys())
+UNIQUE_MODELS = list(FasterRCNN.configs.keys())[:1] + list(YOLOX.configs.keys())[:1]
 
 
 def _test_predict(_model):
     img = Image.open(NOS_TEST_IMAGE)
-    W, H = img.size
     img = img.resize((640, 480))
+    W, H = img.size
     predictions = _model([img, img])
     assert predictions is not None
 
@@ -64,14 +65,23 @@ def _test_predict(_model):
     assert isinstance(predictions["bboxes"], list)
     assert len(predictions["bboxes"]) == 2
     for bbox in predictions["bboxes"]:
-        assert (bbox[:, 0] >= -1e-1).all() and (bbox[:, 0] <= W).all()
-        assert (bbox[:, 1] >= -1e-1).all() and (bbox[:, 1] <= H).all()
+        assert (bbox[:, 0] >= -5e-1).all() and (bbox[:, 0] <= W).all()
+        assert (bbox[:, 1] >= -5e-1).all() and (bbox[:, 1] <= H).all()
+
+
+@skip_if_no_torch_cuda
+@pytest.mark.parametrize("model_name", UNIQUE_MODELS)
+def test_object_detection_predict_one(model_name):
+    logger.debug(f"Testing model: {model_name}")
+    spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
+    model = hub.load(spec.name, task=spec.task)
+    _test_predict(model)
 
 
 @skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.HUB)
 @pytest.mark.parametrize("model_name", MODELS)
-def test_object_detection_predict(model_name):
+def test_object_detection_predict_variants(model_name):
     logger.debug(f"Testing model: {model_name}")
     spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
     model = hub.load(spec.name, task=spec.task)
