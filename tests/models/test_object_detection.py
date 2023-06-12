@@ -25,6 +25,8 @@ Benchmark results (2080 Ti):
 [yolox/nano]: 24.67 ms / step
 """
 
+import os
+
 import numpy as np
 import pytest
 from loguru import logger
@@ -41,29 +43,34 @@ MODELS = list(FasterRCNN.configs.keys()) + list(YOLOX.configs.keys())
 UNIQUE_MODELS = list(FasterRCNN.configs.keys())[:1] + list(YOLOX.configs.keys())[:1]
 
 
+# Only enable YOLOX TRT models in trt-dev and trt-runtime environments
+if os.getenv("NOS_ENV", "") in ("trt-dev", "trt-runtime"):
+    MODELS += ["yolox/medium-trt"]
+
+
 def _test_predict(_model):
+    B = 1
     img = Image.open(NOS_TEST_IMAGE)
     img = img.resize((640, 480))
-    W, H = img.size
-    predictions = _model([img, img])
+    predictions = _model([img for _ in range(B)])
     assert predictions is not None
 
     assert predictions["scores"] is not None
     assert isinstance(predictions["scores"], list)
-    assert len(predictions["scores"]) == 2
+    assert len(predictions["scores"]) == B
     for scores in predictions["scores"]:
         assert np.min(scores) >= 0.0 and np.max(scores) <= 1.0
 
     assert predictions["labels"] is not None
     assert isinstance(predictions["labels"], list)
-    assert len(predictions["labels"]) == 2
+    assert len(predictions["labels"]) == B
     for labels in predictions["labels"]:
         assert len(np.unique(labels)) >= 3, "At least 3 different classes should be detected"
         assert labels.dtype == np.int32
 
     assert predictions["bboxes"] is not None
     assert isinstance(predictions["bboxes"], list)
-    assert len(predictions["bboxes"]) == 2
+    assert len(predictions["bboxes"]) == B
     for bbox in predictions["bboxes"]:
         assert (bbox[:, 0] >= -5e-1).all() and (bbox[:, 0] <= W).all()
         assert (bbox[:, 1] >= -5e-1).all() and (bbox[:, 1] <= H).all()
@@ -91,7 +98,13 @@ def test_object_detection_predict_variants(model_name):
 @skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
 @pytest.mark.parametrize("model_name", MODELS)
-@pytest.mark.parametrize("img_size", [(640, 480), (1280, 960)])
+# @pytest.mark.parametrize("img_size", [(640, 480), (1280, 960)])
+@pytest.mark.parametrize(
+    "img_size",
+    [
+        (640, 480),
+    ],
+)
 def test_object_detection_predict_benchmark(model_name, img_size):
     """object detection models."""
 

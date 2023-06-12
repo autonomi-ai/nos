@@ -1,0 +1,55 @@
+# Dockerfile.trt for NOS
+# Targets:
+#  - trt-base   : base trt image for common nos + trt dependencies (server)
+#  - trt-dev    : base + trt build deps + nos
+#  - trt-runtime: base + trt runtime deps + nos
+#
+# >>>>>>>>>>>>>>>>>>>>
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE} as trt-base
+
+RUN pip install --upgrade pip
+RUN pip install tabulate netron nvidia-pyindex
+RUN pip install nvidia-tensorrt
+RUN pip install torch-tensorrt
+ENV CUDA_MODULE_LOADING="LAZY"
+ENV NOS_ENV ${PROJECT}_trt_base
+
+# >>>>>>>>>>>>>>>>>>>>
+FROM trt-base as trt-dev
+
+RUN pip install jupyterlab notebook
+
+WORKDIR /tmp/$PROJECT
+ADD pyproject.toml .
+ADD nos nos
+RUN pip install . --no-deps && \
+  rm -rf ~/.cache/pip && \
+  rm -rf /tmp/$PROJECT
+WORKDIR /app/$PROJECT
+ENV NOS_ENV ${PROJECT}_trt_dev
+
+# >>>>>>>>>>>>>>>>>>>>
+FROM trt-base as trt-runtime
+
+WORKDIR /tmp/$PROJECT
+ADD pyproject.toml .
+ADD nos nos
+RUN pip install . --no-deps && \
+  rm -rf ~/.cache/pip && \
+  rm -rf /tmp/$PROJECT
+WORKDIR /app/$PROJECT
+ENV NOS_ENV ${PROJECT}_trt_runtime
+
+# >>>>>>>>>>>>>>>>>>>>
+FROM trt-dev as test-trt-dev
+
+RUN apt-get update \
+  && apt-get install make
+ADD pyproject.toml .
+ADD nos nos
+ADD requirements requirements
+ADD makefiles makefiles
+ADD Makefile .
+ADD tests tests
+RUN pip install -e '.[test]'

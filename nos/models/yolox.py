@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import List, Union
 
 import numpy as np
@@ -10,6 +11,7 @@ from torchvision import ops
 from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.common.types import Batch, ImageT, TensorT
+from nos.constants import NOS_MODELS_DIR
 from nos.hub import TorchHubConfig
 
 
@@ -174,6 +176,29 @@ class YOLOX:
             }
 
 
+class YOLOX_TRT(YOLOX):
+    """Torch-TensorRT runtime for YOLOX."""
+
+    configs = {f"{k}-trt": v for k, v in YOLOX.configs.items()}
+
+    def __init__(self, model_name: str = "yolox/medium-trt"):
+        _model_name = model_name.replace("-trt", "")
+        super().__init__(_model_name)
+
+        model_dir = Path(NOS_MODELS_DIR, f"cache/{_model_name}")
+        model_dir.mkdir(parents=True, exist_ok=True)
+
+        W, H = 640, 480
+        model_id = _model_name.replace("/", "-") + "_" + f"{W}x{H}"
+        self.filename = f"{model_dir}/{model_id}.torchtrt.pt"
+        if not Path(self.filename).exists():
+            raise FileNotFoundError(f"Could not find {self.filename}")
+
+        # Monkey patch backbone
+        trt_backbone = torch.load(self.filename)
+        self.model.backbone = trt_backbone
+
+
 for model_name in YOLOX.configs:
     hub.register(
         model_name,
@@ -186,6 +211,23 @@ for model_name in YOLOX.configs:
                 Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 8],
                 Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 1],
             ]
+        },
+        outputs={
+            "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
+            "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
+            "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
+        },
+    )
+
+for model_name in YOLOX_TRT.configs:
+    hub.register(
+        model_name,
+        TaskType.OBJECT_DETECTION_2D,
+        YOLOX_TRT,
+        init_args=(model_name,),
+        method_name="__call__",
+        inputs={
+            "images": Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 1],
         },
         outputs={
             "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],

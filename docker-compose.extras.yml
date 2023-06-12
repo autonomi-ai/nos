@@ -20,28 +20,40 @@ services:
   base-gpu:
     <<: [*nos-common, *nos-common-gpu]
     image: autonomi/nos:latest-gpu
-    build:
-      context: ./
-      dockerfile: docker/Dockerfile
-      args:
-        - TARGET=gpu
-        - DOCKER_TARGET=base
-        - BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
-    volumes:
-    - ~/.nosd:/app/.nos
-    environment:
-      - NOS_CONDA_ENV=nos_trt
+    # pull_policy: missing
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile
+    #   args:
+    #     - BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
+    #     - TARGET=gpu
+    #     - DOCKER_TARGET=base
+
+  trt-dev:
+    <<: [*nos-common, *nos-common-gpu]
+    image: autonomi/nos:latest-trt-dev
+    # pull_policy: missing
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile.trt
+    #   args:
+    #     - BASE_IMAGE=autonomi/nos:latest-gpu
+    #     - DOCKER_TARGET=trt-dev
+    # depends_on:
+    #   - base-gpu
+    command: ${DOCKER_CMD:-pytest -sv tests/models/test_object_detection.py -k test_object_detection_predict -m benchmark}
 
   mmdet-dev:
     <<: [*nos-common, *nos-common-gpu]
     image: autonomi/nos:latest-mmdet-dev
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.mmdet
-      args:
-        - BASE_IMAGE=autonomi/nos:latest-gpu
-    depends_on:
-      - base-gpu
+    pull_policy: missing
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile.mmdet
+    #   args:
+    #     - BASE_IMAGE=autonomi/nos:latest-gpu
+    # depends_on:
+    #   - base-gpu
 
   test-mmdet-dev:
     <<: [*nos-common, *nos-common-gpu]
