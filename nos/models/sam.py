@@ -5,9 +5,6 @@ import numpy as np
 import torch
 from PIL import Image
 
-from nos import hub
-from nos.common import TaskType
-from nos.common.types import Batch, ImageT
 from nos.hub import HuggingFaceHubConfig
 
 
