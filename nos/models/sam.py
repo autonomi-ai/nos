@@ -49,6 +49,7 @@ class SAM:
 
 
 # Register all SAM models
+"""
 for model_name in SAM.configs:
     hub.register(
         model_name,
@@ -59,3 +60,4 @@ for model_name in SAM.configs:
         inputs={"images": Batch[ImageT[Image.Image]]},
         outputs={"masks": Batch[ImageT[Image.Image]]},
     )
+"""
