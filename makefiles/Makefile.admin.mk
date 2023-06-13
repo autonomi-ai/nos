@@ -11,5 +11,9 @@ create-pypi-release:  ## package, git tag/release and upload a release to PyPI
 	twine upload dist/autonomi_nos-${NOS_VERSION}-py3-none-any.whl
 	echo "Successfully created release ${NOS_VERSION}."
 
+create-tag:
+	git tag -a ${NOS_VERSION} -m "Release ${NOS_VERSION}"
+	git push origin ${NOS_VERSION}
+
 docker-login:  ## Login to Docker Hub
 	docker login
