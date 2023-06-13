@@ -46,10 +46,20 @@ dependency_links = [
     "https://download.pytorch.org/whl/cu117",
 ]
 
+[tool.setuptools]
+include-package-data = false
+
 [tool.setuptools.packages.find]
 include = ["nos*","scripts*"]
 exclude = [
-    "nos*experimental",
+    "build",
+    "conda",
+    "dist",
+    "docs",
+    "makefiles",
+    "requirements",
+    "tests",
+    "nos*experimental*",
 ]
 
 [tool.setuptools.package-data]
