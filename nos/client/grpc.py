@@ -208,7 +208,7 @@ class InferenceClient:
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to get model info ({e})")
 
-    @lru_cache(maxsize=32)  # noqa: B019
+    @lru_cache(maxsize=8)  # noqa: B019
     def Module(self, task: TaskType, model_name: str) -> "InferenceModule":
         """Instantiate a model module.
 
@@ -220,7 +220,7 @@ class InferenceClient:
         """
         return InferenceModule(task, model_name, self)
 
-    @lru_cache(maxsize=32)  # noqa: B019
+    @lru_cache(maxsize=8)  # noqa: B019
     def ModuleFromSpec(self, spec: ModelSpec) -> "InferenceModule":
         """Instantiate a model module from a model spec.
 

@@ -11,4 +11,8 @@ services:
       - NOS_LOGGING_LEVEL=ERROR
     volumes:
       - ~/.nosd:/app/.nos
-    shm_size: 4G
+    deploy:
+      resources:
+        limits:
+          cpus: "6"
+          memory: 6G

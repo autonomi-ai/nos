@@ -12,7 +12,6 @@ console = rich.console.Console()
 @docker_cli.command("start", help="Start NOS inference engine.")
 def _docker_start(
     gpu: bool = typer.Option(False, "--gpu", help="Start the container with GPU support."),
-    shm_size: str = typer.Option("4g", "--shm-size", help="Size of /dev/shm."),
 ):
     """Start the NOS inference engine.
 
@@ -20,16 +19,17 @@ def _docker_start(
         $ nos docker start
     """
     with rich.status.Status("[bold green] Starting inference client ...[/bold green]") as status:
-        client = InferenceServiceRuntime()
-        if client.ready():
+        runtime = "gpu" if gpu else "cpu"
+        runtime = InferenceServiceRuntime(runtime=runtime, name=f"nos-inference-service-runtime-{runtime}")
+        if runtime.get_container_status() == "running":
             status.stop()
-            id = client.id()
+            id = runtime.get_container_id()
             console.print(
                 f"[bold green] ✓ Inference client already running (id={id[:12] if id else None}).[/bold green]"
             )
             return
-        client.start(detach=True, gpu=gpu, shm_size=shm_size)
-        id = client.id()
+        runtime.start()
+        id = runtime.get_container_id()
     console.print(f"[bold green] ✓ Inference client started (id={id[:12] if id else None}). [/bold green]")
 
 
