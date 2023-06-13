@@ -43,18 +43,3 @@ class SAM:
             )
             assert len(masks) > 0
             return [masks[0].cpu().numpy()]
-
-
-# Register all SAM models
-"""
-for model_name in SAM.configs:
-    hub.register(
-        model_name,
-        TaskType.IMAGE_SEGMENTATION_2D,
-        SAM,
-        init_args=(model_name,),
-        method_name="predict",
-        inputs={"images": Batch[ImageT[Image.Image]]},
-        outputs={"masks": Batch[ImageT[Image.Image]]},
-    )
-"""
