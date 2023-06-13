@@ -57,7 +57,12 @@ class InferenceServiceRuntimeConfig:
     gpu: bool = False
     """Whether to start the container with GPU support."""
 
-    kwargs: Dict[str, Any] = field(default_factory=dict)
+    kwargs: Dict[str, Any] = field(
+        default_factory=lambda: {
+            "nano_cpus": int(6e9),
+            "mem_limit": "6g",
+        }
+    )
     """Additional keyword-arguments to pass to `DockerRuntime.start`."""
 
 

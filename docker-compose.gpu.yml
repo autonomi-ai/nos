@@ -17,9 +17,11 @@ services:
       - NOS_LOGGING_LEVEL=DEBUG
     volumes:
       - ~/.nosd:/app/.nos
-    shm_size: 4G
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
+        limits:
+          cpus: "6"
+          memory: 6G
