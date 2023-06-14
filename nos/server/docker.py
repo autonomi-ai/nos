@@ -62,6 +62,11 @@ class DockerRuntime:
             cls._instance = cls()
         return cls._instance
 
+    @classmethod
+    def list(cls, **kwargs) -> Iterable[docker.models.containers.Container]:
+        """List docker containers."""
+        return cls.get()._client.containers.list(**kwargs)
+
     def start(
         self,
         image: str,
@@ -138,26 +143,26 @@ class DockerRuntime:
                 return
             logger.debug(f"Removing container: {name}")
             container.remove(force=True)
-            logger.info(f"Removed container: {name}")
+            logger.debug(f"Removed container: {name}")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             logger.error(f"Failed to stop container: {exc}")
         return container
-
-    def get_container(self, name: str) -> docker.models.containers.Container:
-        """Get container by name."""
-        try:
-            return self._client.containers.get(name)
-        except docker.errors.NotFound:
-            return None
 
     def get_container_id(self, name: str) -> Optional[str]:
         """Get the runtime container ID."""
         container = self.get_container(name)
         return container.id if container else None
 
-    def get_container_status(self, name: str) -> Optional[str]:
-        """Get container status by name."""
-        container = self.get_container(name)
+    def get_container(self, id_or_name: str) -> docker.models.containers.Container:
+        """Get container by id or name."""
+        try:
+            return self._client.containers.get(id_or_name)
+        except docker.errors.NotFound:
+            return None
+
+    def get_container_status(self, id_or_name: str) -> Optional[str]:
+        """Get container status by id or name."""
+        container = self.get_container(id_or_name)
         return container.status if container else None
 
     def get_container_logs(self, name: str, **kwargs) -> Iterable[str]:

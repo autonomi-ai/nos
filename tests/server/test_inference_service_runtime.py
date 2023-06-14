@@ -16,6 +16,9 @@ def inference_service_runtime_cpu():
     runtime = InferenceServiceRuntime(runtime="cpu", name="nos-inference-service-runtime-cpu-test")
     assert runtime is not None
 
+    containers = runtime.list()
+    assert containers is not None
+
     logger.debug("Starting inference service runtime: cpu")
     runtime.start(ports={f"{DEFAULT_GRPC_PORT-1}/tcp": DEFAULT_GRPC_PORT - 1})
     assert runtime.get_container() is not None
@@ -35,6 +38,9 @@ def inference_service_runtime_cpu():
 def inference_service_runtime_gpu():
     runtime = InferenceServiceRuntime(runtime="gpu", name="nos-inference-service-runtime-gpu-test")
     assert runtime is not None
+
+    containers = runtime.list()
+    assert containers is not None
 
     logger.debug("Starting inference service runtime: gpu")
     runtime.start(ports={f"{DEFAULT_GRPC_PORT-2}/tcp": DEFAULT_GRPC_PORT - 2})
