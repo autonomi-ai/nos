@@ -44,14 +44,14 @@ UNIQUE_MODELS = list(FasterRCNN.configs.keys())[:1] + list(YOLOX.configs.keys())
 
 
 # Only enable YOLOX TRT models in trt-dev and trt-runtime environments
-logger.info("get env: {}".format(os.getenv("NOS_ENV", "")))
+logger.info("Using Environment: {}".format(os.getenv("NOS_ENV", "")))
 if os.getenv("NOS_ENV", "") in ("nos_trt_dev", "nos_trt_runtime"):
     UNIQUE_MODELS += ["yolox/medium-trt"]
 
 
-def _test_predict(_model):
+def _test_predict(_model, img_size):
     B = 1
-    W, H = 640, 480
+    W, H = img_size
     img = Image.open(NOS_TEST_IMAGE)
     img = img.resize((W, H))
     predictions = _model([img for _ in range(B)])
@@ -80,12 +80,13 @@ def _test_predict(_model):
 
 @skip_if_no_torch_cuda
 @pytest.mark.parametrize("model_name", UNIQUE_MODELS)
-def test_object_detection_predict_one(model_name):
+@pytest.mark.parametrize("img_size", [(640, 480), (1280, 960)])
+def test_object_detection_predict_one(model_name, img_size):
     logger.debug(f"Testing model: {model_name}")
     spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
     model = hub.load(spec.name, task=spec.task)
     logger.info("Test prediction with model: {}".format(model))
-    _test_predict(model)
+    _test_predict(model, img_size)
 
 
 @skip_if_no_torch_cuda

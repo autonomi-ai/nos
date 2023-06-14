@@ -13,6 +13,7 @@ from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.common.types import Batch, ImageT, TensorT
 from nos.constants import NOS_MODELS_DIR
 from nos.hub import TorchHubConfig
+from nos.logging import logger
 
 
 @dataclass(frozen=True)
@@ -197,12 +198,14 @@ class YOLOX_TRT(YOLOX):
         from torch_tensorrt.fx.tools.trt_splitter import TRTSplitter
         from torch_tensorrt.fx.utils import LowerPrecision
 
+        # Trace the model backbone (TODO: Catch failures here and log problem layer?)
         traced = acc_tracer.trace(self.model.backbone, [inputs])
+
+        # Split out TRT eligible segments
         splitter = TRTSplitter(traced, [inputs])
         split_mod = splitter()
 
         _ = splitter.node_support_preview(dump_graph=False)
-        from nos.logging import logger
 
         logger.info("Graph: \n" + str(split_mod.graph))
 
@@ -218,8 +221,8 @@ class YOLOX_TRT(YOLOX):
             handle.remove()
             return acc_inputs
 
-        # Since the model is splitted into three segments. We need to lower each TRT eligible segment.
-        # If we know the model can be fully lowered, we can skip the splitter part.
+        # We need to lower each TRT eligible segment.
+        # TODO: If we know the model can be fully lowered, we can skip the splitter part.
         for name, _ in split_mod.named_children():
             logger.info(f"Splitting {name}")
             if "_run_on_acc" in name:
@@ -243,6 +246,8 @@ class YOLOX_TRT(YOLOX):
         return True
 
     def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
+
+        # TODO: A little annoying that we need to do this twice. Should be cleaned up in YOLOX refactor.
         W, H = None, None
         if isinstance(images, np.ndarray):
             H, W = images.shape[-2:]
@@ -261,8 +266,6 @@ class YOLOX_TRT(YOLOX):
         if not Path(self.filename).exists():
             compiled = self.__compile__(torch.rand(1, 3, H, W).to(self.device), self.filename)
             assert compiled, "Failed to compile model."
-
-        from nos.logging import logger
 
         if not self.patched:
             # Monkey patch backbone
