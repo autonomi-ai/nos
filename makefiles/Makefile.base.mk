@@ -85,8 +85,17 @@ docker-test-cpu:
 docker-test-gpu:
 	docker compose -f docker-compose.test.yml run --rm --build test-gpu
 
+docker-test-cpu-benchmark:
+	docker compose -f docker-compose.test.yml run --rm --build test-cpu \
+	DOCKER_CMD="make test-cpu-benchmark"
+
+docker-test-gpu-benchmark:
+	docker compose -f docker-compose.test.yml run --rm --build test-gpu \
+	DOCKER_CMD="make test-gpu-benchmark"
+
 docker-test-all: \
-	docker-test-cpu docker-test-gpu
+	docker-test-cpu docker-test-gpu \
+	docker-test-cpu-benchmark docker-test-gpu-benchmark
 
 docker-push-cpu:
 	make .docker-push-base \

@@ -37,7 +37,9 @@ help:
 	@echo "  test-cpu            Basic CPU testing"
 	@echo "  test-client         Basic client-side testing"
 	@echo "  test-server         Server-side testing (all GPUs)"
-	@echo "  test-benchmark      Testing with benchmarks (all GPUs)"
+	@echo "  test-cpu-benchmark  Testing with benchmarks (CPUs)"
+	@echo "  test-gpu-benchmark  Testing with benchmarks (GPUs)"
+	@echo "  test-all			 All tests including CPU, GPU, client, and server
 	@echo "  dist                Builds source and wheel package"
 	@echo ""
 
@@ -99,13 +101,17 @@ test-client: docker-build-cpu docker-build-gpu ## Basic client-side testing
 	CUDA_VISIBLE_DEVICES="" \
 	pytest -sv tests/client -m "client"
 
-test-benchmark: ## Testing with benchmarks (all GPUs)
+test-cpu-benchmark: ## Testing with benchmarks (no GPUs)
+	CUDA_VISIBLE_DEVICES="" \
+	pytest -sv tests -m "benchmark"
+
+test-gpu-benchmark: ## Testing with benchmarks (all GPUs)
 	pytest -sv tests -m "benchmark"
 
 test-server: ## Server-side testing (all GPUs)
 	pytest -sv tests -m "server"
 
-test-all:  ## ALl tests including CPU, GPU, client, and server
+test-all:  ## All tests including CPU, GPU, client, and server
 	make test-cpu test-gpu test-client test-server
 
 dist: clean ## builds source and wheel package
