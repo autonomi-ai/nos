@@ -162,13 +162,17 @@ class YOLOX:
                 torch.stack([F.to_tensor(image) for image in images]) * 255
             )  # yolox expects non-normalized 0-255 tensor
             images = images.to(self.device)
+            from nos.logging import logger
+            logger.info("Running model...")
             predictions = self.model(images)
+            logger.info("Running postprocess...")
             predictions = postprocess(
                 predictions,
                 conf_threshold=self.cfg.confidence_threshold,
                 nms_threshold=self.cfg.nms_threshold,
                 class_agnostic=self.cfg.class_agnostic,
             )
+            logger.info("Done...")
             return {
                 "bboxes": [p[:, :4].cpu().numpy() for p in predictions],
                 "scores": [(p[:, 4] * p[:, 5]).cpu().numpy() for p in predictions],  # obj_conf * class_conf
@@ -183,20 +187,101 @@ class YOLOX_TRT(YOLOX):
 
     def __init__(self, model_name: str = "yolox/medium-trt"):
         _model_name = model_name.replace("-trt", "")
+        self.model_name = _model_name
         super().__init__(_model_name)
 
-        model_dir = Path(NOS_MODELS_DIR, f"cache/{_model_name}")
-        model_dir.mkdir(parents=True, exist_ok=True)
+        self.model_dir = Path(NOS_MODELS_DIR, f"cache/{_model_name}")
+        self.model_dir.mkdir(parents=True, exist_ok=True)
+        self.patched = False
 
-        W, H = 640, 480
-        model_id = _model_name.replace("/", "-") + "_" + f"{W}x{H}"
-        self.filename = f"{model_dir}/{model_id}.torchtrt.pt"
+    def __compile__(self, inputs: List[torch.Tensor], filename) -> str:
+        from nos.logging import logger
+        """Model compilation flow."""
+        logger.info("Load tensorrt modules...")
+        from torch_tensorrt.fx.utils import LowerPrecision
+        import torch_tensorrt.fx.tracer.acc_tracer.acc_tracer as acc_tracer
+        from torch_tensorrt.fx import InputTensorSpec, TRTInterpreter, TRTModule
+        from torch_tensorrt.fx.tools.trt_splitter import TRTSplitter
+
+        logger.info("model inputs: " + str(inputs))
+        logger.info("Run tracer...")
+        traced = acc_tracer.trace(self.model.backbone, [inputs])
+        logger.info("Run splitter...")
+        splitter = TRTSplitter(traced, [inputs])
+        split_mod = splitter()
+
+        _ = splitter.node_support_preview(dump_graph=False)
+        logger.info("Graph: \n" + str(split_mod.graph))
+
+        def get_submod_inputs(mod, submod, inputs):
+            acc_inputs = None
+
+            def get_input(self, inputs):
+                nonlocal acc_inputs
+                acc_inputs = inputs
+
+            handle = submod.register_forward_pre_hook(get_input)
+            mod(*inputs)
+            handle.remove()
+            return acc_inputs
+
+
+        # Since the model is splitted into three segments. We need to lower each TRT eligible segment.
+        # If we know the model can be fully lowered, we can skip the splitter part.
+        for name, _ in split_mod.named_children():
+            logger.info(f"Splitting {name}")
+            if "_run_on_acc" in name:
+                submod = getattr(split_mod, name)
+                # Get submodule inputs for fx2trt
+                acc_inputs = get_submod_inputs(split_mod, submod, [inputs])
+
+                # fx2trt replacement
+                interp = TRTInterpreter(
+                    submod,
+                    InputTensorSpec.from_tensors(acc_inputs),
+                    explicit_batch_dimension=True,
+                )
+                r = interp.run(lower_precision=LowerPrecision.FP32)
+                trt_mod = TRTModule(*r)
+                setattr(split_mod, name, trt_mod)
+
+        # write out split mod to file
+        torch.save(split_mod, filename)
+        logger.info(f"Saved compiled model to {filename}")
+        return True
+    
+
+    def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
+        W, H = None, None
+        if isinstance(images, np.ndarray):
+            H, W = images.shape[-2:]
+        elif isinstance(images, Image.Image):
+            W, H = images.size
+        elif isinstance(images, list):
+            if isinstance(images[0], Image.Image):
+                W, H = images[0].size
+            elif isinstance(images[0], np.ndarray):
+                H, W = images[0].shape[-2:]
+            else:
+                raise ValueError(f"Invalid type for images: {type(images[0])}")
+            
+        model_id = self.model_name.replace("/", "-") + "_" + f"{W}x{H}" + "_fp32"
+        self.filename = f"{self.model_dir}/{model_id}.torchtrt.pt"
         if not Path(self.filename).exists():
-            raise FileNotFoundError(f"Could not find {self.filename}")
+            compiled = self.__compile__(torch.rand(1, 3, H, W).to(self.device), self.filename)
+            assert compiled, "Failed to compile model."
 
-        # Monkey patch backbone
-        trt_backbone = torch.load(self.filename)
-        self.model.backbone = trt_backbone
+        from nos.logging import logger
+        if not self.patched:
+            # Monkey patch backbone
+            logger.info("Patching backbone...")
+            trt_backbone = torch.load(self.filename)
+            self.model.backbone = trt_backbone
+            self.patched = True
+
+        logger.info("Compiled with height, width: " + str(H) + ", " + str(W))
+
+        super().__call__(images)
 
 
 for model_name in YOLOX.configs:

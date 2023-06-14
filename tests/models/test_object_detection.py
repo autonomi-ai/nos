@@ -44,14 +44,16 @@ UNIQUE_MODELS = list(FasterRCNN.configs.keys())[:1] + list(YOLOX.configs.keys())
 
 
 # Only enable YOLOX TRT models in trt-dev and trt-runtime environments
-if os.getenv("NOS_ENV", "") in ("trt-dev", "trt-runtime"):
-    MODELS += ["yolox/medium-trt"]
+logger.info("get env: {}".format(os.getenv("NOS_ENV", "")))
+if os.getenv("NOS_ENV", "") in ("nos_trt_dev", "nos_trt_runtime"):
+    UNIQUE_MODELS += ["yolox/medium-trt"]
 
 
 def _test_predict(_model):
     B = 1
+    W, H = 640, 480
     img = Image.open(NOS_TEST_IMAGE)
-    img = img.resize((640, 480))
+    img = img.resize((W, H))
     predictions = _model([img for _ in range(B)])
     assert predictions is not None
 
@@ -82,6 +84,7 @@ def test_object_detection_predict_one(model_name):
     logger.debug(f"Testing model: {model_name}")
     spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
     model = hub.load(spec.name, task=spec.task)
+    logger.info("Test prediction with model: {}".format(model))
     _test_predict(model)
 
 

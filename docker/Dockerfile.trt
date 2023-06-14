@@ -10,7 +10,7 @@ FROM ${BASE_IMAGE} as trt-base
 
 RUN pip install --upgrade pip
 RUN pip install tabulate netron nvidia-pyindex
-RUN pip install nvidia-tensorrt
+RUN pip install nvidia-tensorrt==8.4.2.4
 RUN pip install torch-tensorrt
 ENV CUDA_MODULE_LOADING="LAZY"
 ENV NOS_ENV ${PROJECT}_trt_base

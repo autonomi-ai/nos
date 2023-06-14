@@ -41,7 +41,7 @@ services:
     #     - DOCKER_TARGET=trt-dev
     # depends_on:
     #   - base-gpu
-    command: ${DOCKER_CMD:-pytest -sv tests/models/test_object_detection.py -k test_object_detection_predict -m benchmark}
+    command: ${DOCKER_CMD:-pytest -sv tests/models/test_object_detection.py -k test_object_detection_predict_one}
 
   mmdet-dev:
     <<: [*nos-common, *nos-common-gpu]
