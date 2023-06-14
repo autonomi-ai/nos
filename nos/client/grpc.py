@@ -183,7 +183,6 @@ class InferenceClient:
         """
         try:
             response: nos_service_pb2.ModelListResponse = self.stub.ListModels(empty_pb2.Empty())
-            logger.debug(response.models)
             return [ModelSpec(name=minfo.name, task=TaskType(minfo.task)) for minfo in response.models]
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to list models ({e})")

@@ -66,18 +66,20 @@ RUN /opt/conda/bin/mamba clean -ya \
   && rm -rf /tmp/$PROJECT
 
 # NOS environment
-ENV NOS_HOME /app/.nos
-ENV NOS_LOGGING_LEVEL WARNING
+ENV NOS_HOME=/app/.nos
+ENV NOS_LOGGING_LEVEL=WARNING
+ENV NOS_MAX_CONCURRENT_MODELS=1
 
 # Torch, HF, Transformers cache
-ENV TORCH_HOME ${NOS_HOME}/cache/torch
-ENV HF_HOME ${NOS_HOME}/cache/transformers
-ENV TRANSFORMERS_CACHE ${NOS_HOME}/cache/transformers
+ENV TORCH_HOME=${NOS_HOME}/cache/torch
+ENV HF_HOME=${NOS_HOME}/cache/transformers
+ENV TRANSFORMERS_CACHE=${NOS_HOME}/cache/transformers
 
 # Ray environment
-ENV RAY_LOG_TO_STDERR 0
-ENV RAY_USAGE_STATS_ENABLED 0
-ENV RAY_DATA_DISABLE_PROGRESS_BARS 1
+ENV RAY_LOG_TO_STDERR=0
+ENV RAY_DEDUP_LOGS=0
+ENV RAY_USAGE_STATS_ENABLED=0
+ENV RAY_DATA_DISABLE_PROGRESS_BARS=1
 ENV RAY_CONDA_HOME=${CONDA_PATH}
 
 RUN echo "export CONDA_PATH=/opt/conda/envs/${PYENV}" >> ~/.bashrc
@@ -98,7 +100,7 @@ RUN pip install . --no-deps && \
   rm -rf /tmp/$PROJECT
 
 WORKDIR /app/$PROJECT
-ENV NOS_ENV ${PYENV}
+ENV NOS_ENV=${PYENV}
 
 CMD ["nos-grpc-server"]
 

@@ -48,7 +48,7 @@ def postprocess(
     box_corner[:, :, 3] = prediction[:, :, 1] + prediction[:, :, 3] / 2
     prediction[:, :, :4] = box_corner[:, :, :4]
 
-    output = [None for _ in range(len(prediction))]
+    output = [np.empty(shape=(0, 7), dtype=np.float32) for _ in range(len(prediction))]
     for i, image_pred in enumerate(prediction):
 
         # If none are remaining => process next image
@@ -82,30 +82,13 @@ def postprocess(
 
         # Filter detections based on NMS
         detections = detections[nms_out_index]
-        if output[i] is None:
-            output[i] = detections
-        else:
-            output[i] = torch.cat((output[i], detections))
+        output[i] = detections.cpu().numpy()
     return output
 
 
 class YOLOX:
-    """Various object detection models from Torch Hub.
-
-
-    YOLOX:
-        https://github.com/Megvii-BaseDetection/YOLOX/tree/main#benchmark
-
-        Standard models:
-            YOLOX-S
-            YOLOX-M
-            YOLOX-L
-            YOLOX-X
-
-        Light models:
-            YOLOX-Tiny
-            YOLOX-Nano
-
+    """YOLOX Object Detection
+    https://github.com/Megvii-BaseDetection/YOLOX/tree/main#benchmark
     """
 
     configs = {
@@ -171,9 +154,9 @@ class YOLOX:
                 class_agnostic=self.cfg.class_agnostic,
             )
             return {
-                "bboxes": [p[:, :4].cpu().numpy() for p in predictions],
-                "scores": [(p[:, 4] * p[:, 5]).cpu().numpy() for p in predictions],  # obj_conf * class_conf
-                "labels": [p[:, 6].cpu().numpy().astype(np.int32) for p in predictions],
+                "bboxes": [p[:, :4] for p in predictions],
+                "scores": [(p[:, 4] * p[:, 5]) for p in predictions],  # obj_conf * class_conf
+                "labels": [p[:, 6].astype(np.int32) for p in predictions],
             }
 
 

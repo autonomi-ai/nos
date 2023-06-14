@@ -168,16 +168,20 @@ class VideoWriter:
         # Write image to video writer in BGR format.
         self.writer.write(img[..., ::-1])
 
-    def close(self, reencode: bool = False):
+    def close(self, reencode: bool = True):
         """Close the video writer, re-encoding the video if needed."""
-        if self.writer is not None:
-            logger.debug(f"Closing video writer [filename={self.filename}].")
-            self.writer.release()
-            self.writer = None
-            # Re-encode video on releasing for better compatibility and
-            # compression ratios.
-            if reencode:
+        if self.writer is None:
+            return
+        logger.debug(f"Closing video writer [filename={self.filename}].")
+        self.writer.release()
+        self.writer = None
+        # Re-encode video on releasing for better compatibility and
+        # compression ratios.
+        if reencode:
+            try:
                 VideoWriter.reencode_video(self.filename)
+            except Exception as e:
+                logger.warning(f"Failed to re-encode video, skipping [filename={self.filename}]: {e}")
         logger.debug(f"Closed video writer [filename={self.filename}].")
 
     def __del__(self):
@@ -223,8 +227,9 @@ class VideoWriter:
             )
             call([cmd], shell=True)
         except Exception:
-            logger.debug(f"re-encode video failed [filename={str(input_path)}]")
-            logger.debug(f"[cmd={cmd}]")
+            logger.error(f"re-encode video failed [filename={str(input_path)}]")
+            logger.error(f"[cmd={cmd}]")
+            raise
 
         if not output_path.exists():
             raise RuntimeError(f"Failed to re-encode video [filename={str(input_path)}]")

@@ -53,3 +53,16 @@ ADD makefiles makefiles
 ADD Makefile .
 ADD tests tests
 RUN pip install -e '.[test]'
+
+# >>>>>>>>>>>>>>>>>>>>
+FROM trt-runtime as test-trt-runtime
+
+RUN apt-get update \
+  && apt-get install make
+ADD pyproject.toml .
+ADD nos nos
+ADD requirements requirements
+ADD makefiles makefiles
+ADD Makefile .
+ADD tests tests
+RUN pip install -e '.[test]'
