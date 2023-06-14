@@ -162,17 +162,13 @@ class YOLOX:
                 torch.stack([F.to_tensor(image) for image in images]) * 255
             )  # yolox expects non-normalized 0-255 tensor
             images = images.to(self.device)
-            from nos.logging import logger
-            logger.info("Running model...")
             predictions = self.model(images)
-            logger.info("Running postprocess...")
             predictions = postprocess(
                 predictions,
                 conf_threshold=self.cfg.confidence_threshold,
                 nms_threshold=self.cfg.nms_threshold,
                 class_agnostic=self.cfg.class_agnostic,
             )
-            logger.info("Done...")
             return {
                 "bboxes": [p[:, :4].cpu().numpy() for p in predictions],
                 "scores": [(p[:, 4] * p[:, 5]).cpu().numpy() for p in predictions],  # obj_conf * class_conf
@@ -281,7 +277,7 @@ class YOLOX_TRT(YOLOX):
 
         logger.info("Compiled with height, width: " + str(H) + ", " + str(W))
 
-        super().__call__(images)
+        return super().__call__(images)
 
 
 for model_name in YOLOX.configs:
