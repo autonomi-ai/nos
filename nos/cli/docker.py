@@ -46,13 +46,18 @@ def _docker_list():
 
 @docker_cli.command("start", help="Start NOS inference server.")
 def _docker_start(
-    gpu: bool = typer.Option(False, "--gpu", help="Start the container with GPU support."),
+    runtime: str = typer.Option("cpu", "--runtime", help="The runtime to use (cpu or gpu)."),
 ):
     """Start the NOS inference server.
 
     Usage:
         $ nos docker start
     """
+    if runtime not in InferenceServiceRuntime.configs:
+        raise ValueError(
+            f"Invalid inference runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
+        )
+
     containers = InferenceServiceRuntime.list()
     if len(containers) > 0:
         container = containers[0]
@@ -61,8 +66,7 @@ def _docker_start(
         )
         return
     with rich.status.Status("[bold green] Starting inference server ...[/bold green]") as status:
-        runtime = "gpu" if gpu else "cpu"
-        runtime = InferenceServiceRuntime(runtime=runtime, name=f"nos-inference-service-runtime-{runtime}")
+        runtime = InferenceServiceRuntime(runtime=runtime)
         if runtime.get_container_status() == "running":
             status.stop()
             id = runtime.get_container_id()

@@ -17,6 +17,7 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 NOS_DOCKER_IMAGE_CPU = "autonomi/nos:latest-cpu"
 NOS_DOCKER_IMAGE_GPU = "autonomi/nos:latest-gpu"
+NOS_DOCKER_IMAGE_TRT_RUNTIME = "autonomi/nos:latest-trt-runtime"
 
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
 NOS_INFERENCE_SERVICE_CMD = "nos-grpc-server"
@@ -81,24 +82,35 @@ class InferenceServiceRuntime:
             image=NOS_DOCKER_IMAGE_CPU,
             name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-cpu",
             gpu=False,
+            kwargs={
+                "nano_cpus": int(6e9),
+                "mem_limit": "6g",
+            },
         ),
         "gpu": InferenceServiceRuntimeConfig(
             image=NOS_DOCKER_IMAGE_GPU,
             name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-gpu",
             gpu=True,
+            kwargs={
+                "nano_cpus": int(8e9),
+                "mem_limit": "12g",
+            },
         ),
-        "mmdet-dev": InferenceServiceRuntimeConfig(
-            image="autonomi/nos:latest-mmdet-dev",
-            name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-mmdet",
+        "trt-runtime": InferenceServiceRuntimeConfig(
+            image="autonomi/nos:latest-trt-runtime",
+            name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-trt-runtime",
             gpu=True,
             environment={
                 "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
-                "NOS_ENV": "mmdet-dev",
+            },
+            kwargs={
+                "nano_cpus": int(8e9),
+                "mem_limit": "12g",
             },
         ),
     }
 
-    def __init__(self, runtime: str = "cpu", name: str = NOS_INFERENCE_SERVICE_CONTAINER_NAME):
+    def __init__(self, runtime: str = "cpu", name: str = None):
         """Initialize the inference runtime.
 
         Args:
@@ -108,7 +120,8 @@ class InferenceServiceRuntime:
         if runtime not in self.configs:
             raise ValueError(f"Invalid inference runtime: {runtime}, available: {list(self.configs.keys())}")
         self.cfg = copy.deepcopy(self.configs[runtime])
-        self.cfg.name = name
+        if name is not None:
+            self.cfg.name = name
 
         self._runtime = DockerRuntime.get()
 

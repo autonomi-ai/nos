@@ -120,7 +120,7 @@ class ModelManager:
     policy: EvictionPolicy = EvictionPolicy.FIFO
     """Eviction policy."""
 
-    max_concurrent_models: int = os.getenv("NOS_MAX_CONCURRENT_MODELS", 4)
+    max_concurrent_models: int = int(os.getenv("NOS_MAX_CONCURRENT_MODELS", 2))
     """Maximum number of concurrent models."""
 
     handlers: Dict[str, ModelHandle] = field(default_factory=OrderedDict)

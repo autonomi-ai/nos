@@ -50,23 +50,32 @@ if os.getenv("NOS_ENV", "") in ("nos_trt_dev", "nos_trt_runtime"):
 
 
 def _test_predict(_model, img_size):
-    B = 1
+    B = 2
     W, H = img_size
-    img = Image.open(NOS_TEST_IMAGE)
-    img = img.resize((W, H))
-    predictions = _model([img for _ in range(B)])
+    img1 = Image.open(NOS_TEST_IMAGE)
+    img1 = img1.resize((W, H))
+    img2 = Image.fromarray(np.zeros((H, W, 3), dtype=np.uint8))
+    predictions = _model([img1, img2])
     assert predictions is not None
 
     assert predictions["scores"] is not None
     assert isinstance(predictions["scores"], list)
     assert len(predictions["scores"]) == B
+    assert len(predictions["scores"][0]) > 0
+    assert len(predictions["scores"][1]) == 0  # empty image should have no detections
     for scores in predictions["scores"]:
+        assert scores.dtype == np.float32
+        if not len(scores):
+            continue
         assert np.min(scores) >= 0.0 and np.max(scores) <= 1.0
 
     assert predictions["labels"] is not None
     assert isinstance(predictions["labels"], list)
     assert len(predictions["labels"]) == B
     for labels in predictions["labels"]:
+        assert labels.dtype == np.int32
+        if not len(labels):
+            continue
         assert len(np.unique(labels)) >= 3, "At least 3 different classes should be detected"
         assert labels.dtype == np.int32
 
@@ -74,6 +83,9 @@ def _test_predict(_model, img_size):
     assert isinstance(predictions["bboxes"], list)
     assert len(predictions["bboxes"]) == B
     for bbox in predictions["bboxes"]:
+        assert bbox.dtype == np.float32
+        if not len(bbox):
+            continue
         assert (bbox[:, 0] >= -5e-1).all() and (bbox[:, 0] <= W).all()
         assert (bbox[:, 1] >= -5e-1).all() and (bbox[:, 1] <= H).all()
 
