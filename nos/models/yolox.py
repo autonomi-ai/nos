@@ -191,22 +191,19 @@ class YOLOX_TRT(YOLOX):
         self.patched = False
 
     def __compile__(self, inputs: List[torch.Tensor], filename) -> str:
-        from nos.logging import logger
         """Model compilation flow."""
-        logger.info("Load tensorrt modules...")
-        from torch_tensorrt.fx.utils import LowerPrecision
         import torch_tensorrt.fx.tracer.acc_tracer.acc_tracer as acc_tracer
         from torch_tensorrt.fx import InputTensorSpec, TRTInterpreter, TRTModule
         from torch_tensorrt.fx.tools.trt_splitter import TRTSplitter
+        from torch_tensorrt.fx.utils import LowerPrecision
 
-        logger.info("model inputs: " + str(inputs))
-        logger.info("Run tracer...")
         traced = acc_tracer.trace(self.model.backbone, [inputs])
-        logger.info("Run splitter...")
         splitter = TRTSplitter(traced, [inputs])
         split_mod = splitter()
 
         _ = splitter.node_support_preview(dump_graph=False)
+        from nos.logging import logger
+
         logger.info("Graph: \n" + str(split_mod.graph))
 
         def get_submod_inputs(mod, submod, inputs):
@@ -220,7 +217,6 @@ class YOLOX_TRT(YOLOX):
             mod(*inputs)
             handle.remove()
             return acc_inputs
-
 
         # Since the model is splitted into three segments. We need to lower each TRT eligible segment.
         # If we know the model can be fully lowered, we can skip the splitter part.
@@ -245,7 +241,6 @@ class YOLOX_TRT(YOLOX):
         torch.save(split_mod, filename)
         logger.info(f"Saved compiled model to {filename}")
         return True
-    
 
     def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
         W, H = None, None
@@ -260,7 +255,7 @@ class YOLOX_TRT(YOLOX):
                 H, W = images[0].shape[-2:]
             else:
                 raise ValueError(f"Invalid type for images: {type(images[0])}")
-            
+
         model_id = self.model_name.replace("/", "-") + "_" + f"{W}x{H}" + "_fp32"
         self.filename = f"{self.model_dir}/{model_id}.torchtrt.pt"
         if not Path(self.filename).exists():
@@ -268,6 +263,7 @@ class YOLOX_TRT(YOLOX):
             assert compiled, "Failed to compile model."
 
         from nos.logging import logger
+
         if not self.patched:
             # Monkey patch backbone
             logger.info("Patching backbone...")
