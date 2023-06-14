@@ -17,6 +17,10 @@ def test_docker_runtime_singleton():
     docker_runtime_ = DockerRuntime.get()
     assert docker_runtime is docker_runtime_
 
+    # List containers
+    containers = docker_runtime.list()
+    assert containers is not None
+
 
 @pytest.fixture
 def docker_runtime_cpu_container():

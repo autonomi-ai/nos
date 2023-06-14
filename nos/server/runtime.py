@@ -115,6 +115,14 @@ class InferenceServiceRuntime:
     def __repr__(self) -> str:
         return f"InferenceServiceRuntime(image={self.cfg.image}, name={self.cfg.name}, gpu={self.cfg.gpu})"
 
+    @classmethod
+    def list(self, **kwargs) -> List[docker.models.containers.Container]:
+        """List running docker containers."""
+        containers = DockerRuntime.get().list(**kwargs)
+        return [
+            container for container in containers if container.name.startswith(NOS_INFERENCE_SERVICE_CONTAINER_NAME)
+        ]
+
     def start(self, **kwargs) -> docker.models.containers.Container:
         """Start the inference runtime.
 
