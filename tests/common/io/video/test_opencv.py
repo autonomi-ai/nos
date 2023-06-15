@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from loguru import logger
 
-from nos.common.io import VideoFile
+from nos.common.io import VideoReader
 from nos.test.utils import NOS_TEST_VIDEO
 
 
@@ -10,11 +10,12 @@ VIDEO_FILES = [NOS_TEST_VIDEO]
 
 
 @pytest.mark.parametrize("filename", VIDEO_FILES)
-def test_video(filename):
+def test_video_reader(filename):
+    """Test VideoReader."""
     from itertools import islice
 
     logger.info(f"Testing video {filename}")
-    video = VideoFile(filename)
+    video = VideoReader(filename)
 
     # Test len()
     assert len(video) > 0
@@ -47,11 +48,11 @@ def test_video(filename):
 
     # Test invalid file
     with pytest.raises(FileNotFoundError):
-        VideoFile("does_not_exist.mp4")
+        VideoReader("does_not_exist.mp4")
 
     # Test invalid bridge
     with pytest.raises(NotImplementedError):
-        VideoFile(filename, bridge="invalid_bridge")
+        VideoReader(filename, bridge="invalid_bridge")
 
     # Test out-of-bounds seek
     with pytest.raises(IndexError):
@@ -74,7 +75,8 @@ def test_video(filename):
 
 @pytest.mark.skip(reason="Not implemented")
 def test_video_context_manager():
-    with VideoFile(NOS_TEST_VIDEO) as video:
+    """Test VideoReader context manager."""
+    with VideoReader(NOS_TEST_VIDEO) as video:
         assert len(video) > 0
         img = next(video)
         assert isinstance(img, np.ndarray)
@@ -82,19 +84,37 @@ def test_video_context_manager():
 
 @pytest.mark.parametrize("filename", VIDEO_FILES)
 def test_video_bridge(filename):
-
+    """Test VideoReader bridge."""
     for (bridge, instance_type) in [
         ("numpy", np.ndarray),
     ]:
-        video = VideoFile(filename, bridge=bridge)
+        video = VideoReader(filename, bridge=bridge)
         assert len(video) > 0
         img = next(video)
         assert isinstance(img, instance_type)
 
 
+def test_video_writer():
+    """Test VideoWriter."""
+    import tempfile
+    import uuid
+    from pathlib import Path
+
+    from nos.common.io import VideoReader, VideoWriter
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        output_path = str(Path(tmp_dir) / f"{str(uuid.uuid4().hex)}.avi")
+        video = VideoReader(NOS_TEST_VIDEO, bridge="numpy")
+        with VideoWriter(output_path) as writer:
+            for img in video:
+                writer.write(img)
+        assert Path(output_path).exists()
+        assert len(VideoReader(output_path)) == len(video)
+
+
 @pytest.mark.benchmark
 def test_benchmark_video_loading():
-    """Benchmark VideoFile loading."""
+    """Benchmark VideoReader loading."""
     import time
 
     import requests
@@ -114,11 +134,11 @@ def test_benchmark_video_loading():
         assert tmp_video_filename.exists()
 
     # Test video loading
-    video = VideoFile(tmp_video_filename)
+    video = VideoReader(tmp_video_filename)
     st = time.perf_counter()
     for img in tqdm(video):
         assert isinstance(img, np.ndarray)
     end = time.perf_counter()
     logger.info(
-        f"VideoFile:: nframes={len(video)}, shape={img.shape}, elapsed={end - st:.2f}s, fps={len(video) / (end-st):.1f}fps"
+        f"VideoReader:: nframes={len(video)}, shape={img.shape}, elapsed={end - st:.2f}s, fps={len(video) / (end-st):.1f}fps"
     )

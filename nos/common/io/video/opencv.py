@@ -4,13 +4,14 @@ from typing import Callable, Iterator, List, Optional, Union
 import cv2
 import numpy as np
 
-from nos.common.io.video.base import BaseVideoFile
+from nos.common.io.video.base import BaseVideoReader
+from nos.logging import logger
 
 
 T = np.ndarray
 
 
-class VideoFile(BaseVideoFile):
+class VideoReader(BaseVideoReader):
     """Video Reader with OpenCV backend."""
 
     def __init__(self, filename: Union[str, Path], transform: Optional[Callable] = None, bridge: str = "numpy"):
@@ -129,3 +130,110 @@ class VideoFile(BaseVideoFile):
     def reset(self) -> None:
         """Reset the video to the beginning."""
         self.seek(0)
+
+
+class VideoWriter:
+    """Video Writer with OpenCV backend."""
+
+    def __init__(self, filename: Union[str, Path], fps: int = 30):
+        """Initialize video writer.
+
+        Args:
+            filename (Union[str, Path]): The path to the video file.
+            fps (int, optional): The frames per second. Defaults to 30.
+        """
+        self.filename = Path(str(filename))
+        if self.filename.exists():
+            raise FileExistsError(f"{self.filename} already exists")
+        self.fps = fps
+        self.writer = None
+
+    def write(self, img: np.ndarray) -> None:
+        """Write the given image to the video file.
+
+        Args:
+            img (np.ndarray): The image to write.
+        Returns:
+            None
+        """
+        # Create video writer if it does not exist.
+        if self.writer is None:
+            H, W = img.shape[:2]
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            self.writer = cv2.VideoWriter(str(self.filename), fourcc, self.fps, (W, H), img.ndim == 3)
+            logger.debug(
+                f"""{self.__class__.__name__} :: Create video writer """
+                f"""[filename={self.filename}, W={W}, H={H}]"""
+            )
+        # Write image to video writer in BGR format.
+        self.writer.write(img[..., ::-1])
+
+    def close(self, reencode: bool = False):
+        """Close the video writer, re-encoding the video if needed."""
+        if self.writer is not None:
+            logger.debug(f"Closing video writer [filename={self.filename}].")
+            self.writer.release()
+            self.writer = None
+            # Re-encode video on releasing for better compatibility and
+            # compression ratios.
+            if reencode:
+                VideoWriter.reencode_video(self.filename)
+        logger.debug(f"Closed video writer [filename={self.filename}].")
+
+    def __del__(self):
+        """Close the video writer cleanly."""
+        self.close()
+
+    def __enter__(self):
+        """Enter context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Exit context manager."""
+        self.close()
+
+    @staticmethod
+    def reencode_video(filename: Union[str, Path]) -> str:
+        """Re-encode video to ensure compatibility with OpenCV.
+
+        Args:
+            filename (Union[str, Path]): The path to the video file.
+
+        Raises:
+            FileNotFoundError: If the video file does not exist.
+
+        Returns:
+            str: The path to the re-encoded video file.
+        """
+        import uuid
+        from pathlib import Path
+        from subprocess import call
+
+        input_path = Path(str(filename))
+        if not input_path.exists():
+            raise FileNotFoundError(f"{input_path} does not exist")
+        output_path = input_path.parent / f"{str(uuid.uuid4().hex)}.mp4"
+        try:
+            logger.debug(f"re-encode video [filename={str(input_path)}, output={str(output_path)}]")
+            cmd = (
+                f"""ffmpeg -loglevel error -vsync 0 """
+                f"""-i '{str(input_path)}' -c:v libx264 """
+                f"""-pix_fmt yuv420p """
+                f"""-vsync 0 -an {str(output_path)}"""
+            )
+            call([cmd], shell=True)
+        except Exception:
+            logger.debug(f"re-encode video failed [filename={str(input_path)}]")
+            logger.debug(f"[cmd={cmd}]")
+
+        if not output_path.exists():
+            raise RuntimeError(f"Failed to re-encode video [filename={str(input_path)}]")
+        logger.debug(
+            f"""re-encode video overwriting [input={str(input_path)} """
+            f"""({input_path.stat().st_size / 1024 ** 2:.2f} MB), """
+            f"""output={str(output_path)} """
+            f"""({output_path.stat().st_size / 1024 ** 2:.2f} MB)"""
+        )
+        logger.debug(f"re-encode video overwriting [filename={str(input_path)}]")
+        output_path.rename(input_path)
+        return str(input_path)
