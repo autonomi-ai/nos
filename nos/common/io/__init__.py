@@ -1,1 +1,1 @@
-from .video.opencv import VideoFile  # noqa: F401
+from .video.opencv import VideoReader, VideoWriter  # noqa: F401

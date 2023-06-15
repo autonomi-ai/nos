@@ -6,7 +6,7 @@ from typing import Iterator, Optional, TypeVar
 T = TypeVar("T")
 
 
-class BaseVideoFile(ABC):
+class BaseVideoReader(ABC):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__} [fn={self.filename}]"
 
