@@ -43,6 +43,9 @@ def test_common_types():
     if has_torch:
         ImageT[torch.Tensor]
 
+    assert TensorSpec(shape=(None, None, 3), dtype="float32").nbytes is None
+    assert TensorSpec(shape=(480, 640, 3), dtype="float32").nbytes == 480 * 640 * 3 * 4
+
 
 def test_common_batch_types():
     T = TypeVar("T")

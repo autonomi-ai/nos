@@ -327,5 +327,5 @@ class InferenceModule:
             response = self.stub.Run(request)
             response = loads(response.response_bytes)
             return response
-        except grpc.RpcError as e:
+        except Exception as e:
             raise NosClientException(f"Failed to run model {self.model_name} ({e})")

@@ -52,6 +52,14 @@ class TensorSpec:
         else:
             return dtype
 
+    @property
+    def nbytes(self) -> Optional[int]:
+        """Return the number of bytes required to store the tensor."""
+        try:
+            return np.prod(self.shape) * np.dtype(self.dtype).itemsize
+        except TypeError:
+            return None
+
 
 @dataclass(frozen=True)
 class ImageSpec(TensorSpec):

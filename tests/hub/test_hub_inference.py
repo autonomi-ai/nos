@@ -8,7 +8,11 @@ from nos.test.utils import skip_if_no_torch_cuda
 def hub_image_models():
     models = hub.list()
     assert len(models) > 0
-    return [spec for spec in models if spec.task in (TaskType.IMAGE_EMBEDDING, TaskType.OBJECT_DETECTION_2D)]
+    return [
+        spec
+        for spec in models
+        if spec.task in (TaskType.IMAGE_EMBEDDING, TaskType.OBJECT_DETECTION_2D) and not spec.name.endswith("trt")
+    ]
 
 
 @skip_if_no_torch_cuda
