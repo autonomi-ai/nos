@@ -30,7 +30,7 @@ def ray_executor():
 
 
 @pytest.fixture(scope="session")
-def grpc_server():
+def grpc_server(ray_executor):
     """Test gRPC server (Port: 50052)."""
     from loguru import logger
 
@@ -101,7 +101,7 @@ def grpc_server_docker_runtime_cpu():
     assert status is not None and status == "running"
 
     # Yield the running container
-    yield container
+    yield runtime
 
     # Tear down
     try:
@@ -137,7 +137,7 @@ def grpc_server_docker_runtime_gpu():
     assert status is not None and status == "running"
 
     # Yield the running container
-    yield container
+    yield runtime
 
     # Tear down
     try:

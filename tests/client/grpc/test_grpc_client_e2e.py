@@ -18,7 +18,6 @@ from nos.common import ModelSpec, TaskType  # noqa: E402
 from nos.test.utils import NOS_TEST_IMAGE  # noqa: E402
 
 
-@pytest.mark.skip(reason="This test is not ready yet.")
 @pytest.mark.client
 def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: F811
     """Test the gRPC client with GPU docker runtime initialized.
@@ -71,7 +70,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
+    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
         response = model(texts=["a cat dancing on the grass."])
         assert isinstance(response, dict)
         assert "embedding" in response
@@ -81,8 +80,8 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-        response = model(img=img)
+    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
+        response = model(images=img)
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -91,7 +90,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
+    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
         response = model(images=[img])
         assert isinstance(response, dict)
 
@@ -102,12 +101,13 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
+    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
         response = model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)
         assert isinstance(response, dict)
         assert "images" in response
 
 
+@pytest.mark.skip(reason="CPU backend is not ready yet")
 @pytest.mark.client
 def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: F811
     """Test the gRPC client with CPU docker runtime initialized.
@@ -156,7 +156,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
+    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
         response = model(texts=["a cat dancing on the grass."])
         assert isinstance(response, dict)
         assert "embedding" in response
@@ -166,7 +166,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
+    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
         response = model(images=[img])
         assert isinstance(response, dict)
         assert "embedding" in response
@@ -176,18 +176,17 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
+    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
         response = model(images=[img])
         assert isinstance(response, dict)
         assert "bboxes" in response
         assert "labels" in response
         assert "scores" in response
 
-    # TXT2IMG (not supported in CPU yet)
+    # TXT2IMG
     task, model_name = TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2"
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
-    with pytest.raises(Exception):
-        for _ in tqdm(range(1), desc=f"Bench [task={task}, model_name={model_name}]"):
-            response = model(prompts=["a cat dancing on the grass."])
+    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
+        response = model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)
