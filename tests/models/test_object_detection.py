@@ -112,7 +112,7 @@ def test_object_detection_predict_variants(model_name):
 
 
 @skip_if_no_torch_cuda
-@pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
+@pytest.mark.benchmark(group=PyTestGroup.MODEL_BENCHMARK)
 @pytest.mark.parametrize("model_name", MODELS)
 # @pytest.mark.parametrize("img_size", [(640, 480), (1280, 960)])
 @pytest.mark.parametrize(

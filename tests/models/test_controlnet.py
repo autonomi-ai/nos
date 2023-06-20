@@ -88,7 +88,7 @@ def test_controlnet_control_tasks(task):
 
 
 @pytest.mark.skip("TODO: Fix this test")
-@pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
+@pytest.mark.benchmark(group=PyTestGroup.MODEL_BENCHMARK)
 def test_controlnet_benchmark(model):
     """Benchmark ControlNet model."""
     raise NotImplementedError()

@@ -53,7 +53,7 @@ def test_stable_diffusion_download_all():
 
 
 @skip_if_no_torch_cuda
-@pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
+@pytest.mark.benchmark(group=PyTestGroup.MODEL_BENCHMARK)
 def test_stable_diffusion_benchmark(model):
     """Benchmark StableDiffusion model."""
     from nos.test.benchmark import run_benchmark
