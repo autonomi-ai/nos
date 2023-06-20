@@ -64,7 +64,7 @@ def test_mmdetection_predict(model_name):
 
 @pytest.mark.skip(reason="mmdetection benchmarking not yet implemented")
 @skip_if_no_torch_cuda
-@pytest.mark.benchmark(group=PyTestGroup.BENCHMARK_MODELS)
+@pytest.mark.benchmark(group=PyTestGroup.MODEL_BENCHMARK)
 @pytest.mark.parametrize(
     "model_name",
     [

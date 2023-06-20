@@ -18,7 +18,8 @@ class PyTestGroup(Enum):
     INTEGRATION = "integration"
     HUB = "hub"
     BENCHMARK = "benchmark"
-    BENCHMARK_MODELS = "benchmark-models"
+    MODEL_BENCHMARK = "model-benchmark"
+    MODEL_COMPILATION = "model-compilation"
 
 
 def skip_if_no_torch_cuda(test_case):
