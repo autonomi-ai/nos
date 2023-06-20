@@ -100,8 +100,6 @@ def test_clip_torchtrt_compilation():
 
                 # Get submodule inputs for fx2trt
                 acc_inputs = get_submod_inputs(split_mod, submod, inputs)
-                # print(f"submod: {submod}")
-                # print(f"name: {name}")
 
                 # fx2trt replacement
                 interp = TRTInterpreter(
