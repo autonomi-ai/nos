@@ -26,7 +26,7 @@
 - ☁️ **Cloud-agnostic:** Run on any cloud HW (AWS, GCP, Azure, Lambda Labs, On-Prem)
 
 ## Batteries Included
- - 💪 **SOTA Model Support:** NOS provides out-of-the-box support for popular CV models such as [Stable Diffusion](stabilityai/stable-diffusion-2), [OpenAI CLIP](openai/clip-vit-base-patch32), [OpenMMLab](https://github.com/open-mmlab/) object detection, tracking and more
+ - 💪 **SOTA Model Support:** NOS provides out-of-the-box support for popular CV models such as [Stable Diffusion](stabilityai/stable-diffusion-2), [OpenAI CLIP](openai/clip-vit-base-patch32), [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX) object detection, tracking and more
  - 🔌 **APIs:** NOS provides out-of-the-box APIs and avoids all the ML model deployment hassles
  - 🐳 **Docker:** NOS ships with docker images to run accelerated and scalable CV workloads
  - 📈 **Multi-Platform**: NOS allows you to run models on different HW (NVIDIA, custom ASICs) without any model compilation or runtime management.

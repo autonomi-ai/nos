@@ -7,7 +7,7 @@
         - WaitForServer
         - GetServiceInfo
         - GetModelInfo
-        - Predict
+        - Run
 
 ## ::: nos.client.grpc.InferenceModule
     handler: python
