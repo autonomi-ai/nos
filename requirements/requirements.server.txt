@@ -1,6 +1,5 @@
 diffusers>=0.17.1
 huggingface_hub
-optimum[onnxruntime]
 pyarrow>=12.0.0
 ray[serve]==2.5.0
 tabulate

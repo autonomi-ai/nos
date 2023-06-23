@@ -41,7 +41,7 @@ docker-run-trt-notebook:
 		-v ~/.nosd:/app/.nos \
 		-v ${PWD}:/app/nos/ \
 		-v /tmp/trt/.cache:/root/.cache \
-		torch_tensorrt:latest bash -c "cd /app/nos/examples/notebook && jupyter notebook --ip=0.0.0.0 --allow-root"
+		autonomi/nos:latest-trt-dev bash -c "cd /app/nos/examples/notebook && jupyter notebook --ip=0.0.0.0 --allow-root"
 
 docker-test-trt:
 	docker compose -f docker-compose.extras.yml run --rm --build trt-dev
