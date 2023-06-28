@@ -20,11 +20,15 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.mark.skip(reason="TODO: Fix this test")
 @pytest.mark.benchmark(group=PyTestGroup.MODEL_COMPILATION)
 def test_sdv2_torchtrt_compilation():
     """Test and benchmark compilation of SDv2 with TorchTRT."""
+    from PIL import Image
+
     from nos.models.stable_diffusion import StableDiffusionTensorRT
 
     sd = StableDiffusionTensorRT(model_name="stabilityai/stable-diffusion-2-1", scheduler="ddim")
-    sd(prompts=["fox jumped over dog"], num_inference_steps=200, num_images=1).images  # noqa: B018
+    images = sd(prompts=["fox jumped over dog"], num_inference_steps=10, num_images=1)  # noqa: B018
+    assert len(images) == 1
+    assert isinstance(images[0], Image.Image)
+    assert images[0].size == (512, 512)

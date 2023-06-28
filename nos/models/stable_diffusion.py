@@ -59,8 +59,8 @@ class StableDiffusion:
     ):
         from diffusers import (
             DDIMScheduler,
+            DiffusionPipeline,
             EulerDiscreteScheduler,
-            StableDiffusionPipeline,
         )
 
         try:
@@ -73,7 +73,7 @@ class StableDiffusion:
             self.device = "cuda"
             self.dtype = dtype
             self.revision = "fp16"
-            torch.backends.cuda.matmul.allow_tf32 = True
+            # torch.backends.cuda.matmul.allow_tf32 = True
         else:
             self.device = "cpu"
             self.dtype = torch.float32
@@ -85,16 +85,16 @@ class StableDiffusion:
             self.scheduler = EulerDiscreteScheduler.from_pretrained(self.cfg.model_name, subfolder="scheduler")
         else:
             raise ValueError(f"Unknown scheduler: {scheduler}, choose from: ['ddim', 'euler-discrete']")
-        self.pipe = StableDiffusionPipeline.from_pretrained(
+        self.pipe = DiffusionPipeline.from_pretrained(
             self.cfg.model_name,
             scheduler=self.scheduler,
             torch_dtype=self.dtype,
             # revision=self.revision,
         )
         self.pipe = self.pipe.to(self.device)
-        self.pipe.enable_attention_slicing()
 
         # TODO (spillai): Pending xformers integration
+        # self.pipe.enable_attention_slicing()
         # self.pipe.enable_xformers_memory_efficient_attention()
 
     def __call__(
@@ -109,16 +109,13 @@ class StableDiffusion:
         """Generate images from text prompt."""
         if isinstance(prompts, str):
             prompts = [prompts]
-        with torch.inference_mode():
-            with torch.autocast("cuda"):
-                images = self.pipe(
-                    prompts * num_images,
-                    num_inference_steps=num_inference_steps,
-                    guidance_scale=guidance_scale,
-                    height=height,
-                    width=width,
-                ).images
-                return images
+        return self.pipe(
+            prompts * num_images,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            height=height,
+            width=width,
+        ).images
 
 
 @dataclass(frozen=True)
@@ -139,7 +136,6 @@ class StableDiffusionTensorRT(StableDiffusion):
     configs = {f"{k}-trt": v for k, v in StableDiffusion.configs.items()}
 
     def __init__(self, *args, **kwargs):
-        kwargs["model_name"]
         super().__init__(*args, **kwargs)
 
         self.verbose = kwargs.get("verbose", False)
@@ -150,8 +146,11 @@ class StableDiffusionTensorRT(StableDiffusion):
 
     def get_inputs_vae(self, width: int = 512, height: int = 512, batch_size: int = 1):
         """Get inputs for VAE."""
-        x = torch.rand(batch_size, 3, height // 8, width // 8, dtype=self.pipe.vae.dtype, device=self.pipe.vae.device)
-        return [x]
+        # x = torch.rand(batch_size, 3, height // 8, width // 8, dtype=self.pipe.vae.dtype, device=self.pipe.vae.device)
+        z = torch.rand(
+            2 * batch_size, 4, height // 8, width // 8, dtype=self.pipe.vae.dtype, device=self.pipe.vae.device
+        )
+        return [z]
 
     def get_inputs_text_encoder(self):
         """Get inputs for text encoder."""
@@ -172,13 +171,23 @@ class StableDiffusionTensorRT(StableDiffusion):
         self, model: torch.nn.Module, dtype: torch.dtype = torch.float32
     ) -> torch.fx.graph_module.GraphModule:
         """Trace the VAE of the model."""
-        model = self.pipe.vae
-        (sample,) = self.get_inputs_vae()
-        args = {"sample": sample}
+        import torch.nn as nn
+
+        class _AutoEncoderKLDecoder(nn.Module):
+            def __init__(self, model):
+                super().__init__()
+                self.model = model
+
+            def forward(self, z, return_dict: bool = False):
+                return self.model.decode(z, return_dict=return_dict)
+
+        model = _AutoEncoderKLDecoder(self.pipe.vae)
+        (z,) = self.get_inputs_vae()
+        args = {
+            "z": z,
+        }
         concrete_args = {
-            "sample_posterior": False,
-            "return_dict": True,
-            "generator": None,
+            "return_dict": False,
         }
 
         logger.debug("Tracing VAE with HFTracer")
@@ -189,11 +198,11 @@ class StableDiffusionTensorRT(StableDiffusion):
         if self.verbose:
             traced_graph.print_tabular()
 
-        traced_model.config = model.config
+        traced_model.config = self.pipe.vae.config
         # The model class must be stored as an attribute to allow model deserialization, which uses trace, and thus
         # _generate_dummy_input, where the model class is needed.
         traced_model.class_for_deserialization = model.__class__
-        traced_model.device = model.device
+        traced_model.device = self.pipe.vae.device
         return traced_model
 
     def _trace_unet(self, dtype: torch.dtype = torch.float32) -> torch.fx.graph_module.GraphModule:
@@ -243,7 +252,7 @@ class StableDiffusionTensorRT(StableDiffusion):
                     max_workspace_size=16 * GB_bytes,
                     explicit_batch_dimension=True,
                     lower_precision=LowerPrecision.FP32 if precision == torch.float32 else LowerPrecision.FP16,
-                    verbose_log=False,
+                    verbose_log=True,
                     timing_cache_prefix="",
                     save_timing_cache=False,
                     cuda_graph_batch_size=-1,
@@ -275,6 +284,7 @@ class StableDiffusionTensorRT(StableDiffusion):
     def __compile_unet__(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> str:
         """Compile the UNet model."""
         try:
+            logger.info("Compiling UNet model")
             torch._dynamo.config.verbose = False
             torch._dynamo.config.suppress_errors = True
             torch._dynamo.reset()
@@ -298,7 +308,7 @@ class StableDiffusionTensorRT(StableDiffusion):
             if trt_model is None:
                 raise RuntimeError("Failed to compile VAE")
             logger.debug("Patching VAE model")
-            self.pipe.vae = trt_model
+            self.pipe.vae.decode = trt_model
             self.patched["vae"] = True
             logger.debug("Done patching VAE model")
         except Exception as e:
@@ -306,6 +316,7 @@ class StableDiffusionTensorRT(StableDiffusion):
             self.patched["vae"] = False
 
         try:
+            raise NotImplementedError("TODO: Implement text-encoder compilation")
             logger.info("Compiling text encoder model")
             text_inputs = self.get_inputs_text_encoder()
             trt_model = self.__compile_text_encoder__(text_inputs, precision)
@@ -319,17 +330,25 @@ class StableDiffusionTensorRT(StableDiffusion):
             logger.error(f"Failed to compile text encoder: {e}")
             self.patched["text_encoder"] = False
 
-        # try:
-        #     opt_model = self.__compile_unet__(inputs, precision)
-        #     if opt_model is None:
-        #         raise RuntimeError("Failed to compile UNet")
-        #     logger.debug("Patching UNet model")
-        #     self.pipe.unet = opt_model
-        #     self.patched["unet"] = True
-        #     logger.debug("Done patching UNet model")
-        # except Exception as e:
-        #     logger.error(f"Failed to compile UNet: {e}")
-        #     self.patched["unet"] = False
+        try:
+            raise NotImplementedError("TODO: Implement UNet compilation")
+            logger.info("Compiling UNet model")
+            opt_model = self.__compile_unet__(inputs, precision)
+            if opt_model is None:
+                raise RuntimeError("Failed to compile UNet")
+            logger.debug("Patching UNet model")
+            self.pipe.unet = opt_model
+            self.patched["unet"] = True
+            logger.debug("Done patching UNet model")
+        except Exception as e:
+            logger.error(f"Failed to compile UNet: {e}")
+            self.patched["unet"] = False
+
+        # TODO (spillai): Investigate why we need to do this here.
+        try:
+            self.pipe._execution_device = self.device
+        except Exception:
+            logger.warning("Failed to set execution device")
         logger.debug(f"Done compiling models in {time.time() - st:.2f}s")
 
     def __call__(
@@ -342,6 +361,7 @@ class StableDiffusionTensorRT(StableDiffusion):
         width: int = 512,
     ) -> List[Image.Image]:
         """Generate images from text prompt."""
+
         if isinstance(prompts, str):
             prompts = [prompts]
 
@@ -353,14 +373,14 @@ class StableDiffusionTensorRT(StableDiffusion):
                 height=height,
             )
             self.__compile__(prompts, precision=self.pipe.unet.dtype, width=width, height=height)
-        return super().__call__(
-            prompts,
-            num_images=num_images,
+
+        return self.pipe(
+            prompts * num_images,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             height=height,
             width=width,
-        )
+        ).images
 
 
 # Register the model with the hub
