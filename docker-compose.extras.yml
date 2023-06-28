@@ -4,6 +4,7 @@ x-nos-common:
   &nos-common
   volumes:
     - ~/.nosd:/app/.nos
+    - ${PWD}:/app/nos
   environment:
     - NOS_LOGGING_LEVEL=DEBUG
   shm_size: 4G
