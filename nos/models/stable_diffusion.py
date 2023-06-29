@@ -73,7 +73,9 @@ class StableDiffusion:
             self.device = "cuda"
             self.dtype = dtype
             self.revision = "fp16"
-            # torch.backends.cuda.matmul.allow_tf32 = True
+            # TODO (spillai): Investigate if this has any effect on performance
+            # tf32 vs fp32: https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/279
+            torch.backends.cuda.matmul.allow_tf32 = True
         else:
             self.device = "cpu"
             self.dtype = torch.float32
@@ -89,7 +91,7 @@ class StableDiffusion:
             self.cfg.model_name,
             scheduler=self.scheduler,
             torch_dtype=self.dtype,
-            # revision=self.revision,
+            revision=self.revision,
         )
         self.pipe = self.pipe.to(self.device)
 
@@ -133,8 +135,6 @@ class StableDiffusionTensorRTCompilationConfig:
 class StableDiffusionTensorRT(StableDiffusion):
     """TensorRT accelerated StableDiffusion with Torch TensorRT."""
 
-    configs = {f"{k}-trt": v for k, v in StableDiffusion.configs.items()}
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -142,7 +142,7 @@ class StableDiffusionTensorRT(StableDiffusion):
         self.model_dir = Path(NOS_MODELS_DIR, f"cache/{self.cfg.model_name}")
         self.model_dir.mkdir(parents=True, exist_ok=True)
         self._compilation_cfg = None
-        self.patched = {}
+        self._patched = {}
 
     def get_inputs_vae(self, width: int = 512, height: int = 512, batch_size: int = 1):
         """Get inputs for VAE."""
@@ -173,19 +173,24 @@ class StableDiffusionTensorRT(StableDiffusion):
         """Trace the VAE of the model."""
         import torch.nn as nn
 
+        # Note: For SDv2, we need to only trace `vae.decode` since that is method that is
+        # called within SDv2's forward pass. If we try to trace the full VAE directly,
+        # it returns a `GraphModule` that cannot access the `decode` method. We workaround
+        # this by wrapping the decode method below in a `_AutoEncoderKLDecoder` class that
+        # calls the `vae.decode` method and only trace the relevant codepaths for inference.
         class _AutoEncoderKLDecoder(nn.Module):
+            """Wrapper for VAE to only trace the `decode` method."""
+
             def __init__(self, model):
                 super().__init__()
                 self.model = model
 
-            def forward(self, z, return_dict: bool = False):
+            def forward(self, z: torch.FloatTensor, return_dict: bool = False):
                 return self.model.decode(z, return_dict=return_dict)
 
         model = _AutoEncoderKLDecoder(self.pipe.vae)
         (z,) = self.get_inputs_vae()
-        args = {
-            "z": z,
-        }
+        args = {"z": z}
         concrete_args = {
             "return_dict": False,
         }
@@ -208,7 +213,7 @@ class StableDiffusionTensorRT(StableDiffusion):
     def _trace_unet(self, dtype: torch.dtype = torch.float32) -> torch.fx.graph_module.GraphModule:
         raise NotImplementedError("TODO: Implement UNet tracing")
 
-    def __compile___(
+    def _compile(
         self,
         trace_fn: Callable,
         model: torch.nn.Module,
@@ -271,17 +276,15 @@ class StableDiffusionTensorRT(StableDiffusion):
         torch.save(trt_model, filename)
         return trt_model
 
-    def __compile_vae__(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> bool:
+    def _compile_vae(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> bool:
         """Compile the VAE model."""
-        return self.__compile___(self._trace_vae, self.pipe.vae, inputs, precision, slug="vae")
+        return self._compile(self._trace_vae, self.pipe.vae, inputs, precision, slug="vae")
 
-    def __compile_text_encoder__(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> bool:
+    def _compile_text_encoder(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> bool:
         """Compile the text encoder model."""
-        return self.__compile___(
-            self._trace_text_encoder, self.pipe.text_encoder, inputs, precision, slug="text-encoder"
-        )
+        return self._compile(self._trace_text_encoder, self.pipe.text_encoder, inputs, precision, slug="text-encoder")
 
-    def __compile_unet__(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> str:
+    def _compile_unet(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> str:
         """Compile the UNet model."""
         try:
             logger.info("Compiling UNet model")
@@ -304,45 +307,45 @@ class StableDiffusionTensorRT(StableDiffusion):
         try:
             logger.info("Compiling VAE model")
             vae_inputs = self.get_inputs_vae(width=width, height=height)
-            trt_model = self.__compile_vae__(vae_inputs, precision)
+            trt_model = self._compile_vae(vae_inputs, precision)
             if trt_model is None:
                 raise RuntimeError("Failed to compile VAE")
             logger.debug("Patching VAE model")
             self.pipe.vae.decode = trt_model
-            self.patched["vae"] = True
+            self._patched["vae"] = True
             logger.debug("Done patching VAE model")
         except Exception as e:
             logger.error(f"Failed to compile VAE: {e}")
-            self.patched["vae"] = False
+            self._patched["vae"] = False
 
         try:
             raise NotImplementedError("TODO: Implement text-encoder compilation")
             logger.info("Compiling text encoder model")
             text_inputs = self.get_inputs_text_encoder()
-            trt_model = self.__compile_text_encoder__(text_inputs, precision)
+            trt_model = self._compile_text_encoder(text_inputs, precision)
             if trt_model is None:
                 raise RuntimeError("Failed to compile text encoder")
             logger.debug("Patching text encoder model")
             self.pipe.text_encoder = trt_model
-            self.patched["text_encoder"] = True
+            self._patched["text_encoder"] = True
             logger.debug("Done patching text encoder model")
         except Exception as e:
             logger.error(f"Failed to compile text encoder: {e}")
-            self.patched["text_encoder"] = False
+            self._patched["text_encoder"] = False
 
         try:
             raise NotImplementedError("TODO: Implement UNet compilation")
             logger.info("Compiling UNet model")
-            opt_model = self.__compile_unet__(inputs, precision)
+            opt_model = self._compile_unet(inputs, precision)
             if opt_model is None:
                 raise RuntimeError("Failed to compile UNet")
             logger.debug("Patching UNet model")
             self.pipe.unet = opt_model
-            self.patched["unet"] = True
+            self._patched["unet"] = True
             logger.debug("Done patching UNet model")
         except Exception as e:
             logger.error(f"Failed to compile UNet: {e}")
-            self.patched["unet"] = False
+            self._patched["unet"] = False
 
         # TODO (spillai): Investigate why we need to do this here.
         try:
@@ -366,7 +369,7 @@ class StableDiffusionTensorRT(StableDiffusion):
             prompts = [prompts]
 
         # TODO (spillai): Capture all of this in StableDiffusionTensorRTConfig?
-        if not len(self.patched):
+        if not len(self._patched):
             self._compilation_cfg = StableDiffusionTensorRTCompilationConfig(
                 precision=self.pipe.vae.dtype,
                 width=width,

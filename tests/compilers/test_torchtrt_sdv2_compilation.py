@@ -8,6 +8,7 @@ import os
 
 import pytest
 
+from nos.common import tqdm
 from nos.logging import logger
 from nos.test.utils import PyTestGroup
 
@@ -27,8 +28,16 @@ def test_sdv2_torchtrt_compilation():
 
     from nos.models.stable_diffusion import StableDiffusionTensorRT
 
-    sd = StableDiffusionTensorRT(model_name="stabilityai/stable-diffusion-2-1", scheduler="ddim")
-    images = sd(prompts=["fox jumped over dog"], num_inference_steps=10, num_images=1)  # noqa: B018
+    model_name = "stabilityai/stable-diffusion-2-1"
+    sd = StableDiffusionTensorRT(model_name=model_name, scheduler="ddim")
+
+    # First run will trigger a compilation (if not already cached)
+    images = sd(prompts=["fox jumped over the moon"], num_inference_steps=10, num_images=1)  # noqa: B018
     assert len(images) == 1
     assert isinstance(images[0], Image.Image)
     assert images[0].size == (512, 512)
+
+    # Subsequent runs will use the cached compilation
+    logger.debug("Running benchmark (60s) ...")
+    for _ in tqdm(duration=60.0, desc=f"torch-trt | {model_name}"):
+        images = sd(prompts=["fox jumped over the moon"], num_inference_steps=100, num_images=1)  # noqa: B018

@@ -9,7 +9,6 @@ import os
 import pytest
 
 from nos.common import tqdm
-from nos.compilers.trt import get_submod_inputs
 from nos.constants import NOS_TMP_DIR
 from nos.logging import logger
 from nos.test.utils import PyTestGroup
@@ -39,6 +38,8 @@ def test_clip_torchtrt_compilation():
     from transformers import CLIPVisionModel
     from transformers.modeling_outputs import BaseModelOutputWithPooling
     from transformers.utils.fx import symbolic_trace
+
+    from nos.compilers.trt import get_submod_inputs
 
     logger.warning(f"Deregistering acc_ops.expand: {acc_ops.expand in registry.CONVERTERS.keys()}")
     registry.CONVERTERS.pop(acc_ops.expand)
