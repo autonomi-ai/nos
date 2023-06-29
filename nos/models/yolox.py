@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Union
+from typing import Dict, List, Union
 
 import numpy as np
 import torch
@@ -11,6 +11,7 @@ from torchvision import ops
 from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.common.types import Batch, ImageT, TensorT
+from nos.compilers import compile
 from nos.constants import NOS_MODELS_DIR
 from nos.hub import TorchHubConfig
 from nos.logging import logger
@@ -86,6 +87,29 @@ def postprocess(
     return output
 
 
+def prepare_images(images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> List[np.ndarray]:
+    """Prepare images for inference.
+
+    Args:
+        images: A single image or a list of images (PIL.Image or np.ndarray)
+
+    Returns:
+        images: A list of images (np.ndarray)
+    """
+    if isinstance(images, np.ndarray):
+        images = [images]
+    elif isinstance(images, Image.Image):
+        images = [np.asarray(images.convert("RGB"))]
+    elif isinstance(images, list):
+        if isinstance(images[0], Image.Image):
+            images = [np.asarray(image.convert("RGB")) for image in images]
+        elif isinstance(images[0], np.ndarray):
+            pass
+        else:
+            raise ValueError(f"Invalid type for images: {type(images[0])}")
+    return images
+
+
 class YOLOX:
     """YOLOX Object Detection
     https://github.com/Megvii-BaseDetection/YOLOX/tree/main#benchmark
@@ -127,21 +151,11 @@ class YOLOX:
         self.model = torch.hub.load(self.cfg.repo, self.cfg.model_name).to(self.device)
         self.model.eval()
 
-    def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
+    def __call__(
+        self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
+    ) -> Dict[str, np.ndarray]:
         """Predict bounding boxes for images."""
         with torch.inference_mode():
-            if isinstance(images, np.ndarray):
-                images = [images]
-            elif isinstance(images, Image.Image):
-                images = [np.asarray(images)]
-            elif isinstance(images, list):
-                if isinstance(images[0], Image.Image):
-                    images = [np.asarray(image) for image in images]
-                elif isinstance(images[0], np.ndarray):
-                    pass
-                else:
-                    raise ValueError(f"Invalid type for images: {type(images[0])}")
-
             images = (
                 torch.stack([F.to_tensor(image) for image in images]) * 255
             )  # yolox expects non-normalized 0-255 tensor
@@ -160,105 +174,73 @@ class YOLOX:
             }
 
 
+def get_model_id(name: str, shape: torch.Size, dtype: torch.dtype) -> str:
+    """Get model id from model name, shape and dtype."""
+    replacements = {"/": "-", " ": "-"}
+    for k, v in replacements.items():
+        name = name.replace(k, v)
+    shape = list(map(int, shape))
+    shape_str = "x".join([str(s) for s in shape])
+    precision_str = str(dtype).split(".")[-1]
+    return f"{name}_{shape_str}_{precision_str}"
+
+
 class YOLOXTensorRT(YOLOX):
-    """TensorRT accelerated for YOLOX."""
+    """TensorRT accelerated for YOLOX with Torch TensorRT."""
 
-    configs = {f"{k}-trt": v for k, v in YOLOX.configs.items()}
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    def __init__(self, model_name: str = "yolox/medium-trt"):
-        _model_name = model_name.replace("-trt", "")
-        self.model_name = _model_name
-        super().__init__(_model_name)
+        self.verbose = kwargs.get("verbose", False)
+        self._model_dir = Path(NOS_MODELS_DIR, f"cache/{self.cfg.model_name}")
+        self._model_dir.mkdir(parents=True, exist_ok=True)
+        self._patched = False
+        self._patched_shape = None
 
-        self.model_dir = Path(NOS_MODELS_DIR, f"cache/{_model_name}")
-        self.model_dir.mkdir(parents=True, exist_ok=True)
-        self.patched = False
-
-    def __compile__(self, inputs: List[torch.Tensor], filename) -> str:
+    def __compile__(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> torch.nn.Module:
         """Model compilation flow."""
-        import torch_tensorrt.fx.tracer.acc_tracer.acc_tracer as acc_tracer
-        from torch_tensorrt.fx import InputTensorSpec, TRTInterpreter, TRTModule
-        from torch_tensorrt.fx.tools.trt_splitter import TRTSplitter
-        from torch_tensorrt.fx.utils import LowerPrecision
+        assert isinstance(inputs, list), f"inputs must be a list, got {type(inputs)}"
+        assert len(inputs) == 1, f"inputs must be a list of length 1, got {len(inputs)}"
+        keys = {"input"}
+        args = dict(zip(keys, inputs))
 
-        # Trace the model backbone (TODO: Catch failures here and log problem layer?)
-        traced = acc_tracer.trace(self.model.backbone, [inputs])
+        # Check if we have a cached model
+        slug = "backbone"
+        model_id = get_model_id(f"{self.cfg.model_name}--{slug}", inputs[0].shape, precision)
+        filename = f"{self._model_dir}/{model_id}.torchtrt.pt"
+        if Path(filename).exists():
+            logger.debug(f"Found cached {slug}: {filename}")
+            trt_model = torch.load(filename)
+            self.model.backbone = trt_model
+            return
 
-        # Split out TRT eligible segments
-        splitter = TRTSplitter(traced, [inputs])
-        split_mod = splitter()
+        # Compile the model backbone
+        try:
+            trt_model = compile(
+                self.model.backbone, args, concrete_args=None, precision=precision, slug="yolox_backbone"
+            )
+            logger.debug(f"Saving compiled {slug} model to {filename}")
+            torch.save(trt_model, filename)
+            self.model.backbone = trt_model
+            logger.debug(f"Patched {slug} model")
+        except Exception as e:
+            logger.error(f"Failed to compile {slug} model: {e}")
 
-        _ = splitter.node_support_preview(dump_graph=False)
-
-        logger.info("Graph: \n" + str(split_mod.graph))
-
-        def get_submod_inputs(mod, submod, inputs):
-            acc_inputs = None
-
-            def get_input(self, inputs):
-                nonlocal acc_inputs
-                acc_inputs = inputs
-
-            handle = submod.register_forward_pre_hook(get_input)
-            mod(*inputs)
-            handle.remove()
-            return acc_inputs
-
-        # We need to lower each TRT eligible segment.
-        # TODO: If we know the model can be fully lowered, we can skip the splitter part.
-        for name, _ in split_mod.named_children():
-            logger.info(f"Splitting {name}")
-            if "_run_on_acc" in name:
-                submod = getattr(split_mod, name)
-                # Get submodule inputs for fx2trt
-                acc_inputs = get_submod_inputs(split_mod, submod, [inputs])
-
-                # fx2trt replacement
-                interp = TRTInterpreter(
-                    submod,
-                    InputTensorSpec.from_tensors(acc_inputs),
-                    explicit_batch_dimension=True,
-                )
-                r = interp.run(lower_precision=LowerPrecision.FP32)
-                trt_mod = TRTModule(*r)
-                setattr(split_mod, name, trt_mod)
-
-        # write out split mod to file
-        torch.save(split_mod, filename)
-        logger.info(f"Saved compiled model to {filename}")
-        return True
-
-    def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
-
-        # TODO: A little annoying that we need to do this twice. Should be cleaned up in YOLOX refactor.
-        W, H = None, None
-        if isinstance(images, np.ndarray):
-            H, W = images.shape[-2:]
-        elif isinstance(images, Image.Image):
-            W, H = images.size
-        elif isinstance(images, list):
-            if isinstance(images[0], Image.Image):
-                W, H = images[0].size
-            elif isinstance(images[0], np.ndarray):
-                H, W = images[0].shape[-2:]
-            else:
-                raise ValueError(f"Invalid type for images: {type(images[0])}")
-
-        model_id = self.model_name.replace("/", "-") + "_" + f"{W}x{H}" + "_fp32"
-        self.filename = f"{self.model_dir}/{model_id}.torchtrt.pt"
-        if not Path(self.filename).exists():
-            compiled = self.__compile__(torch.rand(1, 3, H, W).to(self.device), self.filename)
-            assert compiled, "Failed to compile model."
-
-        if not self.patched:
-            # Monkey patch backbone
-            logger.info("Patching backbone...")
-            trt_backbone = torch.load(self.filename)
-            self.model.backbone = trt_backbone
-            self.patched = True
-
-        logger.info("Compiled with height, width: " + str(H) + ", " + str(W))
-
+    def __call__(
+        self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
+    ) -> Dict[str, np.ndarray]:
+        """Predict bounding boxes for images."""
+        images = prepare_images(images)
+        B = len(images)
+        H, W = images[0].shape[:2]
+        if not self._patched:
+            assert H is not None and W is not None, "Must provide image size for first call to __call__"
+            inputs = [torch.rand(B, 3, H, W).to(self.device)]
+            self.__compile__(inputs, precision=torch.float32)
+            self._patched = True  # we set this to patched even if the compilation fails
+            self._patched_shape = (B, H, W)
+        if (B, H, W) != self._patched_shape:
+            raise ValueError(f"Image size changed from {self._patched_shape} to {(B, H, W)}")
         return super().__call__(images)
 
 
