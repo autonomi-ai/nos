@@ -32,12 +32,16 @@ docker-build-trt-runtime:
 docker-run-trt-notebook:
 	docker run -it --gpus all \
 		-p 8888:8888 \
+		-e CUDA_MODULE_LOADING="LAZY" \
+		-e HF_HOME=/app/.nos/cache/transformers \
+		-e TRANSFORMERS_CACHE=/app/.nos/cache/transformers \
+		-e TORCH_HOME=/app/.nos/cache/torch \
 		-e NOS_HOME=/app/.nos \
 		-e NOS_LOG_LEVEL=DEBUG \
 		-v ~/.nosd:/app/.nos \
 		-v ${PWD}:/app/nos/ \
 		-v /tmp/trt/.cache:/root/.cache \
-		autonomi/nos:latest-trt-dev bash -c "cd /app/nos/examples/notebook && jupyter notebook --ip=0.0.0.0 --allow-root"
+		autonomi/nos:latest-trt-dev bash -c "cd /app/nos/examples/notebook && jupyter lab --ip=0.0.0.0 --allow-root"
 
 docker-test-trt:
 	docker compose -f docker-compose.extras.yml run --rm --build trt-dev

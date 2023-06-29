@@ -1,4 +1,4 @@
-diffusers
+diffusers>=0.17.1
 huggingface_hub
 pyarrow>=12.0.0
 ray[serve]==2.5.0
