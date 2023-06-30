@@ -217,6 +217,7 @@ class YOLOXTensorRT(YOLOX):
             self._patched_shape = (B, H, W)
         if (B, H, W) != self._patched_shape:
             raise ValueError(f"Image size changed from {self._patched_shape} to {(B, H, W)}")
+
         return super().__call__(images)
 
 
@@ -240,19 +241,40 @@ for model_name in YOLOX.configs:
         },
     )
 
-# for model_name in YOLOXTensorRT.configs:
-#     hub.register(
-#         model_name,
-#         TaskType.OBJECT_DETECTION_2D,
-#         YOLOXTensorRT,
-#         init_args=(model_name,),
-#         method_name="__call__",
-#         inputs={
-#             "images": Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 1],
-#         },
-#         outputs={
-#             "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
-#             "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
-#             "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
-#         },
-#     )
+for model_name in YOLOXTensorRT.configs:
+    hub.register(
+        model_name + "-trt",
+        TaskType.OBJECT_DETECTION_2D,
+        YOLOXTensorRT,
+        init_args=(model_name,),
+        method_name="__call__",
+        inputs={
+            "images": Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 1],
+        },
+        outputs={
+            "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
+            "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
+            "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
+        },
+    )
+
+
+def generate_detections_video(output_filename, model_name):
+    detect2d = client.Module(TaskType.OBJECT_DETECTION_2D, model_name)
+
+    # Run inference on every 500th frame, and display the results
+    output_filename = "test_video_out_trt.mp4"
+    if os.path.exists(output_filename):
+        os.remove(output_filename)
+    writer = VideoWriter(output_filename, fps=30)
+    for img in tqdm(islice(VideoReader(filename), 0, None, 10)):
+        H, W = img.shape[:2]
+        img = cv2.resize(img, (640, 480))
+        predictions = detect2d(images=[img])
+        for _idx, (img, bboxes, _scores, labels) in enumerate(
+            zip([img], predictions["bboxes"], predictions["scores"], predictions["scores"])
+        ):
+            vis = visualize_det2d(img, bboxes, labels)
+            vis = cv2.resize(vis, (W, H))
+            writer.write(vis)
+    writer.close()
