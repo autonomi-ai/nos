@@ -1,6 +1,7 @@
 import contextlib
 import io
 import time
+import traceback
 from dataclasses import dataclass
 from typing import Any, Dict
 
@@ -84,6 +85,14 @@ def compile(
     if slug is None:
         model_cls = model.__class__
         slug = f"{model_cls.__module__}.{model_cls.__name__}"
+
+    logger.debug("Validating inputs")
+    assert isinstance(cargs, dict), "Arguments must be a dictionary"
+    assert len(cargs) > 0, "Arguments must not be empty"
+    # TODO (spillai): We assume that the first input is the batched tensor
+    first_input = list(cargs.values())[0]
+    batch_size = first_input.shape[0]
+
     logger.debug(f"Tracing {slug} with NOS")
     try:
         concrete_args = concrete_args or {}
@@ -99,7 +108,8 @@ def compile(
             logger.debug(">" * 80)
     except Exception as e:
         logger.error(f"Failed to trace model: {e}")
-        raise e
+        logger.error(traceback.format_exc())
+        return None
     logger.debug(f"Traced {slug} in {time.time() - st:.2f}s")
 
     st = time.time()
@@ -111,26 +121,28 @@ def compile(
     max_workspace_size = free // 2
     logger.debug(f"Compiling with max_workspace_size = {max_workspace_size / 1024 ** 3:.1f} GiB")
     try:
-        trt_model = torch_tensorrt.fx.compile(
-            traced_model,
-            list(cargs.values()),
-            min_acc_module_size=5,
-            max_batch_size=2048,
-            max_workspace_size=max_workspace_size,
-            explicit_batch_dimension=True,
-            lower_precision=LowerPrecision.FP32 if precision == torch.float32 else LowerPrecision.FP16,
-            verbose_log=options.verbose,
-            timing_cache_prefix="",
-            save_timing_cache=False,
-            cuda_graph_batch_size=-1,
-            dynamic_batch=False,
-            is_aten=False,
-            use_experimental_fx_rt=False,
-        )
+        with io.StringIO() as buf, contextlib.redirect_stdout(buf):
+            trt_model = torch_tensorrt.fx.compile(
+                traced_model,
+                list(cargs.values()),
+                min_acc_module_size=5,
+                max_workspace_size=max_workspace_size,
+                explicit_batch_dimension=True,
+                lower_precision=LowerPrecision.FP32 if precision == torch.float32 else LowerPrecision.FP16,
+                verbose_log=options.verbose,
+                timing_cache_prefix="",
+                save_timing_cache=False,
+                cuda_graph_batch_size=batch_size,
+                dynamic_batch=False,
+                max_batch_size=2048,
+                is_aten=False,
+                use_experimental_fx_rt=False,
+            )
+            logger.debug(buf.getvalue())
         assert callable(trt_model), "Compiled model must be callable"
     except Exception as e:
         logger.error(f"Failed to compile {slug}: {e}, skipping compilation")
-        raise e
+        logger.error(traceback.format_exc())
         return None
     logger.debug(f"Compiled {slug} in {time.time() - st:.2f}s")
 
