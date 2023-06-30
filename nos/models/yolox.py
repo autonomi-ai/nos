@@ -10,6 +10,7 @@ from torchvision import ops
 
 from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
+from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
 from nos.compilers import compile
 from nos.constants import NOS_MODELS_DIR
@@ -87,29 +88,6 @@ def postprocess(
     return output
 
 
-def prepare_images(images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> List[np.ndarray]:
-    """Prepare images for inference.
-
-    Args:
-        images: A single image or a list of images (PIL.Image or np.ndarray)
-
-    Returns:
-        images: A list of images (np.ndarray)
-    """
-    if isinstance(images, np.ndarray):
-        images = [images]
-    elif isinstance(images, Image.Image):
-        images = [np.asarray(images.convert("RGB"))]
-    elif isinstance(images, list):
-        if isinstance(images[0], Image.Image):
-            images = [np.asarray(image.convert("RGB")) for image in images]
-        elif isinstance(images[0], np.ndarray):
-            pass
-        else:
-            raise ValueError(f"Invalid type for images: {type(images[0])}")
-    return images
-
-
 class YOLOX:
     """YOLOX Object Detection
     https://github.com/Megvii-BaseDetection/YOLOX/tree/main#benchmark
@@ -174,17 +152,6 @@ class YOLOX:
             }
 
 
-def get_model_id(name: str, shape: torch.Size, dtype: torch.dtype) -> str:
-    """Get model id from model name, shape and dtype."""
-    replacements = {"/": "-", " ": "-"}
-    for k, v in replacements.items():
-        name = name.replace(k, v)
-    shape = list(map(int, shape))
-    shape_str = "x".join([str(s) for s in shape])
-    precision_str = str(dtype).split(".")[-1]
-    return f"{name}_{shape_str}_{precision_str}"
-
-
 class YOLOXTensorRT(YOLOX):
     """TensorRT accelerated for YOLOX with Torch TensorRT."""
 
@@ -197,6 +164,17 @@ class YOLOXTensorRT(YOLOX):
         self._patched = False
         self._patched_shape = None
 
+    @staticmethod
+    def _get_model_id(name: str, shape: torch.Size, dtype: torch.dtype) -> str:
+        """Get model id from model name, shape and dtype."""
+        replacements = {"/": "-", " ": "-"}
+        for k, v in replacements.items():
+            name = name.replace(k, v)
+        shape = list(map(int, shape))
+        shape_str = "x".join([str(s) for s in shape])
+        precision_str = str(dtype).split(".")[-1]
+        return f"{name}_{shape_str}_{precision_str}"
+
     def __compile__(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> torch.nn.Module:
         """Model compilation flow."""
         assert isinstance(inputs, list), f"inputs must be a list, got {type(inputs)}"
@@ -206,25 +184,23 @@ class YOLOXTensorRT(YOLOX):
 
         # Check if we have a cached model
         slug = "backbone"
-        model_id = get_model_id(f"{self.cfg.model_name}--{slug}", inputs[0].shape, precision)
+        model_id = YOLOXTensorRT._get_model_id(f"{self.cfg.model_name}--{slug}", inputs[0].shape, precision)
         filename = f"{self._model_dir}/{model_id}.torchtrt.pt"
         if Path(filename).exists():
-            logger.debug(f"Found cached {slug}: {filename}")
+            logger.debug(f"Found cached {model_id}: {filename}")
             trt_model = torch.load(filename)
             self.model.backbone = trt_model
             return
 
         # Compile the model backbone
         try:
-            trt_model = compile(
-                self.model.backbone, args, concrete_args=None, precision=precision, slug="yolox_backbone"
-            )
-            logger.debug(f"Saving compiled {slug} model to {filename}")
+            trt_model = compile(self.model.backbone, args, concrete_args=None, precision=precision, slug=model_id)
+            logger.debug(f"Saving compiled {model_id} model to {filename}")
             torch.save(trt_model, filename)
             self.model.backbone = trt_model
-            logger.debug(f"Patched {slug} model")
+            logger.debug(f"Patched {model_id} model")
         except Exception as e:
-            logger.error(f"Failed to compile {slug} model: {e}")
+            logger.error(f"Failed to compile {model_id} model: {e}")
 
     def __call__(
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
