@@ -7,6 +7,7 @@ opencv-python-headless>=4.6.0.66
 pandas
 Pillow
 psutil>=5.9.5
+py-cpuinfo
 pydantic
 rich>=12.5.1
 tqdm

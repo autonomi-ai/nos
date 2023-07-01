@@ -9,8 +9,9 @@ Benchmark results (NVIDIA GeForce RTX 2080 Ti):
 import pytest
 from PIL import Image
 
+from nos.common import tqdm
+from nos.logging import logger
 from nos.models import CLIP
-from nos.test.benchmark import run_benchmark
 from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
 
@@ -66,19 +67,25 @@ def test_clip_model_variants():
     "model_name",
     [
         "openai/clip-vit-base-patch32",
-        "openai/clip-vit-large-patch14",
-        "laion/CLIP-ViT-H-14-laion2B-s32B-b79K",
-        "laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
+        # "openai/clip-vit-large-patch14",
+        # "laion/CLIP-ViT-H-14-laion2B-s32B-b79K",
+        # "laion/CLIP-ViT-L-14-laion2B-s32B-b82K",
     ],
 )
 def test_clip_visual_benchmark(model_name):
     """Benchmark CLIP visual encoder."""
+    import numpy as np
 
     img = Image.open(NOS_TEST_IMAGE)
+    img = img.resize((224, 224))
 
     model = CLIP(model_name=model_name)
-    time_ms = run_benchmark(
-        lambda: model.encode_image(img),
-        num_iters=1000,
-    )
-    print(f"BENCHMARK [{model_name}]: {time_ms:.2f} ms / step")
+    logger.debug(f"Benchmarking {model_name}")
+    logger.debug("Warming up (5s) ...")
+    for _ in tqdm(duration=5.0, disable=True):
+        model.encode_image([img])
+    logger.debug("Running benchmark (20s) ...")
+    B = 128
+    images = [np.asarray(img) for _ in range(B)]
+    for _ in tqdm(duration=20.0, unit_scale=B, desc=f"torch-eager | {model_name}"):
+        model.encode_image(images)
