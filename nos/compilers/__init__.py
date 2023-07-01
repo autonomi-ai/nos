@@ -141,6 +141,7 @@ def compile(
             logger.debug(buf.getvalue())
         assert callable(trt_model), "Compiled model must be callable"
     except Exception as e:
+        import traceback
         logger.error(f"Failed to compile {slug}: {e}, skipping compilation")
         logger.error(traceback.format_exc())
         return None

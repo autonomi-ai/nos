@@ -174,10 +174,10 @@ class CLIPTensorRT(CLIP):
         }
         try:
             trt_model = compile(self.model.vision_model, args, concrete_args=None, precision=precision, slug=model_id)
-            logger.debug(f"Saving compiled {model_id} model to {filename}")
+            logger.info(f"Saving compiled {model_id} model to {filename}")
             torch.save(trt_model, filename)
             self.model.vision_model = _CLIPVisionTransformer(trt_model)
-            logger.debug(f"Patched {model_id} model")
+            logger.info(f"Patched {model_id} model")
         except Exception as e:
             import traceback
 
@@ -203,6 +203,7 @@ class CLIPTensorRT(CLIP):
 
         if not len(self._patched):
             # Note (spillai): Force compilation with resized images
+            logger.info("Compiling clip...")
             inputs = [torch.tensor(images)]
             self._compile_vision_model(inputs, precision=self.model.dtype)
             self._patched["vision_model"] = True
@@ -230,6 +231,27 @@ for model_name in CLIP.configs:
     )
     hub.register(
         model_name,
+        TaskType.IMAGE_EMBEDDING,
+        CLIP,
+        init_args=(model_name,),
+        method_name="encode_image",
+        inputs={"images": Batch[ImageT[Image.Image]]},
+        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
+    )
+
+for model_name in CLIPTensorRT.configs:
+    cfg = CLIP.configs[model_name]
+    hub.register(
+        model_name + '-trt',
+        TaskType.TEXT_EMBEDDING,
+        CLIPTensorRT,
+        init_args=(model_name,),
+        method_name="encode_text",
+        inputs={"texts": Batch[str]},
+        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
+    )
+    hub.register(
+        model_name + '-trt',
         TaskType.IMAGE_EMBEDDING,
         CLIP,
         init_args=(model_name,),
