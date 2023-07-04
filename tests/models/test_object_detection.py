@@ -46,7 +46,7 @@ UNIQUE_MODELS = list(FasterRCNN.configs.keys())[:1] + list(YOLOX.configs.keys())
 # Only enable YOLOX TRT models in trt-dev and trt-runtime environments
 env = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", "base_gpu"))
 logger.info(f"Using env: {env}")
-if env not in ("nos_trt_dev", "nos_trt_runtime"):
+if env in ("nos_trt_dev", "nos_trt_runtime"):
     UNIQUE_MODELS += ["yolox/medium-trt"]
 
 

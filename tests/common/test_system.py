@@ -1,3 +1,6 @@
+import pytest
+import torch
+
 from nos.common.system import (
     get_docker_info,
     get_nvidia_smi,
@@ -34,6 +37,7 @@ def test_system_info_with_gpu():
     assert len(info["gpu"]["devices"]) > 0
 
 
+@pytest.mark.skipif(torch.cuda.is_available(), reason="Skipping CPU-only tests when GPU is available.")
 def test_system_utilities_cpu():
     assert has_docker(), "Docker not installed."
     assert get_docker_info() is not None
@@ -45,6 +49,9 @@ def test_system_utilities_cpu():
 
 @skip_if_no_torch_cuda
 def test_system_utilities_gpu():
+    assert has_docker(), "Docker not installed."
+    assert get_docker_info() is not None
+
     assert has_gpu(), "No GPU detected."
     assert get_nvidia_smi() is not None
 
