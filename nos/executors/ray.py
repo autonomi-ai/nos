@@ -55,7 +55,7 @@ class RayExecutor:
         """Check if Ray is initialized."""
         return ray.is_initialized()
 
-    def init(self, max_attempts: int = 5, timeout: int = 60, retry_interval: int = 5) -> None:
+    def init(self, max_attempts: int = 10, timeout: int = 60, retry_interval: int = 5) -> None:
         """Initialize Ray exector.
 
         This implementation forces Ray to start a new cluster instance via
@@ -80,7 +80,7 @@ class RayExecutor:
             del os.environ["RAY_ADDRESS"]
 
         st = time.time()
-        attempt = 0
+        attempt = -1
 
         # Attempt to connect to an existing ray cluster.
         # Allow upto 5 attempts, or if timeout of 60 seconds is reached.
@@ -110,18 +110,18 @@ class RayExecutor:
             except ConnectionError as exc:
                 # If Ray head is not running (this results in a ConnectionError),
                 # start it in a background subprocess.
+                attempt += 1
                 if attempt > 0:
                     logger.error(
                         f"Failed to connect to InferenceExecutor.\n"
                         f"{exc}\n"
                         f"Retrying {attempt}/{max_attempts} after {retry_interval}s..."
                     )
+                    time.sleep(retry_interval)
                 else:
                     logger.debug("No executor found, starting a new one")
-                self.start()
-                attempt += 1
-
-                time.sleep(retry_interval)
+                    self.start()
+                continue
         logger.error(f"Failed to connect to InferenceExecutor: namespace={self.spec.namespace}.")
         return False
 
