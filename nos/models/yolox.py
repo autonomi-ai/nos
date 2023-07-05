@@ -133,6 +133,7 @@ class YOLOX:
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
     ) -> Dict[str, np.ndarray]:
         """Predict bounding boxes for images."""
+        images = prepare_images(images)
         with torch.inference_mode():
             images = (
                 torch.stack([F.to_tensor(image) for image in images]) * 255

@@ -74,7 +74,7 @@ class CLIP:
     def encode_image(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
         """Encode image into an embedding."""
         images = prepare_images(images)
-        with torch.inference_mode(), torch.autocast(self.device, dtype=self.model.dtype):
+        with torch.inference_mode():
             inputs = self.processor(images=images, return_tensors="pt").to(self.device)
             if self.device != "cuda" and self.model.dtype == torch.float16:
                 inputs = {k: v.half() for k, v in inputs.items()}
@@ -208,7 +208,7 @@ class CLIPTensorRT(CLIP):
             self._patched["vision_model"] = True
             self._patched_shape = (len(images), H, W)
 
-        with torch.inference_mode(), torch.autocast(self.device, dtype=self.model.dtype):
+        with torch.inference_mode():
             inputs = self.processor(images=images, return_tensors="pt").to(self.device)
             if self.device != "cuda" and self.model.dtype == torch.float16:
                 inputs = {k: v.half() for k, v in inputs.items()}
