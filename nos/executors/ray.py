@@ -95,8 +95,9 @@ class RayExecutor:
                     ray.init(
                         address="auto",
                         namespace=self.spec.namespace,
-                        runtime_env=self.spec.runtime_env,
+                        object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                         ignore_reinit_error=True,
+                        include_dashboard=False,
                         configure_logging=True,
                         logging_level=logging.ERROR,
                         log_to_driver=level <= logging.ERROR,
@@ -116,12 +117,12 @@ class RayExecutor:
                         f"{exc}\n"
                         f"Retrying {attempt}/{max_attempts} after {retry_interval}s..."
                     )
+                    time.sleep(retry_interval)
                 else:
                     logger.debug("No executor found, starting a new one")
-                self.start()
+                    self.start()
                 attempt += 1
-
-                time.sleep(retry_interval)
+                continue
         logger.error(f"Failed to connect to InferenceExecutor: namespace={self.spec.namespace}.")
         return False
 
@@ -140,7 +141,6 @@ class RayExecutor:
                     _node_name="nos-executor",
                     address="local",
                     namespace=self.spec.namespace,
-                    runtime_env=self.spec.runtime_env,
                     object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                     ignore_reinit_error=False,
                     include_dashboard=False,

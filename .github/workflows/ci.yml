@@ -37,11 +37,15 @@ jobs:
         run: conda info
       - name: Conda list
         run: conda list
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: /usr/share/miniconda3/envs/nos-${{ matrix.os }}-${{ matrix.python-version }}
           key: conda-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements/requirements.txt') }}-${{ hashFiles('pyproject.toml') }}-${{ env.CACHE_NUMBER }}
         id: cache
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}-${{ env.CACHE_NUMBER }}
       - name: Install dependencies
         run: make develop-cpu
         if: steps.cache.outputs.cache-hit != 'true'
