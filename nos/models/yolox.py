@@ -194,11 +194,8 @@ class YOLOXTensorRT(YOLOX):
 
         # Compile the model backbone
         try:
-            self.model.half()
-            trt_model = compile(
-                self.model.backbone, args, concrete_args=None, precision=torch.float16, slug="yolox_backbone"
-            )
-            logger.debug(f"Saving compiled {slug} model to {filename}")
+            trt_model = compile(self.model.backbone, args, concrete_args=None, precision=precision, slug=model_id)
+            logger.debug(f"Saving compiled {model_id} model to {filename}")
             torch.save(trt_model, filename)
             self.model.backbone = trt_model
             logger.debug(f"Patched {model_id} model")
@@ -214,8 +211,8 @@ class YOLOXTensorRT(YOLOX):
         H, W = images[0].shape[:2]
         if not self._patched:
             assert H is not None and W is not None, "Must provide image size for first call to __call__"
-            inputs = [torch.rand(B, 3, H, W, dtype=torch.float16).to(self.device)]
-            self.__compile__(inputs, precision=torch.float16)
+            inputs = [torch.rand(B, 3, H, W).to(self.device)]
+            self.__compile__(inputs, precision=torch.float32)
             self._patched = True  # we set this to patched even if the compilation fails
             self._patched_shape = (B, H, W)
         if (B, H, W) != self._patched_shape:
