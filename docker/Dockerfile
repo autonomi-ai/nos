@@ -21,7 +21,7 @@ ENV TZ="America/Los_Angeles"
 
 # Pre-requisites for installing miniconda
 RUN apt-get -y update \
-  && apt-get install -y --no-install-recommends gnupg2 sudo curl tzdata build-essential \
+  && apt-get install -y --no-install-recommends gnupg2 sudo curl tzdata build-essential git \
   && apt-get -y autoclean \
   && apt-get -y autoremove \
   && rm -rf /var/lib/apt/lists/*
