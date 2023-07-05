@@ -174,10 +174,10 @@ class CLIPTensorRT(CLIP):
         }
         try:
             trt_model = compile(self.model.vision_model, args, concrete_args=None, precision=precision, slug=model_id)
-            logger.info(f"Saving compiled {model_id} model to {filename}")
+            logger.debug(f"Saving compiled {model_id} model to {filename}")
             torch.save(trt_model, filename)
             self.model.vision_model = _CLIPVisionTransformer(trt_model)
-            logger.info(f"Patched {model_id} model")
+            logger.debug(f"Patched {model_id} model")
         except Exception as e:
             import traceback
 

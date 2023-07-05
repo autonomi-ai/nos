@@ -9,7 +9,7 @@ from .constants import NOS_LOG_DIR
 date = datetime.utcnow().strftime("%Y-%m-%d_%H%M%S")
 LOGGING_PATH = os.getenv("NOS_LOGGING_PATH", os.path.join(NOS_LOG_DIR, f"nos-{date}.log"))
 LOGGING_ROTATION = os.getenv("NOS_LOGGING_ROTATION", "100 MB")
-LOGGING_LEVEL = os.getenv("NOS_LOGGING_LEVEL", "DEBUG")
+LOGGING_LEVEL = os.getenv("NOS_LOGGING_LEVEL", "INFO")
 
 
 def build_logger(name: str = None, level: str = LOGGING_LEVEL):
