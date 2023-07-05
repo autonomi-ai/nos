@@ -49,8 +49,8 @@ def test_controlnet(model):
 
     # Generate depth map from generated image
     # Note: This needs to correspond to the controlnet model used in the pipeline
-    depth_proc = Processor("midas")
-    control_img = depth_proc(image, to_bytes=False)
+    depth_proc = Processor("depth_midas")
+    control_img = depth_proc(image, to_pil=True)
 
     # Generate new images from text prompts
     prompt = ", best quality, extremely detailed"
@@ -70,7 +70,7 @@ def test_controlnet(model):
     assert output.images[0].size == (512, 512)
 
 
-@pytest.mark.parametrize("task", ["midas", "canny", "openpose"])
+@pytest.mark.parametrize("task", ["depth_midas", "canny", "openpose"])
 def test_controlnet_control_tasks(task):
     """Test various control tasks."""
     from controlnet_aux.processor import Processor
@@ -82,7 +82,7 @@ def test_controlnet_control_tasks(task):
     img = img.resize((512, 512))
 
     proc = Processor(task)
-    img = proc(img, to_bytes=False)
+    img = proc(img, to_pil=True)
     assert img is not None
     assert isinstance(img, Image.Image)
 
