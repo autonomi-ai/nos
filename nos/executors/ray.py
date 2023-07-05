@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
 NOS_RAY_RUNTIME_ENV = os.getenv("NOS_RAY_ENV", None)
-NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 4 * 1024 * 1024 * 1024))  # 4GB
+NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
 
 
 @dataclass
