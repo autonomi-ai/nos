@@ -242,7 +242,7 @@ for model_name in CLIP.configs:
 for model_name in CLIPTensorRT.configs:
     cfg = CLIP.configs[model_name]
     hub.register(
-        model_name + '-trt',
+        model_name + "-trt",
         TaskType.TEXT_EMBEDDING,
         CLIPTensorRT,
         init_args=(model_name,),
@@ -251,7 +251,7 @@ for model_name in CLIPTensorRT.configs:
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
     )
     hub.register(
-        model_name + '-trt',
+        model_name + "-trt",
         TaskType.IMAGE_EMBEDDING,
         CLIP,
         init_args=(model_name,),
