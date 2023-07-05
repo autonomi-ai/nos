@@ -1,3 +1,4 @@
+import os
 import platform
 import subprocess
 from io import StringIO
@@ -45,6 +46,12 @@ def has_gpu() -> bool:
 def has_docker() -> bool:
     """Check if Docker is available."""
     return sh("docker --version") is not None
+
+
+def is_inside_docker() -> bool:
+    """Check if within Docker."""
+    cgroup = "/proc/self/cgroup"
+    return os.path.isfile("/.dockerenv") or os.path.isfile(cgroup) and any("docker" in line for line in open(cgroup))
 
 
 def has_nvidia_docker() -> bool:
