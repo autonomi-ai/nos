@@ -21,7 +21,7 @@ ENV TZ="America/Los_Angeles"
 
 # Pre-requisites for installing miniconda
 RUN apt-get -y update \
-  && apt-get install -y --no-install-recommends gnupg2 sudo curl tzdata build-essential \
+  && apt-get install -y --no-install-recommends gnupg2 sudo curl tzdata build-essential git \
   && apt-get -y autoclean \
   && apt-get -y autoremove \
   && rm -rf /var/lib/apt/lists/*
@@ -57,7 +57,8 @@ RUN --mount=type=cache,target=/opt/conda/pkgs/ \
 RUN --mount=type=cache,target=~/.cache/pip \
   pip install \
   -r requirements/requirements.txt \
-  -r requirements/requirements.server.txt
+  -r requirements/requirements.server.txt \
+  -r requirements/requirements.extras.txt
 
 # Cleanup
 RUN /opt/conda/bin/mamba clean -ya \
@@ -81,6 +82,7 @@ ENV RAY_DEDUP_LOGS=0
 ENV RAY_USAGE_STATS_ENABLED=0
 ENV RAY_DATA_DISABLE_PROGRESS_BARS=1
 ENV RAY_CONDA_HOME=${CONDA_PATH}
+ENV RAY_ENABLE_MAC_LARGE_OBJECT_STORE=1
 
 RUN echo "export CONDA_PATH=/opt/conda/envs/${PYENV}" >> ~/.bashrc
 RUN echo "export PATH=/opt/conda/envs/${PYENV}/bin:$PATH" >> ~/.bashrc
