@@ -328,4 +328,8 @@ class InferenceModule:
             response = loads(response.response_bytes)
             return response
         except Exception as e:
-            raise NosClientException(f"Failed to run model {self.model_name} ({e})")
+            import traceback
+
+            raise NosClientException(
+                f"""Failed to run model {self.model_name} ({e})""" f"""\nTraceback\n""" f"""{traceback.format_exc()}"""
+            )

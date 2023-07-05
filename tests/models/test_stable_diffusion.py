@@ -17,7 +17,7 @@ def model():
 
 
 @pytest.mark.benchmark(group=PyTestGroup.HUB)
-def test_stable_diffusion(model):
+def test_stable_diffusion_predict(model):
     """Use StableDiffusion to generate an image from a text prompt.
 
     Note: This test should be able to run with CPU or GPU.
