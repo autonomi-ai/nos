@@ -57,7 +57,8 @@ RUN --mount=type=cache,target=/opt/conda/pkgs/ \
 RUN --mount=type=cache,target=~/.cache/pip \
   pip install \
   -r requirements/requirements.txt \
-  -r requirements/requirements.server.txt
+  -r requirements/requirements.server.txt \
+  -r requirements/requirements.extras.txt
 
 # Cleanup
 RUN /opt/conda/bin/mamba clean -ya \

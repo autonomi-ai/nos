@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ["ubuntu-latest"]
+        os: ["ubuntu-latest", "macos-latest"]
         python-version: ["3.8"]
     defaults:
       run:
@@ -67,4 +67,3 @@ jobs:
         uses: actions/checkout@master
       - name: Build and test-cpu within docker container
         run: make docker-test-cpu
-        if: steps.cache.outputs.cache-hit != 'true'
