@@ -55,7 +55,7 @@ class RayExecutor:
         """Check if Ray is initialized."""
         return ray.is_initialized()
 
-    def init(self, max_attempts: int = 10, timeout: int = 60, retry_interval: int = 5) -> None:
+    def init(self, max_attempts: int = 5, timeout: int = 60, retry_interval: int = 5) -> None:
         """Initialize Ray exector.
 
         This implementation forces Ray to start a new cluster instance via
@@ -80,7 +80,7 @@ class RayExecutor:
             del os.environ["RAY_ADDRESS"]
 
         st = time.time()
-        attempt = -1
+        attempt = 0
 
         # Attempt to connect to an existing ray cluster.
         # Allow upto 5 attempts, or if timeout of 60 seconds is reached.
@@ -95,8 +95,9 @@ class RayExecutor:
                     ray.init(
                         address="auto",
                         namespace=self.spec.namespace,
-                        runtime_env=self.spec.runtime_env,
+                        object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                         ignore_reinit_error=True,
+                        include_dashboard=False,
                         configure_logging=True,
                         logging_level=logging.ERROR,
                         log_to_driver=level <= logging.ERROR,
@@ -110,7 +111,6 @@ class RayExecutor:
             except ConnectionError as exc:
                 # If Ray head is not running (this results in a ConnectionError),
                 # start it in a background subprocess.
-                attempt += 1
                 if attempt > 0:
                     logger.error(
                         f"Failed to connect to InferenceExecutor.\n"
@@ -121,6 +121,7 @@ class RayExecutor:
                 else:
                     logger.debug("No executor found, starting a new one")
                     self.start()
+                attempt += 1
                 continue
         logger.error(f"Failed to connect to InferenceExecutor: namespace={self.spec.namespace}.")
         return False
@@ -140,7 +141,6 @@ class RayExecutor:
                     _node_name="nos-executor",
                     address="local",
                     namespace=self.spec.namespace,
-                    runtime_env=self.spec.runtime_env,
                     object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                     ignore_reinit_error=False,
                     include_dashboard=False,

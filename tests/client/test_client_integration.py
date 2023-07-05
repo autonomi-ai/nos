@@ -23,6 +23,10 @@ def test_nos_init(runtime):  # noqa: F811
     assert client.WaitForServer(timeout=180, retry_interval=5)
     assert client.IsHealthy()
 
+    # Test re-initializing the server
+    container_ = nos.init(runtime=runtime, port=GRPC_PORT, utilization=0.5)
+    assert container_.id == container.id
+
     # Shutdown the server
     nos.shutdown()
     containers = InferenceServiceRuntime.list()
