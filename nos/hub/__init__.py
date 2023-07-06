@@ -22,6 +22,8 @@ class Hub:
         """
         if cls._instance is None:
             cls._instance = cls()
+            # Register models / Populate the registry
+            import nos.models  # noqa: F401, E402
         return cls._instance
 
     @classmethod
@@ -99,6 +101,3 @@ list = Hub.list
 load = Hub.load
 register = Hub.register
 load_spec = Hub.load_spec
-
-# Register models / Populate the registry
-import nos.models  # noqa: F401, E402

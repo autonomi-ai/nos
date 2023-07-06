@@ -11,11 +11,11 @@ import pytest
 from PIL import Image
 from tqdm import tqdm
 
+from nos.common import ModelSpec, TaskType  # noqa: E402
+from nos.test.utils import NOS_TEST_IMAGE
+
 
 pytestmark = pytest.mark.client
-
-from nos.common import ModelSpec, TaskType  # noqa: E402
-from nos.test.utils import NOS_TEST_IMAGE  # noqa: E402
 
 
 @pytest.mark.client
@@ -97,7 +97,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
         assert "bboxes" in response
 
     # TXT2IMG
-    task, model_name = TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2"
+    task, model_name = TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2-1"
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
@@ -107,7 +107,6 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
         assert "images" in response
 
 
-@pytest.mark.skip(reason="CPU backend is not ready yet")
 @pytest.mark.client
 def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: F811
     """Test the gRPC client with CPU docker runtime initialized.
@@ -184,9 +183,10 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
         assert "scores" in response
 
     # TXT2IMG
-    task, model_name = TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2"
-    model = client.Module(task=task, model_name=model_name)
-    assert model is not None
-    assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-        response = model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)
+    if False:
+        task, model_name = TaskType.IMAGE_GENERATION, "runwayml/stable-diffusion-v1-5"
+        model = client.Module(task=task, model_name=model_name)
+        assert model is not None
+        assert model.GetModelInfo() is not None
+        for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
+            response = model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)

@@ -1,5 +1,3 @@
-import torch
-
 from nos import hub
 
 from .clip import CLIP  # noqa: F401

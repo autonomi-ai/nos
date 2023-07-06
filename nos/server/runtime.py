@@ -9,15 +9,16 @@ from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.logging import LOGGING_LEVEL, logger
 from nos.protoc import import_module
 from nos.server.docker import DockerRuntime
+from nos.version import __version__
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
-NOS_DOCKER_IMAGE_CPU = "autonomi/nos:latest-cpu"
-NOS_DOCKER_IMAGE_GPU = "autonomi/nos:latest-gpu"
-NOS_DOCKER_IMAGE_TRT_RUNTIME = "autonomi/nos:latest-trt-runtime"
+NOS_DOCKER_IMAGE_CPU = f"autonomi/nos:{__version__}-cpu"
+NOS_DOCKER_IMAGE_GPU = f"autonomi/nos:{__version__}-gpu"
+NOS_DOCKER_IMAGE_TRT_RUNTIME = f"autonomi/nos:{__version__}-trt-runtime"
 
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
 NOS_INFERENCE_SERVICE_CMD = "nos-grpc-server"

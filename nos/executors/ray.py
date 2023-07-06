@@ -95,7 +95,6 @@ class RayExecutor:
                     ray.init(
                         address="auto",
                         namespace=self.spec.namespace,
-                        object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                         ignore_reinit_error=True,
                         include_dashboard=False,
                         configure_logging=True,

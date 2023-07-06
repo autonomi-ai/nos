@@ -3,7 +3,10 @@ from nos.constants import DEFAULT_GRPC_PORT
 
 
 def init(
-    runtime: str = "auto", port: int = DEFAULT_GRPC_PORT, utilization: float = 0.8
+    runtime: str = "auto",
+    port: int = DEFAULT_GRPC_PORT,
+    utilization: float = 0.8,
+    pull: bool = True,
 ) -> docker.models.containers.Container:
     """Initialize the inference server.
 
@@ -12,6 +15,7 @@ def init(
             In "auto" mode, the runtime will be automatically detected.
         port (int, optional): The port to use for the inference server. Defaults to DEFAULT_GRPC_PORT.
         utilization (float, optional): The target cpu/memory utilization of inference server. Defaults to 0.8.
+        pull (bool, optional): Pull the docker image before starting the inference server. Defaults to True.
     """
     import math
 
@@ -62,6 +66,10 @@ def init(
                 f"Invalid inference service runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
             )
 
+    # Pull docker image (if necessary)
+    if pull:
+        _pull_image(InferenceServiceRuntime.configs[runtime].image)
+
     # Start inference server
     runtime = InferenceServiceRuntime(runtime=runtime)
     logger.info(f"Starting inference service: [name={runtime.cfg.name}, runtime={runtime}]")
@@ -102,3 +110,40 @@ def shutdown() -> docker.models.containers.Container:
         raise RuntimeError(f"Failed to shutdown inference server: {e}")
     logger.info(f"Inference service stopped: [name={container.name}, id={container.id[:12]}]")
     return container
+
+
+def _pull_image(image: str, quiet: bool = False, platform: str = None) -> str:
+    """Pull the latest inference server image."""
+    import subprocess
+    from collections import deque
+
+    import rich.status
+
+    import docker.errors
+    from nos.logging import logger
+    from nos.server.runtime import DockerRuntime
+
+    try:
+        DockerRuntime.get()._client.images.get(image)
+        logger.info(f"Found up-to-date server image: {image}")
+    except docker.errors.ImageNotFound:
+        try:
+            logger.info(f"Pulling new server image: {image} (this may take a while).")
+            # use subprocess to pull image and stream output
+            proc = subprocess.Popen(
+                f"docker pull {image}", stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
+            )
+            status_q = deque(maxlen=25)
+            status_str = "Pulling new server image: {image} (this may take a while)."
+            with rich.status.Status(status_str) as status:
+                while proc.stdout.readable():
+                    line = proc.stdout.readline()
+                    if not line:
+                        break
+                    status_q.append(line.decode("utf-8").strip())
+                    status.update("[bold yellow]" + f"{status_str}\n\t" + "\n\t".join(status_q) + "[/bold yellow]")
+            proc.wait()
+            logger.info(f"Pulled new server image: {image}")
+        except (docker.errors.APIError, docker.errors.DockerException) as exc:
+            logger.error(f"Failed to pull image: {image}, exiting early: {exc}")
+            raise Exception(f"Failed to pull image: {image}, please mnaully pull image via `docker pull {image}`")

@@ -66,3 +66,22 @@ def skip_all_unless_nos_env(nos_env: str = None):
 
     env = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", "base_gpu"))
     return pytest.mark.skipif(env != nos_env, reason=f"Requires nos env {nos_env}, but using {env}")
+
+
+def get_benchmark_video() -> str:
+    """Download a benchmark video from URL to local file."""
+    import requests
+
+    from nos.constants import NOS_CACHE_DIR
+
+    URL = "https://zackakil.github.io/video-intelligence-api-visualiser/assets/test_video.mp4"
+
+    # Download video from URL to local file
+    tmp_videos_dir = NOS_CACHE_DIR / "test_data" / "videos"
+    tmp_videos_dir.mkdir(parents=True, exist_ok=True)
+    tmp_video_filename = tmp_videos_dir / "test_video.mp4"
+    if not tmp_video_filename.exists():
+        with open(str(tmp_video_filename), "wb") as f:
+            f.write(requests.get(URL).content)
+        assert tmp_video_filename.exists()
+    return str(tmp_video_filename)
