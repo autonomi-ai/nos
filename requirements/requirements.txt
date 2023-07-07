@@ -1,7 +1,7 @@
 av>=10.0.0
 cloudpickle>=2.2.1
 docker>=6.0.0
-grpcio-tools>=1.32.0,<=1.49.1
+grpcio-tools>=1.51.3
 loguru>=0.7.0
 opencv-python-headless>=4.6.0.66
 pandas
