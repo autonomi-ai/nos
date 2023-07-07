@@ -1,3 +1,7 @@
+## NOS Inference Service
+::: nos.init
+::: nos.shutdown
+
 ## ::: nos.client.grpc.InferenceClient
     handler: python
     options:
@@ -5,8 +9,12 @@
         - __init__
         - IsHealthy
         - WaitForServer
-        - GetServiceInfo
+        - GetServiceVersion
+        - CheckCompatibility
+        - ListModels
         - GetModelInfo
+        - Module
+        - ModuleFromSpec
         - Run
 
 ## ::: nos.client.grpc.InferenceModule

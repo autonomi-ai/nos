@@ -8,11 +8,11 @@ nav:
 - <strong>🏠 Home</strong>: README.md
 - <strong>🔥 Quickstart</strong>: docs/QUICKSTART.md
 - <strong>📚 API Documentation</strong>:
-  - InferenceClient: docs/api/client.md
-  - ModelSpec: docs/api/common/spec.md
-  - Types: docs/api/common/types.md
-  - Tasks: docs/api/common/tasks.md
-  - Hub: docs/api/hub.md
+  - Inference Client: docs/api/client.md
+  - Model Specification: docs/api/common/spec.md
+  - NOS Types: docs/api/common/types.md
+  - NOS Tasks: docs/api/common/tasks.md
+  - NOS Hub: docs/api/hub.md
 - <strong>🏁 Roadmap</strong>: docs/ROADMAP.md
 - <strong>🧾 Release Notes</strong>: docs/RELEASE-NOTES.md
 - <strong>🧑‍💻 Contributing</strong>: docs/CONTRIBUTING.md
@@ -76,8 +76,6 @@ theme:
     - navigation.path
     - navigation.expand
     - navigation.indexes
-    - navigation.tabs
-    - navigation.tabs.sticky
 
 extra:
   analytics:
