@@ -8,7 +8,7 @@ pandas
 Pillow
 psutil>=5.9.5
 py-cpuinfo>=9.0.0
-pydantic
+pydantic<=2
 rich>=12.5.1
 tqdm
 typer>=0.7.0
