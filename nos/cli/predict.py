@@ -198,3 +198,31 @@ def _predict_segmentation(
     console.print(
         f"[bold green] ✓ Generated masks ({response['masks']}..., time=~{(time.perf_counter() - st) * 1e3:.1f}ms) [/bold green]"
     )
+
+
+@predict_cli.command("benchmark", help="Make a noop grpc call with an image input.")
+def _benchmark(
+    ctx: typer.Context,
+    model_name: str = typer.Option(
+        "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
+        "-m",
+        "--model-name",
+        help="Name of the model to use (e.g. torchvision/fasterrcnn_mobilenet_v3_large_320_fpn).",
+    ),
+    filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
+) -> None:
+    from PIL import Image
+
+    img = Image.open(filename).resize((640, 480))
+    with rich.status.Status("[bold green] Run noop image grpc call...[/bold green]"):
+        try:
+            st = time.perf_counter()
+            response = ctx.obj.client.Run(task=TaskType.BENCHMARK, model_name=model_name, images=[img])
+            end = time.perf_counter()
+            console.print(
+                f"[bold green] ✓ Benchmark grpc image transfer ({response['success']}..., time=~{(end - st) * 1e3:.1f}ms) [/bold green]"
+            )
+        except NosClientException as exc:
+            console.print(f"[red] ✗ Failed benchmarking. [/red]\n[bold red]{exc}[/bold red]")
+            return
+

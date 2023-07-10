@@ -18,3 +18,6 @@ class TaskType(Enum):
     """Image embedding."""
     TEXT_EMBEDDING = "text_embedding"
     """Text embedding."""
+
+    BENCHMARK = "benchmark"
+    """Noop GPRC call for benchrmarking purposes"""
