@@ -65,11 +65,6 @@ class FasterRCNN:
                 "labels": [pred["labels"].cpu().numpy().astype(np.int32) for pred in predictions],
             }
 
-    def __benchmark__(
-        self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
-    ) -> Dict[str, np.ndarray]:
-        return {"result": True}
-
 
 hub.register(
     "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
@@ -88,20 +83,4 @@ hub.register(
         "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
         "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
     },
-)
-
-
-hub.register(
-    "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
-    TaskType.BENCHMARK,
-    FasterRCNN,
-    init_args=("torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",),
-    method_name="__benchmark__",
-    inputs={
-        "images": Union[
-            Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 8],
-            Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 1],
-        ]
-    },
-    outputs={"result": bool},
 )
