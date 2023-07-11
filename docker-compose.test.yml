@@ -4,6 +4,7 @@ x-nos-common:
   &nos-common-test
   volumes:
     - ~/.nosd:/app/.nos
+    - /dev/shm:/dev/shm
   environment:
     - NOS_LOGGING_LEVEL=DEBUG
   shm_size: 4G

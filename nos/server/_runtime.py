@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import docker
+from nos.common.shm import NOS_SHM_ENABLED
 from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED  # noqa F401
 from nos.logging import LOGGING_LEVEL, logger
 from nos.protoc import import_module
@@ -45,13 +46,15 @@ class InferenceServiceRuntimeConfig:
         default_factory=lambda: {
             "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
             "NOS_PROFILING_ENABLED": int(NOS_PROFILING_ENABLED),
+            "NOS_SHM_ENABLED": int(NOS_SHM_ENABLED),
         }
     )
     """Environment variables."""
 
     volumes: Dict[str, Dict[str, str]] = field(
         default_factory=lambda: {
-            str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},
+            str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},  # nos cache
+            "/dev/shm": {"bind": "/dev/shm", "mode": "rw"},  # shared-memory transport
         }
     )
     """Volumes to mount."""
