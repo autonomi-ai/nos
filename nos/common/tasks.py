@@ -20,4 +20,4 @@ class TaskType(Enum):
     """Text embedding."""
 
     CUSTOM = "custom"
-    """Noop GPRC call for benchrmarking purposes"""
+    """Custom task type."""

@@ -11,6 +11,9 @@ from google.protobuf import empty_pb2
 from nos import hub
 from nos.common import ModelSpec, TaskType, dumps
 from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED  # noqa F401
+from nos.common import FunctionSignature, ModelSpec, TaskType, dumps, loads
+from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTransportManager
+from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor
 from nos.logging import logger
@@ -37,6 +40,9 @@ class InferenceService:
     Parameters:
         model_manager (ModelManager): Model manager.
         executor (RayExecutor): Ray executor.
+        shm_manager (SharedMemoryTransportManager): Shared memory transport manager.
+            Used to create shared memory buffers for inputs/outputs,
+            and to copy data to/from shared memory.
 
     Note: To be used with the `InferenceServiceImpl` gRPC service.
     """
@@ -49,6 +55,10 @@ class InferenceService:
         except Exception as e:
             logger.info(f"Failed to initialize executor: {e}")
             raise RuntimeError(f"Failed to initialize executor: {e}")
+        if NOS_SHM_ENABLED:
+            self.shm_manager = SharedMemoryTransportManager()
+        else:
+            self.shm_manager = None
 
     def execute(self, model_name: str, task: TaskType = None, inputs: Dict[str, Any] = None) -> Dict[str, Any]:
         """Execute the model.
@@ -68,7 +78,9 @@ class InferenceService:
 
         # TODO (spillai): Validate/Decode the inputs
         mid = time.perf_counter()
-        model_inputs = model_spec.signature._decode_inputs(inputs)
+        model_inputs = FunctionSignature.validate(inputs, model_spec.signature.inputs)
+        model_inputs = SharedMemoryDataDict.decode(model_inputs)
+        # model_inputs = model_spec.signature._decode_inputs(inputs)
         model_inputs_types = [
             f"{k}: List[type={type(v[0])}, len={len(v)}]" if isinstance(v, list) else str(type(v))
             for k, v in model_inputs.items()
@@ -90,6 +102,9 @@ class InferenceService:
         # If the response is a single value, wrap it in a dict with the appropriate key
         if len(model_spec.signature.outputs) == 1:
             response = {k: response for k in model_spec.signature.outputs}
+
+        # Encode the response
+        response = SharedMemoryDataDict.encode(response)
 
         return response
 
@@ -136,6 +151,42 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             logger.error(f"Failed to load spec: [request={request.request}, e={e}]")
             context.abort(grpc.StatusCode.NOT_FOUND, str(e))
         return spec._to_proto(public=True)
+
+    def RegisterSystemSharedMemory(
+        self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
+    ) -> nos_service_pb2.GenericResponse:
+        """Register system shared memory with a dry-run inference request."""
+        if not NOS_SHM_ENABLED:
+            context.abort(grpc.StatusCode.UNIMPLEMENTED, "Shared memory not enabled.")
+
+        metadata = dict(context.invocation_metadata())
+        client_id = metadata.get("client_id", None)
+        spec_id = metadata.get("spec_id", None)
+        logger.debug(f"Registering system shared memory for client_id={client_id}, spec_id={spec_id}")
+        try:
+            shm_map = self.shm_manager.create(loads(request.request_bytes), namespace=f"{client_id}/{spec_id}")
+            return nos_service_pb2.GenericResponse(response_bytes=dumps(shm_map))
+        except Exception as e:
+            logger.error(f"Failed to register system shared memory: {e}")
+            context.abort(grpc.StatusCode.INTERNAL, str(e))
+
+    def UnregisterSystemSharedMemory(
+        self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
+    ) -> nos_service_pb2.GenericResponse:
+        """Unregister system shared memory."""
+        if not NOS_SHM_ENABLED:
+            context.abort(context, grpc.StatusCode.UNIMPLEMENTED, "Shared memory not enabled.")
+
+        metadata = dict(context.invocation_metadata())
+        client_id = metadata.get("client_id", None)
+        spec_id = metadata.get("spec_id", None)
+        logger.debug(f"Unregistering system shared memory for client_id={client_id}, spec_id={spec_id}")
+        try:
+            self.shm_manager.cleanup(namespace=f"{client_id}/{spec_id}")
+        except Exception as e:
+            logger.error(f"Failed to unregister system shared memory: {e}")
+            context.abort(grpc.StatusCode.INTERNAL, str(e))
+        return nos_service_pb2.GenericResponse()
 
     def Run(
         self, request: nos_service_pb2.InferenceRequest, context: grpc.ServicerContext

@@ -17,6 +17,7 @@ services:
       - NOS_LOGGING_LEVEL=DEBUG
     volumes:
       - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
     deploy:
       resources:
         reservations:

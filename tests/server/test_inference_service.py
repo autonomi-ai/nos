@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 import contextlib
 
+=======
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
 import numpy as np
 import pytest
 from loguru import logger
@@ -8,7 +11,11 @@ from PIL import Image
 from nos import hub
 from nos.common import TaskType, tqdm
 from nos.executors.ray import RayExecutor
+<<<<<<< HEAD
 from nos.managers import ModelHandle, ModelManager
+=======
+from nos.server.service import ModelHandle, ModelManager
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
 from nos.test.conftest import ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
 
@@ -17,6 +24,7 @@ NOS_SHM_ENABLED = False
 pytestmark = pytest.mark.server
 
 
+<<<<<<< HEAD
 @contextlib.contextmanager
 def warns(warn_cls=UserWarning, shm_enabled=NOS_SHM_ENABLED):
     """Catch warnings if shared memory is enabled."""
@@ -26,6 +34,8 @@ def warns(warn_cls=UserWarning, shm_enabled=NOS_SHM_ENABLED):
         yield
 
 
+=======
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
 def test_model_manager(ray_executor: RayExecutor):  # noqa: F811
     manager = ModelManager()
     assert manager is not None
@@ -72,6 +82,7 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
         assert result is not None
 
 
+<<<<<<< HEAD
 # @pytest.mark.parametrize("shm_enabled", [False, True])
 def test_inference_service_noop(grpc_client_with_cpu_backend):  # noqa: F811
     """Test inference service with shared memory transport."""
@@ -80,6 +91,11 @@ def test_inference_service_noop(grpc_client_with_cpu_backend):  # noqa: F811
 
     # client = local_grpc_client_with_server
     client = grpc_client_with_cpu_backend
+=======
+def test_inference_service_shm_transport(local_grpc_client_with_server):  # noqa: F811
+    """Test inference service with shared memory transport."""
+    client = local_grpc_client_with_server
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
     assert client is not None
     assert client.IsHealthy()
 
@@ -87,7 +103,11 @@ def test_inference_service_noop(grpc_client_with_cpu_backend):  # noqa: F811
     img = Image.open(NOS_TEST_IMAGE)
 
     # Load noop model
+<<<<<<< HEAD
     task, model_name = TaskType.CUSTOM, "noop/process-images"
+=======
+    task, model_name = TaskType.CUSTOM, "noop/process_images"
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
@@ -96,6 +116,7 @@ def test_inference_service_noop(grpc_client_with_cpu_backend):  # noqa: F811
     # Change image sizes on the fly to test if the client
     # registers new shared memory regions.
     for shape in [(224, 224), (640, 480), (1280, 720)]:
+<<<<<<< HEAD
         # __call__(images: np.ndarray, 3-dim)
         inputs = {"images": np.asarray(img.resize(shape))}
         response = model(**inputs)
@@ -155,6 +176,49 @@ BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (28
 @pytest.mark.parametrize("shape", BENCHMARK_IMAGE_SHAPES)
 @pytest.mark.parametrize("image_type", [Image.Image, np.ndarray])
 def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, image_type):  # noqa: F811
+=======
+        # __call__(images: np.ndarray)
+        inputs = {"images": np.asarray(img.resize(shape))}
+        response = model(**inputs)
+
+        # __call__(images: List[np.ndarray])
+        inputs = {"images": [np.asarray(img.resize(shape))]}
+        response = model(**inputs)
+        assert isinstance(response, dict)
+        assert "result" in response
+
+    #     # __call__(image: Image.Image)
+    #     # This will not use shared memory transport
+    #     # and force the client to unregister shm objects,
+    #     # and send the image over the wire.
+    #     inputs = {"images": img.resize(shape)}
+    #     response = model(**inputs)
+
+    #     # __call__(image: List[Image.Image])
+    #     # This will not use shared memory transport
+    #     # and force the client to send the image over the wire.
+    #     # Note: Since we've already unregistered the shm objects,
+    #     # no new shm region changes should happen here.
+    #     inputs = {"images": [img.resize(shape)]}
+    #     response = model(**inputs)
+
+    # # Test manually registering/unregistering shared memory regions
+    # model.UnregisterSystemSharedMemory() # unregister from previous test
+    # for _shape in [(224, 224), (640, 480), (1280, 720)]:
+    #     images = np.vstack([np.asarray(img.resize(_shape)) for _ in range(8)])
+    #     inputs = {"images": images}
+    #     model.RegisterSystemSharedMemory(inputs)
+    #     response = model(**inputs)
+    #     assert isinstance(response, dict)
+    #     assert "result" in response
+    #     model.UnregisterSystemSharedMemory()
+
+
+@pytest.mark.benchmark
+# @pytest.mark.parametrize("client_with_server", ("docker-cpu", "docker-gpu"), indirect=True)
+@pytest.mark.parametrize("shape", [(224, 224), (640, 480), (1280, 720), (1920, 1080), (2880, 1620), (3840, 2160)])
+def test_benchmark_inference_service_shm_transport(local_grpc_client_with_server, shape):  # noqa: F811
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
     """Benchmark shared memory transport and inference between the client-server.
 
     Tests with 3 client-server configurations:
@@ -164,17 +228,23 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, i
 
     Note: This test is only valid for the local server.
     """
+<<<<<<< HEAD
     assert not NOS_SHM_ENABLED, "Shared memory transport is not supported yet. "
     shm_enabled = False
 
     # client = local_grpc_client_with_server
     client = grpc_client_with_gpu_backend
+=======
+
+    client = local_grpc_client_with_server
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
     assert client is not None
     assert client.IsHealthy()
 
     # Load dummy image
     img = Image.open(NOS_TEST_IMAGE)
     img = img.resize(shape)
+<<<<<<< HEAD
     if image_type == np.ndarray:
         img = np.asarray(img)
         assert img.shape[:2][::-1] == shape
@@ -187,6 +257,12 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, i
 
     # Load noop model
     task, model_name = TaskType.CUSTOM, "noop/process-images"
+=======
+    img = np.asarray(img)
+
+    # Load noop model
+    task, model_name = TaskType.CUSTOM, "noop/process_images"
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
@@ -194,6 +270,7 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, i
     # Benchmark (10s)
     for b in range(8):
         B = 2**b
+<<<<<<< HEAD
 
         # Prepare inputs
         if isinstance(img, np.ndarray):
@@ -209,6 +286,12 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, i
             model.RegisterSystemSharedMemory(inputs)
 
         # Warmup
+=======
+        images = np.stack([img for _ in range(B)])
+        inputs = {"images": images}
+        model.RegisterSystemSharedMemory(inputs)
+
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
         for _ in tqdm(duration=2, desc="Warmup", disable=True):
             try:
                 response = model(**inputs)
@@ -216,10 +299,16 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, i
                 logger.error(f"Exception: {e}")
                 continue
 
+<<<<<<< HEAD
         # Benchmark no-op inference
         for _ in tqdm(
             duration=10,
             desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={shape}, type={image_type}]",
+=======
+        for _ in tqdm(
+            duration=10,
+            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={img.shape}]",
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)
             unit="images",
             unit_scale=B,
             total=0,
@@ -231,6 +320,12 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, i
                 continue
             assert isinstance(response, dict)
             assert "result" in response
+<<<<<<< HEAD
 
         if shm_enabled:
             model.UnregisterSystemSharedMemory()
+=======
+            assert isinstance(response["result"], bool)
+
+        model.UnregisterSystemSharedMemory()
+>>>>>>> c3a0b3d (Shared memory transport for gRPC)

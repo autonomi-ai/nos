@@ -4,6 +4,7 @@ from typing import Any
 from tqdm import tqdm as _tqdm
 
 from .cloudpickle import dumps, loads
+from .shm import SharedMemoryDataDict, SharedMemoryNumpyObject, SharedMemoryTransportManager  # noqa: F401
 from .spec import FunctionSignature, ModelSpec, ObjectTypeInfo
 from .tasks import TaskType
 from .types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT
@@ -29,7 +30,7 @@ def tqdm(iterable: Any = None, *args, **kwargs) -> Any:
         raise KeyError("`duration` must be specified when no iterable is provided")
 
     # Yield progress bar for the specified duration
-    def iterable():
+    def _iterable():
         idx = 0
         st_ms = time.perf_counter() * 1_000
         while True:
@@ -40,4 +41,4 @@ def tqdm(iterable: Any = None, *args, **kwargs) -> Any:
             yield idx
             idx += 1
 
-    return _tqdm(iterable(), *args, **kwargs)
+    return _tqdm(_iterable(), *args, **kwargs)
