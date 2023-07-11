@@ -98,7 +98,7 @@ hub.register(
     TaskType.BENCHMARK,
     FasterRCNN,
     init_args=("torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",),
-    method_name="__call__",
+    method_name="__benchmark__",
     inputs={
         "images": Union[
             Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 8],
