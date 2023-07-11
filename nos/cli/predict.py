@@ -225,4 +225,3 @@ def _benchmark(
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed benchmarking. [/red]\n[bold red]{exc}[/bold red]")
             return
-

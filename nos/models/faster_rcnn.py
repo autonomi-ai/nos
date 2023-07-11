@@ -64,7 +64,6 @@ class FasterRCNN:
                 "scores": [pred["scores"].cpu().numpy() for pred in predictions],
                 "labels": [pred["labels"].cpu().numpy().astype(np.int32) for pred in predictions],
             }
-        
 
     def __benchmark__(
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
@@ -92,7 +91,6 @@ hub.register(
 )
 
 
-""" Register a noop equivalent for benchmarking. Going forward we should have these for most models."""
 hub.register(
     "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
     TaskType.BENCHMARK,
@@ -105,5 +103,5 @@ hub.register(
             Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 1],
         ]
     },
-    outputs={"result" : bool},
+    outputs={"result": bool},
 )
