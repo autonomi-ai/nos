@@ -36,6 +36,7 @@ hub.register(
     "noop/noop-image",
     TaskType.CUSTOM,
     Noop,
+    init_args=("noop/noop-image",),
     method_name="__call__",
     inputs={
         "images": Union[
@@ -43,5 +44,5 @@ hub.register(
             Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")]],
         ]
     },
-    outputs=Dict[str, any],
+    outputs={"success": bool},
 )
