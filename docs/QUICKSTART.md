@@ -14,7 +14,7 @@
 2. **(OPTIONAL) Install Docker dependencies for local NOS server**
 
     If you are running the NOS container locally on a linux box, you will also need to install Docker
-    and Nvidia Docker. 
+    and Nvidia Docker.
     ```bash
     sudo apt-get update \
     && sudo apt-get install -y nvidia-container-toolkit-base
