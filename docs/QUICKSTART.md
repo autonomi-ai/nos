@@ -11,6 +11,16 @@
     pip install autonomi-nos
     ```
 
+2. **(OPTIONAL) Install Docker dependencies for local NOS server**
+
+    If you are running the NOS container locally on a linux box, you will also need to install Docker
+    and Nvidia Docker.
+    ```bash
+    sudo apt-get update \
+    && sudo apt-get install -y nvidia-container-toolkit-base
+    ```
+    If you run into issues, refer to the official Nvidia install [guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) or just ping us here.
+
 2. **Run the NOS server with Docker**
 
     Navigate to the `examples/quickstart` folder and run the NOS server via:
