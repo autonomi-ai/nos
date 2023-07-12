@@ -23,7 +23,7 @@ class Noop:
         ),
     }
 
-    def __init__(self):
+    def __init__(self, model_name="noop/noop-image"):
         pass
 
     def __call__(
@@ -36,7 +36,7 @@ hub.register(
     "noop/noop-image",
     TaskType.CUSTOM,
     Noop,
-    init_args=("noop/noop-image",),
+    init_args=("noop/noop-imge",),
     method_name="__call__",
     inputs={
         "images": Union[
