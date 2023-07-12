@@ -25,7 +25,7 @@ class NoOp:
 
 
 hub.register(
-    "noop/process_images",
+    "noop/process-images",
     TaskType.CUSTOM,
     NoOp,
     method_name="process_images",

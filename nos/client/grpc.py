@@ -397,7 +397,7 @@ class InferenceModule:
 
         shm_request = {}
         for k, v in inputs.items():
-            if isinstance(v, np.ndarray) or isinstance(v, list):
+            if isinstance(v, np.ndarray) or (isinstance(v, list) and isinstance(v[0], np.ndarray)):
                 shm_request[k] = (
                     [TensorSpec(v[0].shape, dtype=str(v[0].dtype))] * len(v)
                     if isinstance(v, list)

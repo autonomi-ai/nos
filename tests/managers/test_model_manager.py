@@ -3,6 +3,7 @@ import pytest
 from loguru import logger
 
 from nos import hub
+from nos.common import TaskType
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
 
@@ -54,6 +55,18 @@ def test_model_manager_errors(manager):
     # Creating a model with an invalid eviction policy should raise a `NotImplementedError`.
     with pytest.raises(NotImplementedError):
         ModelManager(policy=ModelManager.EvictionPolicy.LRU)
+
+
+def test_model_manager_noop_inference(manager):  # noqa: F811
+    """Test inference with a no-op model."""
+    spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
+    noop: ModelHandle = manager.get(spec)
+    assert noop is not None
+    assert isinstance(noop, ModelHandle)
+
+    img = (np.random.rand(1, 224, 224, 3) * 255).astype(np.uint8)
+    result = noop.remote(images=[img])
+    assert result is True
 
 
 @pytest.mark.benchmark
