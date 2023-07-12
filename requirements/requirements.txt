@@ -1,14 +1,14 @@
 av>=10.0.0
 cloudpickle>=2.2.1
 docker>=6.0.0
-grpcio-tools>=1.32.0,<=1.49.1
+grpcio-tools<=1.49.1
 loguru>=0.7.0
 opencv-python-headless>=4.6.0.66
 pandas
 Pillow
 psutil>=5.9.5
 py-cpuinfo>=9.0.0
-pydantic
+pydantic<=2
 rich>=12.5.1
 tqdm
 typer>=0.7.0
