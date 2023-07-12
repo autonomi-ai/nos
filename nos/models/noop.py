@@ -34,14 +34,14 @@ class Noop:
 
 hub.register(
     "noop/noop-image",
-    TaskType.BENCHMARK,
+    TaskType.CUSTOM,
     Noop,
     method_name="__call__",
     inputs={
         "images": Union[
-            Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 8],
-            Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 1],
+            Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")]],
+            Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")]],
         ]
     },
-    outputs={"success": bool},
+    outputs=Dict[str, any],
 )
