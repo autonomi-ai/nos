@@ -3,7 +3,7 @@ import rich.status
 import typer
 
 import docker
-from nos.server.runtime import InferenceServiceRuntime
+from nos.server import InferenceServiceRuntime
 
 
 docker_cli = typer.Typer(name="docker", help="NOS Docker CLI.", no_args_is_help=True)

@@ -2,7 +2,7 @@ import pytest
 
 import nos
 from nos.client import InferenceClient
-from nos.server.runtime import InferenceServiceRuntime
+from nos.server import InferenceServiceRuntime
 from nos.test.utils import PyTestGroup, get_benchmark_video
 
 

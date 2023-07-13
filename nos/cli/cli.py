@@ -1,5 +1,6 @@
 import typer
 
+
 try:
     import torch
 except ImportError:
@@ -20,6 +21,7 @@ app_cli.add_typer(predict_cli)
 
 if torch is not None:
     from nos.cli.benchmark import benchmark_cli
+
     app_cli.add_typer(benchmark_cli)
 
 

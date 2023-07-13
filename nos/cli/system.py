@@ -6,7 +6,7 @@ from rich.panel import Panel
 from docker.errors import APIError
 from nos.common.system import get_system_info, has_gpu
 from nos.logging import logger
-from nos.server.docker import DockerRuntime
+from nos.server import DockerRuntime
 
 
 system_cli = typer.Typer(name="system", help="NOS System CLI.", no_args_is_help=True)

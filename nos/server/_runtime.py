@@ -8,8 +8,9 @@ import docker
 from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
 from nos.logging import LOGGING_LEVEL, logger
 from nos.protoc import import_module
-from nos.server.docker import DockerRuntime
 from nos.version import __version__
+
+from ._docker import DockerRuntime
 
 
 nos_service_pb2 = import_module("nos_service_pb2")

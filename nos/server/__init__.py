@@ -1,5 +1,21 @@
+import math
+import subprocess
+from collections import deque
+
+import psutil
+import rich.status
+
 import docker
+import docker.errors
+import docker.models.containers
+from nos import __version__
+from nos.common.system import has_docker, has_gpu
 from nos.constants import DEFAULT_GRPC_PORT
+from nos.logging import logger
+
+from ._docker import DockerRuntime  # noqa F401
+from ._runtime import InferenceServiceRuntime
+from ._service import InferenceServiceImpl  # noqa F401
 
 
 __all__ = ["init", "shutdown"]
@@ -20,19 +36,13 @@ def init(
         utilization (float, optional): The target cpu/memory utilization of inference server. Defaults to 0.8.
         pull (bool, optional): Pull the docker image before starting the inference server. Defaults to True.
     """
-    import math
-
-    import psutil
-
-    from nos.common.system import get_system_info, has_docker, has_gpu
-    from nos.logging import logger
-    from nos.server.runtime import DockerRuntime, InferenceServiceRuntime
-
     _MIN_NUM_CPUS = 4
     _MIN_MEM_GB = 6
     _MIN_SHMEM_GB = 4
 
     def _check_system_requirements():
+        """Check system requirements."""
+        logger.debug(f"Checking system requirements, [nos={__version__}].")
         if not has_docker():
             raise RuntimeError("Docker not found, please install docker before proceeding.")
 
@@ -56,7 +66,6 @@ def init(
     # Check system requirements
     _check_system_requirements()
 
-
     # Determine runtime from system
     if runtime == "auto":
         runtime = "gpu" if has_gpu() else "cpu"
@@ -67,24 +76,27 @@ def init(
             )
 
     # Check if the latest inference server is already running
-    # If the running container's tag is inconsistent with the current version, 
+    # If the running container's tag is inconsistent with the current version,
     # we will shutdown the running container and start a new one.
     containers = InferenceServiceRuntime.list()
     if len(containers) == 1:
         logger.debug("Found an existing inference server running, checking if it is the latest version.")
         if InferenceServiceRuntime.configs[runtime].image not in containers[0].image.tags:
-            logger.debug("Existing inference server is not the latest version, shutting down before starting the latest one.")
-            shutdown()
+            logger.debug(
+                "Existing inference server is not the latest version, shutting down before starting the latest one."
+            )
+            _stop_container(containers[0])
         else:
             (container,) = containers
             logger.info(f"Inference server already running (name={container.name}, id={container.id[:12]}).")
             return container
     elif len(containers) > 1:
-        raise RuntimeError(f"""Multiple inference servers running, please manually stop all nos containers before running `nos.init()`."""
-                           """This should not have happened, please report this issue to the NOS maintainers.""")
+        logger.warning("""Multiple inference servers running, please report this issue to the NOS maintainers.""")
+        for container in containers:
+            _stop_container(container)
     else:
-        logger.debug("No existing inference server found, starting a new one.")      
-    
+        logger.debug("No existing inference server found, starting a new one.")
+
     # Pull docker image (if necessary)
     if pull:
         _pull_image(InferenceServiceRuntime.configs[runtime].image)
@@ -118,9 +130,6 @@ def init(
 
 def shutdown() -> docker.models.containers.Container:
     """Shutdown the inference server."""
-    from nos.logging import logger
-    from nos.server.runtime import InferenceServiceRuntime
-
     # Check if inference server is already running
     containers = InferenceServiceRuntime.list()
     if not len(containers):
@@ -129,26 +138,22 @@ def shutdown() -> docker.models.containers.Container:
         raise RuntimeError("Multiple inference servers running, please manually stop all containers.")
     # Shutdown inference server
     (container,) = containers
+    _stop_container(container)
+    return container
+
+
+def _stop_container(container: docker.models.containers.Container) -> None:
+    """Force stop containers."""
     logger.info(f"Stopping inference service: [name={container.name}, id={container.id[:12]}]")
     try:
         container.remove(force=True)
     except Exception as e:
         raise RuntimeError(f"Failed to shutdown inference server: {e}")
     logger.info(f"Inference service stopped: [name={container.name}, id={container.id[:12]}]")
-    return container
 
 
 def _pull_image(image: str, quiet: bool = False, platform: str = None) -> str:
     """Pull the latest inference server image."""
-    import subprocess
-    from collections import deque
-
-    import rich.status
-
-    import docker.errors
-    from nos.logging import logger
-    from nos.server.runtime import DockerRuntime
-
     try:
         DockerRuntime.get()._client.images.get(image)
         logger.info(f"Found up-to-date server image: {image}")
