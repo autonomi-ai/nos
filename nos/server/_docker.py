@@ -1,7 +1,7 @@
 """Docker utilities to run containerized inference workloads
 (compile/infer) in detached mode.
 """
-
+import os
 from dataclasses import dataclass
 from typing import Any, Iterable, List, Optional, Union
 
@@ -124,6 +124,7 @@ class DockerRuntime:
                 command=command,
                 name=name,
                 device_requests=device_requests,
+                user=os.getuid(),
                 **kwargs,
             )
             logger.debug(f"Started container [name={name}, image={container.image}, id={container.id[:12]}]")
