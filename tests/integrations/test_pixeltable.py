@@ -98,6 +98,7 @@ def test_pixeltable_integration():
 
     # Import pixeltable functions (only available after client is initialized)
     from pixeltable.functions.custom import noop_process_images as noop
+    from pixeltable.functions.image_embedding import openai_clip
     from pixeltable.functions.object_detection_2d import yolox_medium
 
     # Setup pixeltable database
@@ -149,23 +150,28 @@ def test_pixeltable_integration():
 
     # Compute detections
     records = []
-    with timer(f"noop_{H}x{W}") as info:
+    with timer(f"noop_{W}x{H}") as info:
         t.add_column(pt.Column("noop_ids", computed_with=noop(t.frame)))
     logger.info(info)
     records.append(info)
-    # assert info.elapsed <= 200., f"noop on full resolution took too long, timing={info}"
-    with timer("noop_640x480") as info:
+    # assert info.elapsed <= 200., f"{info.desc} took too long, timing={info}"
+    with timer(f"noop_{RW}x{RH}") as info:
         t.add_column(pt.Column("noop_ids_s", computed_with=noop(t.frame_s)))
     logger.info(info)
     records.append(info)
-    # assert info.elapsed <= 130., f"noop on low-resolution took too long, timing={info}"
-    with timer("yolox_medium_{H}x{W}") as info:
+    # assert info.elapsed <= 130., f"{info.desc} took too long, timing={info}"
+    with timer(f"yolox_medium_{W}x{H}") as info:
         t.add_column(pt.Column("detections_ym", computed_with=yolox_medium(t.frame)))
     logger.info(info)
     records.append(info)
-    # assert info.elapsed <= 130., f"noop on low-resolution took too long, timing={info}"
-    with timer("yolox_medium on resized") as info:
+    # assert info.elapsed <= 130., f"{info.desc} took too long, timing={info}"
+    with timer(f"yolox_medium_{RW}x{RH}") as info:
         t.add_column(pt.Column("detections_ym_s", computed_with=yolox_medium(t.frame_s)))
     logger.info(info)
     records.append(info)
-    # assert info.elapsed <= 130., f"noop on low-resolution took too long, timing={info}"
+    # assert info.elapsed <= 130., f"{info.desc} took too long, timing={info}"
+    with timer(f"openai_{RW}x{RH}") as info:
+        t.add_column(pt.Column("detections_clip_s", computed_with=openai_clip(t.frame_s)))
+    logger.info(info)
+    records.append(info)
+    # assert info.elapsed <= 130., f"{info.desc} took too long, timing={info}"
