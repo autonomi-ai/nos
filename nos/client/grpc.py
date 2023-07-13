@@ -1,5 +1,6 @@
 """gRPC client for NOS service."""
 import time
+import traceback
 from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any, Callable, Dict, List
@@ -102,7 +103,7 @@ class InferenceClient:
             try:
                 self._stub = nos_service_pb2_grpc.InferenceServiceStub(self._channel)
             except Exception as e:
-                raise NosClientException(f"Failed to connect to server ({e})")
+                raise NosClientException(f"Failed to connect to server ({e})", e)
         assert self._channel
         assert self._stub
         return self._stub
@@ -118,8 +119,8 @@ class InferenceClient:
         try:
             response: nos_service_pb2.PingResponse = self.stub.Ping(empty_pb2.Empty())
             return response.status == "ok"
-        except grpc.RpcError as exc:
-            raise NosClientException(f"Failed to ping server ({exc})")
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to ping server (details={e.details()})", e)
 
     def WaitForServer(self, timeout: int = 60, retry_interval: int = 5) -> None:
         """Ping the gRPC server for health.
@@ -132,7 +133,6 @@ class InferenceClient:
         Raises:
             NosClientException: If the server fails to respond to the ping or times out.
         """
-        exc = None
         st = time.time()
         while time.time() - st <= timeout:
             try:
@@ -140,7 +140,7 @@ class InferenceClient:
             except Exception:
                 logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
                 time.sleep(retry_interval)
-        raise NosClientException(f"Failed to ping server ({exc})")
+        raise NosClientException("Failed to ping server.")
 
     def GetServiceVersion(self) -> str:
         """Get service version.
@@ -154,7 +154,7 @@ class InferenceClient:
             response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
             return response.version
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to get service info ({e})")
+            raise NosClientException(f"Failed to get service info (details={e.details()})", e)
 
     def CheckCompatibility(self) -> bool:
         """Check if the service version is compatible with the client.
@@ -185,7 +185,7 @@ class InferenceClient:
             response: nos_service_pb2.ModelListResponse = self.stub.ListModels(empty_pb2.Empty())
             return [ModelSpec(name=minfo.name, task=TaskType(minfo.task)) for minfo in response.models]
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to list models ({e})")
+            raise NosClientException(f"Failed to list models (details={e.details()})", e)
 
     def GetModelInfo(self, spec: ModelSpec) -> ModelSpec:
         """Get the relevant model information from the model name.
@@ -205,7 +205,7 @@ class InferenceClient:
             model_spec: ModelSpec = loads(response.response_bytes)
             return model_spec
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to get model info ({e})")
+            raise NosClientException(f"Failed to get model info (details={(e.details())})", e)
 
     @lru_cache(maxsize=8)  # noqa: B019
     def Module(self, task: TaskType, model_name: str) -> "InferenceModule":
@@ -327,9 +327,13 @@ class InferenceModule:
             response = self.stub.Run(request)
             response = loads(response.response_bytes)
             return response
-        except Exception as e:
-            import traceback
-
-            raise NosClientException(
-                f"""Failed to run model {self.model_name} ({e})""" f"""\nTraceback\n""" f"""{traceback.format_exc()}"""
+        except grpc.RpcError as e:
+            logger.error(
+                f"""Run() failed"""
+                f"""\nrequest={request}"""
+                f"""\ninputs={inputs}"""
+                f"""\nerror: {e.details()}"""
+                f"""\n\nTraceback"""
+                f"""\n{traceback.format_exc()}"""
             )
+            raise NosClientException(f"Failed to run model {self.model_name} (details={e.details()})", e)

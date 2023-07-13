@@ -2,7 +2,7 @@ import pytest
 from loguru import logger
 
 from nos.executors.ray import RayExecutor
-from nos.server import InferenceServiceImpl
+from nos.server._service import InferenceServiceImpl
 from nos.test.conftest import ray_executor  # noqa: F401
 
 
