@@ -3,8 +3,8 @@ import time
 import pytest
 from loguru import logger
 
-from nos.server.docker import DockerRuntime
-from nos.server.runtime import NOS_DOCKER_IMAGE_CPU, NOS_DOCKER_IMAGE_GPU
+from nos.server._docker import DockerRuntime
+from nos.server._runtime import NOS_DOCKER_IMAGE_CPU, NOS_DOCKER_IMAGE_GPU
 from nos.test.utils import skip_if_no_torch_cuda
 
 

@@ -2,7 +2,7 @@ import pytest
 from loguru import logger
 
 from nos.executors.ray import RayExecutor
-from nos.server.service import InferenceServiceImpl
+from nos.server import InferenceServiceImpl
 from nos.test.conftest import ray_executor  # noqa: F401
 
 
@@ -11,7 +11,7 @@ pytestmark = pytest.mark.server
 
 def test_model_manager(ray_executor: RayExecutor):  # noqa: F811
     from nos import hub
-    from nos.server.service import ModelHandle, ModelManager
+    from nos.managers import ModelHandle, ModelManager
 
     manager = ModelManager()
     assert manager is not None
@@ -40,7 +40,7 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
 
     from nos import hub
     from nos.common import TaskType
-    from nos.server.service import ModelHandle, ModelManager
+    from nos.managers import ModelHandle, ModelManager
     from nos.test.utils import NOS_TEST_IMAGE
 
     manager = ModelManager()

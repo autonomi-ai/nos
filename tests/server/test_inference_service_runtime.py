@@ -4,7 +4,7 @@ import pytest
 from loguru import logger
 
 from nos.constants import DEFAULT_GRPC_PORT
-from nos.server.runtime import InferenceServiceRuntime
+from nos.server._runtime import InferenceServiceRuntime
 from nos.test.utils import skip_if_no_torch_cuda
 
 

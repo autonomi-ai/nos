@@ -2,11 +2,11 @@ import pytest
 from loguru import logger
 
 from nos.constants import DEFAULT_GRPC_PORT
-from nos.server.runtime import InferenceServiceRuntime
+from nos.server._runtime import InferenceServiceRuntime
 from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_all_unless_nos_env, skip_if_no_torch_cuda
 
 
-# See `nos.server.runtime.InferenceServiceRuntime` for `mmdet-dev` runtime spec
+# See `nos.server._runtime.InferenceServiceRuntime` for `mmdet-dev` runtime spec
 RUNTIME_ENV = "mmdet-dev"
 pytestmark = skip_all_unless_nos_env(RUNTIME_ENV)
 

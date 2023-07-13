@@ -34,7 +34,7 @@ def grpc_server(ray_executor):
     """Test gRPC server (Port: 50052)."""
     from loguru import logger
 
-    from nos.server.service import InferenceServiceImpl
+    from nos.server import InferenceServiceImpl
 
     logger.info(f"Starting gRPC test server on port: {GRPC_TEST_PORT}")
     options = [
@@ -77,7 +77,7 @@ def grpc_client_gpu():
 @pytest.fixture(scope="session")
 def grpc_server_docker_runtime_cpu():
     """Test DockerRuntime CPU (Port: 50053)."""
-    from nos.server.runtime import InferenceServiceRuntime
+    from nos.server import InferenceServiceRuntime
 
     CPU_CONTAINER_NAME = "nos-inference-service-runtime-cpu-e2e-test"
     runtime = InferenceServiceRuntime(runtime="cpu", name=CPU_CONTAINER_NAME)
@@ -113,7 +113,7 @@ def grpc_server_docker_runtime_cpu():
 @pytest.fixture(scope="session")
 def grpc_server_docker_runtime_gpu():
     """Test DockerRuntime GPU (Port: 50054)."""
-    from nos.server.runtime import InferenceServiceRuntime
+    from nos.server import InferenceServiceRuntime
 
     GPU_CONTAINER_NAME = "nos-inference-service-runtime-gpu-e2e-test"
     runtime = InferenceServiceRuntime(runtime="gpu", name=GPU_CONTAINER_NAME)

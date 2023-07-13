@@ -33,7 +33,7 @@
     {% include "../examples/quickstart/docker-compose.quickstart.yml" %}
     ```
 
-    We first spin up a `nos-server` service mounting the necessary host directories (`~/.nosd`) and exposing the gRPC port. The command `nos-grpc-server` spins up the gRPC server with the default 50051 port that can be used to send inference requests. The `NOS_HOME` directory is set to `/app/.nos` where all the models and optimization artifacts are stored. This directory is mounted on your host machine at `~/.nosd`.
+    We first spin up a `nos-grpc-server` service mounting the necessary host directories (`~/.nosd`) and exposing the gRPC port. The command `nos-grpc-server` spins up the gRPC server with the default 50051 port that can be used to send inference requests. The `NOS_HOME` directory is set to `/app/.nos` where all the models and optimization artifacts are stored. This directory is mounted on your host machine at `~/.nosd`.
 
     Alternatively, you can also get started with docker via:
     ```bash
