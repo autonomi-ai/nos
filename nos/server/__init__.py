@@ -1,6 +1,7 @@
 import math
 import subprocess
 from collections import deque
+from typing import List, Optional, Union
 
 import psutil
 import rich.status
@@ -9,7 +10,6 @@ import docker
 import docker.errors
 import docker.models.containers
 from nos import __version__
-from nos.common.system import has_docker, has_gpu
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
 
@@ -36,15 +36,35 @@ def init(
         utilization (float, optional): The target cpu/memory utilization of inference server. Defaults to 0.8.
         pull (bool, optional): Pull the docker image before starting the inference server. Defaults to True.
     """
+    from nos.common.system import has_docker, has_gpu, has_nvidia_docker_runtime_enabled
+
     _MIN_NUM_CPUS = 4
     _MIN_MEM_GB = 6
     _MIN_SHMEM_GB = 4
+
+    # Determine runtime from system
+    if runtime == "auto":
+        runtime = "gpu" if has_gpu() else "cpu"
+        logger.debug(f"Detected system runtime: {runtime}")
+    else:
+        if runtime not in InferenceServiceRuntime.configs:
+            raise ValueError(
+                f"Invalid inference service runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
+            )
 
     def _check_system_requirements():
         """Check system requirements."""
         logger.debug(f"Checking system requirements, [nos={__version__}].")
         if not has_docker():
             raise RuntimeError("Docker not found, please install docker before proceeding.")
+
+        if runtime == "gpu":
+            if not has_gpu():
+                raise RuntimeError("GPU not found, please install CUDA drivers before proceeding.")
+            if not has_nvidia_docker_runtime_enabled():
+                raise RuntimeError(
+                    "NVIDIA Docker runtime not enabled, please enable NVIDIA Docker runtime before proceeding."
+                )
 
         # For now, we require at least 4 physical CPU cores and 6 GB of free memory
         cl = DockerRuntime.get()._client
@@ -66,15 +86,6 @@ def init(
     # Check system requirements
     _check_system_requirements()
 
-    # Determine runtime from system
-    if runtime == "auto":
-        runtime = "gpu" if has_gpu() else "cpu"
-    else:
-        if runtime not in InferenceServiceRuntime.configs:
-            raise ValueError(
-                f"Invalid inference service runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
-            )
-
     # Check if the latest inference server is already running
     # If the running container's tag is inconsistent with the current version,
     # we will shutdown the running container and start a new one.
@@ -82,13 +93,15 @@ def init(
     if len(containers) == 1:
         logger.debug("Found an existing inference server running, checking if it is the latest version.")
         if InferenceServiceRuntime.configs[runtime].image not in containers[0].image.tags:
-            logger.debug(
-                "Existing inference server is not the latest version, shutting down before starting the latest one."
+            logger.info(
+                "Active inference server is not the latest version, shutting down before starting the latest one."
             )
             _stop_container(containers[0])
         else:
             (container,) = containers
-            logger.info(f"Inference server already running (name={container.name}, id={container.id[:12]}).")
+            logger.info(
+                f"Inference server already running (name={container.name}, image={container.image}, id={container.id[:12]})."
+            )
             return container
     elif len(containers) > 1:
         logger.warning("""Multiple inference servers running, please report this issue to the NOS maintainers.""")
@@ -124,32 +137,39 @@ def init(
         shm_size=f"{_MIN_SHMEM_GB}g",
         ports={f"{DEFAULT_GRPC_PORT}/tcp": port},
     )
-    logger.info(f"Inference service started: [name={runtime.cfg.name}, runtime={runtime}, id={container.id[:12]}]")
+    logger.info(
+        f"Inference service started: [name={runtime.cfg.name}, runtime={runtime}, image={container.image}, id={container.id[:12]}]"
+    )
     return container
 
 
-def shutdown() -> docker.models.containers.Container:
+def shutdown() -> Optional[Union[docker.models.containers.Container, List[docker.models.containers.Container]]]:
     """Shutdown the inference server."""
     # Check if inference server is already running
     containers = InferenceServiceRuntime.list()
-    if not len(containers):
-        raise RuntimeError("Inference server not running, nothing to shutdown.")
+    if len(containers) == 1:
+        (container,) = containers
+        _stop_container(container)
+        return container
     if len(containers) > 1:
-        raise RuntimeError("Multiple inference servers running, please manually stop all containers.")
-    # Shutdown inference server
-    (container,) = containers
-    _stop_container(container)
-    return container
+        logger.warning("""Multiple inference servers running, please report this issue to the NOS maintainers.""")
+        for container in containers:
+            _stop_container(container)
+        return containers
+    logger.info("No active inference servers found, ignoring shutdown.")
+    return None
 
 
 def _stop_container(container: docker.models.containers.Container) -> None:
     """Force stop containers."""
-    logger.info(f"Stopping inference service: [name={container.name}, id={container.id[:12]}]")
+    logger.info(
+        f"Stopping inference service: [name={container.name}, image={container.image}, id={container.id[:12]}]"
+    )
     try:
         container.remove(force=True)
     except Exception as e:
         raise RuntimeError(f"Failed to shutdown inference server: {e}")
-    logger.info(f"Inference service stopped: [name={container.name}, id={container.id[:12]}]")
+    logger.info(f"Inference service stopped: [name={container.name}, image={container.image}, id={container.id[:12]}]")
 
 
 def _pull_image(image: str, quiet: bool = False, platform: str = None) -> str:

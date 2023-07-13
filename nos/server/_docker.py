@@ -126,8 +126,8 @@ class DockerRuntime:
                 device_requests=device_requests,
                 **kwargs,
             )
-            logger.info(f"Started container: {name}")
-            logger.info(f"Get logs using `docker logs -f {container.id[:12]}`")
+            logger.debug(f"Started container [name={name}, image={container.image}, id={container.id[:12]}]")
+            logger.debug(f"Get logs using `docker logs -f {container.id[:12]}`")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             logger.error(f"Failed to start container, cleaning up container: {exc}")
             self.stop(name)
@@ -141,9 +141,9 @@ class DockerRuntime:
             if container is None:
                 logger.debug(f"Container not running: {name}, exiting early.")
                 return
-            logger.debug(f"Removing container: {name}")
+            logger.debug(f"Removing container: [name={name}, image={container.image}, id={container.id[:12]}]")
             container.remove(force=True)
-            logger.debug(f"Removed container: {name}")
+            logger.debug(f"Removed container: [name={name}, image={container.image}, id={container.id[:12]}]")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             logger.error(f"Failed to stop container: {exc}")
         return container

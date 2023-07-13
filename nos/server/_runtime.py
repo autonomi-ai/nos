@@ -144,7 +144,7 @@ class InferenceServiceRuntime:
         Args:
             **kwargs: Additional keyword-arguments to pass to `DockerRuntime.start`.
         """
-        logger.info(f"Starting inference runtime with image: {self.cfg.image}")
+        logger.debug(f"Starting inference runtime with image: {self.cfg.image}")
 
         # Override config with supplied kwargs
         for k in list(kwargs.keys()):
@@ -167,7 +167,7 @@ class InferenceServiceRuntime:
             gpu=self.cfg.gpu,
             **self.cfg.kwargs,
         )
-        logger.info(f"Started inference runtime: {self}")
+        logger.debug(f"Started inference runtime: {self}")
         return container
 
     def stop(self, timeout: int = 30) -> docker.models.containers.Container:
