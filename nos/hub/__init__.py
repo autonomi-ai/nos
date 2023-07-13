@@ -92,8 +92,10 @@ class Hub:
                 method_name=kwargs.pop("method_name", None),
             ),
         )
-        cls.get()._registry[ModelSpec.get_id(spec.name, spec.task)] = spec
-        logger.debug(f"Registered model: [name={model_name}]")
+        model_id = ModelSpec.get_id(spec.name, spec.task)
+        if model_id not in cls.get()._registry:            
+            cls.get()._registry[model_id] = spec
+            logger.debug(f"Registered model: [name={model_name}]")
 
 
 # Alias methods
