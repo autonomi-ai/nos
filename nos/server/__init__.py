@@ -13,9 +13,8 @@ from nos import __version__
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
 
-from ._docker import DockerRuntime  # noqa F401
+from ._docker import DockerRuntime
 from ._runtime import InferenceServiceRuntime
-from ._service import InferenceServiceImpl  # noqa F401
 
 
 __all__ = ["init", "shutdown"]

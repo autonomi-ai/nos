@@ -34,7 +34,7 @@ def grpc_server(ray_executor):
     """Test gRPC server (Port: 50052)."""
     from loguru import logger
 
-    from nos.server import InferenceServiceImpl
+    from nos.server._service import InferenceServiceImpl
 
     logger.info(f"Starting gRPC test server on port: {GRPC_TEST_PORT}")
     options = [
