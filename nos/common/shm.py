@@ -1,7 +1,7 @@
 import os
 import secrets
 from dataclasses import dataclass, field
-from multiprocessing.shared_memory import SharedMemory
+from multiprocessing.shared_memory import SharedMemory, SharedMemoryManager
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -99,8 +99,17 @@ class SharedMemoryDataDict:
 class SharedMemoryTransportManager:
     """Shared memory transport manager."""
 
+    _shm_manager: SharedMemoryManager = field(init=False, default=None)
+    """Shared memory manager."""
+
     _objects_map: Dict[str, Any] = field(default_factory=dict)
     """Shared memory objects map."""
+
+    def __post_init__(self) -> None:
+        """Initialize the shared memory transport manager."""
+        logger.debug("Initializing shared memory transport manager")
+        self._shm_manager = SharedMemoryManager()
+        self._shm_manager.start()
 
     def create(self, data: Dict[str, Any], namespace: Optional[str] = None) -> Dict[str, Any]:
         """Create a shared memory segment for the data dictionary.
@@ -128,7 +137,7 @@ class SharedMemoryTransportManager:
                     shape, dtype = value[0].shape, value[0].dtype
                     objects_map[key] = [
                         SharedMemoryNumpyObject(
-                            SharedMemory(name=f"nos_psm_{secrets.token_hex(8)}", size=item.nbytes, create=True),
+                            self._shm_manager.SharedMemory(size=item.nbytes),
                             item.shape,
                             str(dtype),
                         )
@@ -141,7 +150,7 @@ class SharedMemoryTransportManager:
                     nbytes = value.nbytes
                     shape, dtype = value.shape, value.dtype
                     objects_map[key] = SharedMemoryNumpyObject(
-                        SharedMemory(name=f"nos_psm_{secrets.token_hex(8)}", size=value.nbytes, create=True),
+                        self._shm_manager.SharedMemory(size=value.nbytes),
                         value.shape,
                         str(dtype),
                     )
@@ -154,7 +163,7 @@ class SharedMemoryTransportManager:
         self._objects_map.update({f"{namespace}/{key}": value for key, value in objects_map.items()})
         return objects_map
 
-    def cleanup(self, namespace: Optional[str] = None):
+    def cleanup(self, namespace: Optional[str] = None) -> None:
         """Cleanup the shared memory segments."""
         for key in list(self._objects_map.keys()):
             if namespace is None or key.startswith(namespace):
