@@ -2,6 +2,9 @@ import docker
 from nos.constants import DEFAULT_GRPC_PORT
 
 
+__all__ = ["init", "shutdown"]
+
+
 def init(
     runtime: str = "auto",
     port: int = DEFAULT_GRPC_PORT,
@@ -53,15 +56,6 @@ def init(
     # Check system requirements
     _check_system_requirements()
 
-    # Check if inference server is already running
-    containers = InferenceServiceRuntime.list()
-    if len(containers) > 0:
-        assert (
-            len(containers) == 1
-        ), "Multiple inference servers running, please manually stop all containers before proceeding."
-        (container,) = containers
-        logger.warning(f"Inference server already running (name={container.name}, id={container.id[:12]}).")
-        return container
 
     # Determine runtime from system
     if runtime == "auto":
@@ -72,6 +66,25 @@ def init(
                 f"Invalid inference service runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
             )
 
+    # Check if the latest inference server is already running
+    # If the running container's tag is inconsistent with the current version, 
+    # we will shutdown the running container and start a new one.
+    containers = InferenceServiceRuntime.list()
+    if len(containers) == 1:
+        logger.debug("Found an existing inference server running, checking if it is the latest version.")
+        if InferenceServiceRuntime.configs[runtime].image not in containers[0].image.tags:
+            logger.debug("Existing inference server is not the latest version, shutting down before starting the latest one.")
+            shutdown()
+        else:
+            (container,) = containers
+            logger.info(f"Inference server already running (name={container.name}, id={container.id[:12]}).")
+            return container
+    elif len(containers) > 1:
+        raise RuntimeError(f"""Multiple inference servers running, please manually stop all nos containers before running `nos.init()`."""
+                           """This should not have happened, please report this issue to the NOS maintainers.""")
+    else:
+        logger.debug("No existing inference server found, starting a new one.")      
+    
     # Pull docker image (if necessary)
     if pull:
         _pull_image(InferenceServiceRuntime.configs[runtime].image)
