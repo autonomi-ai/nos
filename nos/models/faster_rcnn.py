@@ -8,6 +8,7 @@ from PIL import Image
 
 from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
+from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
 from nos.hub import TorchHubConfig
 
@@ -43,19 +44,8 @@ class FasterRCNN:
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
     ) -> Dict[str, np.ndarray]:
         """Predict bounding boxes for images."""
+        images = prepare_images(images)
         with torch.inference_mode():
-            if isinstance(images, np.ndarray):
-                images = [images]
-            elif isinstance(images, Image.Image):
-                images = [np.asarray(images)]
-            elif isinstance(images, list):
-                if isinstance(images[0], Image.Image):
-                    images = [np.asarray(image) for image in images]
-                elif isinstance(images[0], np.ndarray):
-                    pass
-                else:
-                    raise ValueError(f"Invalid type for images: {type(images[0])}")
-
             images = torch.stack([F.to_tensor(image) for image in images])
             images = images.to(self.device)
             predictions = self.model(images)
