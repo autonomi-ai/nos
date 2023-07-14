@@ -26,6 +26,7 @@ Benchmark results (2080 Ti):
 """
 
 import os
+from typing import List
 
 import numpy as np
 import pytest
@@ -55,40 +56,52 @@ def _test_predict(_model, img_size):
     W, H = img_size
     img1 = Image.open(NOS_TEST_IMAGE)
     img1 = img1.resize((W, H))
+    # we add an empty image to test batch inference,
+    # and to make sure that the model can handle empty images.
     img2 = Image.fromarray(np.zeros((H, W, 3), dtype=np.uint8))
-    predictions = _model([img1, img2])
-    assert predictions is not None
+    for im_type in (List[Image.Image], List[np.ndarray], np.ndarray):
+        if im_type == List[Image.Image]:
+            images = [img1, img2]
+            logger.debug("Testing List[Image.Image] inference")
+        elif im_type == List[np.ndarray]:
+            images = [np.asarray(img) for img in images]
+            logger.debug("Testing List[np.ndarray] inference")
+        elif im_type == np.ndarray:
+            images = np.stack([np.asarray(img) for img in images])
+            logger.debug("Testing stacked np.ndarray inference")
+        predictions = _model(images)
+        assert predictions is not None
 
-    assert predictions["scores"] is not None
-    assert isinstance(predictions["scores"], list)
-    assert len(predictions["scores"]) == B
-    assert len(predictions["scores"][0]) > 0
-    assert len(predictions["scores"][1]) == 0  # empty image should have no detections
-    for scores in predictions["scores"]:
-        assert scores.dtype == np.float32
-        if not len(scores):
-            continue
-        assert np.min(scores) >= 0.0 and np.max(scores) <= 1.0
+        assert predictions["scores"] is not None
+        assert isinstance(predictions["scores"], list)
+        assert len(predictions["scores"]) == B
+        assert len(predictions["scores"][0]) > 0
+        assert len(predictions["scores"][1]) == 0  # empty image should have no detections
+        for scores in predictions["scores"]:
+            assert scores.dtype == np.float32
+            if not len(scores):
+                continue
+            assert np.min(scores) >= 0.0 and np.max(scores) <= 1.0
 
-    assert predictions["labels"] is not None
-    assert isinstance(predictions["labels"], list)
-    assert len(predictions["labels"]) == B
-    for labels in predictions["labels"]:
-        assert labels.dtype == np.int32
-        if not len(labels):
-            continue
-        assert len(np.unique(labels)) >= 3, "At least 3 different classes should be detected"
-        assert labels.dtype == np.int32
+        assert predictions["labels"] is not None
+        assert isinstance(predictions["labels"], list)
+        assert len(predictions["labels"]) == B
+        for labels in predictions["labels"]:
+            assert labels.dtype == np.int32
+            if not len(labels):
+                continue
+            assert len(np.unique(labels)) >= 3, "At least 3 different classes should be detected"
+            assert labels.dtype == np.int32
 
-    assert predictions["bboxes"] is not None
-    assert isinstance(predictions["bboxes"], list)
-    assert len(predictions["bboxes"]) == B
-    for bbox in predictions["bboxes"]:
-        assert bbox.dtype == np.float32
-        if not len(bbox):
-            continue
-        assert (bbox[:, 0] >= -5e-1).all() and (bbox[:, 0] <= W).all()
-        assert (bbox[:, 1] >= -5e-1).all() and (bbox[:, 1] <= H).all()
+        assert predictions["bboxes"] is not None
+        assert isinstance(predictions["bboxes"], list)
+        assert len(predictions["bboxes"]) == B
+        for bbox in predictions["bboxes"]:
+            assert bbox.dtype == np.float32
+            if not len(bbox):
+                continue
+            assert (bbox[:, 0] >= -5e-1).all() and (bbox[:, 0] <= W).all()
+            assert (bbox[:, 1] >= -5e-1).all() and (bbox[:, 1] <= H).all()
 
 
 @skip_if_no_torch_cuda

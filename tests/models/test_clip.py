@@ -6,6 +6,7 @@ Benchmark results (NVIDIA GeForce RTX 2080 Ti):
 - [laion/CLIP-ViT-H-14-laion2B-s32B-b79K]: 51.53 ms / step
 - [laion/CLIP-ViT-L-14-laion2B-s32B-b82K]: 24.50 ms / step
 """
+import numpy as np
 import pytest
 from PIL import Image
 
@@ -39,6 +40,13 @@ def _test_clip_encode_image(_model, D: int = 512):
     embed_im = _model.encode_image([im])
     assert embed_im.shape == (1, D)
     embed_im = _model.encode_image([im, im.rotate(180)])
+    assert embed_im.shape == (2, D)
+
+    embed_im = _model.encode_image([np.asarray(im)])  # List[np.ndarray]
+    assert embed_im.shape == (1, D)
+    embed_im = _model.encode_image([np.asarray(im) for _ in range(2)])  # List[np.ndarray]
+    assert embed_im.shape == (2, D)
+    embed_im = _model.encode_image(np.stack([np.asarray(im) for _ in range(2)]))  # np.ndarray
     assert embed_im.shape == (2, D)
 
 
