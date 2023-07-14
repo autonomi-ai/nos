@@ -17,3 +17,5 @@ NOS_TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_GRPC_PORT = 50051
 DEFAULT_HTTP_PORT = 8000
+
+NOS_PROFILING_ENABLED = bool(int(os.getenv("NOS_PROFILING_ENABLED", 0)))

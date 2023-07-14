@@ -66,7 +66,7 @@ class ModelHandle:
         # will need to be calculated from the target HW and model spec
         # (i.e. 0.5 on A100 vs. T4 are different).
         model_cls = spec.signature.func_or_cls
-        actor_options = {"num_gpus": 0.5 if torch.cuda.is_available() else 0}
+        actor_options = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
         logger.debug(f"Creating actor: {actor_options}, {model_cls}")
         actor_cls = ray.remote(**actor_options)(model_cls)
         return actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)

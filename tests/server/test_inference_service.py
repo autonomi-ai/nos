@@ -7,8 +7,6 @@ from PIL import Image
 
 from nos import hub
 from nos.common import TaskType, tqdm
-
-# from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
@@ -74,14 +72,11 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
         assert result is not None
 
 
-@pytest.mark.parametrize(
-    "shm_enabled",
-    [
-        False,
-    ],
-)
-def test_inference_service_noop(grpc_client_with_cpu_backend, shm_enabled):  # noqa: F811
+# @pytest.mark.parametrize("shm_enabled", [False, True])
+def test_inference_service_noop(grpc_client_with_cpu_backend):  # noqa: F811
     """Test inference service with shared memory transport."""
+    assert not NOS_SHM_ENABLED, "Shared memory transport is not supported yet. "
+    shm_enabled = False
 
     # client = local_grpc_client_with_server
     client = grpc_client_with_cpu_backend
@@ -151,16 +146,15 @@ def test_inference_service_noop(grpc_client_with_cpu_backend, shm_enabled):  # n
     # Note: This test is only valid for the local server.
 
 
-@pytest.mark.benchmark
+BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (2880, 1620), (3840, 2160)]
+
+
 # @pytest.mark.parametrize("client_with_server", ("docker-cpu", "docker-gpu"), indirect=True)
-@pytest.mark.parametrize(
-    "shm_enabled",
-    [
-        False,
-    ],
-)
-@pytest.mark.parametrize("shape", [(224, 224), (640, 480), (1280, 720), (1920, 1080), (2880, 1620), (3840, 2160)])
-def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shm_enabled, shape):  # noqa: F811
+# @pytest.mark.parametrize("shm_enabled", [False, True])
+@pytest.mark.benchmark
+@pytest.mark.parametrize("shape", BENCHMARK_IMAGE_SHAPES)
+@pytest.mark.parametrize("image_type", [Image.Image, np.ndarray])
+def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, image_type):  # noqa: F811
     """Benchmark shared memory transport and inference between the client-server.
 
     Tests with 3 client-server configurations:
@@ -170,6 +164,8 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shm_enab
 
     Note: This test is only valid for the local server.
     """
+    assert not NOS_SHM_ENABLED, "Shared memory transport is not supported yet. "
+    shm_enabled = False
 
     # client = local_grpc_client_with_server
     client = grpc_client_with_gpu_backend
@@ -179,7 +175,15 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shm_enab
     # Load dummy image
     img = Image.open(NOS_TEST_IMAGE)
     img = img.resize(shape)
-    img = np.asarray(img)
+    if image_type == np.ndarray:
+        img = np.asarray(img)
+        assert img.shape[:2][::-1] == shape
+    elif image_type == Image.Image:
+        assert img.size == shape
+        if shm_enabled:
+            logger.warning("Shared memory transport is not supported for Image.Image")
+    else:
+        raise TypeError(f"Invalid image type: {image_type}")
 
     # Load noop model
     task, model_name = TaskType.CUSTOM, "noop/process-images"
@@ -190,11 +194,21 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shm_enab
     # Benchmark (10s)
     for b in range(8):
         B = 2**b
-        images = np.stack([img for _ in range(B)])
-        inputs = {"images": images}
-        # if shm_enabled:
-        #     model.RegisterSystemSharedMemory(inputs)
 
+        # Prepare inputs
+        if isinstance(img, np.ndarray):
+            images = np.stack([img for _ in range(B)])
+        elif isinstance(img, Image.Image):
+            images = [img for _ in range(B)]
+        else:
+            raise TypeError(f"Invalid image type: {type(img)}")
+        inputs = {"images": images}
+
+        # Register shared memory regions
+        if shm_enabled:
+            model.RegisterSystemSharedMemory(inputs)
+
+        # Warmup
         for _ in tqdm(duration=2, desc="Warmup", disable=True):
             try:
                 response = model(**inputs)
@@ -202,9 +216,10 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shm_enab
                 logger.error(f"Exception: {e}")
                 continue
 
+        # Benchmark no-op inference
         for _ in tqdm(
             duration=10,
-            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={img.shape}]",
+            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={shape}, type={image_type}]",
             unit="images",
             unit_scale=B,
             total=0,
@@ -217,5 +232,5 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shm_enab
             assert isinstance(response, dict)
             assert "result" in response
 
-        # if shm_enabled:
-        #     model.UnregisterSystemSharedMemory()
+        if shm_enabled:
+            model.UnregisterSystemSharedMemory()
