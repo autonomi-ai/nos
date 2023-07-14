@@ -76,12 +76,13 @@ def test_pixeltable_integration():
 
     import nos
     from nos.common.io import VideoReader
-    from nos.test.utils import get_benchmark_video
+    from nos.test.utils import NOS_TEST_VIDEO, get_benchmark_video
 
     print(nos.__version__)
 
     # Get benchmark video, and read first frame for image dimensions
-    FILENAME = get_benchmark_video()
+    FILENAME = str(NOS_TEST_VIDEO)
+    get_benchmark_video()
     assert Path(FILENAME).exists()
     _video = VideoReader(FILENAME)
     assert len(_video) > 0

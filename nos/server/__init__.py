@@ -1,3 +1,4 @@
+import logging
 import math
 import subprocess
 from collections import deque
@@ -25,6 +26,8 @@ def init(
     port: int = DEFAULT_GRPC_PORT,
     utilization: float = 0.8,
     pull: bool = True,
+    logging_level: int = logging.INFO,
+    tag: Optional[str] = None,
 ) -> docker.models.containers.Container:
     """Initialize the inference server.
 
@@ -34,8 +37,29 @@ def init(
         port (int, optional): The port to use for the inference server. Defaults to DEFAULT_GRPC_PORT.
         utilization (float, optional): The target cpu/memory utilization of inference server. Defaults to 0.8.
         pull (bool, optional): Pull the docker image before starting the inference server. Defaults to True.
+        logging_level (int, optional): The logging level to use for the inference server. Defaults to logging.INFO.
+        tag (str, optional): The tag of the docker image to use ("latest"). Defaults to None, where the
+            appropriate version is used.
     """
     from nos.common.system import has_docker, has_gpu, has_nvidia_docker_runtime_enabled
+
+    # Check arguments
+    available_runtimes = list(InferenceServiceRuntime.configs.keys()) + ["auto"]
+    if runtime not in available_runtimes:
+        raise ValueError(f"Invalid inference service runtime: {runtime}, available: {available_runtimes}")
+
+    if utilization <= 0.25 or utilization > 1:
+        raise ValueError(f"Invalid utilization: {utilization}, must be in (0.25, 1].")
+
+    if logging_level not in (logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL):
+        raise ValueError(f"Invalid logging level: {logging_level}")
+
+    if tag is None:
+        tag = __version__
+    else:
+        if not isinstance(tag, str):
+            raise ValueError(f"Invalid tag: {tag}, must be a string.")
+        raise NotImplementedError("Custom tags are not yet supported.")
 
     _MIN_NUM_CPUS = 4
     _MIN_MEM_GB = 6
