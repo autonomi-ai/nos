@@ -42,7 +42,10 @@ class InferenceServiceRuntimeConfig:
     """Ports to expose."""
 
     environment: Dict[str, str] = field(
-        default_factory=lambda: {"NOS_LOGGING_LEVEL": LOGGING_LEVEL, "NOS_PROFILING_ENABLED": NOS_PROFILING_ENABLED}
+        default_factory=lambda: {
+            "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
+            "NOS_PROFILING_ENABLED": int(NOS_PROFILING_ENABLED),
+        }
     )
     """Environment variables."""
 
