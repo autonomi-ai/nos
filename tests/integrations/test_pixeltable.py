@@ -6,12 +6,20 @@ Requirements:
 Benchmarks:
 - compute-with for noop, yolox/medium, openai/clip
 
+Timing records (2023-07-14)
+                   desc  elapsed    n  latency_ms    fps
+0          noop_294x240     4.54  168       27.02  37.00
+1          noop_640x480     2.00  168       11.90  84.00
+2  yolox_medium_294x240     3.11  168       18.51  54.02
+3  yolox_medium_640x480     2.98  168       17.74  56.38
+4        openai_640x480     3.33  168       19.82  50.45
 """
 import contextlib
 import time
-from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from loguru import logger
 
@@ -43,18 +51,26 @@ def cleanup():
     nos.shutdown()
 
 
-@dataclass
 class TimingInfo:
-    desc: str
-    elapsed: float = field(init=False, default=None)
+    def __init__(self, desc: str, **kwargs):
+        self.desc = desc
+        self.elapsed = None
+        self.kwargs = kwargs
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(desc={self.desc}, elapsed={self.elapsed:.2f}s)"
+        repr_str = f"{self.__class__.__name__}(desc={self.desc}"
+        if len(self.kwargs):
+            repr_str += ", " + ", ".join([f"{k}={v}" for k, v in self.kwargs.items()])
+        repr_str += f", elapsed={self.elapsed:.2f}s)"
+        return repr_str
+
+    def to_dict(self):
+        return self.kwargs | {"desc": self.desc, "elapsed": self.elapsed}
 
 
 @contextlib.contextmanager
-def timer(desc: str = ""):
-    info = TimingInfo(desc)
+def timer(desc: str = "", **kwargs):
+    info = TimingInfo(desc, **kwargs)
 
     logger.info(f"timer: {desc}")
     start = time.time()
@@ -78,7 +94,11 @@ def test_pixeltable_integration():
 
     import nos
     from nos.common.io import VideoReader
+    from nos.constants import NOS_CACHE_DIR
     from nos.test.utils import NOS_TEST_VIDEO, get_benchmark_video  # noqa: F401
+
+    NOS_INTEGRATIONS_DIR = Path(NOS_CACHE_DIR) / "integrations"
+    NOS_INTEGRATIONS_DIR.mkdir(exist_ok=True, parents=True)
 
     print(nos.__version__)
 
@@ -88,7 +108,8 @@ def test_pixeltable_integration():
 
     assert Path(FILENAME).exists()
     _video = VideoReader(FILENAME)
-    assert len(_video) > 0
+    nframes = len(_video)
+    assert nframes > 0
     H, W, C = _video[0].shape
 
     # Setup videos to insert
@@ -152,30 +173,51 @@ def test_pixeltable_integration():
         ],
     )
 
-    # Compute detections
-    records = []
-    with timer(f"noop_{W}x{H}") as info:
+    # Run inference (see acceptance criteria from timing table above)
+    timing_records = []
+    with timer(f"noop_{W}x{H}", n=nframes) as info:
         t.add_column(pt.Column("noop_ids", computed_with=noop(t.frame)))
     logger.info(info)
-    records.append(info)
-    # assert info.elapsed <= 200., f"{info.desc} took too long, timing={info}"
-    with timer(f"noop_{RW}x{RH}") as info:
+    timing_records.append(info)
+    assert info.elapsed <= 10.0, f"{info.desc} took too long, timing={info}"
+
+    with timer(f"noop_{RW}x{RH}", n=nframes) as info:
         t.add_column(pt.Column("noop_ids_s", computed_with=noop(t.frame_s)))
     logger.info(info)
-    records.append(info)
-    # assert info.elapsed <= 130., f"{info.desc} took too long, timing={info}"
-    with timer(f"yolox_medium_{W}x{H}") as info:
+    timing_records.append(info)
+    assert info.elapsed <= 4.0, f"{info.desc} took too long, timing={info}"
+
+    t[yolox_medium(t.frame)].show(1)  # load model
+    with timer(f"yolox_medium_{W}x{H}", n=nframes) as info:
         t.add_column(pt.Column("detections_ym", computed_with=yolox_medium(t.frame)))
     logger.info(info)
-    records.append(info)
-    # assert info.elapsed <= 130., f"{info.desc} took too long, timing={info}"
-    with timer(f"yolox_medium_{RW}x{RH}") as info:
+    timing_records.append(info)
+    assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
+
+    with timer(f"yolox_medium_{RW}x{RH}", n=nframes) as info:
         t.add_column(pt.Column("detections_ym_s", computed_with=yolox_medium(t.frame_s)))
     logger.info(info)
-    records.append(info)
-    # assert info.elapsed <= 130., f"{info.desc} took too long, timing={info}"
-    with timer(f"openai_{RW}x{RH}") as info:
-        t.add_column(pt.Column("detections_clip_s", computed_with=openai_clip(t.frame_s)))
+    timing_records.append(info)
+    assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
+
+    t[openai_clip(t.frame)].show(1)  # load model
+    with timer(f"openai_{RW}x{RH}", n=nframes) as info:
+        t.add_column(pt.Column("embedding_clip_s", computed_with=openai_clip(t.frame_s)))
     logger.info(info)
-    records.append(info)
-    # assert info.elapsed <= 130., f"{info.desc} took too long, timing={info}"
+    timing_records.append(info)
+    assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
+
+    timing_df = pd.DataFrame([r.to_dict() for r in timing_records], columns=["desc", "elapsed", "n"])
+    timing_df = timing_df.assign(
+        elapsed=lambda x: x.elapsed.round(2),
+        latency_ms=lambda x: ((x.elapsed / nframes) * 1000).round(2),
+        fps=lambda x: (1 / (x.elapsed / nframes)).round(2),
+    )
+    logger.info(f"\nTiming records\n{timing_df}")
+
+    # Save timing records
+    version_str = nos.__version__.replace(".", "-")
+    date_str = datetime.utcnow().strftime("%Y%m%d")
+    profile_path = Path(NOS_INTEGRATIONS_DIR) / f"nos-pixeltable-profile--{version_str}--{date_str}.json"
+    timing_df.to_json(str(profile_path), orient="records", indent=2)
+    logger.info(f"Saved timing records to: {str(profile_path)}")
