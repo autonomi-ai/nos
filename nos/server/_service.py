@@ -27,8 +27,7 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 def load_spec(model_name: str, task: TaskType) -> ModelSpec:
     """Get the model spec cache."""
     model_spec: ModelSpec = hub.load_spec(model_name, task=task)
-    if NOS_PROFILING_ENABLED:
-        logger.debug(f"Loaded model spec: {model_spec}")
+    logger.info(f"Loaded model spec: {model_spec}")
     return model_spec
 
 
@@ -61,26 +60,22 @@ class InferenceService:
         Returns:
             Dict[str, Any]: Model outputs.
         """
-        st = time.perf_counter()
-
         # Load the model spec
         try:
             model_spec: ModelSpec = load_spec(model_name, task=task)
         except Exception as e:
             raise ModelNotFoundError(f"Failed to load model spec: {model_name}, {e}")
-        if NOS_PROFILING_ENABLED:
-            logger.debug(f"Loaded spec [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         # TODO (spillai): Validate/Decode the inputs
         mid = time.perf_counter()
         model_inputs = model_spec.signature._decode_inputs(inputs)
-        if NOS_PROFILING_ENABLED:
-            model_inputs_types = {
-                k: f"List[{len(v)}]" if isinstance(v, list) else type(v) for k, v in model_inputs.items()
-            }
-            logger.debug(
-                f"Decoded inputs [inputs={model_inputs_types}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms]"
-            )
+        model_inputs_types = [
+            f"{k}: List[type={type(v[0])}, len={len(v)}]" if isinstance(v, list) else str(type(v))
+            for k, v in model_inputs.items()
+        ]
+        logger.debug(
+            f"Decoded inputs [inputs=({', '.join(model_inputs_types)}), elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms]"
+        )
 
         # Initialize the model (if not already initialized)
         # This call should also evict models and garbage collect if
@@ -90,8 +85,7 @@ class InferenceService:
         # Get the model handle and call it remotely (with model spec, actor handle)
         mid = time.perf_counter()
         response: Dict[str, Any] = model_handle.remote(**model_inputs)
-        if NOS_PROFILING_ENABLED:
-            logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms]")
+        logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms]")
 
         # If the response is a single value, wrap it in a dict with the appropriate key
         if len(model_spec.signature.outputs) == 1:
@@ -137,6 +131,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         try:
             model_info = request.request
             spec: ModelSpec = hub.load_spec(model_info.name, task=TaskType(model_info.task))
+            logger.debug(f"GetModelInfo(): {spec}")
         except KeyError as e:
             logger.error(f"Failed to load spec: [request={request.request}, e={e}]")
             context.abort(grpc.StatusCode.NOT_FOUND, str(e))
@@ -160,9 +155,9 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
 
         try:
             st = time.perf_counter()
-            logger.debug(f"Executing request [task={model_request.task}, name={model_request.name}]")
+            logger.info(f"Executing request [task={model_request.task}, name={model_request.name}]")
             response = self.execute(model_request.name, task=TaskType(model_request.task), inputs=request.inputs)
-            logger.debug(
+            logger.info(
                 f"Executed request [task={model_request.task}, model={model_request.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )
             return nos_service_pb2.InferenceResponse(response_bytes=dumps(response))

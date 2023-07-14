@@ -26,7 +26,7 @@ def init(
     port: int = DEFAULT_GRPC_PORT,
     utilization: float = 0.8,
     pull: bool = True,
-    logging_level: int = logging.INFO,
+    logging_level: Union[int, str] = logging.INFO,
     tag: Optional[str] = None,
 ) -> docker.models.containers.Container:
     """Initialize the inference server.
@@ -37,7 +37,8 @@ def init(
         port (int, optional): The port to use for the inference server. Defaults to DEFAULT_GRPC_PORT.
         utilization (float, optional): The target cpu/memory utilization of inference server. Defaults to 0.8.
         pull (bool, optional): Pull the docker image before starting the inference server. Defaults to True.
-        logging_level (int, optional): The logging level to use for the inference server. Defaults to logging.INFO.
+        logging_level (Union[int, str], optional): The logging level to use. Defaults to logging.INFO.
+            Optionally, a string can be passed (i.e. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL").
         tag (str, optional): The tag of the docker image to use ("latest"). Defaults to None, where the
             appropriate version is used.
     """
@@ -51,7 +52,11 @@ def init(
     if utilization <= 0.25 or utilization > 1:
         raise ValueError(f"Invalid utilization: {utilization}, must be in (0.25, 1].")
 
-    if logging_level not in (logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR, logging.CRITICAL):
+    if not isinstance(logging_level, (int, str)):
+        raise ValueError(f"Invalid logging level: {logging_level}, must be an integer or string.")
+    if isinstance(logging_level, int):
+        logging_level = logging.getLevelName(logging_level)
+    if logging_level not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
         raise ValueError(f"Invalid logging level: {logging_level}")
 
     if tag is None:
@@ -159,6 +164,9 @@ def init(
         mem_limit=f"{mem_limit}g",
         shm_size=f"{_MIN_SHMEM_GB}g",
         ports={f"{DEFAULT_GRPC_PORT}/tcp": port},
+        environment={
+            "NOS_LOGGING_LEVEL": logging_level,
+        },
     )
     logger.info(
         f"Inference service started: [name={runtime.cfg.name}, runtime={runtime}, image={container.image}, id={container.id[:12]}]"

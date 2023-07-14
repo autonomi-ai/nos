@@ -175,6 +175,7 @@ def test_pixeltable_integration():
 
     # Run inference (see acceptance criteria from timing table above)
     timing_records = []
+    t[noop(t.frame)].show(1)  # noop (warmup)
     with timer(f"noop_{W}x{H}", n=nframes) as info:
         t.add_column(pt.Column("noop_ids", computed_with=noop(t.frame)))
     logger.info(info)
