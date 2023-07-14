@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import docker
-from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
+from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED  # noqa F401
 from nos.logging import LOGGING_LEVEL, logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -41,7 +41,9 @@ class InferenceServiceRuntimeConfig:
     ports: Dict[int, int] = field(default_factory=lambda: {DEFAULT_GRPC_PORT: DEFAULT_GRPC_PORT})
     """Ports to expose."""
 
-    environment: Dict[str, str] = field(default_factory=lambda: {"NOS_LOGGING_LEVEL": LOGGING_LEVEL})
+    environment: Dict[str, str] = field(
+        default_factory=lambda: {"NOS_LOGGING_LEVEL": LOGGING_LEVEL, "NOS_PROFILING_ENABLED": NOS_PROFILING_ENABLED}
+    )
     """Environment variables."""
 
     volumes: Dict[str, Dict[str, str]] = field(

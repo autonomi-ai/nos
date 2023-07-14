@@ -69,14 +69,18 @@ class InferenceService:
         except Exception as e:
             raise ModelNotFoundError(f"Failed to load model spec: {model_name}, {e}")
         if NOS_PROFILING_ENABLED:
-            logger.debug(f"Loaded spec, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms")
+            logger.debug(f"Loaded spec [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         # TODO (spillai): Validate/Decode the inputs
         mid = time.perf_counter()
         model_inputs = model_spec.signature._decode_inputs(inputs)
         if NOS_PROFILING_ENABLED:
-            model_inputs_types = {k: type(v) for k, v in model_inputs.items()}
-            logger.debug(f"Decoded inputs: {model_inputs_types}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
+            model_inputs_types = {
+                k: f"List[{len(v)}]" if isinstance(v, list) else type(v) for k, v in model_inputs.items()
+            }
+            logger.debug(
+                f"Decoded inputs [inputs={model_inputs_types}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms]"
+            )
 
         # Initialize the model (if not already initialized)
         # This call should also evict models and garbage collect if
@@ -87,7 +91,7 @@ class InferenceService:
         mid = time.perf_counter()
         response: Dict[str, Any] = model_handle.remote(**model_inputs)
         if NOS_PROFILING_ENABLED:
-            logger.debug(f"Executed model: {model_spec}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
+            logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms]")
 
         # If the response is a single value, wrap it in a dict with the appropriate key
         if len(model_spec.signature.outputs) == 1:
@@ -156,10 +160,10 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
 
         try:
             st = time.perf_counter()
-            logger.debug(f"Executing request: {model_request.task}, {model_request.name}")
+            logger.debug(f"Executing request [task={model_request.task}, name={model_request.name}]")
             response = self.execute(model_request.name, task=TaskType(model_request.task), inputs=request.inputs)
             logger.debug(
-                f"Executed request: [task={model_request.task}, model={model_request.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                f"Executed request [task={model_request.task}, model={model_request.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )
             return nos_service_pb2.InferenceResponse(response_bytes=dumps(response))
         except (grpc.RpcError, Exception) as e:
