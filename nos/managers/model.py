@@ -10,6 +10,7 @@ import torch
 from nos.common import ModelSpec
 from nos.logging import logger
 
+import memray
 
 @dataclass
 class ModelHandle:
@@ -68,7 +69,14 @@ class ModelHandle:
         model_cls = spec.signature.func_or_cls
         actor_options = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
         logger.debug(f"Creating actor: {actor_options}, {model_cls}")
+
+        # Add some memory logs to this actor
         actor_cls = ray.remote(**actor_options)(model_cls)
+        flattened_name = spec.name.replace("/", "_")
+        memray.Tracker(
+            "/tmp/ray/session_latest/logs/"
+            f"{flattened_name}_mem_profile.bin"
+        ).__enter__()
         return actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
 
     def kill(self) -> None:

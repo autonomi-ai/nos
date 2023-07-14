@@ -96,10 +96,11 @@ class RayExecutor:
                         address="auto",
                         namespace=self.spec.namespace,
                         ignore_reinit_error=True,
-                        include_dashboard=False,
+                        include_dashboard=True,
                         configure_logging=True,
                         logging_level=logging.ERROR,
                         log_to_driver=level <= logging.ERROR,
+                        dashboard_host="0.0.0.0",
                     )
                     status.stop()
                     console.print("[bold green] ✓ InferenceExecutor :: Connected to backend. [/bold green]")
@@ -142,10 +143,11 @@ class RayExecutor:
                     namespace=self.spec.namespace,
                     object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                     ignore_reinit_error=False,
-                    include_dashboard=False,
+                    include_dashboard=True,
                     configure_logging=True,
                     logging_level=logging.ERROR,
                     log_to_driver=level <= logging.ERROR,
+                    dashboard_host="0.0.0.0",
                 )
                 logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - st:.2f}s)")
                 status.stop()
