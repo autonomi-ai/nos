@@ -1,18 +1,34 @@
+import contextlib
+
+import numpy as np
 import pytest
 from loguru import logger
+from PIL import Image
 
+from nos import hub
+from nos.common import TaskType, tqdm
+
+# from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
-from nos.server._service import InferenceServiceImpl
+from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
+from nos.test.utils import NOS_TEST_IMAGE
 
 
+NOS_SHM_ENABLED = False
 pytestmark = pytest.mark.server
 
 
-def test_model_manager(ray_executor: RayExecutor):  # noqa: F811
-    from nos import hub
-    from nos.managers import ModelHandle, ModelManager
+@contextlib.contextmanager
+def warns(warn_cls=UserWarning, shm_enabled=NOS_SHM_ENABLED):
+    """Catch warnings if shared memory is enabled."""
+    if shm_enabled:
+        yield pytest.warns(warn_cls)
+    else:
+        yield
 
+
+def test_model_manager(ray_executor: RayExecutor):  # noqa: F811
     manager = ModelManager()
     assert manager is not None
 
@@ -35,13 +51,6 @@ def test_model_manager(ray_executor: RayExecutor):  # noqa: F811
 @pytest.mark.benchmark
 def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
     """Benchmark inference with a model manager."""
-    from PIL import Image
-    from tqdm import tqdm
-
-    from nos import hub
-    from nos.common import TaskType
-    from nos.managers import ModelHandle, ModelManager
-    from nos.test.utils import NOS_TEST_IMAGE
 
     manager = ModelManager()
     assert manager is not None
@@ -54,18 +63,159 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
     assert handle is not None
 
     img = Image.open(NOS_TEST_IMAGE)
-    for _ in tqdm(range(10), desc="Inference with len(pool)=1 (warmup)"):
+    for _ in tqdm(duration=5, desc="Inference (5s warmup)"):
         result = handle.remote(images=[img] * 8)
         assert result is not None
 
     # Run inference
     img = Image.open(NOS_TEST_IMAGE)
-    for _ in tqdm(range(500), desc="Inference with len(pool)=1"):
+    for _ in tqdm(duration=20, desc="Inference (20s benchmark)"):
         result = handle.remote(images=[img] * 8)
         assert result is not None
 
 
-@pytest.mark.skip(reason="This test is not ready yet.")
-def test_inference_service_impl(ray_executor: RayExecutor):  # noqa: F811
-    service = InferenceServiceImpl()
-    assert service is not None
+@pytest.mark.parametrize(
+    "shm_enabled",
+    [
+        False,
+    ],
+)
+def test_inference_service_noop(grpc_client_with_cpu_backend, shm_enabled):  # noqa: F811
+    """Test inference service with shared memory transport."""
+
+    # client = local_grpc_client_with_server
+    client = grpc_client_with_cpu_backend
+    assert client is not None
+    assert client.IsHealthy()
+
+    # Load dummy image
+    img = Image.open(NOS_TEST_IMAGE)
+
+    # Load noop model
+    task, model_name = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # Inference (single forward pass)
+    # Change image sizes on the fly to test if the client
+    # registers new shared memory regions.
+    for shape in [(224, 224), (640, 480), (1280, 720)]:
+        # __call__(images: np.ndarray, 3-dim)
+        inputs = {"images": np.asarray(img.resize(shape))}
+        response = model(**inputs)
+
+        # __call__(images: List[np.ndarray], List of 3-dim)
+        # This call should register a new shared memory region
+        # and raise a user warning.
+        inputs = {"images": [np.asarray(img.resize(shape))]}
+        with warns(UserWarning, shm_enabled=shm_enabled) as warn:
+            response = model(**inputs)
+        # This call should not raise any warnings.
+        with warns(None, shm_enabled=shm_enabled) as warn:
+            response = model(**inputs)
+        if warn:
+            assert len(warn) == 0, "Expected no warnings, but warnings were raised"
+        assert isinstance(response, dict)
+        assert "result" in response
+
+        # __call__(image: Image.Image)
+        # This will not use shared memory transport
+        # and force the client to unregister shm objects,
+        # and send the image over the wire.
+        inputs = {"images": img.resize(shape)}
+        response = model(**inputs)
+
+        # __call__(image: List[Image.Image])
+        # This will not use shared memory transport
+        # and force the client to send the image over the wire.
+        # Note: Since we've already unregistered the shm objects,
+        # no new shm region changes should happen here.
+        inputs = {"images": [img.resize(shape)]}
+        response = model(**inputs)
+
+    # Test manually registering/unregistering shared memory regions
+    if shm_enabled:
+        model.UnregisterSystemSharedMemory()  # unregister from previous test
+    for _shape in [(224, 224), (640, 480), (1280, 720)]:
+        images = np.vstack([np.asarray(img.resize(_shape)) for _ in range(8)])
+        inputs = {"images": images}
+        model.RegisterSystemSharedMemory(inputs)
+        response = model(**inputs)
+        assert isinstance(response, dict)
+        assert "result" in response
+        if shm_enabled:
+            model.UnregisterSystemSharedMemory()
+
+    # TODO (spillai) Compare round-trip-times with and without shared memory transport
+    # Note: This test is only valid for the local server.
+
+
+@pytest.mark.benchmark
+# @pytest.mark.parametrize("client_with_server", ("docker-cpu", "docker-gpu"), indirect=True)
+@pytest.mark.parametrize(
+    "shm_enabled",
+    [
+        False,
+    ],
+)
+@pytest.mark.parametrize("shape", [(224, 224), (640, 480), (1280, 720), (1920, 1080), (2880, 1620), (3840, 2160)])
+def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shm_enabled, shape):  # noqa: F811
+    """Benchmark shared memory transport and inference between the client-server.
+
+    Tests with 3 client-server configurations:
+      - local client, local server
+      - local client, CPU docker server
+      - local client, GPU docker server
+
+    Note: This test is only valid for the local server.
+    """
+
+    # client = local_grpc_client_with_server
+    client = grpc_client_with_gpu_backend
+    assert client is not None
+    assert client.IsHealthy()
+
+    # Load dummy image
+    img = Image.open(NOS_TEST_IMAGE)
+    img = img.resize(shape)
+    img = np.asarray(img)
+
+    # Load noop model
+    task, model_name = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # Benchmark (10s)
+    for b in range(8):
+        B = 2**b
+        images = np.stack([img for _ in range(B)])
+        inputs = {"images": images}
+        # if shm_enabled:
+        #     model.RegisterSystemSharedMemory(inputs)
+
+        for _ in tqdm(duration=2, desc="Warmup", disable=True):
+            try:
+                response = model(**inputs)
+            except Exception as e:
+                logger.error(f"Exception: {e}")
+                continue
+
+        for _ in tqdm(
+            duration=10,
+            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={img.shape}]",
+            unit="images",
+            unit_scale=B,
+            total=0,
+        ):
+            try:
+                response = model(**inputs)
+            except Exception as e:
+                logger.error(f"Exception: {e}")
+                continue
+            assert isinstance(response, dict)
+            assert "result" in response
+
+        # if shm_enabled:
+        #     model.UnregisterSystemSharedMemory()

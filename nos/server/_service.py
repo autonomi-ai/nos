@@ -1,4 +1,7 @@
+import os
+import time
 import traceback
+from functools import lru_cache
 from typing import Any, Dict
 
 import grpc
@@ -17,8 +20,19 @@ from nos.protoc import import_module
 from nos.version import __version__
 
 
+NOS_PROFILING_ENABLED = bool(os.getenv("NOS_PROFILING_ENABLED", 0))
+
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
+
+
+@lru_cache(maxsize=32)
+def load_spec(model_name: str, task: TaskType) -> ModelSpec:
+    """Get the model spec cache."""
+    model_spec: ModelSpec = hub.load_spec(model_name, task=task)
+    if NOS_PROFILING_ENABLED:
+        logger.debug(f"Loaded model spec: {model_spec}")
+    return model_spec
 
 
 class InferenceService:
@@ -39,8 +53,6 @@ class InferenceService:
         except Exception as e:
             logger.info(f"Failed to initialize executor: {e}")
             raise RuntimeError(f"Failed to initialize executor: {e}")
-        self.current_model_id = None
-        self.current_model_spec = None
 
     def execute(self, model_name: str, task: TaskType = None, inputs: Dict[str, Any] = None) -> Dict[str, Any]:
         """Execute the model.
@@ -52,22 +64,19 @@ class InferenceService:
         Returns:
             Dict[str, Any]: Model outputs.
         """
-        # Load model spec if the model has changed
-        if self.current_model_id is None or self.current_model_id != (model_name, task.value):
-            # Load the model spec
-            try:
-                model_spec: ModelSpec = hub.load_spec(model_name, task=task)
-                logger.debug(f"Loaded model spec: {model_spec}")
-            except Exception as e:
-                raise ModelNotFoundError(f"Failed to load model spec: {model_name}, {e}")
-            self.current_model_id = (model_name, task.value)
-            self.current_model_spec = model_spec
+        time.perf_counter()
 
-        assert self.current_model_spec is not None
-        model_spec = self.current_model_spec
+        # Load the model spec
+        try:
+            model_spec: ModelSpec = load_spec(model_name, task=task)
+        except Exception as e:
+            raise ModelNotFoundError(f"Failed to load model spec: {model_name}, {e}")
 
         # TODO (spillai): Validate/Decode the inputs
+        mid = time.perf_counter()
         model_inputs = model_spec.signature._decode_inputs(inputs)
+        if NOS_PROFILING_ENABLED:
+            logger.debug(f"Decoded inputs: {model_inputs}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
 
         # Initialize the model (if not already initialized)
         # This call should also evict models and garbage collect if
@@ -75,7 +84,10 @@ class InferenceService:
         model_handle: ModelHandle = self.model_manager.get(model_spec)
 
         # Get the model handle and call it remotely (with model spec, actor handle)
+        mid = time.perf_counter()
         response: Dict[str, Any] = model_handle.remote(**model_inputs)
+        if NOS_PROFILING_ENABLED:
+            logger.debug(f"Executed model: {model_spec}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
 
         # If the response is a single value, wrap it in a dict with the appropriate key
         if len(model_spec.signature.outputs) == 1:
@@ -143,11 +155,15 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid task {model_request.task}")
 
         try:
+            st = time.perf_counter()
             logger.debug(f"Executing request: {model_request.task}, {model_request.name}")
             response = self.execute(model_request.name, task=TaskType(model_request.task), inputs=request.inputs)
+            logger.debug(
+                f"Executed request: [task={model_request.task}, model={model_request.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            )
             return nos_service_pb2.InferenceResponse(response_bytes=dumps(response))
         except (grpc.RpcError, Exception) as e:
-            msg = f"Failed to execute request: {model_request.task}, {model_request.name}"
+            msg = f"Failed to execute request: [task={model_request.task}, model={model_request.name}]"
             msg += f"{traceback.format_exc()}"
             logger.error(f"{msg}, e={e}")
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
