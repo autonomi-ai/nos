@@ -16,15 +16,6 @@ import pytest
 from loguru import logger
 
 
-# Ensure that the environment does not have server-side requirements installed
-try:
-    import ray  # noqa: F401
-    import torch  # noqa: F401
-
-    raise AssertionError("torch/ray is installed in pixeltable environment")
-except ImportError:
-    pass
-
 # Skip this entire test if pixeltable is not installed
 pytestmark = pytest.mark.skipif(pytest.importorskip("pixeltable") is None, reason="pixeltable is not installed")
 
@@ -69,6 +60,17 @@ def timer(desc: str = ""):
     start = time.time()
     yield info
     info.elapsed = time.time() - start
+
+
+def test_pixeltable_installation():
+    # Ensure that the environment does not have server-side requirements installed
+    try:
+        import ray  # noqa: F401
+        import torch  # noqa: F401
+
+        raise AssertionError("torch/ray is installed in pixeltable environment")
+    except ImportError:
+        pass
 
 
 def test_pixeltable_integration():
