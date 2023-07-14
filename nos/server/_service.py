@@ -1,4 +1,3 @@
-import os
 import time
 import traceback
 from functools import lru_cache
@@ -11,7 +10,7 @@ from google.protobuf import empty_pb2
 
 from nos import hub
 from nos.common import ModelSpec, TaskType, dumps
-from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
+from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED  # noqa F401
 from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor
 from nos.logging import logger
@@ -19,8 +18,6 @@ from nos.managers import ModelHandle, ModelManager
 from nos.protoc import import_module
 from nos.version import __version__
 
-
-NOS_PROFILING_ENABLED = bool(os.getenv("NOS_PROFILING_ENABLED", 0))
 
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
@@ -64,19 +61,22 @@ class InferenceService:
         Returns:
             Dict[str, Any]: Model outputs.
         """
-        time.perf_counter()
+        st = time.perf_counter()
 
         # Load the model spec
         try:
             model_spec: ModelSpec = load_spec(model_name, task=task)
         except Exception as e:
             raise ModelNotFoundError(f"Failed to load model spec: {model_name}, {e}")
+        if NOS_PROFILING_ENABLED:
+            logger.debug(f"Loaded spec, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms")
 
         # TODO (spillai): Validate/Decode the inputs
         mid = time.perf_counter()
         model_inputs = model_spec.signature._decode_inputs(inputs)
         if NOS_PROFILING_ENABLED:
-            logger.debug(f"Decoded inputs: {model_inputs}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
+            model_inputs_types = {k: type(v) for k, v in model_inputs.items()}
+            logger.debug(f"Decoded inputs: {model_inputs_types}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
 
         # Initialize the model (if not already initialized)
         # This call should also evict models and garbage collect if

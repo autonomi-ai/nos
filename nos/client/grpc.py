@@ -10,7 +10,7 @@ from google.protobuf import empty_pb2
 
 from nos.client.exceptions import NosClientException
 from nos.common import ModelSpec, TaskType, loads
-from nos.constants import DEFAULT_GRPC_PORT
+from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -314,7 +314,10 @@ class InferenceModule:
         # Check if the input dictionary is consistent
         # with inputs/outputs defined in `spec.signature`
         # and then encode it.
+        st = time.perf_counter()
         inputs = self._spec.signature._encode_inputs(inputs)
+        if NOS_PROFILING_ENABLED:
+            logger.debug(f"Encoded inputs, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms")
         request = nos_service_pb2.InferenceRequest(
             model=nos_service_pb2.ModelInfo(
                 task=self.task.value,
@@ -323,9 +326,15 @@ class InferenceModule:
             inputs=inputs,
         )
         try:
-
+            mid = time.perf_counter()
             response = self.stub.Run(request)
+            if NOS_PROFILING_ENABLED:
+                logger.debug(f"Executed request, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
+
+            mid = time.perf_counter()
             response = loads(response.response_bytes)
+            if NOS_PROFILING_ENABLED:
+                logger.debug(f"Decoded response, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
             return response
         except grpc.RpcError as e:
             logger.error(
