@@ -11,11 +11,9 @@ import numpy as np
 from google.protobuf import empty_pb2
 
 from nos.client.exceptions import NosClientException
-from nos.common import ModelSpec, TaskType, loads
-from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
 from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryNumpyObject, SharedMemoryTransportManager
-from nos.constants import DEFAULT_GRPC_PORT
+from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__

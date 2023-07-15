@@ -15,20 +15,3 @@ from .openmmlab.mmdetection.mmdetection import MMDetection  # noqa: F401
 from .sam import SAM
 from .stable_diffusion import StableDiffusion  # noqa: F401
 from .yolox import YOLOX  # noqa: F401
-
-
-class NoOp:
-    """Noop model rep for benchmarking."""
-
-    def process_images(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> bool:
-        return True
-
-
-hub.register(
-    "noop/process-images",
-    TaskType.CUSTOM,
-    NoOp,
-    method_name="process_images",
-    inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
-    outputs={"result": bool},
-)

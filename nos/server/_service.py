@@ -9,11 +9,12 @@ import rich.status
 from google.protobuf import empty_pb2
 
 from nos import hub
-from nos.common import ModelSpec, TaskType, dumps
-from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED  # noqa F401
 from nos.common import FunctionSignature, ModelSpec, TaskType, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTransportManager
-from nos.constants import DEFAULT_GRPC_PORT  # noqa F401
+from nos.constants import (  # noqa F401
+    DEFAULT_GRPC_PORT,  # noqa F401
+    NOS_PROFILING_ENABLED,
+)
 from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor
 from nos.logging import logger
