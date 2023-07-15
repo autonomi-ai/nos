@@ -106,7 +106,7 @@ docker-push-gpu:
 	TARGET=gpu
 
 docker-push-all: \
-	docker-push-cpu docker-push-gpu
+	docker-push-cpu docker-push-gpu docker-build-and-push-multiplatform-cpu
 
 docker-compose-upd-cpu: docker-build-cpu
 	docker compose -f docker-compose.cpu.yml up
