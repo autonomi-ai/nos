@@ -73,11 +73,12 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
 
 
 @pytest.mark.skipif(not NOS_SHM_ENABLED, reason="Shared memory transport is not enabled.")
-def test_shm_registry(local_grpc_client_with_server):  # noqa: F811
+def test_shm_registry(grpc_client_with_gpu_backend):  # noqa: F811
     """Test shm registry with local server."""
     shm_enabled = NOS_SHM_ENABLED
 
-    client = local_grpc_client_with_server
+    # client = local_grpc_client_with_server
+    client = grpc_client_with_gpu_backend
     assert client is not None
     assert client.IsHealthy()
 

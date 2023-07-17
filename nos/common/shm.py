@@ -1,8 +1,10 @@
 import os
+import secrets
 import time
 from dataclasses import dataclass, field
 from multiprocessing.managers import SharedMemoryManager
 from multiprocessing.shared_memory import SharedMemory
+from multiprocessing import resource_tracker
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -17,14 +19,34 @@ NOS_SHM_ENABLED = bool(int(os.environ.get("NOS_SHM_ENABLED", 0)))
 
 @dataclass
 class SharedMemoryNumpyObject:
-    """Shared memory object wrapping numpy array."""
+    """Shared memory object wrapping numpy array.
+    
+    Shared memory objects are updated with user-permissions (0666) under
+    /dev/shm/nos_psm_<random_hex_string> and are automatically cleaned up
+    when the object is garbage collected.
+    """
 
-    shm: SharedMemory
-    """Shared memory object"""
+    nbytes: int
+    """numpy array nbytes"""
     shape: Tuple[int, ...]
     """numpy array shape"""
-    dtype: str
+    dtype: np.dtype
     """numpy array dtype"""
+    mode: str = field(init=False, default="r")
+    """Shared memory  mode"""
+    _shm: SharedMemory = field(init=False, default=None)
+    """Shared memory object"""
+
+    def __post_init__(self) -> None:
+        # Set user-level permissions on the shared memory object
+        self._shm = SharedMemory(name=f"nos_psm_{secrets.token_hex(8)}", create=True, size=self.nbytes)
+        # TOFIX (spillai): This is a hack to get around the fact that the shared memory
+        # object is created with the default permissions (0600) and the user running
+        # the inference service is not the same as the user running the client.
+        self._shm._fd = os.dup(self._shm._fd)
+        os.chown(self._shm._fd, 1000, 1000)
+        os.chmod(self._shm._fd, 0o666)
+        self.mode = "w"
 
     def __repr__(self) -> str:
         """Return the shared memory object representation."""
@@ -35,7 +57,7 @@ class SharedMemoryNumpyObject:
 
         This method is called when the object is pickled (dumps).
         """
-        return {"name": self.name, "shape": self.shape, "dtype": self.dtype}
+        return {"name": self.name, "shape": self.shape, "dtype": str(self.dtype)}
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
         """Set the shared memory object state.
@@ -44,34 +66,42 @@ class SharedMemoryNumpyObject:
         Args:
             state (Dict[str, Any]): Shared memory object state.
         """
-        self.shm = SharedMemory(name=state["name"])
+        self._shm = SharedMemory(name=state["name"], create=False)
         self.shape = state["shape"]
-        self.dtype = state["dtype"]
+        assert isinstance(state["dtype"], str)
+        self.dtype = np.dtype(state["dtype"])
+        self.mode = "r"
 
     def cleanup(self) -> None:
         """Close and unlink the shared memory object."""
-        self.shm.close()
-        self.shm.unlink()
+        self._shm.close()
+        self._shm.unlink()
 
     def close(self) -> None:
         """Close the shared memory object."""
-        self.shm.close()
+        self._shm.close()
+        # Note (spillai): We need to explicitly call `unregister()` here
+        # to avoid the resource tracker from raising a UserWarning about leaked 
+        # resources. This is because the shared memory implementation in Python
+        # assumes that all clients of a segment are child processes from a single
+        # parent, and that they inherit the same resource_tracker. 
+        resource_tracker.unregister(self._shm._name, "shared_memory")
 
     @property
     def name(self) -> str:
         """Return the shared memory name."""
-        return self.shm.name
+        return self._shm.name
 
     def copy_from(self, arr: np.ndarray) -> None:
         """Copy data from the numpy array to shared memory object."""
         assert arr.shape == self.shape, f"Array shape {arr.shape} does not match shared memory shape {self.shape}"
         assert arr.dtype == self.dtype, f"Array dtype {arr.dtype} does not match shared memory dtype {self.dtype}"
-        target: np.ndarray = np.ndarray(arr.shape, dtype=arr.dtype, buffer=self.shm.buf)
+        target: np.ndarray = np.ndarray(arr.shape, dtype=arr.dtype, buffer=self._shm.buf)
         target[:] = arr[:]
 
     def get(self) -> np.ndarray:
         """Get the numpy array from the shared memory object ."""
-        src: np.ndarray = np.ndarray(shape=self.shape, dtype=getattr(np, self.dtype), buffer=self.shm.buf)
+        src: np.ndarray = np.ndarray(shape=self.shape, dtype=self.dtype, buffer=self._shm.buf)
         target = src.copy()
         del src
         return target
@@ -119,15 +149,15 @@ class SharedMemoryTransportManager:
     def __post_init__(self) -> None:
         """Initialize the shared memory transport manager."""
         logger.debug("Initializing shared memory transport manager")
-        self._shm_manager = SharedMemoryManager()
-        self._shm_manager.start()
+        # self._shm_manager = SharedMemoryManager()
+        # self._shm_manager.start()
 
     def __del__(self) -> None:
         """Cleanup the shared memory transport manager."""
         logger.debug("Cleaning up shared memory transport manager")
         self.cleanup()
-        self._shm_manager.shutdown()
-        self._shm_manager = None
+        # self._shm_manager.shutdown()
+        # self._shm_manager = None
 
     def create(self, data: Dict[str, Any], namespace: Optional[str] = None) -> Dict[str, Any]:
         """Create a shared memory segment for the data dictionary.
@@ -152,16 +182,17 @@ class SharedMemoryTransportManager:
             full_key = f"{namespace}/{key}"
             assert full_key not in self._objects_map, f"Shared memory segment {full_key} already exists."
 
+            # Convert np.uint8 -> "uint8"
+            # dtype = str(value.dtype)
+
             if isinstance(value, TensorSpec):
-                nbytes = value.nbytes
-                shape, dtype = value.shape, value.dtype
                 objects_map[key] = SharedMemoryNumpyObject(
-                    self._shm_manager.SharedMemory(size=value.nbytes),
+                    value.nbytes,
                     value.shape,
-                    str(dtype),
+                    np.dtype(value.dtype),
                 )
                 logger.debug(
-                    f"Created shm segment [key={full_key}, size={nbytes / 1024 / 1024:.2f} MB, shape={shape}, dtype={dtype}, len=1]"
+                    f"Created shm segment [key={full_key}, size={value.nbytes / 1024 / 1024:.2f} MB, shape={value.shape}, dtype={value.dtype}, len=1]"
                 )
             else:
                 logger.debug("Ignoring non-tensor input")
@@ -177,6 +208,7 @@ class SharedMemoryTransportManager:
                 # Note (spillai): We don't need to explicitly call `cleanup()` here
                 # as the shared memory segments are automatically cleaned up when
                 # the SharedMemoryNumpyObject is garbage collected.
+                # self._objects_map[key].cleanup()
                 del self._objects_map[key]
                 logger.debug(f"Removed shm segment [key={key}]")
 
