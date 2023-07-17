@@ -29,11 +29,11 @@ class DynamicProtobufCompiler:
         sys.path.append(str(self.cache_dir))
 
         # Compile all proto files from all paths
-        logger.debug(f"Compiling protos from: {PROTO_PATHS}")
+        logger.debug(f"Compiling protos [dirs={PROTO_PATHS}]")
         for path in itertools.chain.from_iterable(Path(path).glob("*.proto") for path in PROTO_PATHS):
-            logger.debug(f"Compiling {path}")
+            logger.debug(f"Compiling ... [filename={path}]")
             self.compile(str(path))
-        logger.debug(f"Compiled modules: {self.list_modules()}")
+        logger.debug(f"Compiled modules [modules={self.list_modules()}]")
 
     @classmethod
     def get(cls: "DynamicProtobufCompiler") -> "DynamicProtobufCompiler":
@@ -44,6 +44,7 @@ class DynamicProtobufCompiler:
 
     def compile(self, proto_filename: str):
         """Compile the proto file to generate the Python modules"""
+        logger.debug(f"Compiling proto [proto={proto_filename}]")
         cmd = [
             "",
             "-I" + str(Path(protoc.__file__).parent / "_proto/"),
@@ -52,11 +53,11 @@ class DynamicProtobufCompiler:
             f"--proto_path={Path(proto_filename).parent}",
             f"{Path(proto_filename).name}",
         ]
-        logger.debug(f"Compiling protos: {' '.join(cmd)}")
+        logger.debug(f"Compiling proto [cmd=protoc {' '.join(cmd)}]")
 
         st = time.time()
         protoc.main(cmd)
-        logger.debug(f"Compilation took: {time.time() - st:.2f} seconds")
+        logger.debug(f"Compilation done [elapsed={(time.time() - st)*1e3:.1f}ms]")
 
     def list_modules(self) -> List[str]:
         """Return a list of compiled modules."""
@@ -68,7 +69,7 @@ class DynamicProtobufCompiler:
 
         # Load the module
         module_path = f"{Path(self.cache_dir) / module_name}.py"
-        logger.debug(f"Loading module: {module_path}")
+        logger.debug(f"Loading module [module={module_path}]")
         spec = importlib.util.spec_from_file_location(module_name, module_path)
 
         module = importlib.util.module_from_spec(spec)

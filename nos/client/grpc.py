@@ -1,9 +1,9 @@
 """gRPC client for NOS service."""
+import secrets
 import time
 import traceback
-import uuid
 from dataclasses import dataclass, field
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from typing import Any, Callable, Dict, List
 
 import grpc
@@ -12,7 +12,7 @@ from google.protobuf import empty_pb2
 
 from nos.client.exceptions import NosClientException
 from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps, loads
-from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryNumpyObject, SharedMemoryTransportManager
+from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
 from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
 from nos.logging import logger
 from nos.protoc import import_module
@@ -67,7 +67,7 @@ class InferenceClient:
         self.address: str = address
         self._channel: grpc.Channel = None
         self._stub: nos_service_pb2_grpc.InferenceServiceStub = None
-        self._uuid: str = str(uuid.uuid4())
+        self._uuid: str = secrets.token_hex(4)
 
     def __getstate__(self) -> InferenceClientState:
         """Returns the state of the client for serialization purposes.
@@ -305,9 +305,19 @@ class InferenceModule:
         return self._client.stub
 
     @property
-    def uuid(self) -> str:
+    def client_id(self) -> str:
         """Correlation ID for this module."""
         return self._client._uuid
+
+    @cached_property
+    def object_id(self) -> str:
+        """Unique object ID for this module."""
+        return f"{self._spec.id}_{secrets.token_hex(4)}"
+
+    @cached_property
+    def namespace(self) -> str:
+        """Unique namespace for this module."""
+        return f"{self.client_id}/{self.object_id}"
 
     def _encode(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Encode the inputs dictionary for transmission.
@@ -325,6 +335,12 @@ class InferenceModule:
         # Validate data with spec signature
         inputs = FunctionSignature.validate(inputs, self._spec.signature.inputs)
 
+        # Encode List[np.ndarray] as stacked np.ndarray (B, H, W, C)
+        for k, v in inputs.items():
+            if isinstance(v, list) and isinstance(v[0], np.ndarray):
+                inputs[k] = np.stack(v, axis=0)
+            # TODO (spillai): Add stacked PIL -> np.ndarray conversion
+
         # Optionally, create/register shm and copy over numpy arrays to shm
         if self._shm_objects is not None:
             # If inputs are already registered, check if they've changed
@@ -334,30 +350,22 @@ class InferenceModule:
                 valid = inputs.keys() == self._shm_objects.keys()
                 for k, v in inputs.items():
                     try:
-                        valid &= isinstance(v, np.ndarray) or isinstance(v, list)
+                        valid &= isinstance(v, np.ndarray)
                         if valid and isinstance(v, np.ndarray):
                             valid &= v.shape == self._shm_objects[k].shape
-                        if valid and isinstance(v, list):
-                            valid &= isinstance(self._shm_objects[k], list)
-                            valid &= len(v) == len(self._shm_objects[k])
-                            valid &= all(isinstance(x, np.ndarray) for x in v)
-                            valid &= all(x.shape == y.shape for x, y in zip(v, self._shm_objects[k]))
                     except Exception:
                         valid = False
                 if not valid:
                     logger.warning(
                         """Inputs are inconsistent with previously registered shared memory objects, unregistering ..."""
                     )
-                    registered_str = [
-                        (k, type(v), v.shape if isinstance(v, SharedMemoryNumpyObject) else f"{v[0]} ({len(v)})")
-                        for k, v in self._shm_objects.items()
-                    ]
+                    registered_str = [(k, type(v), v.shape) for k, v in self._shm_objects.items()]
                     inputs_str = [
                         (k, type(v), v.shape if isinstance(v, np.ndarray) else None) for k, v in inputs.items()
                     ]
                     logger.warning(
-                        f"""Unregistering due to inconsistent shapes ... [registered: {registered_str}, """
-                        f"""inputs: {inputs_str}]"""
+                        f"""Unregistering due to inconsistent shapes ... [registered={registered_str}, """
+                        f"""inputs={inputs_str}]"""
                     )
                     self.UnregisterSystemSharedMemory()
 
@@ -385,7 +393,13 @@ class InferenceModule:
         return self._spec
 
     def RegisterSystemSharedMemory(self, inputs: Dict[str, Any]) -> None:
-        """Register system shared memory for inputs."""
+        """Register system shared memory for inputs.
+
+        Args:
+            inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
+                defined in the ModelSpec.signature.inputs. For example, {"images": np.ndarray}.
+        """
+
         # Create shared memory request
         # We convert the numpy arrays to TensorSpec(s) to let the
         # server know the shape and dtype of the underlying shm data.
@@ -395,34 +409,44 @@ class InferenceModule:
 
         shm_request = {}
         for k, v in inputs.items():
-            if isinstance(v, np.ndarray) or (isinstance(v, list) and isinstance(v[0], np.ndarray)):
-                shm_request[k] = (
-                    [TensorSpec(v[0].shape, dtype=str(v[0].dtype))] * len(v)
-                    if isinstance(v, list)
-                    else TensorSpec(v.shape, dtype=str(v.dtype))
-                )
+            if isinstance(v, np.ndarray):
+                shm_request[k] = TensorSpec(v.shape, dtype=str(v.dtype))
         if not len(shm_request):
-            logger.debug(f"Skipping shared memory registration, no numpy arrays found in inputs: {inputs}")
+            logger.debug(f"Skipping shm registration, no numpy arrays found in inputs [inputs={inputs}]")
             return
-        logger.debug(f"Registering shared memory: {shm_request}")
+        logger.debug(f"Registering shm [request={shm_request}]")
 
         # Request shared memory, fail gracefully if not supported
         response = self.stub.RegisterSystemSharedMemory(
             nos_service_pb2.GenericRequest(request_bytes=dumps(shm_request)),
-            metadata=[("client_id", self.uuid), ("spec_id", self._spec.id)],
+            metadata=[("client_id", self.client_id), ("object_id", self.object_id)],
         )
+
+        # Register the shared memory objects by name on the client
+        # Note (spillai): This calls __setstate__ on the SharedMemoryNumpyObject
         self._shm_objects = loads(response.response_bytes)
-        logger.debug(f"Successfully registered shared memory: {self._shm_objects}")
+        logger.debug(f"Registered shm [namespace={self.namespace}, objects={self._shm_objects}]")
 
     def UnregisterSystemSharedMemory(self) -> None:
         """Unregister system shared memory."""
         if self._shm_objects is not None:
-            logger.debug(f"Unregistering shm objects: [{[(k, v) for k, v in self._shm_objects.items()]}")
-            self.stub.UnregisterSystemSharedMemory(
-                nos_service_pb2.GenericRequest(request_bytes=dumps(self._shm_objects)),
-                metadata=[("client_id", self.uuid), ("spec_id", self._spec.id)],
+            logger.debug(
+                f"Unregistering shm [namespace={self.namespace}, objects={[(k, v) for k, v in self._shm_objects.items()]}"
             )
-            logger.debug(f"Successfully unregistered shared memory: {self._shm_objects}")
+
+            # Close the shared memory objects
+            shm_objects_name_map = {k: v.name for k, v in self._shm_objects.items()}
+            for _k, v in self._shm_objects.items():
+                v.close()
+
+            # Unregister the shared memory objects on the server
+            self.stub.UnregisterSystemSharedMemory(
+                nos_service_pb2.GenericRequest(request_bytes=dumps(shm_objects_name_map)),
+                metadata=[("client_id", self.client_id), ("object_id", self.object_id)],
+            )
+            logger.debug(f"Unregistered shm [{self._shm_objects}]")
+
+            # Delete the shared memory objects after safely closing (client-side) and unregistering them (server-side).
             self._shm_objects = {}
 
     def __call__(self, **inputs: Dict[str, Any]) -> Dict[str, Any]:
@@ -440,7 +464,6 @@ class InferenceModule:
         # with inputs/outputs defined in `spec.signature`
         # and then encode it.
         st = time.perf_counter()
-        # inputs = self._spec.signature._encode_inputs(inputs)
         inputs = self._encode(inputs)
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Encoded inputs, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms")
