@@ -22,6 +22,10 @@ def test_nos_init():
     # Initialize the server
     container_1 = nos.init(logging_level=logging.DEBUG)
     assert container_1 is not None
+
+    containers = InferenceServiceRuntime.list()
+    assert len(containers) == 1
+
     container_2 = nos.init(logging_level="DEBUG")
     assert container_2 is not None
     assert container_1.id == container_2.id

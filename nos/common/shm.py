@@ -1,6 +1,8 @@
 import os
+import time
 from dataclasses import dataclass, field
-from multiprocessing.shared_memory import SharedMemory, SharedMemoryManager
+from multiprocessing.managers import SharedMemoryManager
+from multiprocessing.shared_memory import SharedMemory
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -26,14 +28,22 @@ class SharedMemoryNumpyObject:
 
     def __repr__(self) -> str:
         """Return the shared memory object representation."""
-        return f"SharedMemoryNumpyObject(name={self.name}, shape={self.shape}, dtype={self.dtype})"
+        return f"ShmObject(name={self.name}, shape={self.shape}, dtype={self.dtype})"
 
     def __getstate__(self) -> Dict[str, Any]:
-        """Return the shared memory object state."""
+        """Return the shared memory object state.
+
+        This method is called when the object is pickled (dumps).
+        """
         return {"name": self.name, "shape": self.shape, "dtype": self.dtype}
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
-        """Set the shared memory object state."""
+        """Set the shared memory object state.
+        This method is called when the object is unpickled (loads).
+
+        Args:
+            state (Dict[str, Any]): Shared memory object state.
+        """
         self.shm = SharedMemory(name=state["name"])
         self.shape = state["shape"]
         self.dtype = state["dtype"]
@@ -42,6 +52,10 @@ class SharedMemoryNumpyObject:
         """Close and unlink the shared memory object."""
         self.shm.close()
         self.shm.unlink()
+
+    def close(self) -> None:
+        """Close the shared memory object."""
+        self.shm.close()
 
     @property
     def name(self) -> str:
@@ -78,14 +92,12 @@ class SharedMemoryDataDict:
         """
         data = {k: loads(v) for k, v in data.items()}
         if NOS_SHM_ENABLED:
-            logger.debug("Decoding shared memory data")
-            for k, v in data.items():
-                if isinstance(v, SharedMemoryNumpyObject):
-                    data[k] = v.get()
-                    logger.debug(f"Decoded data: {k}, {type(data[k])}, {data[k].shape}")
-                elif isinstance(v, list) and isinstance(v[0], SharedMemoryNumpyObject):
-                    data[k] = [x.get() for x in v]
-                    logger.debug(f"Decoded data: {k}, {type(data[k][0])}, {data[k][0].shape}")
+            shm_keys = {k for k, v in data.items() if isinstance(v, SharedMemoryNumpyObject)}
+            if not len(shm_keys):
+                return data
+            st = time.perf_counter()
+            data.update({k: data[k].get() for k in shm_keys})
+            logger.debug(f"Decoded shm data [keys={shm_keys}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         return data
 
     @staticmethod
@@ -110,8 +122,19 @@ class SharedMemoryTransportManager:
         self._shm_manager = SharedMemoryManager()
         self._shm_manager.start()
 
+    def __del__(self) -> None:
+        """Cleanup the shared memory transport manager."""
+        logger.debug("Cleaning up shared memory transport manager")
+        self.cleanup()
+        self._shm_manager.shutdown()
+        self._shm_manager = None
+
     def create(self, data: Dict[str, Any], namespace: Optional[str] = None) -> Dict[str, Any]:
         """Create a shared memory segment for the data dictionary.
+
+        Note: The keys for shared memory segments are prefixed with the
+        namespace `<client_id>/<object_id>/<key>`, while the `objects_map`
+        returned does not have the namespace prefixed (i.e. <key>)
 
         Args:
             data (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
@@ -129,33 +152,17 @@ class SharedMemoryTransportManager:
             full_key = f"{namespace}/{key}"
             assert full_key not in self._objects_map, f"Shared memory segment {full_key} already exists."
 
-            # Note (spillai): Assumes all items in the list are numpy arrays of the same shape.
-            if isinstance(value, TensorSpec) or (isinstance(value, list) and isinstance(value[0], TensorSpec)):
-                if isinstance(value, list):
-                    nbytes = value[0].nbytes * len(value)
-                    shape, dtype = value[0].shape, value[0].dtype
-                    objects_map[key] = [
-                        SharedMemoryNumpyObject(
-                            self._shm_manager.SharedMemory(size=item.nbytes),
-                            item.shape,
-                            str(dtype),
-                        )
-                        for item in value
-                    ]
-                    logger.debug(
-                        f"Created shm segment: key={f'{id}/{key}'}, size={nbytes / 1024 / 1024:.2f} MB, shape={shape}, dtype={dtype}, len={len(value)}"
-                    )
-                elif isinstance(value, TensorSpec):
-                    nbytes = value.nbytes
-                    shape, dtype = value.shape, value.dtype
-                    objects_map[key] = SharedMemoryNumpyObject(
-                        self._shm_manager.SharedMemory(size=value.nbytes),
-                        value.shape,
-                        str(dtype),
-                    )
-                    logger.debug(
-                        f"Created shm segment: key={full_key}, size={nbytes / 1024 / 1024:.2f} MB, shape={shape}, dtype={dtype}, len=1"
-                    )
+            if isinstance(value, TensorSpec):
+                nbytes = value.nbytes
+                shape, dtype = value.shape, value.dtype
+                objects_map[key] = SharedMemoryNumpyObject(
+                    self._shm_manager.SharedMemory(size=value.nbytes),
+                    value.shape,
+                    str(dtype),
+                )
+                logger.debug(
+                    f"Created shm segment [key={full_key}, size={nbytes / 1024 / 1024:.2f} MB, shape={shape}, dtype={dtype}, len=1]"
+                )
             else:
                 logger.debug("Ignoring non-tensor input")
 
@@ -165,13 +172,13 @@ class SharedMemoryTransportManager:
     def cleanup(self, namespace: Optional[str] = None) -> None:
         """Cleanup the shared memory segments."""
         for key in list(self._objects_map.keys()):
+            logger.debug(f"Cleaning up shm segment [key={key}]")
             if namespace is None or key.startswith(namespace):
-                if isinstance(self._objects_map[key], list):
-                    for item in self._objects_map[key]:
-                        item.cleanup()
-                elif isinstance(self._objects_map[key], SharedMemoryNumpyObject):
-                    self._objects_map[key].cleanup()
+                # Note (spillai): We don't need to explicitly call `cleanup()` here
+                # as the shared memory segments are automatically cleaned up when
+                # the SharedMemoryNumpyObject is garbage collected.
                 del self._objects_map[key]
+                logger.debug(f"Removed shm segment [key={key}]")
 
     @staticmethod
     def copy(shm_map: Dict[str, Any], data: Dict[str, Any]) -> Dict[str, Any]:
@@ -189,6 +196,7 @@ class SharedMemoryTransportManager:
         assert len(data) > 0, "Data dict should not be empty."
 
         # Copy the data dict values to the shared memory segments i.e. memcpy(dest, src).
+        st = time.perf_counter()
         for key in shm_map.keys():
             assert key in data, f"Key {key} not found in data dict."
             if isinstance(data[key], list):
@@ -202,9 +210,9 @@ class SharedMemoryTransportManager:
                 # Move data from the data dict value to the shared memory segment.
                 shm_map[key].copy_from(data[key])
             else:
-                raise ValueError(f"Unsupported type: {type(data[key])}")
+                raise ValueError(f"Unsupported type [type={type(data[key])}]")
 
             # Overwrite the data dict value with the shared memory segments for transport.
             data[key] = shm_map[key]
-        logger.debug(f"Successfully copied inputs to shared memory: {shm_map.keys()}")
+        logger.debug(f"Copied inputs to shm [keys={shm_map.keys()}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         return data

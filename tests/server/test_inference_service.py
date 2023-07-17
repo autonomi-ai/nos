@@ -7,13 +7,13 @@ from PIL import Image
 
 from nos import hub
 from nos.common import TaskType, tqdm
+from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
 
 
-NOS_SHM_ENABLED = False
 pytestmark = pytest.mark.server
 
 
@@ -72,14 +72,41 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
         assert result is not None
 
 
-# @pytest.mark.parametrize("shm_enabled", [False, True])
-def test_inference_service_noop(grpc_client_with_cpu_backend):  # noqa: F811
+@pytest.mark.skipif(not NOS_SHM_ENABLED, reason="Shared memory transport is not enabled.")
+def test_shm_registry(local_grpc_client_with_server):  # noqa: F811
+    """Test shm registry with local server."""
+    shm_enabled = NOS_SHM_ENABLED
+
+    client = local_grpc_client_with_server
+    assert client is not None
+    assert client.IsHealthy()
+
+    # Load dummy image
+    img = Image.open(NOS_TEST_IMAGE)
+
+    # Load noop model
+    task, model_name = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # Test manually registering/unregistering shared memory regions
+    for _shape in [(224, 224), (640, 480), (1280, 720)]:
+        images = np.stack([np.asarray(img.resize(_shape)) for _ in range(8)])
+        inputs = {"images": images}
+        if shm_enabled:
+            model.RegisterSystemSharedMemory(inputs)
+            response = model(**inputs)
+            assert isinstance(response, dict)
+            model.UnregisterSystemSharedMemory()
+
+
+def test_inference_service_noop(grpc_client_with_gpu_backend):  # noqa: F811
     """Test inference service with shared memory transport."""
-    assert not NOS_SHM_ENABLED, "Shared memory transport is not supported yet. "
-    shm_enabled = False
+    shm_enabled = NOS_SHM_ENABLED
 
     # client = local_grpc_client_with_server
-    client = grpc_client_with_cpu_backend
+    client = grpc_client_with_gpu_backend
     assert client is not None
     assert client.IsHealthy()
 
@@ -99,6 +126,8 @@ def test_inference_service_noop(grpc_client_with_cpu_backend):  # noqa: F811
         # __call__(images: np.ndarray, 3-dim)
         inputs = {"images": np.asarray(img.resize(shape))}
         response = model(**inputs)
+        assert isinstance(response, dict)
+        assert "result" in response
 
         # __call__(images: List[np.ndarray], List of 3-dim)
         # This call should register a new shared memory region
@@ -129,19 +158,6 @@ def test_inference_service_noop(grpc_client_with_cpu_backend):  # noqa: F811
         inputs = {"images": [img.resize(shape)]}
         response = model(**inputs)
 
-    # Test manually registering/unregistering shared memory regions
-    if shm_enabled:
-        model.UnregisterSystemSharedMemory()  # unregister from previous test
-    for _shape in [(224, 224), (640, 480), (1280, 720)]:
-        images = np.vstack([np.asarray(img.resize(_shape)) for _ in range(8)])
-        inputs = {"images": images}
-        model.RegisterSystemSharedMemory(inputs)
-        response = model(**inputs)
-        assert isinstance(response, dict)
-        assert "result" in response
-        if shm_enabled:
-            model.UnregisterSystemSharedMemory()
-
     # TODO (spillai) Compare round-trip-times with and without shared memory transport
     # Note: This test is only valid for the local server.
 
@@ -150,11 +166,10 @@ BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (28
 
 
 # @pytest.mark.parametrize("client_with_server", ("docker-cpu", "docker-gpu"), indirect=True)
-# @pytest.mark.parametrize("shm_enabled", [False, True])
 @pytest.mark.benchmark
 @pytest.mark.parametrize("shape", BENCHMARK_IMAGE_SHAPES)
 @pytest.mark.parametrize("image_type", [Image.Image, np.ndarray])
-def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, image_type):  # noqa: F811
+def test_benchmark_inference_service_noop(local_grpc_client_with_server, shape, image_type):  # noqa: F811
     """Benchmark shared memory transport and inference between the client-server.
 
     Tests with 3 client-server configurations:
@@ -164,11 +179,10 @@ def test_benchmark_inference_service_noop(grpc_client_with_gpu_backend, shape, i
 
     Note: This test is only valid for the local server.
     """
-    assert not NOS_SHM_ENABLED, "Shared memory transport is not supported yet. "
-    shm_enabled = False
+    shm_enabled = NOS_SHM_ENABLED
 
-    # client = local_grpc_client_with_server
-    client = grpc_client_with_gpu_backend
+    client = local_grpc_client_with_server
+    # client = grpc_client_with_gpu_backend
     assert client is not None
     assert client.IsHealthy()
 

@@ -66,7 +66,8 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
 
     img = (np.random.rand(1, 224, 224, 3) * 255).astype(np.uint8)
     result = noop.remote(images=[img])
-    assert result is True
+    assert isinstance(result, list)
+    assert len(result) == 1
 
 
 @pytest.mark.benchmark

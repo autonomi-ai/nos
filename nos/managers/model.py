@@ -177,20 +177,20 @@ class ModelManager:
         # If the model already exists, raise an error
         model_id = spec.id
         if model_id in self.handlers:
-            raise ValueError(f"Model already exists: {model_id}")
+            raise ValueError(f"Model already exists [model_id={model_id}]")
 
         # If the model handle is full, pop the oldest model
         if len(self.handlers) >= self.max_concurrent_models:
             _handle: ModelHandle = self.evict()
-            logger.debug(f"Deleting oldest model: {_handle.spec.name}")
+            logger.debug(f"Deleting oldest model [model={_handle.spec.name}]")
 
         # Create the serve deployment from the model handle
-        logger.debug(f"Initializing model with spec: {spec.name}")
+        logger.debug(f"Initializing model with spec [model={spec.name}]")
 
         # Note: Currently one model per (model-name, task) is supported.
         self.handlers[model_id] = ModelHandle(spec)
-        logger.debug(f"Created actor: {self.handlers[model_id]}, type={type(self.handlers[model_id])}")
-        logger.debug(f"Models ({len(self.handlers)}): {self.handlers.keys()}")
+        logger.debug(f"Created actor [handle={self.handlers[model_id]}, type={type(self.handlers[model_id])}]")
+        logger.debug(f"Active models ({len(self.handlers)}): {list(self.handlers.keys())})")
 
         return self.handlers[model_id]
 
@@ -205,10 +205,10 @@ class ModelManager:
         assert len(self.handlers) > 0, "No models to evict."
         _, handle = self.handlers.popitem(last=False)
         model_id = handle.spec.id
-        logger.debug(f"Deleting model: {model_id}")
+        logger.debug(f"Deleting model [model_id={model_id}]")
 
         # Explicitly kill the model handle (including all actors)
         handle.kill()
-        logger.debug(f"Deleted model: {model_id}")
-        assert model_id not in self.handlers, f"Model should have been evicted: {model_id}"
+        logger.debug(f"Deleted model [model_id={model_id}]")
+        assert model_id not in self.handlers, f"Model should have been evicted [model_id={model_id}]"
         return handle

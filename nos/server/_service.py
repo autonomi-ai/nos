@@ -31,7 +31,7 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 def load_spec(model_name: str, task: TaskType) -> ModelSpec:
     """Get the model spec cache."""
     model_spec: ModelSpec = hub.load_spec(model_name, task=task)
-    logger.info(f"Loaded model spec: {model_spec}")
+    logger.info(f"Loaded model spec [task={model_spec.task.value}, name={model_spec.name}]")
     return model_spec
 
 
@@ -54,8 +54,9 @@ class InferenceService:
         try:
             self.executor.init()
         except Exception as e:
-            logger.info(f"Failed to initialize executor: {e}")
-            raise RuntimeError(f"Failed to initialize executor: {e}")
+            err_msg = f"Failed to initialize executor [e={e}]"
+            logger.info(err_msg)
+            raise RuntimeError(err_msg)
         if NOS_SHM_ENABLED:
             self.shm_manager = SharedMemoryTransportManager()
         else:
@@ -75,7 +76,7 @@ class InferenceService:
         try:
             model_spec: ModelSpec = load_spec(model_name, task=task)
         except Exception as e:
-            raise ModelNotFoundError(f"Failed to load model spec: {model_name}, {e}")
+            raise ModelNotFoundError(f"Failed to load model spec [model_name={model_name}, e={e}]")
 
         # TODO (spillai): Validate/Decode the inputs
         mid = time.perf_counter()
@@ -147,25 +148,35 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         try:
             model_info = request.request
             spec: ModelSpec = hub.load_spec(model_info.name, task=TaskType(model_info.task))
-            logger.debug(f"GetModelInfo(): {spec}")
+            logger.debug(f"GetModelInfo() [spec={spec}]")
         except KeyError as e:
-            logger.error(f"Failed to load spec: [request={request.request}, e={e}]")
+            logger.error(f"Failed to load spec [request={request.request}, e={e}]")
             context.abort(grpc.StatusCode.NOT_FOUND, str(e))
         return spec._to_proto(public=True)
 
     def RegisterSystemSharedMemory(
         self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
     ) -> nos_service_pb2.GenericResponse:
-        """Register system shared memory with a dry-run inference request."""
+        """Register system shared memory under a specific namespace `<client_id>/<object_id>`."""
         if not NOS_SHM_ENABLED:
             context.abort(grpc.StatusCode.UNIMPLEMENTED, "Shared memory not enabled.")
 
         metadata = dict(context.invocation_metadata())
         client_id = metadata.get("client_id", None)
-        spec_id = metadata.get("spec_id", None)
-        logger.debug(f"Registering system shared memory for client_id={client_id}, spec_id={spec_id}")
+        object_id = metadata.get("object_id", None)
+        namespace = f"{client_id}/{object_id}"
+        logger.debug(f"Registering shm [client_id={client_id}, object_id={object_id}]")
         try:
-            shm_map = self.shm_manager.create(loads(request.request_bytes), namespace=f"{client_id}/{spec_id}")
+            # Create a shared memory segment for the inputs
+            # Note: The returned keys for shared memory segments are identical to the
+            # keys in the input dictionary (i.e. <key>), and are not prefixed with the
+            # namespace `<client_id>/<object_id>`.
+            shm_map = self.shm_manager.create(loads(request.request_bytes), namespace=namespace)
+            # Here, dumps() is used to serialize the shared memory numy objects via __getstate__().
+            # The serialized data is then sent back to the client, which can then deserialized
+            # and set via __setstate__() on the client-side, so that the client can access the shared
+            # memory segments.
+            logger.debug(f"Registered shm [client_id={client_id}, object_id={object_id}, shm_map={shm_map}]")
             return nos_service_pb2.GenericResponse(response_bytes=dumps(shm_map))
         except Exception as e:
             logger.error(f"Failed to register system shared memory: {e}")
@@ -174,18 +185,22 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
     def UnregisterSystemSharedMemory(
         self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
     ) -> nos_service_pb2.GenericResponse:
-        """Unregister system shared memory."""
+        """Unregister system shared memory for specific namespace `<client_id>/<object_id>`."""
         if not NOS_SHM_ENABLED:
             context.abort(context, grpc.StatusCode.UNIMPLEMENTED, "Shared memory not enabled.")
 
         metadata = dict(context.invocation_metadata())
         client_id = metadata.get("client_id", None)
-        spec_id = metadata.get("spec_id", None)
-        logger.debug(f"Unregistering system shared memory for client_id={client_id}, spec_id={spec_id}")
+        object_id = metadata.get("object_id", None)
+        namespace = f"{client_id}/{object_id}"
+        # TODO (spillai): Currently, we can ignore the `shm_objects_name_map` provided
+        # by the client, since all the shared memory segments under the namespace are deleted.
+        loads(request.request_bytes)
+        logger.debug(f"Unregistering shm [client_id={client_id}, object_id={object_id}]")
         try:
-            self.shm_manager.cleanup(namespace=f"{client_id}/{spec_id}")
+            self.shm_manager.cleanup(namespace=namespace)
         except Exception as e:
-            logger.error(f"Failed to unregister system shared memory: {e}")
+            logger.error(f"Failed to unregister shm [e{e}]")
             context.abort(grpc.StatusCode.INTERNAL, str(e))
         return nos_service_pb2.GenericResponse()
 
@@ -194,7 +209,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
     ) -> nos_service_pb2.InferenceResponse:
         """Main model prediction interface."""
         model_request = request.model
-        logger.debug(f"Received request: {model_request.task}, {model_request.name}")
+        logger.debug(f"Received request [task={model_request.task}, model={model_request.name}]")
         if model_request.task not in (
             TaskType.IMAGE_GENERATION.value,
             TaskType.IMAGE_EMBEDDING.value,
@@ -203,18 +218,18 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             TaskType.IMAGE_SEGMENTATION_2D.value,
             TaskType.CUSTOM.value,
         ):
-            context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid task {model_request.task}")
+            context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid task [task={model_request.task}]")
 
         try:
             st = time.perf_counter()
-            logger.info(f"Executing request [task={model_request.task}, name={model_request.name}]")
+            logger.info(f"Executing request [task={model_request.task}, model={model_request.name}]")
             response = self.execute(model_request.name, task=TaskType(model_request.task), inputs=request.inputs)
             logger.info(
                 f"Executed request [task={model_request.task}, model={model_request.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )
             return nos_service_pb2.InferenceResponse(response_bytes=dumps(response))
         except (grpc.RpcError, Exception) as e:
-            msg = f"Failed to execute request: [task={model_request.task}, model={model_request.name}]"
+            msg = f"Failed to execute request [task={model_request.task}, model={model_request.name}]"
             msg += f"{traceback.format_exc()}"
             logger.error(f"{msg}, e={e}")
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
