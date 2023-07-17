@@ -12,6 +12,7 @@ services:
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
+    ipc: host
     deploy:
       resources:
         limits:

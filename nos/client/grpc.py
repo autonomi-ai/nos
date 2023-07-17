@@ -417,15 +417,19 @@ class InferenceModule:
         logger.debug(f"Registering shm [request={shm_request}]")
 
         # Request shared memory, fail gracefully if not supported
-        response = self.stub.RegisterSystemSharedMemory(
-            nos_service_pb2.GenericRequest(request_bytes=dumps(shm_request)),
-            metadata=[("client_id", self.client_id), ("object_id", self.object_id)],
-        )
+        try:
+            response = self.stub.RegisterSystemSharedMemory(
+                nos_service_pb2.GenericRequest(request_bytes=dumps(shm_request)),
+                metadata=[("client_id", self.client_id), ("object_id", self.object_id)],
+            )
 
-        # Register the shared memory objects by name on the client
-        # Note (spillai): This calls __setstate__ on the SharedMemoryNumpyObject
-        self._shm_objects = loads(response.response_bytes)
-        logger.debug(f"Registered shm [namespace={self.namespace}, objects={self._shm_objects}]")
+            # Register the shared memory objects by name on the client
+            # Note (spillai): This calls __setstate__ on the SharedMemoryNumpyObject
+            self._shm_objects = loads(response.response_bytes)
+            logger.debug(f"Registered shm [namespace={self.namespace}, objects={self._shm_objects}]")
+        except grpc.RpcError as e:
+            logger.error(f"Failed to register shm [request={shm_request}], error: {e.details()}")
+            raise NosClientException(f"Failed to register shm [request={shm_request}]", e)
 
     def UnregisterSystemSharedMemory(self) -> None:
         """Unregister system shared memory."""
@@ -440,14 +444,18 @@ class InferenceModule:
                 v.close()
 
             # Unregister the shared memory objects on the server
-            self.stub.UnregisterSystemSharedMemory(
-                nos_service_pb2.GenericRequest(request_bytes=dumps(shm_objects_name_map)),
-                metadata=[("client_id", self.client_id), ("object_id", self.object_id)],
-            )
-            logger.debug(f"Unregistered shm [{self._shm_objects}]")
+            try:
+                self.stub.UnregisterSystemSharedMemory(
+                    nos_service_pb2.GenericRequest(request_bytes=dumps(shm_objects_name_map)),
+                    metadata=[("client_id", self.client_id), ("object_id", self.object_id)],
+                )
 
-            # Delete the shared memory objects after safely closing (client-side) and unregistering them (server-side).
-            self._shm_objects = {}
+                # Delete the shared memory objects after safely closing (client-side) and unregistering them (server-side).
+                self._shm_objects = {}
+                logger.debug(f"Unregistered shm [{self._shm_objects}]")
+            except grpc.RpcError as e:
+                logger.error(f"Failed to unregister shm [{self._shm_objects}], error: {e.details()}")
+                raise NosClientException(f"Failed to unregister shm [{self._shm_objects}]", e)
 
     def __call__(self, **inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Call the instantiated module/model.
@@ -466,7 +474,7 @@ class InferenceModule:
         st = time.perf_counter()
         inputs = self._encode(inputs)
         if NOS_PROFILING_ENABLED:
-            logger.debug(f"Encoded inputs, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms")
+            logger.debug(f"Encoded inputs [id={self.object_id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         request = nos_service_pb2.InferenceRequest(
             model=nos_service_pb2.ModelInfo(
                 task=self.task.value,
@@ -475,14 +483,19 @@ class InferenceModule:
             inputs=inputs,
         )
         try:
-            mid = time.perf_counter()
+            st = time.perf_counter()
+            logger.debug(f"Executing request [id={self.object_id}]]")
             response = self.stub.Run(request)
             if NOS_PROFILING_ENABLED:
-                logger.debug(f"Executed request, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
+                logger.debug(
+                    f"Executed request [id={self.object_id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                )
+
+            st = time.perf_counter()
             response = self._decode(response.response_bytes)
             response = {k: loads(v) for k, v in response.items()}
             if NOS_PROFILING_ENABLED:
-                logger.debug(f"Decoded response, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms")
+                logger.debug(f"Decoded response [elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
             return response
         except grpc.RpcError as e:
             logger.error(

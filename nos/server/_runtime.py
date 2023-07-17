@@ -62,6 +62,9 @@ class InferenceServiceRuntimeConfig:
     shm_size: str = "4g"
     """Size of /dev/shm."""
 
+    ipc_mode: str = "host"
+    """IPC mode."""
+
     detach: bool = True
     """Whether to run the container in detached mode."""
 
@@ -173,6 +176,7 @@ class InferenceServiceRuntime:
             volumes=self.cfg.volumes,
             detach=self.cfg.detach,
             gpu=self.cfg.gpu,
+            ipc_mode=self.cfg.ipc_mode,
             **self.cfg.kwargs,
         )
         logger.debug(f"Started inference runtime: {self}")

@@ -1,4 +1,5 @@
 import contextlib
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -78,7 +79,7 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
     ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),
 )
 def test_shm_registry(client_with_server, request):  # noqa: F811
-    """Test shm registry with local server."""
+    """Test shm registry."""
     shm_enabled = NOS_SHM_ENABLED
 
     client = request.getfixturevalue(client_with_server)
@@ -100,9 +101,20 @@ def test_shm_registry(client_with_server, request):  # noqa: F811
         inputs = {"images": images}
         if shm_enabled:
             model.RegisterSystemSharedMemory(inputs)
-            response = model(**inputs)
-            assert isinstance(response, dict)
+        response = model(**inputs)
+        assert isinstance(response, dict)
+        if shm_enabled:
             model.UnregisterSystemSharedMemory()
+
+    # Repeatedly register/unregister shared memory regions
+    # so that we can test the shared memory registry.
+    shm_files = list(Path("/dev/shm/").rglob("nos_psm_*"))
+    assert len(shm_files) == 0
+    for _ in range(10):
+        model.RegisterSystemSharedMemory(inputs)
+        model.UnregisterSystemSharedMemory()
+        shm_files = list(Path("/dev/shm/").rglob("nos_psm_*"))
+        assert len(shm_files) == 0, "Expected no shared memory regions, but found some."
 
 
 @pytest.mark.parametrize(
@@ -178,7 +190,7 @@ BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (28
     ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),
 )
 @pytest.mark.parametrize("shape", BENCHMARK_IMAGE_SHAPES)
-@pytest.mark.parametrize("image_type", [Image.Image, np.ndarray])
+@pytest.mark.parametrize("image_type", [np.ndarray, Image.Image])
 def test_benchmark_inference_service_noop(client_with_server, shape, image_type, request):  # noqa: F811
     """Benchmark shared memory transport and inference between the client-server.
 
@@ -198,6 +210,7 @@ def test_benchmark_inference_service_noop(client_with_server, shape, image_type,
     # Load dummy image
     img = Image.open(NOS_TEST_IMAGE)
     img = img.resize(shape)
+    nbytes = shape[0] * shape[1] * 3
     if image_type == np.ndarray:
         img = np.asarray(img)
         assert img.shape[:2][::-1] == shape
@@ -215,8 +228,12 @@ def test_benchmark_inference_service_noop(client_with_server, shape, image_type,
     assert model.GetModelInfo() is not None
 
     # Benchmark (10s)
-    for b in range(8):
+    for b in (0, 4, 8):
         B = 2**b
+
+        # Skip if batched images are >= 512 MB
+        if B * nbytes >= 512 * 1024**2:
+            continue
 
         # Prepare inputs
         if isinstance(img, np.ndarray):
@@ -241,8 +258,8 @@ def test_benchmark_inference_service_noop(client_with_server, shape, image_type,
 
         # Benchmark no-op inference
         for _ in tqdm(
-            duration=10,
-            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={shape}, type={image_type}]",
+            duration=5,
+            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={shape}, size={(B * nbytes) / 1024 ** 2:.1f}MB, type={image_type}]",
             unit="images",
             unit_scale=B,
             total=0,
