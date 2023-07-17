@@ -79,17 +79,17 @@ class InferenceService:
             raise ModelNotFoundError(f"Failed to load model spec [model_name={model_name}, e={e}]")
 
         # TODO (spillai): Validate/Decode the inputs
-        mid = time.perf_counter()
+        st = time.perf_counter()
         model_inputs = FunctionSignature.validate(inputs, model_spec.signature.inputs)
         model_inputs = SharedMemoryDataDict.decode(model_inputs)
-        # model_inputs = model_spec.signature._decode_inputs(inputs)
-        model_inputs_types = [
-            f"{k}: List[type={type(v[0])}, len={len(v)}]" if isinstance(v, list) else str(type(v))
-            for k, v in model_inputs.items()
-        ]
-        logger.debug(
-            f"Decoded inputs [inputs=({', '.join(model_inputs_types)}), elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms]"
-        )
+        if NOS_PROFILING_ENABLED:
+            model_inputs_types = [
+                f"{k}: List[type={type(v[0])}, len={len(v)}]" if isinstance(v, list) else str(type(v))
+                for k, v in model_inputs.items()
+            ]
+            logger.debug(
+                f"Decoded inputs [inputs=({', '.join(model_inputs_types)}), elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            )
 
         # Initialize the model (if not already initialized)
         # This call should also evict models and garbage collect if
@@ -97,16 +97,20 @@ class InferenceService:
         model_handle: ModelHandle = self.model_manager.get(model_spec)
 
         # Get the model handle and call it remotely (with model spec, actor handle)
-        mid = time.perf_counter()
+        st = time.perf_counter()
         response: Dict[str, Any] = model_handle.remote(**model_inputs)
-        logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - mid) * 1e3:.1f}ms]")
+        if NOS_PROFILING_ENABLED:
+            logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         # If the response is a single value, wrap it in a dict with the appropriate key
         if len(model_spec.signature.outputs) == 1:
             response = {k: response for k in model_spec.signature.outputs}
 
         # Encode the response
+        st = time.perf_counter()
         response = SharedMemoryDataDict.encode(response)
+        if NOS_PROFILING_ENABLED:
+            logger.debug(f"Encoded response [elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         return response
 
@@ -193,9 +197,8 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         client_id = metadata.get("client_id", None)
         object_id = metadata.get("object_id", None)
         namespace = f"{client_id}/{object_id}"
-        # TODO (spillai): Currently, we can ignore the `shm_objects_name_map` provided
+        # TODO (spillai): Currently, we can ignore the `request` provided
         # by the client, since all the shared memory segments under the namespace are deleted.
-        loads(request.request_bytes)
         logger.debug(f"Unregistering shm [client_id={client_id}, object_id={object_id}]")
         try:
             self.shm_manager.cleanup(namespace=namespace)
@@ -209,7 +212,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
     ) -> nos_service_pb2.InferenceResponse:
         """Main model prediction interface."""
         model_request = request.model
-        logger.debug(f"Received request [task={model_request.task}, model={model_request.name}]")
+        logger.debug(f"=> Received request [task={model_request.task}, model={model_request.name}]")
         if model_request.task not in (
             TaskType.IMAGE_GENERATION.value,
             TaskType.IMAGE_EMBEDDING.value,

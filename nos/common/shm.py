@@ -14,7 +14,7 @@ from nos.common.types import TensorSpec
 from nos.logging import logger
 
 
-NOS_SHM_ENABLED = bool(int(os.environ.get("NOS_SHM_ENABLED", 0)))
+NOS_SHM_ENABLED = bool(int(os.environ.get("NOS_SHM_ENABLED", 1)))
 
 
 @dataclass
@@ -36,6 +36,7 @@ class SharedMemoryNumpyObject:
     """Shared memory  mode"""
     _shm: SharedMemory = field(init=False, default=None)
     """Shared memory object"""
+    _shm_arr: np.ndarray = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         # Set user-level permissions on the shared memory object
@@ -47,6 +48,8 @@ class SharedMemoryNumpyObject:
         os.chown(self._shm._fd, 1000, 1000)
         os.chmod(self._shm._fd, 0o666)
         self.mode = "w"
+        # Create a numpy array view of the shared memory object
+        self._shm_arr = np.ndarray(shape=self.shape, dtype=self.dtype, buffer=self._shm.buf)
 
     def __repr__(self) -> str:
         """Return the shared memory object representation."""
@@ -71,20 +74,24 @@ class SharedMemoryNumpyObject:
         assert isinstance(state["dtype"], str)
         self.dtype = np.dtype(state["dtype"])
         self.mode = "r"
+        # Create a numpy array view of the shared memory object
+        self._shm_arr = np.ndarray(shape=self.shape, dtype=self.dtype, buffer=self._shm.buf)
 
     def cleanup(self) -> None:
         """Close and unlink the shared memory object (server-side / writer)."""
         self._shm.close()
         self._shm.unlink()
+        self._shm_arr = None
 
     def close(self) -> None:
         """Close the shared memory object (client-side / reader)."""
-        self._shm.close()
         # Note (spillai): We need to explicitly call `unregister()` here
         # to avoid the resource tracker from raising a UserWarning about leaked
         # resources. This is because the shared memory implementation in Python
         # assumes that all clients of a segment are child processes from a single
         # parent, and that they inherit the same resource_tracker.
+        self._shm.close()
+        self._shm_arr = None
         resource_tracker.unregister(self._shm._name, "shared_memory")
 
     @property
@@ -96,15 +103,11 @@ class SharedMemoryNumpyObject:
         """Copy data from the numpy array to shared memory object."""
         assert arr.shape == self.shape, f"Array shape {arr.shape} does not match shared memory shape {self.shape}"
         assert arr.dtype == self.dtype, f"Array dtype {arr.dtype} does not match shared memory dtype {self.dtype}"
-        target: np.ndarray = np.ndarray(arr.shape, dtype=arr.dtype, buffer=self._shm.buf)
-        target[:] = arr[:]
+        self._shm_arr[:] = arr[:]
 
     def get(self) -> np.ndarray:
         """Get the numpy array from the shared memory object ."""
-        src: np.ndarray = np.ndarray(shape=self.shape, dtype=self.dtype, buffer=self._shm.buf)
-        target = src.copy()
-        del src
-        return target
+        return self._shm_arr.copy()
 
 
 class SharedMemoryDataDict:
@@ -120,13 +123,16 @@ class SharedMemoryDataDict:
         is called when the object is unpickled, and it creates a new SharedMemoryNumpyObject
         instance with the given name, shape and dtype.
         """
+        st = time.perf_counter()
         data = {k: loads(v) for k, v in data.items()}
+        logger.debug(f"Loaded shm dict [elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         if NOS_SHM_ENABLED:
-            shm_keys = {k for k, v in data.items() if isinstance(v, SharedMemoryNumpyObject)}
-            if not len(shm_keys):
-                return data
             st = time.perf_counter()
-            data.update({k: data[k].get() for k in shm_keys})
+            shm_keys = set()
+            for k, v in data.items():
+                if isinstance(v, SharedMemoryNumpyObject):
+                    data[k] = v.get()
+                    shm_keys.add(k)
             logger.debug(f"Decoded shm data [keys={shm_keys}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         return data
 
@@ -149,15 +155,11 @@ class SharedMemoryTransportManager:
     def __post_init__(self) -> None:
         """Initialize the shared memory transport manager."""
         logger.debug("Initializing shared memory transport manager")
-        # self._shm_manager = SharedMemoryManager()
-        # self._shm_manager.start()
 
     def __del__(self) -> None:
         """Cleanup the shared memory transport manager."""
         logger.debug("Cleaning up shared memory transport manager")
         self.cleanup()
-        # self._shm_manager.shutdown()
-        # self._shm_manager = None
 
     def create(self, data: Dict[str, Any], namespace: Optional[str] = None) -> Dict[str, Any]:
         """Create a shared memory segment for the data dictionary.
@@ -182,9 +184,6 @@ class SharedMemoryTransportManager:
             full_key = f"{namespace}/{key}"
             assert full_key not in self._objects_map, f"Shared memory segment {full_key} already exists."
 
-            # Convert np.uint8 -> "uint8"
-            # dtype = str(value.dtype)
-
             if isinstance(value, TensorSpec):
                 objects_map[key] = SharedMemoryNumpyObject(
                     value.nbytes,
@@ -205,10 +204,10 @@ class SharedMemoryTransportManager:
         for key in list(self._objects_map.keys()):
             logger.debug(f"Cleaning up shm segment [key={key}]")
             if namespace is None or key.startswith(namespace):
-                # Note (spillai): We don't need to explicitly call `cleanup()` here
-                # as the shared memory segments are automatically cleaned up when
-                # the SharedMemoryNumpyObject is garbage collected.
-                # self._objects_map[key].cleanup()
+                # Note (spillai): We need to explicitly call `cleanup()` here
+                # as the shared memory segments in order to clean up the shared
+                # memory segments immediately after being unregistered.
+                self._objects_map[key].cleanup()
                 del self._objects_map[key]
                 logger.debug(f"Removed shm segment [key={key}]")
 

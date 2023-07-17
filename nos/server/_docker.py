@@ -123,7 +123,6 @@ class DockerRuntime:
                 command=command,
                 name=name,
                 device_requests=device_requests,
-                ipc_mode="host",
                 **kwargs,
             )
             logger.debug(f"Started container [name={name}, image={container.image}, id={container.id[:12]}]")
