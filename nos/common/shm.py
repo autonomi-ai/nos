@@ -2,9 +2,9 @@ import os
 import secrets
 import time
 from dataclasses import dataclass, field
+from multiprocessing import resource_tracker
 from multiprocessing.managers import SharedMemoryManager
 from multiprocessing.shared_memory import SharedMemory
-from multiprocessing import resource_tracker
 from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
@@ -20,7 +20,7 @@ NOS_SHM_ENABLED = bool(int(os.environ.get("NOS_SHM_ENABLED", 0)))
 @dataclass
 class SharedMemoryNumpyObject:
     """Shared memory object wrapping numpy array.
-    
+
     Shared memory objects are updated with user-permissions (0666) under
     /dev/shm/nos_psm_<random_hex_string> and are automatically cleaned up
     when the object is garbage collected.
@@ -73,18 +73,18 @@ class SharedMemoryNumpyObject:
         self.mode = "r"
 
     def cleanup(self) -> None:
-        """Close and unlink the shared memory object."""
+        """Close and unlink the shared memory object (server-side / writer)."""
         self._shm.close()
         self._shm.unlink()
 
     def close(self) -> None:
-        """Close the shared memory object."""
+        """Close the shared memory object (client-side / reader)."""
         self._shm.close()
         # Note (spillai): We need to explicitly call `unregister()` here
-        # to avoid the resource tracker from raising a UserWarning about leaked 
+        # to avoid the resource tracker from raising a UserWarning about leaked
         # resources. This is because the shared memory implementation in Python
         # assumes that all clients of a segment are child processes from a single
-        # parent, and that they inherit the same resource_tracker. 
+        # parent, and that they inherit the same resource_tracker.
         resource_tracker.unregister(self._shm._name, "shared_memory")
 
     @property

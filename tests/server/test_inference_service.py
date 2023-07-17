@@ -73,12 +73,15 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
 
 
 @pytest.mark.skipif(not NOS_SHM_ENABLED, reason="Shared memory transport is not enabled.")
-def test_shm_registry(grpc_client_with_gpu_backend):  # noqa: F811
+@pytest.mark.parametrize(
+    "client_with_server",
+    ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),
+)
+def test_shm_registry(client_with_server, request):  # noqa: F811
     """Test shm registry with local server."""
     shm_enabled = NOS_SHM_ENABLED
 
-    # client = local_grpc_client_with_server
-    client = grpc_client_with_gpu_backend
+    client = request.getfixturevalue(client_with_server)
     assert client is not None
     assert client.IsHealthy()
 
@@ -102,12 +105,15 @@ def test_shm_registry(grpc_client_with_gpu_backend):  # noqa: F811
             model.UnregisterSystemSharedMemory()
 
 
-def test_inference_service_noop(grpc_client_with_gpu_backend):  # noqa: F811
+@pytest.mark.parametrize(
+    "client_with_server",
+    ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),
+)
+def test_inference_service_noop(client_with_server, request):  # noqa: F811
     """Test inference service with shared memory transport."""
     shm_enabled = NOS_SHM_ENABLED
 
-    # client = local_grpc_client_with_server
-    client = grpc_client_with_gpu_backend
+    client = request.getfixturevalue(client_with_server)
     assert client is not None
     assert client.IsHealthy()
 
@@ -166,11 +172,14 @@ def test_inference_service_noop(grpc_client_with_gpu_backend):  # noqa: F811
 BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (2880, 1620), (3840, 2160)]
 
 
-# @pytest.mark.parametrize("client_with_server", ("docker-cpu", "docker-gpu"), indirect=True)
 @pytest.mark.benchmark
+@pytest.mark.parametrize(
+    "client_with_server",
+    ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),
+)
 @pytest.mark.parametrize("shape", BENCHMARK_IMAGE_SHAPES)
 @pytest.mark.parametrize("image_type", [Image.Image, np.ndarray])
-def test_benchmark_inference_service_noop(local_grpc_client_with_server, shape, image_type):  # noqa: F811
+def test_benchmark_inference_service_noop(client_with_server, shape, image_type, request):  # noqa: F811
     """Benchmark shared memory transport and inference between the client-server.
 
     Tests with 3 client-server configurations:
@@ -182,8 +191,7 @@ def test_benchmark_inference_service_noop(local_grpc_client_with_server, shape, 
     """
     shm_enabled = NOS_SHM_ENABLED
 
-    client = local_grpc_client_with_server
-    # client = grpc_client_with_gpu_backend
+    client = request.getfixturevalue(client_with_server)
     assert client is not None
     assert client.IsHealthy()
 
