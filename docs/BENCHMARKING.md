@@ -1,0 +1,14 @@
+# 🛠️ Benchmarking + Profiling
+
+1. **Memory profiling with Memray**
+
+    Ray supports memory profiling through `memray`, 
+    which is included in the server requirements. Each model
+    that is executed should produce its own `$MODEL_NAME_mem_profile.bin`
+    file that can be downloaded from the Ray dashboard for 
+    offline visualization. After starting the GPU server, go to
+
+    Then run
+    ```bash
+    memray flamegraph $MODEL_NAME_mem_profile.bin
+    ```
