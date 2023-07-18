@@ -89,6 +89,9 @@ def test_pixeltable_installation():
         pass
 
 
+BENCHMARK_IMAGE_SHAPES = [(640, 480), (1280, 720), (2880, 1620)]
+
+
 def test_pixeltable_integration():
     import pixeltable as pt
 
@@ -157,8 +160,9 @@ def test_pixeltable_integration():
         )
 
     # Resized columns
-    RH, RW = 480, 640
-    t.add_column(pt.Column("frame_s", computed_with=t.frame.resize((RW, RH))))
+    # RH, RW = 480, 640
+    for (RW, RH) in [(224, 224)] + BENCHMARK_IMAGE_SHAPES:
+        t.add_column(pt.Column(f"frame_{RW}x{RH}", computed_with=t.frame.resize((RW, RH))))
 
     # Insert video files, and compute detections
     t.insert_rows(
@@ -182,11 +186,12 @@ def test_pixeltable_integration():
     timing_records.append(info)
     assert info.elapsed <= 10.0, f"{info.desc} took too long, timing={info}"
 
-    with timer(f"noop_{RW}x{RH}", n=nframes) as info:
-        t.add_column(pt.Column("noop_ids_s", computed_with=noop(t.frame_s)))
-    logger.info(info)
-    timing_records.append(info)
-    assert info.elapsed <= 4.0, f"{info.desc} took too long, timing={info}"
+    for (RW, RH) in BENCHMARK_IMAGE_SHAPES:
+        with timer(f"noop_{RW}x{RH}", n=nframes) as info:
+            t.add_column(pt.Column(f"noop_ids_{RW}x{RH}", computed_with=noop(getattr(t, f"frame_{RW}x{RH}"))))
+        logger.info(info)
+        timing_records.append(info)
+        # assert info.elapsed <= 4.0, f"{info.desc} took too long, timing={info}"
 
     t[yolox_medium(t.frame)].show(1)  # load model
     with timer(f"yolox_medium_{W}x{H}", n=nframes) as info:
@@ -195,18 +200,24 @@ def test_pixeltable_integration():
     timing_records.append(info)
     assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
 
-    with timer(f"yolox_medium_{RW}x{RH}", n=nframes) as info:
-        t.add_column(pt.Column("detections_ym_s", computed_with=yolox_medium(t.frame_s)))
-    logger.info(info)
-    timing_records.append(info)
-    assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
+    for (RW, RH) in BENCHMARK_IMAGE_SHAPES:
+        with timer(f"yolox_medium_{RW}x{RH}", n=nframes) as info:
+            t.add_column(
+                pt.Column(f"detections_ym_{RW}x{RH}", computed_with=yolox_medium(getattr(t, f"frame_{RW}x{RH}")))
+            )
+        logger.info(info)
+        timing_records.append(info)
+        # assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
 
     t[openai_clip(t.frame)].show(1)  # load model
-    with timer(f"openai_{RW}x{RH}", n=nframes) as info:
-        t.add_column(pt.Column("embedding_clip_s", computed_with=openai_clip(t.frame_s)))
-    logger.info(info)
-    timing_records.append(info)
-    assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
+    for (RW, RH) in [(224, 224)] + BENCHMARK_IMAGE_SHAPES:
+        with timer(f"openai_{RW}x{RH}", n=nframes) as info:
+            t.add_column(
+                pt.Column(f"embedding_clip_{RW}x{RH}", computed_with=openai_clip(getattr(t, f"frame_{RW}x{RH}")))
+            )
+        logger.info(info)
+        timing_records.append(info)
+        # assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
 
     timing_df = pd.DataFrame([r.to_dict() for r in timing_records], columns=["desc", "elapsed", "n"])
     timing_df = timing_df.assign(

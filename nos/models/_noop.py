@@ -14,7 +14,7 @@ class NoOp:
     def process_images(
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
     ) -> Dict[str, np.ndarray]:
-        if isinstance(images, (Image.Image, np.ndarray)):
+        if (isinstance(images, np.ndarray) and images.ndim == 3) or isinstance(images, Image.Image):
             images = [images]
         return list(range(len(images)))
 

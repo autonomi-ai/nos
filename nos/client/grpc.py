@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List
 import grpc
 import numpy as np
 from google.protobuf import empty_pb2
+from PIL import Image
 
 from nos.client.exceptions import NosClientException
 from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps, loads
@@ -337,9 +338,12 @@ class InferenceModule:
 
         # Encode List[np.ndarray] as stacked np.ndarray (B, H, W, C)
         for k, v in inputs.items():
-            if isinstance(v, list) and isinstance(v[0], np.ndarray):
+            if isinstance(v, Image.Image):
+                inputs[k] = np.asarray(v)
+            elif isinstance(v, list) and isinstance(v[0], Image.Image):
+                inputs[k] = np.stack([np.asarray(_v) for _v in v], axis=0)
+            elif isinstance(v, list) and isinstance(v[0], np.ndarray):
                 inputs[k] = np.stack(v, axis=0)
-            # TODO (spillai): Add stacked PIL -> np.ndarray conversion
 
         # Optionally, create/register shm and copy over numpy arrays to shm
         if self._shm_objects is not None:
@@ -429,7 +433,7 @@ class InferenceModule:
             logger.debug(f"Registered shm [namespace={self.namespace}, objects={self._shm_objects}]")
         except grpc.RpcError as e:
             logger.error(f"Failed to register shm [request={shm_request}], error: {e.details()}")
-            raise NosClientException(f"Failed to register shm [request={shm_request}]", e)
+            raise NosClientException(f"Failed to register shm [request={shm_request}, e={e.details()}]", e)
 
     def UnregisterSystemSharedMemory(self) -> None:
         """Unregister system shared memory."""
@@ -449,7 +453,6 @@ class InferenceModule:
                     nos_service_pb2.GenericRequest(request_bytes=dumps(shm_objects_name_map)),
                     metadata=[("client_id", self.client_id), ("object_id", self.object_id)],
                 )
-
                 # Delete the shared memory objects after safely closing (client-side) and unregistering them (server-side).
                 self._shm_objects = {}
                 logger.debug(f"Unregistered shm [{self._shm_objects}]")
