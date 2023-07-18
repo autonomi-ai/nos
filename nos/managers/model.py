@@ -12,6 +12,8 @@ from nos.logging import logger
 
 import memray
 
+NOS_MEMRAY_ENABLE = os.getenv("NOS_MEMRAY_ENABLE")
+
 @dataclass
 class ModelHandle:
     """Model handles for model execution.
@@ -73,10 +75,11 @@ class ModelHandle:
         # Add some memory logs to this actor
         actor_cls = ray.remote(**actor_options)(model_cls)
         flattened_name = spec.name.replace("/", "_")
-        memray.Tracker(
-            "/tmp/ray/session_latest/logs/"
-            f"{flattened_name}_mem_profile.bin"
-        ).__enter__()
+        if NOS_MEMRAY_ENABLE:
+            memray.Tracker(
+                "/tmp/ray/session_latest/logs/"
+                f"{flattened_name}_mem_profile.bin"
+            ).__enter__()
         return actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
 
     def kill(self) -> None:

@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
 NOS_RAY_RUNTIME_ENV = os.getenv("NOS_RAY_ENV", None)
 NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
+NOS_DASHBOARD_ENABLE = os.getenv("NOS_DASHBOARD_ENABLE")
 
 
 @dataclass
@@ -96,11 +97,11 @@ class RayExecutor:
                         address="auto",
                         namespace=self.spec.namespace,
                         ignore_reinit_error=True,
-                        include_dashboard=True,
+                        include_dashboard=NOS_DASHBOARD_ENABLE,
                         configure_logging=True,
                         logging_level=logging.ERROR,
                         log_to_driver=level <= logging.ERROR,
-                        dashboard_host="0.0.0.0",
+                        dashboard_host="0.0.0.0" if NOS_DASHBOARD_ENABLE else None,
                     )
                     status.stop()
                     console.print("[bold green] ✓ InferenceExecutor :: Connected to backend. [/bold green]")
@@ -143,11 +144,10 @@ class RayExecutor:
                     namespace=self.spec.namespace,
                     object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                     ignore_reinit_error=False,
-                    include_dashboard=True,
+                    include_dashboard=False,
                     configure_logging=True,
                     logging_level=logging.ERROR,
                     log_to_driver=level <= logging.ERROR,
-                    dashboard_host="0.0.0.0",
                 )
                 logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - st:.2f}s)")
                 status.stop()
