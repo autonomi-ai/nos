@@ -186,12 +186,16 @@ def test_inference_service_noop(client_with_server, request):  # noqa: F811
 
 
 BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 8)]
-BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (2880, 1620)]
+BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (2880, 1620)]
 BENCHMARK_MODELS = [
-    (TaskType.CUSTOM, "noop/process-images"),
-    (TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32"),
-    (TaskType.OBJECT_DETECTION_2D, "yolox/medium"),
-    (TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"),
+    (TaskType.CUSTOM, "noop/process-images", [(224, 224), (640, 480), (1280, 720), (2880, 1620)]),
+    (TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32", [(224, 224), (640, 480)]),
+    (TaskType.OBJECT_DETECTION_2D, "yolox/medium", [(640, 480), (1280, 720), (2880, 1620)]),
+    (
+        TaskType.OBJECT_DETECTION_2D,
+        "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
+        [(640, 480), (1280, 720), (2880, 1620)],
+    ),
 ]
 BENCHMARK_IMAGE_TYPES = [np.ndarray, Image.Image]
 
@@ -212,6 +216,8 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
 
     Note: This test is only valid for the local server.
     """
+    pd.set_option("display.max_rows", 500)
+
     shm_enabled = NOS_SHM_ENABLED
 
     client = request.getfixturevalue(client_with_server)
@@ -220,13 +226,13 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
 
     # Load model
     timing_records = []
-    for (task, model_name) in BENCHMARK_MODELS:
+    for (task, model_name, shapes) in BENCHMARK_MODELS:
         model = client.Module(task=task, model_name=model_name)
         assert model is not None
         assert model.GetModelInfo() is not None
 
         # Benchmark
-        for (image_type, shape, B) in product(BENCHMARK_IMAGE_TYPES, BENCHMARK_IMAGE_SHAPES, BENCHMARK_BATCH_SIZES):
+        for (image_type, shape, B) in product(BENCHMARK_IMAGE_TYPES, shapes, BENCHMARK_BATCH_SIZES):
             # Load dummy image
             img = Image.open(NOS_TEST_IMAGE)
             img = img.resize(shape)
@@ -287,12 +293,15 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
                     n=B * nbatches,
                     elapsed=duration,
                     shape=shape,
-                    image_type=image_type,
-                    backend=client_with_server,
+                    image_type=image_type.__name__,
                 )
             )
             if shm_enabled:
                 model.UnregisterSystemSharedMemory()
+
+    # Save timing records
+    backend = "gpu" if "gpu" in client_with_server else "cpu"
+    date_str = datetime.utcnow().strftime("%Y%m%d")
 
     # Print timing records
     timing_df = pd.DataFrame(
@@ -302,16 +311,16 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
         elapsed=lambda x: x.elapsed.round(2),
         latency_ms=lambda x: ((x.elapsed / x.n) * 1000).round(2),
         fps=lambda x: (1 / (x.elapsed / x.n)).round(2),
+        date=date_str,
+        backend=backend,
+        version=nos.__version__,
     )
     logger.info(f"\nTiming records\n{timing_df}")
 
-    # Save timing records
-    backend = "gpu" if "gpu" in client_with_server else "cpu"
-    version_str = nos.__version__.replace(".", "-")
-    date_str = datetime.utcnow().strftime("%Y%m%d")
     NOS_DIR = Path(nos.__file__).parent.parent / ".nos"
     NOS_BENCHMARK_DIR = NOS_DIR / "benchmark"
     NOS_BENCHMARK_DIR.mkdir(parents=True, exist_ok=True)
+    version_str = nos.__version__.replace(".", "-")
     profile_path = Path(NOS_BENCHMARK_DIR) / f"nos-{backend}-inference-benchmark--{version_str}--{date_str}.json"
     timing_df.to_json(str(profile_path), orient="records", indent=2)
     logger.info(f"Saved timing records to {str(profile_path)}")

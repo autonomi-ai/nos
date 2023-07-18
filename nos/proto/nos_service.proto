@@ -70,13 +70,11 @@ message ServiceInfoResponse {
 // Register system shared memory request
 message GenericRequest {
   bytes request_bytes = 1;
-  // bytes metadata_bytes = 2;
 }
 
 // Register system shared memory response
 message GenericResponse {
   bytes response_bytes = 1;
-  // bytes metadata_bytes = 2;
 }
 
 // Service definition

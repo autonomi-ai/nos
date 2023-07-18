@@ -388,9 +388,9 @@ class InferenceModule:
         """Decode the response bytes."""
         return loads(response_bytes)
 
-    # def __del__(self):
-    #     """Delete the shared memory."""
-    #     self.UnregisterSystemSharedMemory()
+    def __del__(self):
+        """Delete the shared memory."""
+        self.UnregisterSystemSharedMemory()
 
     def GetModelInfo(self) -> ModelSpec:
         """Get the relevant model information from the model name."""
@@ -437,7 +437,11 @@ class InferenceModule:
 
     def UnregisterSystemSharedMemory(self) -> None:
         """Unregister system shared memory."""
-        if self._shm_objects is not None:
+        if not NOS_SHM_ENABLED:
+            logger.warning("Shared memory is not enabled, skipping.")
+            return
+
+        if self._shm_objects is not None and len(self._shm_objects):
             logger.debug(
                 f"Unregistering shm [namespace={self.namespace}, objects={[(k, v) for k, v in self._shm_objects.items()]}"
             )
