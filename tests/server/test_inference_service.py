@@ -11,6 +11,7 @@ from PIL import Image
 
 import nos
 from nos import hub
+from nos.version import __version__ as nos_version
 from nos.common import TaskType, TimingInfo, tqdm
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
@@ -313,7 +314,7 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
         fps=lambda x: (1 / (x.elapsed / x.n)).round(2),
         date=date_str,
         backend=backend,
-        version=nos.__version__,
+        version=nos_version,
     )
     logger.info(f"\nTiming records\n{timing_df}")
 

@@ -10,7 +10,7 @@ import rich.status
 import docker
 import docker.errors
 import docker.models.containers
-from nos import __version__
+from nos.version import __version__
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
 
