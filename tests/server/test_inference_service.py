@@ -1,13 +1,17 @@
 import contextlib
+from datetime import datetime
+from itertools import product
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pytest
 from loguru import logger
 from PIL import Image
 
+import nos
 from nos import hub
-from nos.common import TaskType, tqdm
+from nos.common import TaskType, TimingInfo, tqdm
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
 from nos.managers import ModelHandle, ModelManager
@@ -181,17 +185,24 @@ def test_inference_service_noop(client_with_server, request):  # noqa: F811
     # Note: This test is only valid for the local server.
 
 
-BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (2880, 1620), (3840, 2160)]
+BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 8)]
+BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (2880, 1620)]
+BENCHMARK_MODELS = [
+    (TaskType.CUSTOM, "noop/process-images"),
+    (TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32"),
+    (TaskType.OBJECT_DETECTION_2D, "yolox/medium"),
+    (TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"),
+]
+BENCHMARK_IMAGE_TYPES = [np.ndarray, Image.Image]
 
 
 @pytest.mark.benchmark
-@pytest.mark.parametrize("shape", BENCHMARK_IMAGE_SHAPES)
-@pytest.mark.parametrize("image_type", [np.ndarray, Image.Image])
 @pytest.mark.parametrize(
     "client_with_server",
-    ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),
+    ("grpc_client_with_gpu_backend",),
+    # ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),
 )
-def test_benchmark_inference_service_noop(shape, image_type, client_with_server, request):  # noqa: F811
+def test_benchmark_inference_service_noop(client_with_server, request):  # noqa: F811
     """Benchmark shared memory transport and inference between the client-server.
 
     Tests with 3 client-server configurations:
@@ -207,70 +218,100 @@ def test_benchmark_inference_service_noop(shape, image_type, client_with_server,
     assert client is not None
     assert client.IsHealthy()
 
-    # Load dummy image
-    img = Image.open(NOS_TEST_IMAGE)
-    img = img.resize(shape)
-    nbytes = shape[0] * shape[1] * 3
-    if image_type == np.ndarray:
-        img = np.asarray(img)
-        assert img.shape[:2][::-1] == shape
-    elif image_type == Image.Image:
-        assert img.size == shape
-        if shm_enabled:
-            logger.warning("Shared memory transport is not supported for Image.Image")
-    else:
-        raise TypeError(f"Invalid image type: {image_type}")
+    # Load model
+    timing_records = []
+    for (task, model_name) in BENCHMARK_MODELS:
+        model = client.Module(task=task, model_name=model_name)
+        assert model is not None
+        assert model.GetModelInfo() is not None
 
-    # Load noop model
-    task, model_name = TaskType.CUSTOM, "noop/process-images"
-    model = client.Module(task=task, model_name=model_name)
-    assert model is not None
-    assert model.GetModelInfo() is not None
+        # Benchmark
+        for (image_type, shape, B) in product(BENCHMARK_IMAGE_TYPES, BENCHMARK_IMAGE_SHAPES, BENCHMARK_BATCH_SIZES):
+            # Load dummy image
+            img = Image.open(NOS_TEST_IMAGE)
+            img = img.resize(shape)
+            W, H = shape
+            nbytes = H * W * 3
+            if image_type == np.ndarray:
+                img = np.asarray(img)
+                assert img.shape[:2][::-1] == shape
+            elif image_type == Image.Image:
+                assert img.size == shape
+            else:
+                raise TypeError(f"Invalid image type: {image_type}")
 
-    # Benchmark (10s)
-    for b in (0, 4, 8):
-        B = 2**b
-
-        # Skip if batched images are >= 512 MB
-        if B * nbytes >= 512 * 1024**2:
-            continue
-
-        # Prepare inputs
-        if isinstance(img, np.ndarray):
-            images = np.stack([img for _ in range(B)])
-        elif isinstance(img, Image.Image):
-            images = [img for _ in range(B)]
-        else:
-            raise TypeError(f"Invalid image type: {type(img)}")
-        inputs = {"images": images}
-
-        # Register shared memory regions
-        if shm_enabled:
-            model.RegisterSystemSharedMemory(inputs)
-
-        # Warmup
-        for _ in tqdm(duration=2, desc="Warmup", disable=True):
-            try:
-                response = model(**inputs)
-            except Exception as e:
-                logger.error(f"Exception: {e}")
+            # Skip if batched images are >= 512 MB
+            if B * nbytes >= 512 * 1024**2:
                 continue
 
-        # Benchmark no-op inference
-        for _ in tqdm(
-            duration=5,
-            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={shape}, size={(B * nbytes) / 1024 ** 2:.1f}MB, type={image_type}]",
-            unit="images",
-            unit_scale=B,
-            total=0,
-        ):
-            try:
-                response = model(**inputs)
-            except Exception as e:
-                logger.error(f"Exception: {e}")
-                continue
-            assert isinstance(response, dict)
-            assert "result" in response
+            # Prepare inputs
+            if isinstance(img, np.ndarray):
+                images = np.stack([img for _ in range(B)])
+            elif isinstance(img, Image.Image):
+                images = [img for _ in range(B)]
+            else:
+                raise TypeError(f"Invalid image type: {type(img)}")
+            inputs = {"images": images}
 
-        if shm_enabled:
-            model.UnregisterSystemSharedMemory()
+            # Register shared memory regions
+            if shm_enabled:
+                model.RegisterSystemSharedMemory(inputs)
+
+            # Warmup
+            for _ in tqdm(duration=2, desc="Warmup", disable=True):
+                try:
+                    response = model(**inputs)
+                except Exception as e:
+                    logger.error(f"Exception: {e}")
+                    continue
+
+            # Benchmark no-op inference
+            duration = 5.0
+            for nbatches in tqdm(  # noqa: B007
+                duration=duration,
+                desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={shape}, size={(B * nbytes) / 1024 ** 2:.1f}MB, type={image_type}]",
+                unit="images",
+                unit_scale=B,
+                total=0,
+            ):
+                try:
+                    response = model(**inputs)
+                except Exception as e:
+                    logger.error(f"Exception: {e}")
+                    continue
+                assert isinstance(response, dict)
+            timing_records.append(
+                TimingInfo(
+                    desc=f"{model_name}_{B}x{shape[0]}x{shape[1]}x3",
+                    b=B,
+                    n=B * nbatches,
+                    elapsed=duration,
+                    shape=shape,
+                    image_type=image_type,
+                    backend=client_with_server,
+                )
+            )
+            if shm_enabled:
+                model.UnregisterSystemSharedMemory()
+
+    # Print timing records
+    timing_df = pd.DataFrame(
+        [r.to_dict() for r in timing_records], columns=["desc", "b", "n", "elapsed", "shape", "image_type", "backend"]
+    )
+    timing_df = timing_df.assign(
+        elapsed=lambda x: x.elapsed.round(2),
+        latency_ms=lambda x: ((x.elapsed / x.n) * 1000).round(2),
+        fps=lambda x: (1 / (x.elapsed / x.n)).round(2),
+    )
+    logger.info(f"\nTiming records\n{timing_df}")
+
+    # Save timing records
+    backend = "gpu" if "gpu" in client_with_server else "cpu"
+    version_str = nos.__version__.replace(".", "-")
+    date_str = datetime.utcnow().strftime("%Y%m%d")
+    NOS_DIR = Path(nos.__file__).parent.parent / ".nos"
+    NOS_BENCHMARK_DIR = NOS_DIR / "benchmark"
+    NOS_BENCHMARK_DIR.mkdir(parents=True, exist_ok=True)
+    profile_path = Path(NOS_BENCHMARK_DIR) / f"nos-{backend}-inference-benchmark--{version_str}--{date_str}.json"
+    timing_df.to_json(str(profile_path), orient="records", indent=2)
+    logger.info(f"Saved timing records to {str(profile_path)}")

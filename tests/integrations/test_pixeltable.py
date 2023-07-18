@@ -14,8 +14,7 @@ Timing records (2023-07-14)
 3  yolox_medium_640x480     2.98  168       17.74  56.38
 4        openai_640x480     3.33  168       19.82  50.45
 """
-import contextlib
-import time
+
 from datetime import datetime
 from pathlib import Path
 
@@ -51,33 +50,6 @@ def cleanup():
     nos.shutdown()
 
 
-class TimingInfo:
-    def __init__(self, desc: str, **kwargs):
-        self.desc = desc
-        self.elapsed = None
-        self.kwargs = kwargs
-
-    def __repr__(self):
-        repr_str = f"{self.__class__.__name__}(desc={self.desc}"
-        if len(self.kwargs):
-            repr_str += ", " + ", ".join([f"{k}={v}" for k, v in self.kwargs.items()])
-        repr_str += f", elapsed={self.elapsed:.2f}s)"
-        return repr_str
-
-    def to_dict(self):
-        return self.kwargs | {"desc": self.desc, "elapsed": self.elapsed}
-
-
-@contextlib.contextmanager
-def timer(desc: str = "", **kwargs):
-    info = TimingInfo(desc, **kwargs)
-
-    logger.info(f"timer: {desc}")
-    start = time.time()
-    yield info
-    info.elapsed = time.time() - start
-
-
 def test_pixeltable_installation():
     # Ensure that the environment does not have server-side requirements installed
     try:
@@ -96,6 +68,7 @@ def test_pixeltable_integration():
     import pixeltable as pt
 
     import nos
+    from nos.common import timer
     from nos.common.io import VideoReader
     from nos.constants import NOS_CACHE_DIR
     from nos.test.utils import NOS_TEST_VIDEO, get_benchmark_video  # noqa: F401
