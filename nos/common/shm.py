@@ -175,7 +175,6 @@ class SharedMemoryTransportManager:
         Returns:
             Dict[str, Any]: Shared memory segment for the data dictionary.
         """
-        # assert len(self._objects_map) == 0, "Shared memory segments should be empty."
         namespace = namespace or ""
 
         # Create shared memory segments for numpy arrays (or lists of numpy arrays)
