@@ -14,7 +14,7 @@ from nos.common.types import TensorSpec
 from nos.logging import logger
 
 
-NOS_SHM_ENABLED = bool(int(os.environ.get("NOS_SHM_ENABLED", 1)))
+NOS_SHM_ENABLED = bool(int(os.environ.get("NOS_SHM_ENABLED", "1")))
 
 
 @dataclass

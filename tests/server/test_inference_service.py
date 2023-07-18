@@ -185,13 +185,13 @@ BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (1920, 1080), (28
 
 
 @pytest.mark.benchmark
+@pytest.mark.parametrize("shape", BENCHMARK_IMAGE_SHAPES)
+@pytest.mark.parametrize("image_type", [np.ndarray, Image.Image])
 @pytest.mark.parametrize(
     "client_with_server",
     ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),
 )
-@pytest.mark.parametrize("shape", BENCHMARK_IMAGE_SHAPES)
-@pytest.mark.parametrize("image_type", [np.ndarray, Image.Image])
-def test_benchmark_inference_service_noop(client_with_server, shape, image_type, request):  # noqa: F811
+def test_benchmark_inference_service_noop(shape, image_type, client_with_server, request):  # noqa: F811
     """Benchmark shared memory transport and inference between the client-server.
 
     Tests with 3 client-server configurations:
