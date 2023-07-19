@@ -12,7 +12,7 @@ services:
     command: nos-grpc-server
     ports:
       - 50051:50051
-      - 0.0.0.0:8265:8265
+      - 8265:8265
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL=DEBUG

@@ -10,8 +10,6 @@ import torch
 from nos.common import ModelSpec
 from nos.logging import logger
 
-import memray
-
 NOS_MEMRAY_ENABLE = os.getenv("NOS_MEMRAY_ENABLE")
 
 @dataclass
@@ -76,6 +74,7 @@ class ModelHandle:
         actor_cls = ray.remote(**actor_options)(model_cls)
         flattened_name = spec.name.replace("/", "_")
         if NOS_MEMRAY_ENABLE:
+            import memray
             memray.Tracker(
                 "/tmp/ray/session_latest/logs/"
                 f"{flattened_name}_mem_profile.bin"
