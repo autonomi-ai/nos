@@ -98,7 +98,7 @@ class InferenceService:
 
         # Get the model handle and call it remotely (with model spec, actor handle)
         st = time.perf_counter()
-        response: Dict[str, Any] = model_handle.remote(**model_inputs)
+        response: Dict[str, Any] = model_handle(**model_inputs)
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 

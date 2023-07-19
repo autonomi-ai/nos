@@ -51,15 +51,57 @@ def test_model_manager_errors(manager):  # noqa: F811
 
 def test_model_manager_noop_inference(manager):  # noqa: F811
     """Test inference with a no-op model."""
+
+    from nos.common import tqdm
+
     spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
     noop: ModelHandle = manager.get(spec)
     assert noop is not None
     assert isinstance(noop, ModelHandle)
 
-    img = (np.random.rand(1, 224, 224, 3) * 255).astype(np.uint8)
-    result = noop.remote(images=[img])
+    B = 16
+    img = (np.random.rand(B, 480, 640, 3) * 255).astype(np.uint8)
+
+    # NoOp: __call__
+    result = noop(images=img)
     assert isinstance(result, list)
-    assert len(result) == 1
+    assert len(result) == B
+
+    # NoOp: __call__ (perf.)
+    pbar = tqdm(duration=5, unit_scale=B, desc=f"noop [B={B}]", total=0)
+    for idx in pbar:
+        result = noop(images=img)
+        desc = f"noop [B={B}, idx={idx}, pending={len(noop.pending)}, queue={len(noop.results)}]"
+        pbar.set_description(desc)
+
+        assert isinstance(result, list)
+        assert len(result) == B
+
+    # NoOp: submit + get (perf.)
+    def noop_gen(_noop, _pbar, B):
+        for idx in _pbar:
+            _noop.submit(images=img)
+            desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
+            _pbar.set_description(desc)
+            if _noop.full():
+                yield _noop.get()
+        while _noop.has_next():
+            yield _noop.get()
+
+    for replicas in [2, 4, 8]:
+        noop = noop.scale(replicas)
+        logger.debug(f"NoOp ({replicas}): {noop}")
+        pbar = tqdm(duration=10, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
+
+        idx = 0
+        for result in noop_gen(noop, pbar, B):
+            assert isinstance(result, list)
+            assert len(result) == B
+            idx += 1
+
+        assert idx == pbar.n
+        assert len(noop.results) == 0
+        assert len(noop.pending) == 0
 
 
 def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # noqa: F811
@@ -118,19 +160,19 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
 
     # Check if the model can be called
     images = [np.random.rand(224, 224, 3).astype(np.uint8)]
-    result = model_handle.remote(images=images)
+    result = model_handle(images=images)
     assert len(result) == 1
     assert isinstance(result, np.ndarray)
 
     # Check if the model can be called with keyword arguments
-    result = model_handle.remote(images=images, n=2)
+    result = model_handle(images=images, n=2)
     assert len(result) == 2
     assert isinstance(result, np.ndarray)
 
     # Check if the model can NOT be called with positional arguments
     # We expect this to raise an exception, as the model only accepts keyword arguments.
     with pytest.raises(Exception):
-        result = model_handle.remote(images, 2)
+        result = model_handle(images, 2)
 
 
 @pytest.mark.benchmark
@@ -167,7 +209,7 @@ def test_model_manager_inference(model_name, scale, manager):  # noqa: F811
     # Warmup
     for _ in tqdm(range(10), desc=f"Warmup model={model_name}, B=1", total=0):
         images = [img]
-        result = handle.remote(images=images)
+        result = handle(images=images)
         assert result is not None
         assert isinstance(result, np.ndarray)
 
@@ -183,7 +225,7 @@ def test_model_manager_inference(model_name, scale, manager):  # noqa: F811
             unit_scale=B,
             total=0,
         ):
-            embedding = handle.remote(images=images)
+            embedding = handle(images=images)
             assert embedding is not None
             assert isinstance(embedding, np.ndarray)
             N, _ = embedding.shape
