@@ -10,7 +10,9 @@ import torch
 from nos.common import ModelSpec
 from nos.logging import logger
 
-NOS_MEMRAY_ENABLE = os.getenv("NOS_MEMRAY_ENABLE")
+
+NOS_MEMRAY_ENABLED = os.getenv("NOS_MEMRAY_ENABLED")
+
 
 @dataclass
 class ModelHandle:
@@ -73,12 +75,10 @@ class ModelHandle:
         # Add some memory logs to this actor
         actor_cls = ray.remote(**actor_options)(model_cls)
         flattened_name = spec.name.replace("/", "_")
-        if NOS_MEMRAY_ENABLE:
+        if NOS_MEMRAY_ENABLED:
             import memray
-            memray.Tracker(
-                "/tmp/ray/session_latest/logs/"
-                f"{flattened_name}_mem_profile.bin"
-            ).__enter__()
+
+            memray.Tracker("/tmp/ray/session_latest/logs/" f"{flattened_name}_mem_profile.bin").__enter__()
         return actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
 
     def kill(self) -> None:

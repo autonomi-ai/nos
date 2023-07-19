@@ -1,8 +1,8 @@
 accelerate>0.18.0
 diffusers>=0.17.1
 huggingface_hub
+memray
 pyarrow>=12.0.0
 ray[serve]==2.5.0
 tabulate
 transformers>=4.29.2
-memray

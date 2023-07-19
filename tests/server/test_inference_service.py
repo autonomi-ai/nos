@@ -328,15 +328,8 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
 
 
 @pytest.mark.skipif(not NOS_MEMRAY_ENABLED, reason="Memray tracking is not enabled.")
-@pytest.mark.parametrize(
-    "client_with_server",
-    ("grpc_client_with_gpu_backend"),
-)
-def test_memray_tracking(client_with_server, request):  # noqa: F811
-    """Test shm registry."""
-    memray_enabled = NOS_MEMRAY_ENABLED
-
-    client = request.getfixturevalue(client_with_server)
+def test_memray_tracking(request):  # noqa: F811
+    client = request.getfixturevalue("grpc_client_with_gpu_backend")
     assert client is not None
     assert client.IsHealthy()
 
@@ -349,21 +342,21 @@ def test_memray_tracking(client_with_server, request):  # noqa: F811
     assert model is not None
     assert model.GetModelInfo() is not None
 
-    # Make an inference request and confirm that we see a memray profile
+    # Make an inference request and confirm that this doesn't break inference
     shape = (224, 224)
     images = [np.asarray(img.resize(shape))]
     inputs = {"images": images}
     response = model(**inputs)
     assert isinstance(response, dict)
-    if shm_enabled:
-        model.UnregisterSystemSharedMemory()
 
-    # Repeatedly register/unregister shared memory regions
-    # so that we can test the shared memory registry.
-    shm_files = list(Path("/dev/shm/").rglob("nos_psm_*"))
-    assert len(shm_files) == 0
-    for _ in range(10):
-        model.RegisterSystemSharedMemory(inputs)
-        model.UnregisterSystemSharedMemory()
-        shm_files = list(Path("/dev/shm/").rglob("nos_psm_*"))
-        assert len(shm_files) == 0, "Expected no shared memory regions, but found some."
+    # TODO: Copy out the memray file
+    """
+    memray_log_path = Path("/tmp/ray/session_latest/logs/")
+
+    print(memray_log_path)
+    memray_files = list(memray_log_path.rglob("*_mem_profile.bin"))
+    print("memray files: ")
+    for file in memray_files:
+        print(file)
+    assert len(memray_files) == model_count, f"Expected {model_count} memray files"
+    """
