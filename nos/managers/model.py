@@ -54,10 +54,13 @@ class ModelHandle:
         >> model = ModelHandle(spec, num_replicas=1)
 
         # Call the task immediately
-        >> response = model_handle(**model_inputs)
+        >> response = model(**model_inputs)
 
-        # Submit a task to the model handle
-        >> response_ref = model_handle.submit(**model_inputs)
+        # Submit a task to the model handle,
+        # this will add results to the queue
+        >> model.submit(**model_inputs)
+        # Fetch the next result from the queue
+        >> response = model.get()
 
         # Submit a task to the model handle,
         # this will add results to the queue
@@ -89,7 +92,7 @@ class ModelHandle:
         """Initialize the actor handles."""
         self._actors = [self.get_actor(self.spec) for _ in range(self.num_replicas)]
         self._actor_pool = ray.util.ActorPool(self._actors)
-        self._results_queue_size = 2 * self.num_replicas
+        self._results_queue_size = self.num_replicas
 
     def __repr__(self) -> str:
         assert len(self._actors) == self.num_replicas
@@ -131,7 +134,7 @@ class ModelHandle:
         else:
             actors_to_remove = self._actors[replicas:]
             for actor in actors_to_remove:
-                ray.kill(actor.actor)
+                ray.kill(actor)
             self._actors = self._actors[:replicas]
 
             logger.debug(f"Scaling down model [name={self.spec.name}, replicas={replicas}].")
@@ -181,7 +184,6 @@ class ModelHandle:
 
         # Get the actor options from the model spec
         actor_options = cls._actor_options(spec)
-
         actor_cls = ray.remote(**actor_options)(model_cls)
 
         # Check if the model class has the required method
