@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
 NOS_RAY_RUNTIME_ENV = os.getenv("NOS_RAY_ENV", None)
 NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
-NOS_DASHBOARD_ENABLED = os.getenv("NOS_DASHBOARD_ENABLED", False)
+NOS_DASHBOARD_ENABLED = os.getenv("NOS_DASHBOARD_ENABLED", True)
 
 
 @dataclass
@@ -93,7 +93,7 @@ class RayExecutor:
                     "[bold green] InferenceExecutor :: Connecting to backend ... [/bold green]"
                 ) as status:
                     logger.debug(f"Connecting to executor: namespace={self.spec.namespace}")
-                    assert NOS_DASHBOARD_ENABLED==True, f"NOS_DASHBOARD_ENABLED={NOS_DASHBOARD_ENABLED}"
+                    assert NOS_DASHBOARD_ENABLED, f"NOS_DASHBOARD_ENABLED={NOS_DASHBOARD_ENABLED}"
                     ray.init(
                         address="auto",
                         namespace=self.spec.namespace,

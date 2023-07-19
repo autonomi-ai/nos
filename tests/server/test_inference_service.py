@@ -13,6 +13,7 @@ import nos
 from nos import hub
 from nos.common import TaskType, TimingInfo, tqdm
 from nos.common.shm import NOS_SHM_ENABLED
+from nos.constants import NOS_MEMRAY_ENABLED
 from nos.executors.ray import RayExecutor
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
@@ -324,3 +325,45 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
     profile_path = Path(NOS_BENCHMARK_DIR) / f"nos-{backend}-inference-benchmark--{version_str}--{date_str}.json"
     timing_df.to_json(str(profile_path), orient="records", indent=2)
     logger.info(f"Saved timing records to {str(profile_path)}")
+
+
+@pytest.mark.skipif(not NOS_MEMRAY_ENABLED, reason="Memray tracking is not enabled.")
+@pytest.mark.parametrize(
+    "client_with_server",
+    ("grpc_client_with_gpu_backend"),
+)
+def test_memray_tracking(client_with_server, request):  # noqa: F811
+    """Test shm registry."""
+    memray_enabled = NOS_MEMRAY_ENABLED
+
+    client = request.getfixturevalue(client_with_server)
+    assert client is not None
+    assert client.IsHealthy()
+
+    # Load dummy image
+    img = Image.open(NOS_TEST_IMAGE)
+
+    # Load noop model (This should still trigger memray tracking)
+    task, model_name = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # Make an inference request and confirm that we see a memray profile
+    shape = (224, 224)
+    images = [np.asarray(img.resize(shape))]
+    inputs = {"images": images}
+    response = model(**inputs)
+    assert isinstance(response, dict)
+    if shm_enabled:
+        model.UnregisterSystemSharedMemory()
+
+    # Repeatedly register/unregister shared memory regions
+    # so that we can test the shared memory registry.
+    shm_files = list(Path("/dev/shm/").rglob("nos_psm_*"))
+    assert len(shm_files) == 0
+    for _ in range(10):
+        model.RegisterSystemSharedMemory(inputs)
+        model.UnregisterSystemSharedMemory()
+        shm_files = list(Path("/dev/shm/").rglob("nos_psm_*"))
+        assert len(shm_files) == 0, "Expected no shared memory regions, but found some."
