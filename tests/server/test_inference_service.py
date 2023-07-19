@@ -17,6 +17,7 @@ from nos.executors.ray import RayExecutor
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
+from nos.version import __version__ as nos_version
 
 
 pytestmark = pytest.mark.server
@@ -313,7 +314,7 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
         fps=lambda x: (1 / (x.elapsed / x.n)).round(2),
         date=date_str,
         backend=backend,
-        version=nos.__version__,
+        version=nos_version,
     )
     logger.info(f"\nTiming records\n{timing_df}")
 
