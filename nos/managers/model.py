@@ -78,6 +78,19 @@ class ModelHandle:
             raise NotImplementedError("Automatic scaling not implemented.")
         if not isinstance(replicas, int):
             raise ValueError(f"Invalid replicas: {replicas}")
+        
+        # Check if there are any pending submits
+        # on the actor pool, and wait until they are complete / added
+        # to the results queue. 
+        if self._actor_pool.has_next() or len(self._actor_pool._pending_submits):
+            logger.warning(f"Pending futures detected, this may result in dropped queue items [name={self.spec.name}]")
+        logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")
+        while self._actor_pool.has_next():
+            self._fetch_next()
+        logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
+        del self._actor_pool
+        self._actor_pool = None
+        logger.debug(f"Scaling model [name={self.spec.name}].")
 
         if replicas == len(self._actors):
             logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={replicas}].")
@@ -98,7 +111,7 @@ class ModelHandle:
         self._results_queue_size = self.num_replicas
 
         # Re-create the actor pool
-        del self._actor_pool
+        logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
         self._actor_pool = ray.util.ActorPool(self._actors)
         assert len(self._actors) == replicas, "Model scaling failed."
         gc.collect()
