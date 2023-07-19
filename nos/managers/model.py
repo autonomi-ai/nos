@@ -78,10 +78,10 @@ class ModelHandle:
             raise NotImplementedError("Automatic scaling not implemented.")
         if not isinstance(replicas, int):
             raise ValueError(f"Invalid replicas: {replicas}")
-        
+
         # Check if there are any pending submits
         # on the actor pool, and wait until they are complete / added
-        # to the results queue. 
+        # to the results queue.
         if self._actor_pool.has_next() or len(self._actor_pool._pending_submits):
             logger.warning(f"Pending futures detected, this may result in dropped queue items [name={self.spec.name}]")
         logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")
@@ -156,7 +156,14 @@ class ModelHandle:
                 memray.Tracker(log_name).__enter__()
             except Exception:
                 print("Tracker may have already been initialized, skipping...")
-        return actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
+
+        # Check if the model class has the required method
+        actor = actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
+        if not hasattr(actor, spec.signature.method_name):
+            raise NotImplementedError(
+                f"Model class {model_cls} does not have {spec.signature.method_name} implemented."
+            )
+        return actor
 
     def cleanup(self) -> None:
         """Kill all the actor handles and garbage collect."""
@@ -262,7 +269,6 @@ class ModelManager:
 
     def __post_init__(self):
         """Initialize the model manager."""
-        logger.debug(f"NOS_MAX_CONCURRENT_MODELS: {self.max_concurrent_models}")
         if self.policy not in (self.EvictionPolicy.FIFO,):
             raise NotImplementedError(f"Eviction policy not implemented: {self.policy}")
 
