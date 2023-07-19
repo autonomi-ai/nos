@@ -5,6 +5,7 @@ from loguru import logger
 from nos import hub
 from nos.common import ModelSpec, TaskType
 from nos.managers import ModelHandle, ModelManager
+
 from nos.test.conftest import model_manager as manager  # noqa: F401, F811
 
 
@@ -77,7 +78,7 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         assert isinstance(result, list)
         assert len(result) == B
 
-    # NoOp: submit + get (perf.)
+    # NoOp: submit() + get()
     def noop_gen(_noop, _pbar, B):
         for idx in _pbar:
             _noop.submit(images=img)
@@ -88,6 +89,7 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         while _noop.has_next():
             yield _noop.get()
 
+    # NoOp scaling with replicas: submit + get (perf.)
     for replicas in [2, 4, 8]:
         noop = noop.scale(replicas)
         logger.debug(f"NoOp ({replicas}): {noop}")
@@ -175,60 +177,118 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
         result = model_handle(images, 2)
 
 
+BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 8)]
+BENCHMARK_MODELS = [
+    (TaskType.CUSTOM, "noop/process-images", [(224, 224), (640, 480), (1280, 720), (2880, 1620)]),
+    (TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32", [(224, 224), (640, 480)]),
+    (TaskType.OBJECT_DETECTION_2D, "yolox/medium", [(640, 480), (1280, 720), (2880, 1620)]),
+    (
+        TaskType.OBJECT_DETECTION_2D,
+        "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
+        [(640, 480), (1280, 960), (2880, 1620)],
+    ),
+]
+
+
 @pytest.mark.benchmark
-@pytest.mark.parametrize(
-    "model_name",
-    [
-        "openai/clip-vit-base-patch32",
-    ],
-)
-@pytest.mark.parametrize("scale", [1, 8])
-def test_model_manager_inference(model_name, scale, manager):  # noqa: F811
+def test_model_manager_inference(manager):  # noqa: F811
     """Benchmark the model manager with a single model."""
-    import time
+    from itertools import product
 
     from PIL import Image
-    from tqdm import tqdm
 
-    from nos.common import TaskType
+    from nos.common import tqdm
     from nos.test.utils import NOS_TEST_IMAGE
 
-    img = Image.open(NOS_TEST_IMAGE)
-    W, H = 224, 224
-    img = img.resize((W * scale, H * scale))
-    img = np.asarray(img)
+    # Benchmark: for each model, and set of image-shapes
+    for task, model_name, image_shapes in BENCHMARK_MODELS:
+        # Load a model spec
+        spec = hub.load_spec(model_name, task=task)
 
-    # Load a model spec
-    task = TaskType.IMAGE_EMBEDDING
-    spec = hub.load_spec(model_name, task=task)
+        # Add the model to the manager (or via `manager.add()`)
+        model: ModelHandle = manager.get(spec)
+        assert model is not None
 
-    # Add the model to the manager (or via `manager.add()`)
-    handle: ModelHandle = manager.get(spec)
-    assert handle is not None
+        # Benchmark: for each image-shape and batch-size
+        for (shape, B) in product(image_shapes, BENCHMARK_BATCH_SIZES):
+            img = Image.open(NOS_TEST_IMAGE)
+            W, H = shape
+            nbytes = W * H * 3
+            img = np.asarray(img.resize((W, H)))
+            assert img.shape[:2] == (H, W)
 
-    # Warmup
-    for _ in tqdm(range(10), desc=f"Warmup model={model_name}, B=1", total=0):
-        images = [img]
-        result = handle(images=images)
-        assert result is not None
-        assert isinstance(result, np.ndarray)
+            # Skip if batched images are >= 512 MB
+            if B * nbytes >= 512 * 1024**2:
+                continue
 
-    # Benchmark (10s)
-    for b in range(0, 8):
-        B = 2**b
-        images = [img for _ in range(B)]
-        st = time.time()
-        for _ in tqdm(
-            range(100_000),
-            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={img.shape}]",
-            unit="images",
-            unit_scale=B,
-            total=0,
-        ):
-            embedding = handle(images=images)
-            assert embedding is not None
-            assert isinstance(embedding, np.ndarray)
-            N, _ = embedding.shape
-            assert N == B
-            if time.time() - st > 10.0:
-                break
+            # Prepare inputs
+            inputs = {"images": np.stack([img for _ in range(B)])}
+
+            # Warmup (sync)
+            model = model.scale(1)
+            for _ in tqdm(duration=2, desc=f"Warmup SYNC [model={model_name}, B={B}, shape={shape}]", total=0):
+                result = model(**inputs)
+                assert result is not None
+                assert isinstance(result, (np.ndarray, list, dict))
+                if isinstance(result, dict):
+                    for _k, v in result.items():
+                        assert isinstance(v, (np.ndarray, list))
+                        assert len(v) == B
+                else:
+                    assert len(result) == B
+
+            # Benchmark (30s, sync)
+            for _ in tqdm(
+                duration=30,
+                desc=f"Benchmark SYNC [model={model_name}, B={B}, shape={shape}]",
+                unit="images",
+                unit_scale=B,
+                total=0,
+            ):
+                result = model(**inputs)
+
+            # Benchmark (async)
+            def handle_gen(_handle, _inputs, _pbar):
+                for _idx in _pbar:
+                    _handle.submit(**_inputs)
+                    if _handle.full():
+                        yield _handle.get()
+                while _handle.has_next():
+                    yield _handle.get()
+
+            # Model scaling with replicas: submit + get (perf.)
+            for replicas in [2, 4]:
+                # Skip if total bytes processed are >= 256 MB
+                # to avoid GPU OOM errors.
+                if B * nbytes * replicas >= 256 * 1024**2:
+                    continue
+
+                # Scale up the model
+                model = model.scale(replicas)
+
+                # Warmup (async)
+                pbar = tqdm(
+                    duration=5,
+                    unit_scale=B,
+                    desc=f"Warmup ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+                    total=0,
+                )
+                for result in handle_gen(model, inputs, pbar):
+                    assert result is not None
+                    assert isinstance(result, (np.ndarray, list, dict))
+                    if isinstance(result, dict):
+                        for _k, v in result.items():
+                            assert isinstance(v, (np.ndarray, list))
+                            assert len(v) == B
+                    else:
+                        assert len(result) == B
+
+                # Benchmark (30s, async)
+                pbar = tqdm(
+                    duration=30,
+                    unit_scale=B,
+                    desc=f"Benchmark ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+                    total=0,
+                )
+                for result in handle_gen(model, inputs, pbar):
+                    assert result is not None

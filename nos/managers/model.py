@@ -19,21 +19,24 @@ NOS_MEMRAY_ENABLED = os.getenv("NOS_MEMRAY_ENABLED")
 
 @dataclass
 class ModelHandle:
-    """Model handles for model execution.
+    """Model handles for distributed model execution.
 
     Usage:
         ```python
         # Initialize a model handle
-        >> model_handle = ModelHandle(spec, num_replicas=1)
+        >> model = ModelHandle(spec, num_replicas=1)
 
         # Call the task immediately
-        >> response = model_handle(**model_inputs)
+        >> response = model(**model_inputs)
 
-        # Submit a task to the model handle
-        >> response_ref = model_handle.submit(**model_inputs)
+        # Submit a task to the model handle,
+        # this will add results to the queue
+        >> model.submit(**model_inputs)
+        # Fetch the next result from the queue
+        >> response = model.get()
 
-        # Kill all actors
-        >> model_handle.kill()
+        # Cleanup model resources
+        >> model_handle.cleanup()
         ```
     """
 
@@ -49,16 +52,20 @@ class ModelHandle:
     """Queue to fetch results from the actor pool."""
     _results_queue_size: int = field(init=False, default=None)
     """Maximum results queue size."""
+    _actor_profile: Dict[str, Any] = field(init=False, default=None)
+    """Actor profile."""
 
     def __post_init__(self):
         """Initialize the actor handles."""
         self._actors = [self.get_actor(self.spec) for _ in range(self.num_replicas)]
         self._actor_pool = ray.util.ActorPool(self._actors)
-        self._results_queue_size = 2 * self.num_replicas
+        self._results_queue_size = self.num_replicas
 
     def __repr__(self) -> str:
         assert len(self._actors) == self.num_replicas
-        return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, qsize={self._results_queue_size})"
+        opts = self._actor_options(self.spec)
+        opts_str = ", ".join([f"{k}={v}" for k, v in opts.items()])
+        return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, qsize={self._results_queue_size}, opts=({opts_str}))"
 
     def scale(self, replicas: Union[int, str] = 1) -> "ModelHandle":
         """Scale the model handle to a new number of replicas.
@@ -81,14 +88,14 @@ class ModelHandle:
         else:
             actors_to_remove = self._actors[replicas:]
             for actor in actors_to_remove:
-                ray.kill(actor.actor)
+                ray.kill(actor)
             self._actors = self._actors[:replicas]
 
             logger.debug(f"Scaling down model [name={self.spec.name}, replicas={replicas}].")
 
         # Update repicas and queue size
         self.num_replicas = replicas
-        self._results_queue_size = 2 * self.num_replicas
+        self._results_queue_size = self.num_replicas
 
         # Re-create the actor pool
         del self._actor_pool
@@ -124,7 +131,6 @@ class ModelHandle:
 
         # Add some memory logs to this actor
         actor_options = cls._actor_options(spec)
-        logger.debug(f"Creating model handle [name={model_cls.__name__}, opts={actor_options}]")
         actor_cls = ray.remote(**actor_options)(model_cls)
         if NOS_MEMRAY_ENABLED:
             import memray
@@ -242,6 +248,8 @@ class ModelManager:
     """Model handles."""
 
     def __post_init__(self):
+        """Initialize the model manager."""
+        logger.debug(f"NOS_MAX_CONCURRENT_MODELS: {self.max_concurrent_models}")
         if self.policy not in (self.EvictionPolicy.FIFO,):
             raise NotImplementedError(f"Eviction policy not implemented: {self.policy}")
 

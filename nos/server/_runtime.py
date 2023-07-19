@@ -30,6 +30,8 @@ NOS_DOCKER_IMAGE_TRT_RUNTIME = f"autonomi/nos:{__version__}-trt-runtime"
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
 NOS_INFERENCE_SERVICE_CMD = "nos-grpc-server"
 
+NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
+
 
 @dataclass
 class InferenceServiceRuntimeConfig:
