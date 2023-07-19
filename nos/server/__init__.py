@@ -10,9 +10,9 @@ import rich.status
 import docker
 import docker.errors
 import docker.models.containers
-from nos.version import __version__
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
+from nos.version import __version__
 
 from ._docker import DockerRuntime
 from ._runtime import InferenceServiceRuntime

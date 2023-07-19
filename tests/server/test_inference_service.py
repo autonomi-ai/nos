@@ -11,13 +11,13 @@ from PIL import Image
 
 import nos
 from nos import hub
-from nos.version import __version__ as nos_version
 from nos.common import TaskType, TimingInfo, tqdm
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
+from nos.version import __version__ as nos_version
 
 
 pytestmark = pytest.mark.server
