@@ -111,10 +111,10 @@ class ModelHandle:
             raise NotImplementedError("Automatic scaling not implemented.")
         if not isinstance(replicas, int):
             raise ValueError(f"Invalid replicas: {replicas}")
-        
+
         # Check if there are any pending submits
         # on the actor pool, and wait until they are complete / added
-        # to the results queue. 
+        # to the results queue.
         if self._actor_pool.has_next() or len(self._actor_pool._pending_submits):
             logger.warning(f"Pending futures detected, this may result in dropped queue items [name={self.spec.name}]")
         logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")

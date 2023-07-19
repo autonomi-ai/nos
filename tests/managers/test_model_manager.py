@@ -203,7 +203,7 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         assert len(result) == B
 
         logger.debug(f"NoOp ({replicas}): {noop}")
-        pbar = tqdm(duration=10, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
+        pbar = tqdm(duration=5, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
 
         # warmup: submit()
         for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
