@@ -14,6 +14,7 @@ from ray.runtime_env import RuntimeEnv
 from ray.util.queue import Queue
 
 from nos.common import ModelSpec
+from nos.common.profiler import profile_memory
 from nos.logging import logger
 
 
@@ -90,6 +91,7 @@ class ModelHandle:
 
     def __post_init__(self):
         """Initialize the actor handles."""
+        import pdb; pdb.set_trace()
         self._actors = [self.get_actor(self.spec) for _ in range(self.num_replicas)]
         self._actor_pool = ray.util.ActorPool(self._actors)
         self._results_queue_size = self.num_replicas

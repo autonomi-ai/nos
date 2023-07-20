@@ -2,10 +2,14 @@ import copy
 import inspect
 from dataclasses import field
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin
+from functools import cached_property
 
+import json
 from pydantic import validator
 from pydantic.dataclasses import dataclass
 
+from nos.constants import NOS_PATH
+from nos.logging import logger
 from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import NosInputValidationException
 from nos.common.tasks import TaskType
@@ -190,6 +194,73 @@ class RuntimeEnv:
 
 
 @dataclass
+class ModelResources:
+    """Model resources (device/host memory etc)."""
+    device: str = "cpu"
+    """Device type (cpu, cuda, mps, neuron, etc)."""
+    device_mem: int = 32 * 1024**2
+    """Device memory (defaults to 32 MB)."""
+    num_cpus: float = 0
+    """Number of CPUs (defaults to 0 CPUs)."""
+
+    @validator("device")
+    def _validate_device(cls, device: str) -> str:
+        """Validate the device."""
+        from nos.server._runtime import NOS_SUPPORTED_DEVICES
+
+        if device not in NOS_SUPPORTED_DEVICES:
+            err_msg = f"Invalid device provided, device={device}. Use one of {NOS_SUPPORTED_DEVICES}."
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        return device
+    
+    @validator("device_mem")
+    def _validate_device_mem(cls, device_mem: int) -> int:
+        """Validate the device memory."""
+        if device_mem <= 32 * 1024**2 or device_mem > 128 * 1024**3:
+            err_msg = f"Invalid device memory provided, device_mem={device_mem / 1024**2} MB. Provide a value between 32 MB and 128 GB."
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        return device_mem
+    
+    @validator("num_cpus")
+    def _validate_num_cpus(cls, num_cpus: float) -> float:
+        """Validate the number of CPUs."""
+        if num_cpus < 0. or num_cpus > 128.:
+            err_msg = f"Invalid number of CPUs provided, num_cpus={num_cpus}. Provide a value between 0 and 128."
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        return num_cpus
+
+
+@dataclass
+class ModelSpecMetadata:
+    """Model specification metadata.
+    
+    The metadata contains the model profiles, metrics, etc.
+    """
+    name: str
+    """Model identifier."""
+    task: TaskType
+    """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
+    runtime: str
+    """Runtime (e.g. cpu, gpu, trt, etc).
+    See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
+    """
+    resources: ModelResources
+    """Model resources (device/host memory, etc)."""
+
+    @validator("runtime")
+    def _validate_runtime(cls, runtime: str) -> str:
+        """Validate the runtime."""
+        from nos.server._runtime import InferenceServiceRuntime
+
+        if runtime not in InferenceServiceRuntime.configs:
+            raise ValueError(f"Invalid runtime, runtime={runtime}.")
+        return runtime
+        
+
+@dataclass
 class ModelSpec:
     """Model specification for the registry.
 
@@ -205,6 +276,25 @@ class ModelSpec:
     """Model function signature."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
+    _metadata: ModelSpecMetadata = None
+    """Model specification metadata. The contents of the metadata (profiles, metrics, etc) 
+    are specified in a separate file."""
+
+    @cached_property
+    def metadata(self) -> ModelSpecMetadata:
+        try:
+            path = NOS_PATH / f"data/models/{self.id}/metadata.json"
+            with open(str(path), "r") as f:
+                metadata = ModelSpecMetadata(**json.load(f))
+            logger.info(f"Loaded model metadata [name={self.name}, path={path}, metadata={metadata}]")
+        except FileNotFoundError:
+            logger.warning(f"Model metadata not found. [path={path}]")
+            metadata = None
+        return metadata
+
+    @property
+    def task(self) -> TaskType:
+        return self.metadata.task
 
     @staticmethod
     def get_id(model_name: str, task: TaskType = None) -> str:
