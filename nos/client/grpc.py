@@ -1,7 +1,6 @@
 """gRPC client for NOS service."""
 import secrets
 import time
-import traceback
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
 from typing import Any, Callable, Dict, List
@@ -511,12 +510,5 @@ class InferenceModule:
                 )
             return response
         except grpc.RpcError as e:
-            logger.error(
-                f"""Run() failed"""
-                f"""\nrequest={request}"""
-                f"""\ninputs={inputs}"""
-                f"""\nerror: {e.details()}"""
-                f"""\n\nTraceback"""
-                f"""\n{traceback.format_exc()}"""
-            )
-            raise NosClientException(f"Failed to run model {self.model_name} (details={e.details()})", e)
+            logger.error(f"Run() failed [details={e.details()}, request={request}, inputs={inputs.keys()}]")
+            raise NosClientException(f"Run() failed [model={self.model_name}, details={e.details()}]", e)
