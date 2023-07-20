@@ -78,7 +78,13 @@ class ModelHandle:
         if NOS_MEMRAY_ENABLED:
             import memray
 
-            memray.Tracker("/tmp/ray/session_latest/logs/" f"{flattened_name}_mem_profile.bin").__enter__()
+            log_name = "/tmp/ray/session_latest/logs/" f"{flattened_name}_mem_profile.bin"
+            if os.path.exists(log_name):
+                os.remove(log_name)
+            try:
+                memray.Tracker(log_name).__enter__()
+            except Exception:
+                print("Tracker may have already been initialized, skipping...")
         return actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
 
     def kill(self) -> None:
