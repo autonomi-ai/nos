@@ -13,7 +13,6 @@ import nos
 from nos import hub
 from nos.common import TaskType, TimingInfo, tqdm
 from nos.common.shm import NOS_SHM_ENABLED
-from nos.constants import NOS_MEMRAY_ENABLED
 from nos.executors.ray import RayExecutor
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
@@ -327,7 +326,7 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
     logger.info(f"Saved timing records to {str(profile_path)}")
 
 
-@pytest.mark.skipif(not NOS_MEMRAY_ENABLED, reason="Memray tracking is not enabled.")
+# @pytest.mark.skipif(not NOS_MEMRAY_ENABLED, reason="Memray tracking is not enabled.")
 def test_memray_tracking(request):  # noqa: F811
     client = request.getfixturevalue("grpc_client_with_gpu_backend")
     assert client is not None
@@ -348,15 +347,3 @@ def test_memray_tracking(request):  # noqa: F811
     inputs = {"images": images}
     response = model(**inputs)
     assert isinstance(response, dict)
-
-    # TODO: Copy out the memray file
-    """
-    memray_log_path = Path("/tmp/ray/session_latest/logs/")
-
-    print(memray_log_path)
-    memray_files = list(memray_log_path.rglob("*_mem_profile.bin"))
-    print("memray files: ")
-    for file in memray_files:
-        print(file)
-    assert len(memray_files) == model_count, f"Expected {model_count} memray files"
-    """

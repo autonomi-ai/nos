@@ -74,10 +74,10 @@ class ModelHandle:
 
         # Add some memory logs to this actor
         actor_cls = ray.remote(**actor_options)(model_cls)
-        flattened_name = spec.name.replace("/", "_")
         if NOS_MEMRAY_ENABLED:
             import memray
 
+            flattened_name = spec.name.replace("/", "_")
             log_name = "/tmp/ray/session_latest/logs/" f"{flattened_name}_mem_profile.bin"
             if os.path.exists(log_name):
                 os.remove(log_name)
