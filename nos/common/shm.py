@@ -148,9 +148,14 @@ class SharedMemoryTransportManager:
 
     _shm_manager: SharedMemoryManager = field(init=False, default=None)
     """Shared memory manager."""
-
     _objects_map: Dict[str, Any] = field(default_factory=dict)
     """Shared memory objects map."""
+    _shm_counter: int = field(init=False, default=0)
+    """Shared memory counter."""
+    _max_rate: float = field(init=False, default=10)
+    """Maximum shared memory allocation rate."""
+    _last_polled: float = field(init=False, default_factory=lambda: time.time())
+    """Last time the shared memory allocation rate was polled."""
 
     def __post_init__(self) -> None:
         """Initialize the shared memory transport manager."""
@@ -176,6 +181,18 @@ class SharedMemoryTransportManager:
             Dict[str, Any]: Shared memory segment for the data dictionary.
         """
         namespace = namespace or ""
+
+        # Update the number of shm allocations, and rate-limit
+        self._shm_counter += 1
+        if self._shm_counter % 10 == 0:
+            rate = self._shm_counter / (time.time() - self._last_polled)
+            if rate > self._max_rate:
+                logger.warning(
+                    f"Shared memory allocation rate is high, check for variable input shapes with every request "
+                    f"[allocation calls={self._shm_counter}, rate={rate:.1f} calls/s]"
+                )
+            self._last_polled = time.time()
+            self._shm_counter = 0
 
         # Create shared memory segments for numpy arrays (or lists of numpy arrays)
         objects_map: Dict[str, Any] = {}

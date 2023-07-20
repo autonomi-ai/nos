@@ -360,14 +360,14 @@ class InferenceModule:
                     except Exception:
                         valid = False
                 if not valid:
-                    logger.warning(
+                    logger.debug(
                         """Inputs are inconsistent with previously registered shared memory objects, unregistering ..."""
                     )
                     registered_str = [(k, type(v), v.shape) for k, v in self._shm_objects.items()]
                     inputs_str = [
                         (k, type(v), v.shape if isinstance(v, np.ndarray) else None) for k, v in inputs.items()
                     ]
-                    logger.warning(
+                    logger.debug(
                         f"""Unregistering due to inconsistent shapes ... [registered={registered_str}, """
                         f"""inputs={inputs_str}]"""
                     )
