@@ -10,7 +10,8 @@ import numpy as np
 from google.protobuf import empty_pb2
 from PIL import Image
 
-from nos.client.exceptions import NosClientException
+from nos.client.exceptions import NosClientException, NosServerReadyException, NosInputValidationException, NosInferenceException
+
 from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
 from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
@@ -107,7 +108,7 @@ class InferenceClient:
             try:
                 self._stub = nos_service_pb2_grpc.InferenceServiceStub(self._channel)
             except Exception as e:
-                raise NosClientException(f"Failed to connect to server ({e})", e)
+                raise NosServerReadyException(f"Failed to connect to server ({e})", e)
         assert self._channel
         assert self._stub
         return self._stub
@@ -124,7 +125,7 @@ class InferenceClient:
             response: nos_service_pb2.PingResponse = self.stub.Ping(empty_pb2.Empty())
             return response.status == "ok"
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to ping server (details={e.details()})", e)
+            raise NosServerReadyException(f"Failed to ping server (details={e.details()})", e)
 
     def WaitForServer(self, timeout: int = 60, retry_interval: int = 5) -> None:
         """Ping the gRPC server for health.
@@ -144,7 +145,7 @@ class InferenceClient:
             except Exception:
                 logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
                 time.sleep(retry_interval)
-        raise NosClientException("Failed to ping server.")
+        raise NosServerReadyException("Failed to ping server.")
 
     def GetServiceVersion(self) -> str:
         """Get service version.
@@ -158,7 +159,7 @@ class InferenceClient:
             response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
             return response.version
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to get service info (details={e.details()})", e)
+            raise NosServerReadyException(f"Failed to get service info (details={e.details()})", e)
 
     def CheckCompatibility(self) -> bool:
         """Check if the service version is compatible with the client.
@@ -511,4 +512,4 @@ class InferenceModule:
             return response
         except grpc.RpcError as e:
             logger.error(f"Run() failed [details={e.details()}, request={request}, inputs={inputs.keys()}]")
-            raise NosClientException(f"Run() failed [model={self.model_name}, details={e.details()}]", e)
+            raise NosInferenceException(f"Run() failed [model={self.model_name}, details={e.details()}]", e)
