@@ -331,7 +331,7 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
     logger.info(f"Saved timing records to {str(profile_path)}")
 
 
-# @pytest.mark.skipif(not NOS_MEMRAY_ENABLED, reason="Memray tracking is not enabled.")
+@pytest.mark.skipif(not NOS_MEMRAY_ENABLED, reason="Memray tracking is not enabled.")
 def test_memray_tracking(request):  # noqa: F811
     client = request.getfixturevalue("grpc_client_with_gpu_backend")
     assert client is not None
