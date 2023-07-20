@@ -422,6 +422,10 @@ class InferenceModule:
 
         # Request shared memory, fail gracefully if not supported
         try:
+            # Clear the cached object_id and namespace so that they are re-initialized
+            if "object_id" in self.__dict__:  # noqa: WPS421
+                del self.object_id
+                del self.namespace
             response = self.stub.RegisterSystemSharedMemory(
                 nos_service_pb2.GenericRequest(request_bytes=dumps(shm_request)),
                 metadata=[("client_id", self.client_id), ("object_id", self.object_id)],
@@ -481,7 +485,7 @@ class InferenceModule:
         st = time.perf_counter()
         inputs = self._encode(inputs)
         if NOS_PROFILING_ENABLED:
-            logger.debug(f"Encoded inputs [id={self.object_id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
+            logger.debug(f"Encoded inputs [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         request = nos_service_pb2.InferenceRequest(
             model=nos_service_pb2.ModelInfo(
                 task=self.task.value,
@@ -491,18 +495,20 @@ class InferenceModule:
         )
         try:
             st = time.perf_counter()
-            logger.debug(f"Executing request [id={self.object_id}]]")
+            logger.debug(f"Executing request [model={self._spec.name}]]")
             response = self.stub.Run(request)
             if NOS_PROFILING_ENABLED:
                 logger.debug(
-                    f"Executed request [id={self.object_id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                    f"Executed request [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
                 )
 
             st = time.perf_counter()
             response = self._decode(response.response_bytes)
             response = {k: loads(v) for k, v in response.items()}
             if NOS_PROFILING_ENABLED:
-                logger.debug(f"Decoded response [elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
+                logger.debug(
+                    f"Decoded response [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                )
             return response
         except grpc.RpcError as e:
             logger.error(
