@@ -6,7 +6,12 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 
 import docker
 from nos.common.shm import NOS_SHM_ENABLED
-from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED  # noqa F401
+from nos.constants import (  # noqa F401
+    DEFAULT_GRPC_PORT,
+    NOS_DASHBOARD_ENABLED,
+    NOS_MEMRAY_ENABLED,
+    NOS_PROFILING_ENABLED,
+)
 from nos.logging import LOGGING_LEVEL, logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -47,6 +52,8 @@ class InferenceServiceRuntimeConfig:
             "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
             "NOS_PROFILING_ENABLED": int(NOS_PROFILING_ENABLED),
             "NOS_SHM_ENABLED": int(NOS_SHM_ENABLED),
+            "NOS_DASHBOARD_ENABLED": int(NOS_DASHBOARD_ENABLED),
+            "NOS_MEMRAY_ENABLED": int(NOS_MEMRAY_ENABLED),
         }
     )
     """Environment variables."""

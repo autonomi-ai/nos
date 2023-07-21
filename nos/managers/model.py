@@ -11,6 +11,9 @@ from nos.common import ModelSpec
 from nos.logging import logger
 
 
+NOS_MEMRAY_ENABLED = os.getenv("NOS_MEMRAY_ENABLED")
+
+
 @dataclass
 class ModelHandle:
     """Model handles for model execution.
@@ -68,7 +71,20 @@ class ModelHandle:
         model_cls = spec.signature.func_or_cls
         actor_options = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
         logger.debug(f"Creating actor: {actor_options}, {model_cls}")
+
+        # Add some memory logs to this actor
         actor_cls = ray.remote(**actor_options)(model_cls)
+        if NOS_MEMRAY_ENABLED:
+            import memray
+
+            flattened_name = spec.name.replace("/", "_")
+            log_name = "/tmp/ray/session_latest/logs/" f"{flattened_name}_mem_profile.bin"
+            if os.path.exists(log_name):
+                os.remove(log_name)
+            try:
+                memray.Tracker(log_name).__enter__()
+            except Exception:
+                print("Tracker may have already been initialized, skipping...")
         return actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
 
     def kill(self) -> None:

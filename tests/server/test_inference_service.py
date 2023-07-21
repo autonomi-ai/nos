@@ -329,3 +329,25 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
     profile_path = Path(NOS_BENCHMARK_DIR) / f"nos-{backend}-inference-benchmark--{version_str}--{date_str}.json"
     timing_df.to_json(str(profile_path), orient="records", indent=2)
     logger.info(f"Saved timing records to {str(profile_path)}")
+
+
+def test_memray_tracking(request):  # noqa: F811
+    client = request.getfixturevalue("grpc_client_with_gpu_backend")
+    assert client is not None
+    assert client.IsHealthy()
+
+    # Load dummy image
+    img = Image.open(NOS_TEST_IMAGE)
+
+    # Load noop model (This should still trigger memray tracking)
+    task, model_name = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # Make an inference request and confirm that this doesn't break inference
+    shape = (224, 224)
+    images = [np.asarray(img.resize(shape))]
+    inputs = {"images": images}
+    response = model(**inputs)
+    assert isinstance(response, dict)
