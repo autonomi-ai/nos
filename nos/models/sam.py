@@ -7,7 +7,7 @@ from PIL import Image
 
 from nos import hub
 from nos.common import TaskType
-from nos.common.types import Batch, ImageSpec, ImageT
+from nos.common.types import Batch, ImageT
 from nos.hub import HuggingFaceHubConfig
 
 
@@ -45,7 +45,7 @@ class SAM:
                 outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu()
             )
             assert len(masks) > 0
-            return {"masks" : [masks[0].cpu().numpy()]}
+            return {"masks": [masks[0].cpu().numpy()]}
 
 
 for model_name in SAM.configs:
