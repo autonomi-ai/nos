@@ -7,7 +7,7 @@
     conda create -n nos python=3.8
     ```
 
-    Python 3.8 is currently required to run the server on MacOS due to Ray support.
+    Python  3.8 is currently required to run the server on MacOS due to Ray support.
 
     Install Pip as well if its missing:
     ```bash
@@ -64,3 +64,16 @@
         texts=["dog riding horse"])
     img = response["image"]
     ```
+
+4. **Troubleshooting**
+
+```bash
+docker.errors.DockerException: Error while fetching server API version: ('Connection aborted.', ConnectionRefusedError(61, 'Connection refused'))
+```
+
+Docker service isn't running. On Linux/Ubunutu try:
+```bash
+sudo systemctl start docker
+```
+
+On MacOS, make sure Docker Desktop is running.
