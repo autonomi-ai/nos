@@ -1,5 +1,14 @@
 # 🔥 Quickstart
 
+0. **Dependencies**
+    We highly reccomend doing all of the following inside of a Conda environment. Install Conda on your machine following the official [guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html)
+
+    
+    Install Pip:
+    ```bash
+    conda install pip
+    ```
+
 1. **Install NOS**
 
     ```bash
@@ -23,26 +32,13 @@
 
 2. **Run the NOS server with Docker**
 
-    Navigate to the `examples/quickstart` folder and run the NOS server via:
+    Start the nos server with the appropriate backend:
     ```bash
-    docker compose -f docker-compose.quickstart.yml up
+    nos docker start --runtime=[gpu, cpu]
     ```
 
-    Let's inspect the docker-compose file to understand what's going on:
-    ```yaml
-    {% include "../examples/quickstart/docker-compose.quickstart.yml" %}
-    ```
-
-    We first spin up a `nos-grpc-server` service mounting the necessary host directories (`~/.nosd`) and exposing the gRPC port. The command `nos-grpc-server` spins up the gRPC server with the default 50051 port that can be used to send inference requests. The `NOS_HOME` directory is set to `/app/.nos` where all the models and optimization artifacts are stored. This directory is mounted on your host machine at `~/.nosd`.
-
-    Alternatively, you can also get started with docker via:
-    ```bash
-    docker run -it \
-        -p 50051:50051 \
-        -v ~/.nosd:/app/.nos \
-        --shm-size 4g \
-        autonomi/nos:latest-cpu
-    ```
+    This will spin up `nos-nos-server` in `docker ps`. We're now ready to issue 
+    out first inference request!
 
 3. **Run Inference**
     Try out an inference request via the CLI or [Python SDK](https://pypi.org/project/autonomi-nos):
