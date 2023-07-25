@@ -4,5 +4,6 @@ huggingface_hub
 memray
 pyarrow>=12.0.0
 ray[serve]==2.5.0
+super_image
 tabulate
 transformers>=4.29.2
