@@ -5,6 +5,9 @@ import numpy as np
 import torch
 from PIL import Image
 
+from nos import hub
+from nos.common import TaskType
+from nos.common.types import Batch, ImageT
 from nos.hub import HuggingFaceHubConfig
 
 
@@ -32,7 +35,7 @@ class SAM:
         self.model.eval()
         self.processor = SamProcessor.from_pretrained(model_name)
 
-    def predict(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
+    def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
         with torch.inference_mode():
             # empty points for now
             input_points = [[[10, 10]]]
@@ -42,4 +45,16 @@ class SAM:
                 outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu()
             )
             assert len(masks) > 0
-            return [masks[0].cpu().numpy()]
+            return {"masks": [masks[0].cpu().numpy()]}
+
+
+for model_name in SAM.configs:
+    hub.register(
+        model_name,
+        TaskType.IMAGE_SEGMENTATION_2D,
+        SAM,
+        init_args=(model_name,),
+        method_name="__call__",
+        inputs={"images": Batch[ImageT[Image.Image]]},
+        outputs={"masks": Batch[ImageT[Image.Image]]},
+    )
