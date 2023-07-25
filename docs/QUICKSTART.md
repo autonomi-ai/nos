@@ -7,7 +7,7 @@
     conda create -n nos python=3.8
     ```
 
-    (Note for NOS server) Python  3.8 is currently required to run the server on MacOS due to Ray requirements.
+    (Note for NOS server) Python  3.8 is currently required to run the  server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
 
     Install Pip as well if its missing:
     ```bash
@@ -27,7 +27,7 @@
 
 2. **(OPTIONAL) Install Docker dependencies for local NOS server**
 
-    If you are running the NOS container locally on a linux box, you will also need to install Docker
+    If you are running the NOS server locally on a linux box, you will also need to install Docker
     and Nvidia Docker.
     ```bash
     sudo apt-get update \
@@ -37,19 +37,23 @@
 
 2. **Run the NOS server with Docker**
 
-    There are two ways to launch the Nos server.
-    1) From the CLI. Start the nos server with the appropriate backend:
+    There are two ways to launch the Nos server:
+
+    **Via CLI**
+
+    Start the nos server with the appropriate backend:
     ```bash
     nos docker start --runtime=[gpu, cpu]
     ```
 
-    2) With Docker Compose
+    **Via Docker Compose**
+
     Navigate to the `examples/quickstart` folder and run:
     ```bash
     docker compose -f docker-compose.quickstart.yml up
     ```
 
-    This will spin up `nos-grpc-server` in `docker ps`. We're now ready to issue
+    This will spin up `nos-grpc-server` (visible under `docker ps`). We're now ready to issue
     out first inference request!
 
 3. **Run Inference**
