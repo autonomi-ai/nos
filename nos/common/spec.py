@@ -5,15 +5,19 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_
 from functools import cached_property
 
 import json
+from dataclasses import field
+from functools import cached_property
+from typing import Any, Callable, Dict, List, MutableSet, Optional, Tuple, Type, Union, get_args, get_origin
+
 from pydantic import validator
 from pydantic.dataclasses import dataclass
 
-from nos.constants import NOS_PATH
-from nos.logging import logger
 from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import NosInputValidationException
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
+from nos.constants import NOS_PATH
+from nos.logging import logger
 from nos.protoc import import_module
 
 
@@ -139,7 +143,16 @@ class FunctionSignature:
 
     def __repr__(self) -> str:
         """Return the function signature representation."""
-        return f"FunctionSignature(inputs={self.inputs}, outputs={self.outputs}, func_or_cls={self.func_or_cls}, init_args={self.init_args}, init_kwargs={self.init_kwargs}, method_name={self.method_name})"
+        inputs_str = "\n".join([f"{k}={v}" for k, v in self.inputs.items()])
+        outputs_str = "\n".join([f"{k}={v}" for k, v in self.outputs.items()])
+        return (
+            f"""FunctionSignature\n"""
+            f"""\tfunc_or_cls={self.func_or_cls}\n"""
+            f"""\tinit_args={self.init_args}, init_kwargs={self.init_kwargs}\n"""
+            f"""\tmethod_name={self.method_name}\n"""
+            f"""\tinputs={inputs_str}\n"""
+            f"""\toutputs={outputs_str}\n"""
+        )
 
     @staticmethod
     def validate(inputs: Dict[str, Any], sig: Dict[str, FunctionSignatureType]) -> Dict[str, Any]:
@@ -196,12 +209,15 @@ class RuntimeEnv:
 @dataclass
 class ModelResources:
     """Model resources (device/host memory etc)."""
+
     device: str = "cpu"
     """Device type (cpu, cuda, mps, neuron, etc)."""
-    device_mem: int = 32 * 1024**2
-    """Device memory (defaults to 32 MB)."""
-    num_cpus: float = 0
+    device_memory: Union[int, str] = field(default=512 * 1024**2)
+    """Device memory (defaults to 512 MB)."""
+    cpus: float = 0
     """Number of CPUs (defaults to 0 CPUs)."""
+    memory: Union[int, str] = field(default=32 * 1024**2)
+    """Host memory (defaults to 32 MB)"""
 
     @validator("device")
     def _validate_device(cls, device: str) -> str:
@@ -213,42 +229,61 @@ class ModelResources:
             logger.error(err_msg)
             raise ValueError(err_msg)
         return device
-    
-    @validator("device_mem")
-    def _validate_device_mem(cls, device_mem: int) -> int:
+
+    @validator("device_memory")
+    def _validate_device_memory(cls, device_memory: Union[int, str]) -> int:
         """Validate the device memory."""
-        if device_mem <= 32 * 1024**2 or device_mem > 128 * 1024**3:
-            err_msg = f"Invalid device memory provided, device_mem={device_mem / 1024**2} MB. Provide a value between 32 MB and 128 GB."
+        if isinstance(device_memory, str):
+            raise NotImplementedError()
+
+        if device_memory <= 32 * 1024**2 or device_memory > 128 * 1024**3:
+            err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 32 MB and 128 GB."
             logger.error(err_msg)
             raise ValueError(err_msg)
-        return device_mem
-    
-    @validator("num_cpus")
-    def _validate_num_cpus(cls, num_cpus: float) -> float:
+        return device_memory
+
+    @validator("cpus")
+    def _validate_cpus(cls, cpus: Union[float, str]) -> float:
         """Validate the number of CPUs."""
-        if num_cpus < 0. or num_cpus > 128.:
-            err_msg = f"Invalid number of CPUs provided, num_cpus={num_cpus}. Provide a value between 0 and 128."
+        if isinstance(cpus, str):
+            raise NotImplementedError()
+
+        if cpus < 0.0 or cpus > 128.0:
+            err_msg = f"Invalid number of CPUs provided, cpus={cpus}. Provide a value between 0 and 128."
             logger.error(err_msg)
             raise ValueError(err_msg)
-        return num_cpus
+        return cpus
+
+    @validator("memory")
+    def _validate_memory(cls, memory: Union[int, str]) -> int:
+        """Validate the host memory."""
+        if isinstance(memory, str):
+            raise NotImplementedError()
+
+        if memory <= 32 * 1024**2 or memory > 128 * 1024**3:
+            err_msg = f"Invalid device memory provided, memory={memory / 1024**2} MB. Provide a value between 32 MB and 128 GB."
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        return memory
 
 
 @dataclass
 class ModelSpecMetadata:
     """Model specification metadata.
-    
+
     The metadata contains the model profiles, metrics, etc.
     """
+
     name: str
     """Model identifier."""
     task: TaskType
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
-    runtime: str
-    """Runtime (e.g. cpu, gpu, trt, etc).
+    runtime: set
+    """Runtimes supported (e.g. cpu, gpu, trt, etc).
     See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
     """
     resources: ModelResources
-    """Model resources (device/host memory, etc)."""
+    """Model resource limits (device/host memory, etc)."""
 
     @validator("runtime")
     def _validate_runtime(cls, runtime: str) -> str:
@@ -258,7 +293,7 @@ class ModelSpecMetadata:
         if runtime not in InferenceServiceRuntime.configs:
             raise ValueError(f"Invalid runtime, runtime={runtime}.")
         return runtime
-        
+
 
 @dataclass
 class ModelSpec:
@@ -277,8 +312,11 @@ class ModelSpec:
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
     _metadata: ModelSpecMetadata = None
-    """Model specification metadata. The contents of the metadata (profiles, metrics, etc) 
+    """Model specification metadata. The contents of the metadata (profiles, metrics, etc)
     are specified in a separate file."""
+
+    def __repr__(self):
+        return f"""ModeSpec(name={self.name}, task={self.task})""" f"""\n    {self.signature}"""
 
     @cached_property
     def metadata(self) -> ModelSpecMetadata:
@@ -292,9 +330,9 @@ class ModelSpec:
             metadata = None
         return metadata
 
-    @property
-    def task(self) -> TaskType:
-        return self.metadata.task
+    # @property
+    # def task(self) -> TaskType:
+    #     return self.metadata.task
 
     @staticmethod
     def get_id(model_name: str, task: TaskType = None) -> str:

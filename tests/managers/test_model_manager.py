@@ -230,7 +230,6 @@ BENCHMARK_MODELS = [
         "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
         [(640, 480), (1280, 960), (2880, 1620)],
     ),
-
 ]
 BENCHMARK_WARMUP_SEC = 2
 BENCHMARK_DURATION_SEC = 10
