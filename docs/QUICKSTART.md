@@ -2,12 +2,12 @@
 
 0. **Dependencies**
 
-    We highly reccomend doing all of the following inside of a Conda environment. Install Conda on your machine following the official [guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Create a new env:
+    We highly recomend doing all of the following inside of a Conda or Virtualenv environment. You can install Conda on your machine following the official [guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Create a new env:
     ```bash
     conda create -n nos python=3.8
     ```
 
-    Python  3.8 is currently required to run the server on MacOS due to Ray support.
+    (Note for NOS server) Python  3.8 is currently required to run the server on MacOS due to Ray requirements.
 
     Install Pip as well if its missing:
     ```bash
@@ -37,12 +37,19 @@
 
 2. **Run the NOS server with Docker**
 
-    Start the nos server with the appropriate backend:
+    There are two ways to launch the Nos server.
+    1) From the CLI. Start the nos server with the appropriate backend:
     ```bash
     nos docker start --runtime=[gpu, cpu]
     ```
 
-    This will spin up `nos-nos-server` in `docker ps`. We're now ready to issue
+    2) With Docker Compose
+    Navigate to the `examples/quickstart` folder and run:
+    ```bash
+    docker compose -f docker-compose.quickstart.yml up
+    ```
+
+    This will spin up `nos-grpc-server` in `docker ps`. We're now ready to issue
     out first inference request!
 
 3. **Run Inference**
