@@ -1,5 +1,19 @@
 # 🔥 Quickstart
 
+0. **Dependencies**
+
+    We highly recommend doing all of the following inside of a Conda or Virtualenv environment. You can install Conda on your machine following the official [guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Create a new env:
+    ```bash
+    conda create -n nos python=3.8
+    ```
+
+    (Note for NOS server) Python  3.8 is currently required to run the  server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
+
+    Install Pip as well if its missing:
+    ```bash
+    conda install pip
+    ```
+
 1. **Install NOS**
 
     ```bash
@@ -13,7 +27,7 @@
 
 2. **(OPTIONAL) Install Docker dependencies for local NOS server**
 
-    If you are running the NOS container locally on a linux box, you will also need to install Docker
+    If you are running the NOS server locally on a linux box, you will also need to install Docker
     and Nvidia Docker.
     ```bash
     sudo apt-get update \
@@ -23,26 +37,24 @@
 
 2. **Run the NOS server with Docker**
 
-    Navigate to the `examples/quickstart` folder and run the NOS server via:
+    There are two ways to launch the Nos server:
+
+    **Via CLI**
+
+    Start the nos server with the appropriate backend:
+    ```bash
+    nos docker start --runtime=[gpu, cpu]
+    ```
+
+    **Via Docker Compose**
+
+    Navigate to the `examples/quickstart` folder and run:
     ```bash
     docker compose -f docker-compose.quickstart.yml up
     ```
 
-    Let's inspect the docker-compose file to understand what's going on:
-    ```yaml
-    {% include "../examples/quickstart/docker-compose.quickstart.yml" %}
-    ```
-
-    We first spin up a `nos-grpc-server` service mounting the necessary host directories (`~/.nosd`) and exposing the gRPC port. The command `nos-grpc-server` spins up the gRPC server with the default 50051 port that can be used to send inference requests. The `NOS_HOME` directory is set to `/app/.nos` where all the models and optimization artifacts are stored. This directory is mounted on your host machine at `~/.nosd`.
-
-    Alternatively, you can also get started with docker via:
-    ```bash
-    docker run -it \
-        -p 50051:50051 \
-        -v ~/.nosd:/app/.nos \
-        --shm-size 4g \
-        autonomi/nos:latest-cpu
-    ```
+    This will spin up `nos-grpc-server` (visible under `docker ps`). We're now ready to issue
+    out first inference request!
 
 3. **Run Inference**
     Try out an inference request via the CLI or [Python SDK](https://pypi.org/project/autonomi-nos):
@@ -63,3 +75,16 @@
         texts=["dog riding horse"])
     img = response["image"]
     ```
+
+4. **Troubleshooting**
+
+```bash
+docker.errors.DockerException: Error while fetching server API version: ('Connection aborted.', ConnectionRefusedError(61, 'Connection refused'))
+```
+
+Docker service isn't running. On Linux/Ubunutu try:
+```bash
+sudo systemctl start docker
+```
+
+On MacOS, make sure Docker Desktop is running.
