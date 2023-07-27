@@ -189,6 +189,8 @@ class ModelSpec:
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
     signature: FunctionSignature = None
     """Model function signature."""
+    recommended_resolutions: List[Tuple[int, int]] = None
+    """recommended image resolutions for image models."""
 
     @staticmethod
     def get_id(model_name: str, task: TaskType = None) -> str:

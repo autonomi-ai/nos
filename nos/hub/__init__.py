@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from nos.common import FunctionSignature, ModelSpec, TaskType  # noqa: F401
 from nos.hub.config import HuggingFaceHubConfig, MMLabConfig, NosHubConfig, TorchHubConfig  # noqa: F401
@@ -91,6 +91,7 @@ class Hub:
                 init_kwargs=kwargs.pop("init_kwargs", {}),
                 method_name=kwargs.pop("method_name", None),
             ),
+            recommended_resolutions=kwargs.pop("recommended_resolutions", None),
         )
         model_id = ModelSpec.get_id(spec.name, spec.task)
         if model_id not in cls.get()._registry:

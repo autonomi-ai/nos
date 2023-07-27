@@ -236,4 +236,5 @@ for model_name in CLIP.configs:
         method_name="encode_image",
         inputs={"images": Batch[ImageT[Image.Image]]},
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
+        recommended_resolutions=[(224, 224)],
     )
