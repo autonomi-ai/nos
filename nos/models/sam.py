@@ -9,6 +9,7 @@ from nos import hub
 from nos.common import TaskType
 from nos.common.types import Batch, ImageT
 from nos.hub import HuggingFaceHubConfig
+from nos.common.io import prepare_images
 
 from nos.logging import logger
 
@@ -39,9 +40,10 @@ class SAM:
 
     def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
         with torch.inference_mode():
+            images = prepare_images(images)
             # 50 X 50 grid, evenly spaced across input image resolution
             # h, w = images.size 
-            h, w = 640, 480
+            h, w = images[0].shape[:2]
             grid_x, grid_y = torch.meshgrid(
                 torch.linspace(0, w, 50, dtype=int), torch.linspace(0, h, 50, dtype=int)
             )
