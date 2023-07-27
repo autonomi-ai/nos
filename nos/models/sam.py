@@ -7,11 +7,9 @@ from PIL import Image
 
 from nos import hub
 from nos.common import TaskType
+from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT
 from nos.hub import HuggingFaceHubConfig
-from nos.common.io import prepare_images
-
-from nos.logging import logger
 
 
 @dataclass(frozen=True)
@@ -25,7 +23,7 @@ class SAM:
     configs = {
         "facebook/sam-vit-large": SAMConfig(
             model_name="facebook/sam-vit-large",
-        ), 
+        ),
     }
 
     def __init__(self, model_name: str = "facebook/sam-vit-large"):
@@ -42,14 +40,14 @@ class SAM:
         with torch.inference_mode():
             images = prepare_images(images)
             # 50 X 50 grid, evenly spaced across input image resolution
-            # h, w = images.size 
+            # h, w = images.size
             h, w = images[0].shape[:2]
-            grid_x, grid_y = torch.meshgrid(
-                torch.linspace(0, w, 50, dtype=int), torch.linspace(0, h, 50, dtype=int)
-            )
+            grid_x, grid_y = torch.meshgrid(torch.linspace(0, w, 50, dtype=int), torch.linspace(0, h, 50, dtype=int))
             # flatten grid to a list of (x, y) coordinates
             input_points = torch.stack([grid_x.flatten(), grid_y.flatten()], dim=-1)
-            inputs = self.processor(images=images, input_points=[input_points.tolist()], return_tensors="pt").to(self.device)
+            inputs = self.processor(images=images, input_points=[input_points.tolist()], return_tensors="pt").to(
+                self.device
+            )
             outputs = self.model(**inputs)
             masks = self.processor.post_process_masks(
                 outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu()
