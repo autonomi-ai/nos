@@ -10,6 +10,7 @@ import rich.status
 import docker
 import docker.errors
 import docker.models.containers
+from nos.common.system import has_gpu
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
 from nos.version import __version__
@@ -19,6 +20,42 @@ from ._runtime import InferenceServiceRuntime
 
 
 __all__ = ["init", "shutdown"]
+
+
+_MIN_NUM_CPUS = 4
+_MIN_MEM_GB = 6
+_MIN_SHMEM_GB = 4
+
+
+def _check_system_requirements(runtime: str):
+    """Check system requirements."""
+    from nos.common.system import has_docker, has_gpu, has_nvidia_docker_runtime_enabled
+
+    logger.debug(f"Checking system requirements, [nos={__version__}].")
+    if not has_docker():
+        raise RuntimeError("Docker not found, please install docker before proceeding.")
+
+    if runtime == "gpu":
+        if not has_gpu():
+            raise RuntimeError("GPU not found, please install CUDA drivers before proceeding.")
+        if not has_nvidia_docker_runtime_enabled():
+            raise RuntimeError(
+                "NVIDIA Docker runtime not enabled, please enable NVIDIA Docker runtime before proceeding."
+            )
+
+    # For now, we require at least 4 physical CPU cores and 6 GB of free memory
+    cl = DockerRuntime.get()._client
+    num_cpus = cl.info().get("NCPU", psutil.cpu_count(logical=False))
+    mem_avail = (
+        min(cl.info().get("MemTotal", psutil.virtual_memory().total), psutil.virtual_memory().available) / 1024**3
+    )
+    logger.debug(f"Checking system requirements: [num_cpus={num_cpus}, mem_avail={mem_avail:.1f}GB]")
+    if num_cpus < _MIN_NUM_CPUS:
+        raise ValueError(f"Insufficient number of physical CPU cores ({num_cpus} cores), at least 4 cores required.")
+    if mem_avail < _MIN_MEM_GB:
+        raise ValueError(
+            f"Insufficient available system memory ({mem_avail:.1f}GB), at least 6 GB of free memory required."
+        )
 
 
 def init(
@@ -42,8 +79,6 @@ def init(
         tag (str, optional): The tag of the docker image to use ("latest"). Defaults to None, where the
             appropriate version is used.
     """
-    from nos.common.system import has_docker, has_gpu, has_nvidia_docker_runtime_enabled
-
     # Check arguments
     available_runtimes = list(InferenceServiceRuntime.configs.keys()) + ["auto"]
     if runtime not in available_runtimes:
@@ -66,10 +101,6 @@ def init(
             raise ValueError(f"Invalid tag: {tag}, must be a string.")
         raise NotImplementedError("Custom tags are not yet supported.")
 
-    _MIN_NUM_CPUS = 4
-    _MIN_MEM_GB = 6
-    _MIN_SHMEM_GB = 4
-
     # Determine runtime from system
     if runtime == "auto":
         runtime = "gpu" if has_gpu() else "cpu"
@@ -79,40 +110,6 @@ def init(
             raise ValueError(
                 f"Invalid inference service runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
             )
-
-    def _check_system_requirements():
-        """Check system requirements."""
-        logger.debug(f"Checking system requirements, [nos={__version__}].")
-        if not has_docker():
-            raise RuntimeError("Docker not found, please install docker before proceeding.")
-
-        if runtime == "gpu":
-            if not has_gpu():
-                raise RuntimeError("GPU not found, please install CUDA drivers before proceeding.")
-            if not has_nvidia_docker_runtime_enabled():
-                raise RuntimeError(
-                    "NVIDIA Docker runtime not enabled, please enable NVIDIA Docker runtime before proceeding."
-                )
-
-        # For now, we require at least 4 physical CPU cores and 6 GB of free memory
-        cl = DockerRuntime.get()._client
-        num_cpus = cl.info().get("NCPU", psutil.cpu_count(logical=False))
-        mem_avail = (
-            min(cl.info().get("MemTotal", psutil.virtual_memory().total), psutil.virtual_memory().available)
-            / 1024**3
-        )
-        logger.debug(f"Checking system requirements: [num_cpus={num_cpus}, mem_avail={mem_avail:.1f}GB]")
-        if num_cpus < _MIN_NUM_CPUS:
-            raise ValueError(
-                f"Insufficient number of physical CPU cores ({num_cpus} cores), at least 4 cores required."
-            )
-        if mem_avail < _MIN_MEM_GB:
-            raise ValueError(
-                f"Insufficient available system memory ({mem_avail:.1f}GB), at least 6 GB of free memory required."
-            )
-
-    # Check system requirements
-    _check_system_requirements()
 
     # Check if the latest inference server is already running
     # If the running container's tag is inconsistent with the current version,
@@ -137,6 +134,11 @@ def init(
             _stop_container(container)
     else:
         logger.debug("No existing inference server found, starting a new one.")
+
+    # Check system requirements
+    # Note: we do this after checking if the latest
+    # inference server is already running for convenience.
+    _check_system_requirements(runtime)
 
     # Pull docker image (if necessary)
     if pull:
