@@ -104,26 +104,23 @@ def test_pixeltable_integration():
 
     # Setup pixeltable database
     try:
-        db = cl.create_db(PIXELTABLE_DB_NAME)
+        cl.create_db(PIXELTABLE_DB_NAME)
     except Exception:
         pass
-    finally:
-        db = cl.get_db(PIXELTABLE_DB_NAME)
-    assert db is not None
 
     # Setup columns
     cols = [
-        pt.Column("video", pt.VideoType(), nullable=False),
-        pt.Column("frame", pt.ImageType(), nullable=False),
-        pt.Column("frame_idx", pt.IntType(), nullable=False),
+        pt.Column("video", pt.VideoType()),
+        pt.Column("frame", pt.ImageType()),
+        pt.Column("frame_idx", pt.IntType()),
     ]
 
     # Setup pixeltable test_data table
-    db.drop_table("test_data", ignore_errors=True)
+    cl.drop_table("test_data", ignore_errors=True)
     try:
-        t = db.get_table("test_data")
+        t = cl.get_table("test_data")
     except Exception:
-        t = db.create_table(
+        t = cl.create_table(
             "test_data",
             cols,
             extract_frames_from="video",
