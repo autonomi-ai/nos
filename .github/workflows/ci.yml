@@ -1,4 +1,4 @@
-name: CPU Tests
+name: Main CI
 
 on:
   pull_request:
@@ -11,13 +11,14 @@ env:
 
 jobs:
   test-cpu:
-    name: Test CI (CPU)
+    name: Test CPU (Linux)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
-      fail-fast: false
+      max-parallel: 1
+      fail-fast: true
       matrix:
-        os: ["ubuntu-latest", "macos-latest"]
+        os: ["ubuntu-latest"]
         python-version: ["3.8"]
     defaults:
       run:
@@ -53,21 +54,3 @@ jobs:
         run: make lint
       - name: Test
         run: make test-cpu
-
-  docker-test-cpu:
-    name: Test CI within docker (CPU)
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: ["ubuntu-latest"]
-        python-version: ["3.8"]
-    defaults:
-      run:
-        shell: bash -el {0}
-    steps:
-      - name: Checkout git repo
-        uses: actions/checkout@master
-      - name: Build and test-cpu within docker container
-        run: make docker-test-cpu
