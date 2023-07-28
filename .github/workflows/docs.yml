@@ -1,4 +1,4 @@
-name: docs
+name: Generate / Deploy Docs
 on:
   push:
     branches:
@@ -8,6 +8,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4

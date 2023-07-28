@@ -1,17 +1,59 @@
-name: Main CI
+name: Integrations
 
 on:
   pull_request:
+    paths:
+      - "nos/version.py"
   push:
     branches: [main]
+    paths:
+      - "nos/version.py"
   workflow_call:
 
-env:
-  CACHE_NUMBER: 0  # increase to reset cache manually
-
 jobs:
-  test-cpu:
-    name: Test CPU (Linux)
+  test-cpu-macos:
+    name: Test CPU (MacOS)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        os: ["macos-latest"]
+        python-version: ["3.8"]
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@master
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          auto-update-conda: true
+          activate-environment: nos-${{ matrix.os }}-${{ matrix.python-version }}
+          python-version: ${{ matrix.python-version }}
+          use-mamba: true
+      - uses: actions/cache@v3
+        with:
+          path: /usr/share/miniconda3/envs/nos-${{ matrix.os }}-${{ matrix.python-version }}
+          key: conda-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements/requirements.txt') }}-${{ hashFiles('pyproject.toml') }}-${{ env.CACHE_NUMBER }}
+        id: cache
+      - uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}-${{ env.CACHE_NUMBER }}
+      - name: Install dependencies
+        run: make develop-cpu
+        if: steps.cache.outputs.cache-hit != 'true'
+      - name: Quality Check
+        run: make lint
+      - name: Test
+        run: make test-cpu
+
+  test-pixeltable-cpu:
+    name: Test Pixeltable CPU (Linux)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -31,44 +73,10 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           auto-update-conda: true
-          activate-environment: nos-${{ matrix.os }}-${{ matrix.python-version }}
+          activate-environment: nos-pixeltable-${{ matrix.os }}-${{ matrix.python-version }}
           python-version: ${{ matrix.python-version }}
           use-mamba: true
-      - name: Conda info
-        run: conda info
-      - name: Conda list
-        run: conda list
-      - uses: actions/cache@v3
-        with:
-          path: /usr/share/miniconda3/envs/nos-${{ matrix.os }}-${{ matrix.python-version }}
-          key: conda-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements/requirements.txt') }}-${{ hashFiles('pyproject.toml') }}-${{ env.CACHE_NUMBER }}
-        id: cache
-      - uses: actions/cache@v3
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ matrix.os }}-${{ matrix.python-version }}-${{ hashFiles('.pre-commit-config.yaml') }}-${{ env.CACHE_NUMBER }}
-      - name: Install dependencies
-        run: make develop-cpu
-        if: steps.cache.outputs.cache-hit != 'true'
-      - name: Quality Check
-        run: make lint
-      - name: Test
-        run: make test-cpu
-
-  docker-test-cpu:
-    name: Test CPU (docker)
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: true
-      matrix:
-        os: ["ubuntu-latest"]
-        python-version: ["3.8"]
-    defaults:
-      run:
-        shell: bash -el {0}
-    steps:
-      - name: Checkout git repo
-        uses: actions/checkout@master
-      - name: Build and test-cpu within docker container
-        run: make docker-test-cpu
+      - name: Install latest pixeltable and NOS
+        run: pip install git+https://github.com/mkornacker/pixeltable && pip install -e .
+      - name: Test pixeltable integration
+        run: NOS_LOGGING_LEVEL=DEBUG pytest -sv tests/integrations/test_pixeltable.py
