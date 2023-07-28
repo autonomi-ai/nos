@@ -5,9 +5,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_
 from functools import cached_property
 
 import json
-from dataclasses import field
+from dataclasses import asdict, field
 from functools import cached_property
-from typing import Any, Callable, Dict, List, MutableSet, Optional, Tuple, Type, Union, get_args, get_origin
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin
 
 from pydantic import validator
 from pydantic.dataclasses import dataclass
@@ -16,7 +16,7 @@ from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import NosInputValidationException
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
-from nos.constants import NOS_PATH
+from nos.constants import NOS_MODELS_DIR
 from nos.logging import logger
 from nos.protoc import import_module
 
@@ -210,14 +210,28 @@ class RuntimeEnv:
 class ModelResources:
     """Model resources (device/host memory etc)."""
 
+    runtime: str = "cpu"
+    """Runtime type (cpu, gpu, trt-runtime, etc).
+    See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
+    """
     device: str = "cpu"
     """Device type (cpu, cuda, mps, neuron, etc)."""
     device_memory: Union[int, str] = field(default=512 * 1024**2)
     """Device memory (defaults to 512 MB)."""
     cpus: float = 0
     """Number of CPUs (defaults to 0 CPUs)."""
-    memory: Union[int, str] = field(default=32 * 1024**2)
-    """Host memory (defaults to 32 MB)"""
+    memory: Union[int, str] = field(default=256 * 1024**2)
+    """Host memory (defaults to 256 MB)"""
+
+    @validator("runtime")
+    def _validate_runtime(cls, runtime: str) -> str:
+        """Validate the runtime."""
+        from nos.server._runtime import InferenceServiceRuntime
+
+        # Check if runtime is subset of supported runtimes.
+        if runtime not in InferenceServiceRuntime.configs.keys():
+            raise ValueError(f"Invalid runtime, runtime={runtime}.")
+        return runtime
 
     @validator("device")
     def _validate_device(cls, device: str) -> str:
@@ -236,8 +250,8 @@ class ModelResources:
         if isinstance(device_memory, str):
             raise NotImplementedError()
 
-        if device_memory <= 32 * 1024**2 or device_memory > 128 * 1024**3:
-            err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 32 MB and 128 GB."
+        if device_memory < 256 * 1024**2 or device_memory > 128 * 1024**3:
+            err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
             logger.error(err_msg)
             raise ValueError(err_msg)
         return device_memory
@@ -260,8 +274,8 @@ class ModelResources:
         if isinstance(memory, str):
             raise NotImplementedError()
 
-        if memory <= 32 * 1024**2 or memory > 128 * 1024**3:
-            err_msg = f"Invalid device memory provided, memory={memory / 1024**2} MB. Provide a value between 32 MB and 128 GB."
+        if memory < 256 * 1024**2 or memory > 128 * 1024**3:
+            err_msg = f"Invalid device memory provided, memory={memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
             logger.error(err_msg)
             raise ValueError(err_msg)
         return memory
@@ -278,21 +292,31 @@ class ModelSpecMetadata:
     """Model identifier."""
     task: TaskType
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
-    runtime: set
-    """Runtimes supported (e.g. cpu, gpu, trt, etc).
-    See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
-    """
-    resources: ModelResources
+    resources: Dict[str, ModelResources] = field(default_factory=dict)
     """Model resource limits (device/host memory, etc)."""
+    """Key is the runtime type (cpu, gpu, trt-runtime, etc)."""
 
-    @validator("runtime")
-    def _validate_runtime(cls, runtime: str) -> str:
-        """Validate the runtime."""
-        from nos.server._runtime import InferenceServiceRuntime
+    def __repr__(self) -> str:
+        return f"""ModelSpecMetadata(name={self.name}, task={self.task}, """ f"""resources={self.resources})"""
 
-        if runtime not in InferenceServiceRuntime.configs:
-            raise ValueError(f"Invalid runtime, runtime={runtime}.")
-        return runtime
+    def to_json(self, filename: str) -> Dict[str, Any]:
+        """Convert the model spec to json."""
+        specd = asdict(self)
+        with open(filename, "w") as f:
+            json.dump(specd, f, indent=4)
+        return specd
+
+    @classmethod
+    def from_json(cls, filename: str) -> "ModelSpecMetadata":
+        """Convert the model spec from json."""
+        with open(filename, "r") as f:
+            specd = json.load(f)
+            return cls(**specd)
+
+
+def _metadata_path(spec: "ModelSpec") -> str:
+    """Return the metadata path for a model."""
+    return NOS_MODELS_DIR / f"metadata/{spec.id}/metadata.json"
 
 
 @dataclass
@@ -311,22 +335,27 @@ class ModelSpec:
     """Model function signature."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
-    _metadata: ModelSpecMetadata = None
+    _metadata: ModelSpecMetadata = field(init=False, default=None)
     """Model specification metadata. The contents of the metadata (profiles, metrics, etc)
     are specified in a separate file."""
 
+    class Config:
+        """Custom configuration to keep _metadata private for now."""
+
+        underscore_attrs_are_private = True
+
     def __repr__(self):
-        return f"""ModeSpec(name={self.name}, task={self.task})""" f"""\n    {self.signature}"""
+        return f"""ModelSpec(name={self.name}, task={self.task})""" f"""\n    {self.signature}"""
 
     @cached_property
     def metadata(self) -> ModelSpecMetadata:
         try:
-            path = NOS_PATH / f"data/models/{self.id}/metadata.json"
-            with open(str(path), "r") as f:
-                metadata = ModelSpecMetadata(**json.load(f))
+            path = _metadata_path(self)
+            if not path.exists():
+                raise FileNotFoundError(f"Model metadata not found. [path={path}]")
+            metadata = ModelSpecMetadata.from_json(str(path))
             logger.info(f"Loaded model metadata [name={self.name}, path={path}, metadata={metadata}]")
-        except FileNotFoundError:
-            logger.warning(f"Model metadata not found. [path={path}]")
+        except Exception:
             metadata = None
         return metadata
 

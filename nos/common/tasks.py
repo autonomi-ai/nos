@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class TaskType(Enum):
+class TaskType(str, Enum):
     """Task types."""
 
     OBJECT_DETECTION_2D = "object_detection_2d"
