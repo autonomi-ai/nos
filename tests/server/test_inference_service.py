@@ -365,7 +365,6 @@ def test_client_exception_types(request):
     assert model is not None
     assert model.GetModelInfo() is not None
 
-    # Make an inference request and confirm that this doesn't break inference
     # TODO(scott): We only validate input count and not the types themselves. When
     # we finish input validation the test should change accordingly.
     inputs = {}
