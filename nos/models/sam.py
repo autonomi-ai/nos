@@ -7,6 +7,7 @@ from PIL import Image
 
 from nos import hub
 from nos.common import TaskType
+from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT
 from nos.hub import HuggingFaceHubConfig
 
@@ -37,15 +38,22 @@ class SAM:
 
     def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
         with torch.inference_mode():
-            # empty points for now
-            input_points = [[[10, 10]]]
-            inputs = self.processor(images=images, input_points=input_points, return_tensors="pt").to(self.device)
+            images = prepare_images(images)
+            # 50 X 50 grid, evenly spaced across input image resolution
+            # h, w = images.size
+            h, w = images[0].shape[:2]
+            grid_x, grid_y = torch.meshgrid(torch.linspace(0, w, 50, dtype=int), torch.linspace(0, h, 50, dtype=int))
+            # flatten grid to a list of (x, y) coordinates
+            input_points = torch.stack([grid_x.flatten(), grid_y.flatten()], dim=-1)
+            inputs = self.processor(images=images, input_points=[input_points.tolist()], return_tensors="pt").to(
+                self.device
+            )
             outputs = self.model(**inputs)
             masks = self.processor.post_process_masks(
                 outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu()
             )
             assert len(masks) > 0
-            return {"masks": [masks[0].cpu().numpy()]}
+            return [mask.cpu().numpy() for mask in masks]
 
 
 for model_name in SAM.configs:
