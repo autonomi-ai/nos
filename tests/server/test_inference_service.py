@@ -380,19 +380,21 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
         assert result is not None
 
 
-def test_client_exception_types():
+def test_client_exception_types(request):
     # Inference request with malformed input.
+    client = request.getfixturevalue("grpc_client_with_gpu_backend")
+    assert client is not None
+    assert client.IsHealthy()
 
-    manager = ModelManager()
-    assert manager is not None
+    task, model_name = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
 
-    # Load a model spec
-    spec = hub.load_spec("openai/clip-vit-base-patch32", task=TaskType.IMAGE_EMBEDDING)
-
-    # Add the model to the manager (or via `manager.add()`)
-    handle: ModelHandle = manager.get(spec)
-    assert handle is not None
-
-    img = Image.open(NOS_TEST_IMAGE)
+    # Make an inference request and confirm that this doesn't break inference
+    # TODO(scott): We only validate input count and not the types themselves. When 
+    # we finish input validation the test should change accordingly.
+    inputs = {}
     with pytest.raises(NosInputValidationException):
-        handle.remote(images=[img])
+        response = model(**inputs)
+        assert isinstance(response, dict)

@@ -9,6 +9,7 @@ from nos.common.cloudpickle import dumps, loads
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
 from nos.protoc import import_module
+from nos.client.exceptions import NosInputValidationException
 
 
 # TOFIX (spillai): Remove Any type, and explicitly define input/output types.
@@ -139,7 +140,7 @@ class FunctionSignature:
     def validate(inputs: Dict[str, Any], sig: Dict[str, FunctionSignatureType]) -> Dict[str, Any]:
         """Validate the input dict against the defined signature (input or output)."""
         if len(set(sig.keys()).symmetric_difference(set(inputs.keys()))) > 0:
-            raise ValueError(f"Invalid inputs, provided={set(inputs.keys())}, expected={set(sig.keys())}.")
+            raise NosInputValidationException(f"Invalid inputs, provided={set(inputs.keys())}, expected={set(sig.keys())}.")
         # TODO (spillai): Validate input types and shapes.
         return inputs
 
