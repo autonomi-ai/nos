@@ -11,6 +11,7 @@ from PIL import Image
 
 import nos
 from nos import hub
+from nos.client.exceptions import NosInputValidationException
 from nos.common import TaskType, TimingInfo, tqdm
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
@@ -351,3 +352,22 @@ def test_memray_tracking(request):  # noqa: F811
     inputs = {"images": images}
     response = model(**inputs)
     assert isinstance(response, dict)
+
+
+def test_client_exception_types(request):
+    # Inference request with malformed input.
+    client = request.getfixturevalue("grpc_client_with_gpu_backend")
+    assert client is not None
+    assert client.IsHealthy()
+
+    task, model_name = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(task=task, model_name=model_name)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # TODO(scott): We only validate input count and not the types themselves. When
+    # we finish input validation the test should change accordingly.
+    inputs = {}
+    with pytest.raises(NosInputValidationException):
+        response = model(**inputs)
+        assert isinstance(response, dict)
