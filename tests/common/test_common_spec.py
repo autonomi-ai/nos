@@ -209,3 +209,45 @@ def test_common_spec_signature():
         for k, v in spec.signature.get_outputs_spec().items():
             logger.debug(f"output: {k}, {v}")
             check_object_type(v)
+
+
+def test_common_spec_from_custom_model():
+    """Test wrapping custom models for remote execution."""
+    from typing import List, Union
+
+    class CustomModel:
+        """Custom inference model."""
+
+        def __init__(self, model_name: str = "custom/model"):
+            """Initialize the model."""
+            self.model_name = model_name
+
+        def __call__(
+            self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]], n: int = 1
+        ) -> List[int]:
+            if (isinstance(images, np.ndarray) and images.ndim == 3) or isinstance(images, Image.Image):
+                images = [images]
+            return list(range(n * len(images)))
+
+    # Get the model spec for remote execution
+    spec = ModelSpec.from_cls(CustomModel, init_args=(), init_kwargs={"model_name": "custom/model"})
+    assert spec is not None
+    assert isinstance(spec, ModelSpec)
+
+    # Check if the wrapped model can be loaded (directly in the same process)
+    sig: FunctionSignature = spec.signature
+    model = sig.func_or_cls(*sig.init_args, **sig.init_kwargs)
+    assert model is not None
+
+    # Check if the model can be called
+    images = [np.random.rand(224, 224, 3).astype(np.uint8)]
+    result = model(images=images)
+    assert result == [0]
+
+    # Check if the model can be called with keyword arguments
+    result = model(images=images, n=2)
+    assert result == [0, 1]
+
+    # Check if the model can be called with positional arguments
+    result = model(images, 2)
+    assert result == [0, 1]

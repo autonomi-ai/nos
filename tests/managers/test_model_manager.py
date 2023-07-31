@@ -3,7 +3,7 @@ import pytest
 from loguru import logger
 
 from nos import hub
-from nos.common import TaskType
+from nos.common import ModelSpec, TaskType
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
 
@@ -68,6 +68,64 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
     result = noop.remote(images=[img])
     assert isinstance(result, list)
     assert len(result) == 1
+
+
+def test_model_manager_custom_model_inference(manager):  # noqa: F811
+    """Test wrapping custom models for remote execution.
+
+    See also: tests/common/test_common_spec.py for a similar test that
+    simply wraps a custom model for execution purposes.
+    """
+
+    from typing import List, Union
+
+    import numpy as np
+    from PIL import Image
+
+    class CustomModel:
+        """Custom inference model."""
+
+        def __init__(self, model_name: str = "custom/model"):
+            """Initialize the model."""
+            from tflite_runtime.interpreter import Interpreter  # noqa: F401
+
+        def __call__(
+            self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]], n: int = 1
+        ) -> List[int]:
+            if (isinstance(images, np.ndarray) and images.ndim == 3) or isinstance(images, Image.Image):
+                images = [images]
+            return list(range(n * len(images)))
+
+    # Get the model spec for remote execution
+    spec = ModelSpec.from_cls(
+        CustomModel,
+        init_args=(),
+        init_kwargs={"model_name": "custom/model"},
+        pip=["tflite-runtime", "pydantic<2", "Pillow"],
+    )
+    assert spec is not None
+    assert isinstance(spec, ModelSpec)
+
+    # Check if the model can be loaded with the ModelManager
+    # Note: This will be executed as a Ray actor within a custom runtime env.
+    model_handle = manager.get(spec)
+    assert model_handle is not None
+    assert isinstance(model_handle, ModelHandle)
+
+    # Check if the model can be called
+    images = [np.random.rand(224, 224, 3).astype(np.uint8)]
+    result = model_handle.remote(images=images)
+    assert result == [0]
+
+    # Check if the model can be called with keyword arguments
+    result = model_handle.remote(images=images, n=2)
+    assert result == [0, 1]
+
+    # Check if the model can NOT be called with positional arguments
+    # We expect this to raise an exception, as the model only accepts keyword arguments.
+    with pytest.raises(Exception):
+        result = model_handle.remote(images, 2)
+        assert result == [0, 1]
 
 
 @pytest.mark.benchmark

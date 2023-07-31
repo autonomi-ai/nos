@@ -1,4 +1,5 @@
 import copy
+import inspect
 from dataclasses import field
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin
 
@@ -179,6 +180,16 @@ class FunctionSignature:
 
 
 @dataclass
+class RuntimeEnv:
+    conda: Dict[str, Any]
+    """Conda environment specification."""
+
+    @classmethod
+    def from_packages(cls, packages: List[str]) -> Dict[str, Any]:
+        return cls(conda={"dependencies": ["pip", {"pip": packages}]})
+
+
+@dataclass
 class ModelSpec:
     """Model specification for the registry.
 
@@ -192,6 +203,8 @@ class ModelSpec:
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
     signature: FunctionSignature = None
     """Model function signature."""
+    runtime_env: RuntimeEnv = None
+    """Runtime environment with custom packages."""
 
     @staticmethod
     def get_id(model_name: str, task: TaskType = None) -> str:
@@ -244,3 +257,54 @@ class ModelSpec:
     def _from_proto(minfo: nos_service_pb2.ModelInfoResponse) -> "ModelSpec":
         """Convert the model info response back to the spec."""
         return loads(minfo.response_bytes)
+
+    @classmethod
+    def from_cls(cls, func_or_cls: Callable, method_name: str = "__call__", **kwargs) -> "ModelSpec":
+        """Wrap custom models/classes into a nos-compatible model spec.
+
+        Args:
+            func_or_cls (Callable): Model function or class. For now, only classes are supported.
+            method_name (str): Method name to be executed.
+            **kwargs: Additional keyword arguments.
+                These include `init_args` and `init_kwargs` to initialize the model instance.
+
+        Returns:
+            ModelSpec: The resulting model specification that fully describes the model execution.
+        """
+        # Check if the cls is not a function
+        if not callable(func_or_cls) or not inspect.isclass(func_or_cls):
+            raise ValueError(f"Invalid class `{func_or_cls}` provided, needs to be a class object.")
+
+        # Check if the cls has the method_name
+        if not hasattr(func_or_cls, method_name):
+            raise ValueError(f"Invalid method name `{method_name}` provided.")
+
+        # Get the function signature
+        sig = inspect.signature(getattr(func_or_cls, method_name))
+
+        # Get the positional arguments and their types
+        # Note: We skip the `self` argument
+        call_inputs = {
+            k: v.annotation for k, v in sig.parameters.items() if v.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+        }
+        call_inputs.pop("self", None)
+
+        # Get the return type
+        call_outputs = {"result": sig.return_annotation}
+
+        # Build the model spec from the function signature
+        pip = kwargs.pop("pip", None)
+        spec = cls(
+            name=func_or_cls.__name__,
+            task=TaskType.CUSTOM,
+            signature=FunctionSignature(
+                func_or_cls=func_or_cls,
+                init_args=kwargs.pop("init_args", ()),
+                init_kwargs=kwargs.pop("init_kwargs", {}),
+                method_name=method_name,
+                inputs=call_inputs,
+                outputs=call_outputs,
+            ),
+            runtime_env=RuntimeEnv.from_packages(pip) if pip else None,
+        )
+        return spec
