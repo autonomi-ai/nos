@@ -18,6 +18,7 @@ from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
 from nos.version import __version__ as nos_version
+from nos.client.exceptions import NosInputValidationException
 
 
 pytestmark = pytest.mark.server
@@ -351,3 +352,47 @@ def test_memray_tracking(request):  # noqa: F811
     inputs = {"images": images}
     response = model(**inputs)
     assert isinstance(response, dict)
+
+
+@pytest.mark.benchmark
+def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
+    """Benchmark inference with a model manager."""
+
+    manager = ModelManager()
+    assert manager is not None
+
+    # Load a model spec
+    spec = hub.load_spec("openai/clip-vit-base-patch32", task=TaskType.IMAGE_EMBEDDING)
+
+    # Add the model to the manager (or via `manager.add()`)
+    handle: ModelHandle = manager.get(spec)
+    assert handle is not None
+
+    img = Image.open(NOS_TEST_IMAGE)
+    for _ in tqdm(duration=5, desc="Inference (5s warmup)"):
+        result = handle.remote(images=[img] * 8)
+        assert result is not None
+
+    # Run inference
+    img = Image.open(NOS_TEST_IMAGE)
+    for _ in tqdm(duration=20, desc="Inference (20s benchmark)"):
+        result = handle.remote(images=[img] * 8)
+        assert result is not None
+
+
+def test_client_exception_types():
+    # Inference request with malformed input.
+
+    manager = ModelManager()
+    assert manager is not None
+
+    # Load a model spec
+    spec = hub.load_spec("openai/clip-vit-base-patch32", task=TaskType.IMAGE_EMBEDDING)
+
+    # Add the model to the manager (or via `manager.add()`)
+    handle: ModelHandle = manager.get(spec)
+    assert handle is not None
+
+    img = Image.open(NOS_TEST_IMAGE)
+    with pytest.raises(NosInputValidationException):
+        handle.remote(images=[img])
