@@ -5,7 +5,6 @@ from loguru import logger
 from nos import hub
 from nos.common import ModelSpec, TaskType
 from nos.managers import ModelHandle, ModelManager
-
 from nos.test.conftest import model_manager as manager  # noqa: F401, F811
 
 
