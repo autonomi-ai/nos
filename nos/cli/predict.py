@@ -17,7 +17,7 @@ import rich.table
 import typer
 
 from nos.client import InferenceClient
-from nos.client.exceptions import NosClientException
+from nos.common.exceptions import NosClientException
 from nos.common import TaskType
 
 

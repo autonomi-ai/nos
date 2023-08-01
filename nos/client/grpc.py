@@ -10,7 +10,7 @@ import numpy as np
 from google.protobuf import empty_pb2
 from PIL import Image
 
-from nos.client.exceptions import (
+from nos.common.exceptions import (
     NosClientException,
     NosInferenceException,
     NosServerReadyException,

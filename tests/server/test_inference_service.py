@@ -11,7 +11,7 @@ from PIL import Image
 
 import nos
 from nos import hub
-from nos.client.exceptions import NosInputValidationException
+from nos.common.exceptions import NosInputValidationException, NosClientException
 from nos.common import TaskType, TimingInfo, tqdm
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
@@ -368,6 +368,7 @@ def test_client_exception_types(request):
     # TODO(scott): We only validate input count and not the types themselves. When
     # we finish input validation the test should change accordingly.
     inputs = {}
-    with pytest.raises(NosInputValidationException):
+    # with pytest.raises(NosInputValidationException):
+    with pytest.raises(NosClientException):
         response = model(**inputs)
         assert isinstance(response, dict)

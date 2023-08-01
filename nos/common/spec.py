@@ -6,7 +6,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_
 from pydantic import validator
 from pydantic.dataclasses import dataclass
 
-from nos.client.exceptions import NosInputValidationException
+from nos.common.exceptions import NosInputValidationException
 from nos.common.cloudpickle import dumps, loads
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
