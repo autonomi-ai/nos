@@ -8,7 +8,7 @@ import torch
 from PIL import Image
 
 from nos import hub
-from nos.common import EmbeddingSpec, TaskType
+from nos.common import EmbeddingSpec, ImageSpec, TaskType
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
 from nos.compilers import compile
@@ -234,6 +234,6 @@ for model_name in CLIP.configs:
         CLIP,
         init_args=(model_name,),
         method_name="encode_image",
-        inputs={"images": Batch[ImageT[Image.Image]]},
+        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(cfg.height, cfg.width, 3), dtype="uint8")]]},
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
     )

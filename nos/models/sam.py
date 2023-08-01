@@ -36,13 +36,17 @@ class SAM:
         self.model.eval()
         self.processor = SamProcessor.from_pretrained(model_name)
 
-    def __call__(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
+    def __call__(
+        self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]], grid_size=20
+    ) -> np.ndarray:
         with torch.inference_mode():
             images = prepare_images(images)
             # 50 X 50 grid, evenly spaced across input image resolution
             # h, w = images.size
             h, w = images[0].shape[:2]
-            grid_x, grid_y = torch.meshgrid(torch.linspace(0, w, 50, dtype=int), torch.linspace(0, h, 50, dtype=int))
+            grid_x, grid_y = torch.meshgrid(
+                torch.linspace(0, w, grid_size, dtype=int), torch.linspace(0, h, grid_size, dtype=int)
+            )
             # flatten grid to a list of (x, y) coordinates
             input_points = torch.stack([grid_x.flatten(), grid_y.flatten()], dim=-1)
             inputs = self.processor(images=images, input_points=[input_points.tolist()], return_tensors="pt").to(
@@ -63,6 +67,6 @@ for model_name in SAM.configs:
         SAM,
         init_args=(model_name,),
         method_name="__call__",
-        inputs={"images": Batch[ImageT[Image.Image]]},
+        inputs={"images": Batch[ImageT[Image.Image]], "grid_size": int},
         outputs={"masks": Batch[ImageT[Image.Image]]},
     )
