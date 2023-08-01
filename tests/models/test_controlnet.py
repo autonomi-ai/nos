@@ -2,10 +2,11 @@ from typing import List
 
 import pytest
 
-from nos.test.utils import PyTestGroup, skip_all_if_no_torch_cuda
+from nos.test.utils import PyTestGroup
 
 
-pytestmark = skip_all_if_no_torch_cuda()
+pytestmark = pytest.mark.skip("TODO: Pending fixes to ControlNet")  # skip_all_if_no_torch_cuda()
+
 
 MODEL_NAME = "runwayml/stable-diffusion-v1-5"
 

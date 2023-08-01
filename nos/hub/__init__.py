@@ -72,13 +72,16 @@ class Hub:
         return sig.func_or_cls(*sig.init_args, **sig.init_kwargs)
 
     @classmethod
-    def register(cls, model_name: str, task: TaskType, func_or_cls: Callable, **kwargs) -> None:
+    def register(cls, model_name: str, task: TaskType, func_or_cls: Callable, **kwargs) -> ModelSpec:
         """Model registry decorator.
 
         Args:
             model_name (str): Model identifier (e.g. `openai/clip-vit-base-patch32`).
             task (TaskType): Task type (e.g. `TaskType.OBJECT_DETECTION_2D`).
             func_or_cls (Type[Any]): Model function or class.
+            **kwargs: Additional keyword arguments.
+        Returns:
+            ModelSpec: Model specification.
         """
         spec = ModelSpec(
             name=model_name,
@@ -96,6 +99,7 @@ class Hub:
         if model_id not in cls.get()._registry:
             cls.get()._registry[model_id] = spec
             logger.debug(f"Registered model: [name={model_name}]")
+        return spec
 
 
 # Alias methods

@@ -36,6 +36,29 @@ class HuggingFaceHubConfig:
     """Checkpoint name (e.g. bert-base-uncased-pytorch_model.bin)."""
 
 
+def cached_checkpoint(url: str, model_id: str) -> str:
+    """Download the checkpoint and return the local path.
+
+    Args:
+        url (str): URL to the checkpoint.
+        model_id (str): Model identifier.
+
+    Returns:
+        str: Local path to the checkpoint.
+    """
+    from torchvision.datasets.utils import download_url
+
+    # Download the checkpoint and place it in the model directory (with the same filename)
+    directory = Path(NOS_MODELS_DIR) / model_id
+    download_url(url, str(directory))
+    filename = directory / Path(url).name
+
+    # Check that the file exists
+    if not filename.exists():
+        raise IOError(f"Failed to download checkpoint={url}.")
+    return str(filename)
+
+
 @dataclass(frozen=True)
 class MMLabConfig:
     """OpenMMlab configuration."""
@@ -63,20 +86,6 @@ class MMLabConfig:
         """
         return Path(self.config).stem
 
+    @property
     def cached_checkpoint(self) -> str:
-        """Download the checkpoint and return the local path.
-
-        Returns:
-            str: Local path to the checkpoint.
-        """
-        from torchvision.datasets.utils import download_url
-
-        # Download the checkpoint and place it in the model directory (with the same filename)
-        directory = Path(NOS_MODELS_DIR) / self.model_name
-        download_url(self.checkpoint, str(directory))
-        filename = directory / Path(self.checkpoint).name
-
-        # Check that the file exists
-        if not filename.exists():
-            raise IOError(f"Failed to download checkpoint={self.checkpoint}.")
-        return str(filename)
+        return cached_checkpoint(self.checkpoint, self.model_name)

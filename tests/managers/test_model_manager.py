@@ -3,17 +3,9 @@ import pytest
 from loguru import logger
 
 from nos import hub
-from nos.common import TaskType
+from nos.common import ModelSpec, TaskType
 from nos.managers import ModelHandle, ModelManager
-from nos.test.conftest import ray_executor  # noqa: F401
-
-
-@pytest.fixture
-def manager(ray_executor):  # noqa: F811
-    manager = ModelManager()
-    assert manager is not None
-
-    yield manager
+from nos.test.conftest import model_manager as manager  # noqa: F401, F811
 
 
 def test_model_manager(manager):  # noqa: F811
@@ -35,7 +27,7 @@ def test_model_manager(manager):  # noqa: F811
     assert spec in manager
 
 
-def test_model_manager_errors(manager):
+def test_model_manager_errors(manager):  # noqa: F811
     # Get model specs
     spec = None
     for _, _spec in enumerate(hub.list()):
@@ -68,6 +60,77 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
     result = noop.remote(images=[img])
     assert isinstance(result, list)
     assert len(result) == 1
+
+
+def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # noqa: F811
+    """Test wrapping custom models for remote execution.
+
+    See also: tests/common/test_common_spec.py for a similar test that
+    simply wraps a custom model for execution purposes.
+    """
+    from pathlib import Path
+    from typing import List, Union
+
+    import numpy as np
+
+    class CustomModel:
+        """Custom inference model with onnx-runtime."""
+
+        def __init__(self, model_name: str = "resnet18"):
+            """Initialize the model."""
+            import onnxruntime as ort
+            from onnx import hub as onnx_hub
+
+            # Load onnx model resnet18 from hub
+            _ = onnx_hub.load(model_name)  # force download the model weights
+            info = onnx_hub.get_model_info(model=model_name)
+
+            # Load the model from the local cache
+            _path = Path(onnx_hub.get_dir()) / info.model_path
+            path = _path.parent / f"{info.metadata['model_sha']}_{_path.name}"
+            self.session = ort.InferenceSession(str(path), providers=ort.get_available_providers())
+
+        def __call__(self, images: Union[np.ndarray, List[np.ndarray]], n: int = 1) -> np.ndarray:
+            if isinstance(images, np.ndarray) and images.ndim == 3:
+                images = [images]
+            (output,) = self.session.get_outputs()
+            (input,) = self.session.get_inputs()
+            (result,) = self.session.run(
+                [output.name], {input.name: np.stack(images * n).astype(np.float32).transpose(0, 3, 1, 2)}
+            )
+            return result
+
+    # Get the model spec for remote execution
+    spec = ModelSpec.from_cls(
+        CustomModel,
+        init_args=(),
+        init_kwargs={"model_name": "resnet18"},
+        pip=["onnx", "onnxruntime", "pydantic<2"],
+    )
+    assert spec is not None
+    assert isinstance(spec, ModelSpec)
+
+    # Check if the model can be loaded with the ModelManager
+    # Note: This will be executed as a Ray actor within a custom runtime env.
+    model_handle = manager.get(spec)
+    assert model_handle is not None
+    assert isinstance(model_handle, ModelHandle)
+
+    # Check if the model can be called
+    images = [np.random.rand(224, 224, 3).astype(np.uint8)]
+    result = model_handle.remote(images=images)
+    assert len(result) == 1
+    assert isinstance(result, np.ndarray)
+
+    # Check if the model can be called with keyword arguments
+    result = model_handle.remote(images=images, n=2)
+    assert len(result) == 2
+    assert isinstance(result, np.ndarray)
+
+    # Check if the model can NOT be called with positional arguments
+    # We expect this to raise an exception, as the model only accepts keyword arguments.
+    with pytest.raises(Exception):
+        result = model_handle.remote(images, 2)
 
 
 @pytest.mark.benchmark

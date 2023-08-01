@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 import nos
@@ -28,8 +30,10 @@ def test_nos_init(runtime):  # noqa: F811
     assert client.IsHealthy()
 
     # Test re-initializing the server
+    st = time.time()
     container_ = nos.init(runtime=runtime, port=GRPC_PORT, utilization=0.5)
     assert container_.id == container.id
+    assert time.time() - st <= 0.5, "Re-initializing the server should be instantaneous, instead took > 0.5s"
 
     # Shutdown the server
     nos.shutdown()

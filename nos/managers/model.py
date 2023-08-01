@@ -1,11 +1,12 @@
 import os
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Dict, List, Union
 
 import ray
 import torch
+from ray.runtime_env import RuntimeEnv
 
 from nos.common import ModelSpec
 from nos.logging import logger
@@ -70,6 +71,9 @@ class ModelHandle:
         # (i.e. 0.5 on A100 vs. T4 are different).
         model_cls = spec.signature.func_or_cls
         actor_options = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
+        if spec.runtime_env is not None:
+            logger.debug("Using custom runtime environment, this may take a while to build.")
+            actor_options["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
         logger.debug(f"Creating actor: {actor_options}, {model_cls}")
 
         # Add some memory logs to this actor
