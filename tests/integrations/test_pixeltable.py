@@ -13,6 +13,37 @@ Timing records (2023-07-14)
 2  yolox_medium_294x240     3.11  168       18.51  54.02
 3  yolox_medium_640x480     2.98  168       17.74  56.38
 4        openai_640x480     3.33  168       19.82  50.45
+
+Timing records (2023-07-14) w/o SHM
+                      desc  elapsed    n  latency_ms    fps
+0             noop_294x240     1.87  168       11.13  89.84
+1             noop_640x480     1.88  168       11.19  89.36
+2            noop_1280x720     5.97  168       35.54  28.14
+3           noop_2880x1620    18.00  168      107.14   9.33
+4     yolox_medium_294x240     2.98  168       17.74  56.38
+5     yolox_medium_640x480     2.92  168       17.38  57.53
+6    yolox_medium_1280x720    10.94  168       65.12  15.36
+7   yolox_medium_2880x1620    23.02  168      137.02   7.30
+8           openai_224x224     1.74  168       10.36  96.55
+9           openai_640x480     3.28  168       19.52  51.22
+10         openai_1280x720     7.84  168       46.67  21.43
+11        openai_2880x1620    37.06  168      220.60   4.53
+
+Timing records (2023-08-01) w/ SHM
+                      desc  elapsed    n  latency_ms     fps
+0             noop_294x240     1.15  168        6.85  146.09
+1             noop_640x480     1.11  168        6.61  151.35
+2            noop_1280x720     4.86  168       28.93   34.57
+3           noop_2880x1620    16.83  168      100.18    9.98
+4     yolox_medium_294x240     2.09  168       12.44   80.38
+5     yolox_medium_640x480     1.97  168       11.73   85.28
+6    yolox_medium_1280x720     9.12  168       54.29   18.42
+7   yolox_medium_2880x1620    21.14  168      125.83    7.95
+8           openai_224x224     1.34  168        7.98  125.37
+9           openai_640x480     2.50  168       14.88   67.20
+10         openai_1280x720     5.05  168       30.06   33.27
+11        openai_2880x1620    18.72  168      111.43    8.97
+
 """
 
 from datetime import datetime
