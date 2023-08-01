@@ -181,11 +181,12 @@ class ModelHandle:
         Returns:
             ray.ObjectRef: Ray object reference.
         """
+        assert len(self._actors) == 1, "Model should have atleast one replica."
         if self.num_replicas > 1:
             logger.warning("Model has >1 replicas, use `.submit()` instead to fully utilize them.")
-        self.submit(*args, **kwargs)
-        self._fetch_next()
-        return self.get()
+        actor_method_func = getattr(self._actors[0], self.spec.signature.method_name)
+        response_ref: ray.ObjectRef = actor_method_func.remote(**kwargs)
+        return ray.get(response_ref)
 
     def submit(self, *args, **kwargs) -> None:
         """Submit a task to the actor pool.

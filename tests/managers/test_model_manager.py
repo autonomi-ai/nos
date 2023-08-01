@@ -40,7 +40,7 @@ def test_model_manager_errors(manager):  # noqa: F811
     with pytest.raises(ValueError):
         manager.add(spec)
 
-    # Creating a model with num_replicas > 1 should raise a `NotImplementedError`.
+    # Creating a model with num_replicas > 1
     ModelHandle(spec, num_replicas=2)
 
     # Creating a model with an invalid eviction policy should raise a `NotImplementedError`.
@@ -91,7 +91,7 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
     for replicas in [2, 4, 8]:
         noop = noop.scale(replicas)
         logger.debug(f"NoOp ({replicas}): {noop}")
-        pbar = tqdm(duration=5, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
+        pbar = tqdm(duration=10, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
 
         idx = 0
         for result in noop_gen(noop, pbar, B):

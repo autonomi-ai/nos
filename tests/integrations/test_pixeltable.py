@@ -6,15 +6,7 @@ Requirements:
 Benchmarks:
 - compute-with for noop, yolox/medium, openai/clip
 
-Timing records (2023-07-14)
-                   desc  elapsed    n  latency_ms    fps
-0          noop_294x240     4.54  168       27.02  37.00
-1          noop_640x480     2.00  168       11.90  84.00
-2  yolox_medium_294x240     3.11  168       18.51  54.02
-3  yolox_medium_640x480     2.98  168       17.74  56.38
-4        openai_640x480     3.33  168       19.82  50.45
-
-Timing records (2023-07-14) w/o SHM
+Timing records (0.0.7 - 2023-07-14) w/o SHM
                       desc  elapsed    n  latency_ms    fps
 0             noop_294x240     1.87  168       11.13  89.84
 1             noop_640x480     1.88  168       11.19  89.36
@@ -29,7 +21,7 @@ Timing records (2023-07-14) w/o SHM
 10         openai_1280x720     7.84  168       46.67  21.43
 11        openai_2880x1620    37.06  168      220.60   4.53
 
-Timing records (2023-08-01) w/ SHM
+Timing records (0.0.7 - 2023-07-14) w/ SHM
                       desc  elapsed    n  latency_ms     fps
 0             noop_294x240     1.15  168        6.85  146.09
 1             noop_640x480     1.11  168        6.61  151.35
