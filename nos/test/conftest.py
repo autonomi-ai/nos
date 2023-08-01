@@ -29,6 +29,16 @@ def ray_executor():
     executor.stop()
 
 
+@pytest.fixture
+def model_manager(ray_executor):  # noqa: F811
+    from nos.managers import ModelManager
+
+    manager = ModelManager()
+    assert manager is not None
+
+    yield manager
+
+
 @pytest.fixture(scope="session")
 def grpc_server(ray_executor):
     """Test gRPC server (Port: 50052)."""
