@@ -132,44 +132,43 @@ class RayExecutor:
         """Force-start a local instance of Ray head."""
         level = getattr(logging, LOGGING_LEVEL)
 
-        st = time.time()
+        start_t = time.time()
         console = rich.console.Console()
-        with console.status(
-            "[bold green] InferenceExecutor :: Backend initializing (as daemon) ... [/bold green]"
-        ) as status:
-            try:
-                logger.debug(f"Starting executor: namespace={self.spec.namespace}")
-                ray.init(
-                    _node_name="nos-executor",
-                    address="local",
-                    namespace=self.spec.namespace,
-                    object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
-                    ignore_reinit_error=False,
-                    include_dashboard=False,
-                    configure_logging=True,
-                    logging_level=logging.ERROR,
-                    log_to_driver=level <= logging.ERROR,
-                )
-                logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - st:.2f}s)")
-                status.stop()
-            except ConnectionError as exc:
-                logger.error(f"Failed to start executor: exc={exc}.")
-                raise RuntimeError(f"Failed to start executor: exc={exc}.")
-            console.print("[bold green] ✓ InferenceExecutor :: Backend initialized. [/bold green]")
-            logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - st}s)")
+        console.print("[bold green] ✓ InferenceExecutor :: Backend initializing (as daemon) ... [/bold green]")
+        try:
+            logger.debug(f"Starting executor: namespace={self.spec.namespace}")
+            ray.init(
+                _node_name="nos-executor",
+                address="local",
+                namespace=self.spec.namespace,
+                object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
+                ignore_reinit_error=False,
+                include_dashboard=False,
+                configure_logging=True,
+                logging_level=logging.ERROR,
+                log_to_driver=level <= logging.ERROR,
+            )
+            logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - start_t:.2f}s)")
+        except ConnectionError as exc:
+            logger.error(f"Failed to start executor: exc={exc}.")
+            raise RuntimeError(f"Failed to start executor: exc={exc}.")
+        console.print(
+            f"[bold green] ✓ InferenceExecutor :: Backend initialized (elapsed={time.time() - start_t:.1f}s). [/bold green]"
+        )
+        logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - start_t}s)")
 
     def stop(self) -> None:
         """Stop Ray head."""
         console = rich.console.Console()
-        with console.status("[bold green] InferenceExecutor :: Backend stopping ... [/bold green]"):
-            try:
-                logger.debug(f"Stopping executor: namespace={self.spec.namespace}")
-                ray.shutdown()
-                logger.debug(f"Stopped executor: namespace={self.spec.namespace}")
-            except Exception as exc:
-                logger.error(f"Failed to stop executor: exc={exc}.")
-                raise RuntimeError(f"Failed to stop executor: exc={exc}.")
-            console.print("[bold green] ✓ InferenceExecutor :: Backend stopped. [/bold green]")
+        console.print("[bold green] InferenceExecutor :: Backend stopping ... [/bold green]")
+        try:
+            logger.debug(f"Stopping executor: namespace={self.spec.namespace}")
+            ray.shutdown()
+            logger.debug(f"Stopped executor: namespace={self.spec.namespace}")
+        except Exception as exc:
+            logger.error(f"Failed to stop executor: exc={exc}.")
+            raise RuntimeError(f"Failed to stop executor: exc={exc}.")
+        console.print("[bold green] ✓ InferenceExecutor :: Backend stopped. [/bold green]")
 
     @property
     def pid(self) -> Optional[int]:

@@ -17,6 +17,24 @@ from nos.logging import logger
 NOS_MEMRAY_ENABLED = os.getenv("NOS_MEMRAY_ENABLED")
 
 
+class ModelResultQueue(Queue):
+    """Ray-actor based queue for thread-safe put/get of model results."""
+
+    def __init__(self, *args, **kwargs):
+        """Initialize the results queue."""
+        self._size = kwargs.pop("_maxsize", 1)
+        super().__init__(*args, **kwargs)
+
+    def ready(self) -> bool:
+        """Check if the results queue is ready (i.e. full)."""
+        return len(self) >= self._size
+
+    def resize(self, size: int) -> None:
+        """Resize the results queue."""
+        assert not len(self), "Cannot resize queue when there are pending results."
+        self._size = size
+
+
 @dataclass
 class ModelHandle:
     """Model handles for distributed model execution.
@@ -48,10 +66,9 @@ class ModelHandle:
     """Ray actor handle."""
     _actor_pool: ray.util.ActorPool = field(init=False, default=None)
     """Ray actor pool."""
-    _results_queue: Queue = field(init=False, default_factory=Queue)
+    _results_queue: ModelResultQueue = field(init=False, default_factory=ModelResultQueue)
     """Queue to fetch results from the actor pool."""
-    _results_queue_size: int = field(init=False, default=None)
-    """Maximum results queue size."""
+
     _actor_profile: Dict[str, Any] = field(init=False, default=None)
     """Actor profile."""
 
@@ -59,13 +76,13 @@ class ModelHandle:
         """Initialize the actor handles."""
         self._actors = [self.get_actor(self.spec) for _ in range(self.num_replicas)]
         self._actor_pool = ray.util.ActorPool(self._actors)
-        self._results_queue_size = self.num_replicas
+        self._results_queue.resize(self.num_replicas)
 
     def __repr__(self) -> str:
         assert len(self._actors) == self.num_replicas
         opts = self._actor_options(self.spec)
         opts_str = ", ".join([f"{k}={v}" for k, v in opts.items()])
-        return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, qsize={self._results_queue_size}, opts=({opts_str}))"
+        return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, qsize={self.results._size}, opts=({opts_str}))"
 
     def scale(self, replicas: Union[int, str] = 1) -> "ModelHandle":
         """Scale the model handle to a new number of replicas.
@@ -108,7 +125,7 @@ class ModelHandle:
 
         # Update repicas and queue size
         self.num_replicas = replicas
-        self._results_queue_size = self.num_replicas
+        self._results_queue.resize(self.num_replicas)
 
         # Re-create the actor pool
         logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
@@ -210,20 +227,16 @@ class ModelHandle:
         """Check if the handle has a result in the queue."""
         return self._actor_pool.has_next() or len(self._results_queue)
 
-    def get(self) -> Any:
+    def get_next(self) -> Any:
         """Get the next result from the actor pool queue or by the object reference."""
         if not len(self._results_queue):
             self._results_queue.put(self._actor_pool.get_next())
         return self._results_queue.get()
 
-    def full(self) -> bool:
-        """Check if the results queue is full."""
-        return len(self._results_queue) >= self._results_queue_size
-
     def _fetch_next(self) -> None:
         """Fetch results from the actor pool."""
         self._results_queue.put(self._actor_pool.get_next())
-        if len(self._results_queue) > self._results_queue_size:
+        if len(self._results_queue) > self._results_queue._size:
             logger.warning("Results queue full, dropping results. Use `.get()` to get results.")
             self._results_queue.get()
 
@@ -233,7 +246,7 @@ class ModelHandle:
         return self._actor_pool._pending_submits
 
     @property
-    def results(self) -> Queue:
+    def results(self) -> ModelResultQueue:
         """Get the results queue."""
         return self._results_queue
 

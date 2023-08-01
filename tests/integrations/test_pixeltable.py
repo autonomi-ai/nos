@@ -36,6 +36,21 @@ Timing records (0.0.7 - 2023-07-14) w/ SHM
 10         openai_1280x720     5.05  168       30.06   33.27
 11        openai_2880x1620    18.72  168      111.43    8.97
 
+Timing records (0.0.8 - 2023-08-01) w/ SHM
+                      desc  elapsed    n  latency_ms     fps
+0             noop_294x240     1.11  168        6.61  151.35
+1             noop_640x480     1.08  168        6.43  155.56
+2            noop_1280x720     4.82  168       28.69   34.85
+3           noop_2880x1620    16.83  168      100.18    9.98
+4     yolox_medium_294x240     2.05  168       12.20   81.95
+5     yolox_medium_640x480     2.03  168       12.08   82.76
+6    yolox_medium_1280x720     9.23  168       54.94   18.20
+7   yolox_medium_2880x1620    21.26  168      126.55    7.90
+8           openai_224x224     1.29  168        7.68  130.23
+9           openai_640x480     2.51  168       14.94   66.93
+10         openai_1280x720     4.94  168       29.40   34.01
+11        openai_2880x1620    18.49  168      110.06    9.09
+
 """
 
 from datetime import datetime

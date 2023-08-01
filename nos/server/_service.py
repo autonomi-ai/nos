@@ -252,14 +252,14 @@ def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 1) -> N
     server.add_insecure_port(address)
 
     console = rich.console.Console()
-    with console.status(f"[bold green] Starting server on {address}[/bold green]") as status:
-        server.start()
-        console.print(
-            f"[bold green] ✓ InferenceService :: Deployment complete [/bold green]",  # noqa
-        )
-        status.stop()
-        server.wait_for_termination()
-        console.print("Server stopped")
+    console.print(f"[bold green] Starting server on {address}[/bold green]")
+    start_t = time.time()
+    server.start()
+    console.print(
+        f"[bold green] ✓ InferenceService :: Deployment complete (elapsed={time.time() - start_t:.1f}s) [/bold green]",  # noqa
+    )
+    server.wait_for_termination()
+    console.print("Server stopped")
 
 
 def main():

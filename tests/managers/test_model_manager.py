@@ -82,10 +82,10 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
             _noop.submit(images=img)
             desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
             _pbar.set_description(desc)
-            if _noop.full():
-                yield _noop.get()
+            if _noop.results.ready():
+                yield _noop.get_next()
         while _noop.has_next():
-            yield _noop.get()
+            yield _noop.get_next()
 
     # NoOp scaling with replicas: submit + get (perf.)
     for replicas in [2, 4, 8]:
