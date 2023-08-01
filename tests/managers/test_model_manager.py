@@ -105,7 +105,7 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
         CustomModel,
         init_args=(),
         init_kwargs={"model_name": "resnet18"},
-        pip=["onnx", "onnxruntime-gpu", "pydantic<2"],
+        pip=["onnx", "onnxruntime", "pydantic<2"],
     )
     assert spec is not None
     assert isinstance(spec, ModelSpec)

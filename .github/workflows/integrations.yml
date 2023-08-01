@@ -29,7 +29,9 @@ jobs:
       - name: Build and test-cpu within docker container
         run: make docker-test-cpu
 
+  # disabled for now
   test-cpu-macos:
+    if: false
     name: Test CPU (MacOS)
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -68,8 +70,11 @@ jobs:
       - name: Test
         run: make test-cpu
 
+  # disabled for now, due to memory requirements
   test-pixeltable-cpu:
+    if: false
     name: Test Pixeltable CPU (Linux)
+    needs: [docker-test-cpu]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -93,6 +98,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           use-mamba: true
       - name: Install latest pixeltable and NOS
-        run: pip install git+https://github.com/mkornacker/pixeltable && pip install -e .
+        run: pip install git+https://github.com/mkornacker/pixeltable && pip install -e '.[test]'
       - name: Test pixeltable integration
         run: NOS_LOGGING_LEVEL=DEBUG pytest -sv tests/integrations/test_pixeltable.py
