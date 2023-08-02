@@ -16,12 +16,13 @@ from nos.common import ModelSpec
 from nos.logging import logger
 
 
-NOS_MEMRAY_ENABLED = os.getenv("NOS_MEMRAY_ENABLED")
+NOS_MEMRAY_ENABLED = bool(int(os.getenv("NOS_MEMRAY_ENABLED", "0")))
 NOS_RAY_LOGS_DIR = os.getenv("NOS_RAY_LOGS_DIR", "/tmp/ray/session_latest/logs")
 
 if NOS_MEMRAY_ENABLED:
-    NOS_RAY_LOGS_DIR.mkdir(parents=True, exist_ok=True)
     import memray
+
+    Path(NOS_RAY_LOGS_DIR).mkdir(parents=True, exist_ok=True)
 
 
 class ModelResultQueue(Queue):
