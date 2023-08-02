@@ -38,7 +38,7 @@ class SAM:
 
     def __call__(
         self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]], grid_size=20
-    ) -> np.ndarray:
+    ) -> List[np.ndarray]:
         with torch.inference_mode():
             images = prepare_images(images)
             # 50 X 50 grid, evenly spaced across input image resolution
