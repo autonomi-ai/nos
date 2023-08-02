@@ -39,6 +39,20 @@ def test_model_manager(manager):  # noqa: F811
     # Check if the model manager contains the model.
     assert spec in manager
 
+    # Test noop with model manager
+    spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
+    noop: ModelHandle = manager.get(spec)
+    assert noop is not None
+    assert isinstance(noop, ModelHandle)
+
+    B = 1
+    img = (np.random.rand(B, 480, 640, 3) * 255).astype(np.uint8)
+
+    # NoOp: __call__
+    result = noop(images=img)
+    assert isinstance(result, list)
+    assert len(result) == B
+
 
 def test_model_manager_errors(manager):  # noqa: F811
     # Get model specs
@@ -61,73 +75,7 @@ def test_model_manager_errors(manager):  # noqa: F811
         ModelManager(policy=ModelManager.EvictionPolicy.LRU)
 
 
-def test_model_manager_noop_inference(manager):  # noqa: F811
-    """Test inference with a no-op model."""
-
-    from nos.common import tqdm
-
-    spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
-    noop: ModelHandle = manager.get(spec)
-    assert noop is not None
-    assert isinstance(noop, ModelHandle)
-
-    B = 16
-    img = (np.random.rand(B, 480, 640, 3) * 255).astype(np.uint8)
-
-    # NoOp: __call__
-    result = noop(images=img)
-    assert isinstance(result, list)
-    assert len(result) == B
-
-    # NoOp: __call__ (perf.)
-    pbar = tqdm(duration=5, unit_scale=B, desc=f"noop [B={B}]", total=0)
-    for idx in pbar:
-        result = noop(images=img)
-        desc = f"noop [B={B}, idx={idx}, pending={len(noop.pending)}, queue={len(noop.results)}]"
-        pbar.set_description(desc)
-
-        assert isinstance(result, list)
-        assert len(result) == B
-
-    # NoOp: submit() + get_next()
-    def noop_gen(_noop, _pbar, B):
-        for idx in _pbar:
-            _noop.submit(images=img)
-            desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
-            _pbar.set_description(desc)
-            if _noop.results.ready():
-                yield _noop.get_next()
-        while _noop.has_next():
-            yield _noop.get_next()
-
-    # NoOp scaling with replicas: submit + get_next (perf.)
-    for replicas in [1, 2, 4, 8]:
-        # scale the mode
-        noop = noop.scale(replicas)
-
-        # test: __call__
-        result = noop(images=img)  # init / warmup
-        assert isinstance(result, list)
-        assert len(result) == B
-
-        logger.debug(f"NoOp ({replicas}): {noop}")
-        pbar = tqdm(duration=10, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
-
-        # warmup: submit()
-        for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
-            assert isinstance(result, list)
-            assert len(result) == B
-
-        # benchmark: submit()
-        idx = 0
-        for _ in noop_gen(noop, pbar, B):
-            idx += 1
-
-        assert idx == pbar.n
-        assert len(noop.results) == 0
-        assert len(noop.pending) == 0
-
-
+@pytest.mark.server
 def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # noqa: F811
     """Test wrapping custom models for remote execution.
 
@@ -197,6 +145,74 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
     # We expect this to raise an exception, as the model only accepts keyword arguments.
     with pytest.raises(Exception):
         result = model_handle(images, 2)
+
+
+@pytest.mark.benchmark
+def test_model_manager_noop_inference(manager):  # noqa: F811
+    """Test inference with a no-op model."""
+
+    from nos.common import tqdm
+
+    spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
+    noop: ModelHandle = manager.get(spec)
+    assert noop is not None
+    assert isinstance(noop, ModelHandle)
+
+    B = 16
+    img = (np.random.rand(B, 480, 640, 3) * 255).astype(np.uint8)
+
+    # NoOp: __call__
+    result = noop(images=img)
+    assert isinstance(result, list)
+    assert len(result) == B
+
+    # NoOp: __call__ (perf.)
+    pbar = tqdm(duration=5, unit_scale=B, desc=f"noop [B={B}]", total=0)
+    for idx in pbar:
+        result = noop(images=img)
+        desc = f"noop [B={B}, idx={idx}, pending={len(noop.pending)}, queue={len(noop.results)}]"
+        pbar.set_description(desc)
+
+        assert isinstance(result, list)
+        assert len(result) == B
+
+    # NoOp: submit() + get_next()
+    def noop_gen(_noop, _pbar, B):
+        for idx in _pbar:
+            _noop.submit(images=img)
+            desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
+            _pbar.set_description(desc)
+            if _noop.results.ready():
+                yield _noop.get_next()
+        while _noop.has_next():
+            yield _noop.get_next()
+
+    # NoOp scaling with replicas: submit + get_next (perf.)
+    for replicas in [1, 2, 4, 8]:
+        # scale the mode
+        noop = noop.scale(replicas)
+
+        # test: __call__
+        result = noop(images=img)  # init / warmup
+        assert isinstance(result, list)
+        assert len(result) == B
+
+        logger.debug(f"NoOp ({replicas}): {noop}")
+        pbar = tqdm(duration=10, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
+
+        # warmup: submit()
+        for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
+            assert isinstance(result, list)
+            assert len(result) == B
+
+        # benchmark: submit()
+        idx = 0
+        for _ in noop_gen(noop, pbar, B):
+            idx += 1
+
+        assert idx == pbar.n
+        assert len(noop.results) == 0
+        assert len(noop.pending) == 0
 
 
 BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 8)]
