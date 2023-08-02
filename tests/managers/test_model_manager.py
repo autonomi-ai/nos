@@ -1,3 +1,16 @@
+"""
+Test the model manager (nos.managers.ModelManager).
+
+NOTE: The benchmarks are only valid if the noop models have some overhead (i.e. 10ms+).
+The following benchmarks were obtained with a noop model that sleeps for 10ms.
+
+Timing records (0.0.8 - 8/1/2023)
+noop       [B=16, replicas=1,  idx=390, pending=0, queue=0]: : 6256it [00:05, 1250.44it/s]
+noop async [B=16, replicas=1, idx=948, pending=0, queue=2]: : 15184it [00:11, 1378.09it/s]
+noop async [B=16, replicas=2, idx=1836, pending=0, queue=4]: : 29392it [00:12, 2328.83it/s]
+noop async [B=16, replicas=4, idx=1893, pending=0, queue=8]: : 30304it [00:12, 2390.17it/s]
+noop async [B=16, replicas=8, idx=1967, pending=0, queue=16]: : 31488it [00:12, 2464.90it/s]
+"""
 import numpy as np
 import pytest
 from loguru import logger
@@ -26,6 +39,20 @@ def test_model_manager(manager):  # noqa: F811
     # Check if the model manager contains the model.
     assert spec in manager
 
+    # Test noop with model manager
+    spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
+    noop: ModelHandle = manager.get(spec)
+    assert noop is not None
+    assert isinstance(noop, ModelHandle)
+
+    B = 1
+    img = (np.random.rand(B, 480, 640, 3) * 255).astype(np.uint8)
+
+    # NoOp: __call__
+    result = noop(images=img)
+    assert isinstance(result, list)
+    assert len(result) == B
+
 
 def test_model_manager_errors(manager):  # noqa: F811
     # Get model specs
@@ -40,28 +67,15 @@ def test_model_manager_errors(manager):  # noqa: F811
     with pytest.raises(ValueError):
         manager.add(spec)
 
-    # Creating a model with num_replicas > 1 should raise a `NotImplementedError`.
-    with pytest.raises(NotImplementedError):
-        ModelHandle(spec, num_replicas=2)
+    # Creating a model with num_replicas > 1
+    ModelHandle(spec, num_replicas=2)
 
     # Creating a model with an invalid eviction policy should raise a `NotImplementedError`.
     with pytest.raises(NotImplementedError):
         ModelManager(policy=ModelManager.EvictionPolicy.LRU)
 
 
-def test_model_manager_noop_inference(manager):  # noqa: F811
-    """Test inference with a no-op model."""
-    spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
-    noop: ModelHandle = manager.get(spec)
-    assert noop is not None
-    assert isinstance(noop, ModelHandle)
-
-    img = (np.random.rand(1, 224, 224, 3) * 255).astype(np.uint8)
-    result = noop.remote(images=[img])
-    assert isinstance(result, list)
-    assert len(result) == 1
-
-
+@pytest.mark.server
 def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # noqa: F811
     """Test wrapping custom models for remote execution.
 
@@ -118,75 +132,201 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
 
     # Check if the model can be called
     images = [np.random.rand(224, 224, 3).astype(np.uint8)]
-    result = model_handle.remote(images=images)
+    result = model_handle(images=images)
     assert len(result) == 1
     assert isinstance(result, np.ndarray)
 
     # Check if the model can be called with keyword arguments
-    result = model_handle.remote(images=images, n=2)
+    result = model_handle(images=images, n=2)
     assert len(result) == 2
     assert isinstance(result, np.ndarray)
 
     # Check if the model can NOT be called with positional arguments
     # We expect this to raise an exception, as the model only accepts keyword arguments.
     with pytest.raises(Exception):
-        result = model_handle.remote(images, 2)
+        result = model_handle(images, 2)
 
 
 @pytest.mark.benchmark
-@pytest.mark.parametrize(
-    "model_name",
-    [
-        "openai/clip-vit-base-patch32",
-    ],
-)
-@pytest.mark.parametrize("scale", [1, 8])
-def test_model_manager_inference(model_name, scale, manager):  # noqa: F811
+def test_model_manager_noop_inference(manager):  # noqa: F811
+    """Test inference with a no-op model."""
+
+    from nos.common import tqdm
+
+    spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
+    noop: ModelHandle = manager.get(spec)
+    assert noop is not None
+    assert isinstance(noop, ModelHandle)
+
+    B = 16
+    img = (np.random.rand(B, 480, 640, 3) * 255).astype(np.uint8)
+
+    # NoOp: __call__
+    result = noop(images=img)
+    assert isinstance(result, list)
+    assert len(result) == B
+
+    # NoOp: __call__ (perf.)
+    pbar = tqdm(duration=5, unit_scale=B, desc=f"noop [B={B}]", total=0)
+    for idx in pbar:
+        result = noop(images=img)
+        desc = f"noop [B={B}, idx={idx}, pending={len(noop.pending)}, queue={len(noop.results)}]"
+        pbar.set_description(desc)
+
+        assert isinstance(result, list)
+        assert len(result) == B
+
+    # NoOp: submit() + get_next()
+    def noop_gen(_noop, _pbar, B):
+        for idx in _pbar:
+            _noop.submit(images=img)
+            desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
+            _pbar.set_description(desc)
+            if _noop.results.ready():
+                yield _noop.get_next()
+        while _noop.has_next():
+            yield _noop.get_next()
+
+    # NoOp scaling with replicas: submit + get_next (perf.)
+    for replicas in [1, 2, 4, 8]:
+        # scale the mode
+        noop = noop.scale(replicas)
+
+        # test: __call__
+        result = noop(images=img)  # init / warmup
+        assert isinstance(result, list)
+        assert len(result) == B
+
+        logger.debug(f"NoOp ({replicas}): {noop}")
+        pbar = tqdm(duration=10, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
+
+        # warmup: submit()
+        for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
+            assert isinstance(result, list)
+            assert len(result) == B
+
+        # benchmark: submit()
+        idx = 0
+        for _ in noop_gen(noop, pbar, B):
+            idx += 1
+
+        assert idx == pbar.n
+        assert len(noop.results) == 0
+        assert len(noop.pending) == 0
+
+
+BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 8)]
+BENCHMARK_MODELS = [
+    (TaskType.CUSTOM, "noop/process-images", [(224, 224), (640, 480), (1280, 720), (2880, 1620)]),
+    (TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32", [(224, 224), (640, 480)]),
+    (TaskType.OBJECT_DETECTION_2D, "yolox/medium", [(640, 480), (1280, 720), (2880, 1620)]),
+    (
+        TaskType.OBJECT_DETECTION_2D,
+        "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
+        [(640, 480), (1280, 960), (2880, 1620)],
+    ),
+]
+
+
+@pytest.mark.benchmark
+def test_model_manager_inference(manager):  # noqa: F811
     """Benchmark the model manager with a single model."""
-    import time
+    from itertools import product
 
     from PIL import Image
-    from tqdm import tqdm
 
-    from nos.common import TaskType
+    from nos.common import tqdm
     from nos.test.utils import NOS_TEST_IMAGE
 
-    img = Image.open(NOS_TEST_IMAGE)
-    W, H = 224, 224
-    img = img.resize((W * scale, H * scale))
-    img = np.asarray(img)
+    # Benchmark: for each model, and set of image-shapes
+    for task, model_name, image_shapes in BENCHMARK_MODELS:
+        # Load a model spec
+        spec = hub.load_spec(model_name, task=task)
 
-    # Load a model spec
-    task = TaskType.IMAGE_EMBEDDING
-    spec = hub.load_spec(model_name, task=task)
+        # Add the model to the manager (or via `manager.add()`)
+        model: ModelHandle = manager.get(spec)
+        assert model is not None
 
-    # Add the model to the manager (or via `manager.add()`)
-    handle: ModelHandle = manager.get(spec)
-    assert handle is not None
+        # Benchmark: for each image-shape and batch-size
+        for (shape, B) in product(image_shapes, BENCHMARK_BATCH_SIZES):
+            img = Image.open(NOS_TEST_IMAGE)
+            W, H = shape
+            nbytes = W * H * 3
+            img = np.asarray(img.resize((W, H)))
+            assert img.shape[:2] == (H, W)
 
-    # Warmup
-    for _ in tqdm(range(10), desc=f"Warmup model={model_name}, B=1", total=0):
-        images = [img]
-        result = handle.remote(images=images)
-        assert result is not None
-        assert isinstance(result, np.ndarray)
+            # Skip if batched images are >= 512 MB
+            if B * nbytes >= 512 * 1024**2:
+                continue
 
-    # Benchmark (10s)
-    for b in range(0, 8):
-        B = 2**b
-        images = [img for _ in range(B)]
-        st = time.time()
-        for _ in tqdm(
-            range(100_000),
-            desc=f"Benchmark model={model_name}, task={task} [B={B}, shape={img.shape}]",
-            unit="images",
-            unit_scale=B,
-            total=0,
-        ):
-            embedding = handle.remote(images=images)
-            assert embedding is not None
-            assert isinstance(embedding, np.ndarray)
-            N, _ = embedding.shape
-            assert N == B
-            if time.time() - st > 10.0:
-                break
+            # Prepare inputs
+            inputs = {"images": np.stack([img for _ in range(B)])}
+
+            # Warmup (sync)
+            model = model.scale(1)
+            for _ in tqdm(duration=2, desc=f"Warmup SYNC [model={model_name}, B={B}, shape={shape}]", total=0):
+                result = model(**inputs)
+                assert result is not None
+                assert isinstance(result, (np.ndarray, list, dict))
+                if isinstance(result, dict):
+                    for _k, v in result.items():
+                        assert isinstance(v, (np.ndarray, list))
+                        assert len(v) == B
+                else:
+                    assert len(result) == B
+
+            # Benchmark (30s, sync)
+            for _ in tqdm(
+                duration=30,
+                desc=f"Benchmark SYNC [model={model_name}, B={B}, shape={shape}]",
+                unit="images",
+                unit_scale=B,
+                total=0,
+            ):
+                result = model(**inputs)
+
+            # Benchmark (async)
+            def handle_gen(_handle, _inputs, _pbar):
+                for _idx in _pbar:
+                    _handle.submit(**_inputs)
+                    if _handle.full():
+                        yield _handle.get_next()
+                while _handle.has_next():
+                    yield _handle.get_next()
+
+            # Model scaling with replicas: submit + get (perf.)
+            for replicas in [2, 4]:
+                # Skip if total bytes processed are >= 256 MB
+                # to avoid GPU OOM errors.
+                if B * nbytes * replicas >= 256 * 1024**2:
+                    continue
+
+                # Scale up the model
+                model = model.scale(replicas)
+
+                # Warmup (async)
+                pbar = tqdm(
+                    duration=5,
+                    unit_scale=B,
+                    desc=f"Warmup ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+                    total=0,
+                )
+                for result in handle_gen(model, inputs, pbar):
+                    assert result is not None
+                    assert isinstance(result, (np.ndarray, list, dict))
+                    if isinstance(result, dict):
+                        for _k, v in result.items():
+                            assert isinstance(v, (np.ndarray, list))
+                            assert len(v) == B
+                    else:
+                        assert len(result) == B
+
+                # Benchmark (30s, async)
+                pbar = tqdm(
+                    duration=30,
+                    unit_scale=B,
+                    desc=f"Benchmark ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+                    total=0,
+                )
+                for result in handle_gen(model, inputs, pbar):
+                    assert result is not None

@@ -98,7 +98,7 @@ class InferenceService:
 
         # Get the model handle and call it remotely (with model spec, actor handle)
         st = time.perf_counter()
-        response: Dict[str, Any] = model_handle.remote(**model_inputs)
+        response: Dict[str, Any] = model_handle(**model_inputs)
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
@@ -252,14 +252,14 @@ def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 1) -> N
     server.add_insecure_port(address)
 
     console = rich.console.Console()
-    with console.status(f"[bold green] Starting server on {address}[/bold green]") as status:
-        server.start()
-        console.print(
-            f"[bold green] ✓ InferenceService :: Deployment complete [/bold green]",  # noqa
-        )
-        status.stop()
-        server.wait_for_termination()
-        console.print("Server stopped")
+    console.print(f"[bold green] Starting server on {address}[/bold green]")
+    start_t = time.time()
+    server.start()
+    console.print(
+        f"[bold green] ✓ InferenceService :: Deployment complete (elapsed={time.time() - start_t:.1f}s) [/bold green]",  # noqa
+    )
+    server.wait_for_termination()
+    console.print("Server stopped")
 
 
 def main():

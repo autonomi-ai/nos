@@ -10,6 +10,7 @@ import docker.models.containers
 import docker.models.images
 import docker.models.volumes
 import docker.types
+from nos.exceptions import NosServerException
 from nos.logging import logger
 
 
@@ -130,7 +131,7 @@ class DockerRuntime:
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             logger.error(f"Failed to start container, cleaning up container: {exc}")
             self.stop(name)
-            raise exc
+            raise NosServerException(f"Failed to start container [image={image}]")
         return container
 
     def stop(self, name: str, timeout: int = 30) -> docker.models.containers.Container:
@@ -175,4 +176,4 @@ class DockerRuntime:
                 yield line.decode("utf-8")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             logger.error(f"Failed to get container logs: {exc}")
-            raise exc
+            raise NosServerException("Failed to get container logs")

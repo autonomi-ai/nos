@@ -69,13 +69,13 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
 
     img = Image.open(NOS_TEST_IMAGE)
     for _ in tqdm(duration=5, desc="Inference (5s warmup)"):
-        result = handle.remote(images=[img] * 8)
+        result = handle(images=[img] * 8)
         assert result is not None
 
     # Run inference
     img = Image.open(NOS_TEST_IMAGE)
     for _ in tqdm(duration=20, desc="Inference (20s benchmark)"):
-        result = handle.remote(images=[img] * 8)
+        result = handle(images=[img] * 8)
         assert result is not None
 
 
