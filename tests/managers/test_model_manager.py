@@ -1,3 +1,16 @@
+"""
+Test the model manager (nos.managers.ModelManager).
+
+NOTE: The benchmarks are only valid if the noop models have some overhead (i.e. 10ms+).
+The following benchmarks were obtained with a noop model that sleeps for 10ms.
+
+Timing records (0.0.8 - 8/1/2023)
+noop       [B=16, replicas=1,  idx=390, pending=0, queue=0]: : 6256it [00:05, 1250.44it/s]
+noop async [B=16, replicas=1, idx=948, pending=0, queue=2]: : 15184it [00:11, 1378.09it/s]
+noop async [B=16, replicas=2, idx=1836, pending=0, queue=4]: : 29392it [00:12, 2328.83it/s]
+noop async [B=16, replicas=4, idx=1893, pending=0, queue=8]: : 30304it [00:12, 2390.17it/s]
+noop async [B=16, replicas=8, idx=1967, pending=0, queue=16]: : 31488it [00:12, 2464.90it/s]
+"""
 import numpy as np
 import pytest
 from loguru import logger
@@ -76,7 +89,7 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         assert isinstance(result, list)
         assert len(result) == B
 
-    # NoOp: submit() + get()
+    # NoOp: submit() + get_next()
     def noop_gen(_noop, _pbar, B):
         for idx in _pbar:
             _noop.submit(images=img)
@@ -87,16 +100,27 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         while _noop.has_next():
             yield _noop.get_next()
 
-    # NoOp scaling with replicas: submit + get (perf.)
-    for replicas in [2, 4, 8]:
+    # NoOp scaling with replicas: submit + get_next (perf.)
+    for replicas in [1, 2, 4, 8]:
+        # scale the mode
         noop = noop.scale(replicas)
+
+        # test: __call__
+        result = noop(images=img)  # init / warmup
+        assert isinstance(result, list)
+        assert len(result) == B
+
         logger.debug(f"NoOp ({replicas}): {noop}")
         pbar = tqdm(duration=10, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
 
-        idx = 0
-        for result in noop_gen(noop, pbar, B):
+        # warmup: submit()
+        for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
             assert isinstance(result, list)
             assert len(result) == B
+
+        # benchmark: submit()
+        idx = 0
+        for _ in noop_gen(noop, pbar, B):
             idx += 1
 
         assert idx == pbar.n
@@ -250,9 +274,9 @@ def test_model_manager_inference(manager):  # noqa: F811
                 for _idx in _pbar:
                     _handle.submit(**_inputs)
                     if _handle.full():
-                        yield _handle.get()
+                        yield _handle.get_next()
                 while _handle.has_next():
-                    yield _handle.get()
+                    yield _handle.get_next()
 
             # Model scaling with replicas: submit + get (perf.)
             for replicas in [2, 4]:

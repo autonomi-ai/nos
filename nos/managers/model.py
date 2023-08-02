@@ -1,8 +1,10 @@
 import gc
 import os
+import re
 from collections import OrderedDict
 from dataclasses import asdict, dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Union
 
 import ray
@@ -15,6 +17,11 @@ from nos.logging import logger
 
 
 NOS_MEMRAY_ENABLED = os.getenv("NOS_MEMRAY_ENABLED")
+NOS_RAY_LOGS_DIR = os.getenv("NOS_RAY_LOGS_DIR", "/tmp/ray/session_latest/logs")
+
+if NOS_MEMRAY_ENABLED:
+    NOS_RAY_LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    import memray
 
 
 class ModelResultQueue(Queue):
@@ -76,7 +83,7 @@ class ModelHandle:
         """Initialize the actor handles."""
         self._actors = [self.get_actor(self.spec) for _ in range(self.num_replicas)]
         self._actor_pool = ray.util.ActorPool(self._actors)
-        self._results_queue.resize(self.num_replicas)
+        self._results_queue.resize(self.num_replicas * 2)
 
     def __repr__(self) -> str:
         assert len(self._actors) == self.num_replicas
@@ -111,7 +118,6 @@ class ModelHandle:
 
         if replicas == len(self._actors):
             logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={replicas}].")
-            return self
         elif replicas > len(self._actors):
             self._actors += [self.get_actor(self.spec) for _ in range(replicas - len(self._actors))]
             logger.debug(f"Scaling up model [name={self.spec.name}, replicas={replicas}].")
@@ -125,7 +131,7 @@ class ModelHandle:
 
         # Update repicas and queue size
         self.num_replicas = replicas
-        self._results_queue.resize(self.num_replicas)
+        self._results_queue.resize(self.num_replicas * 2)
 
         # Re-create the actor pool
         logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
@@ -137,7 +143,11 @@ class ModelHandle:
     @classmethod
     def _actor_options(cls, spec: ModelSpec) -> Dict[str, Any]:
         """Get actor options from model specification."""
-        return {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
+        actor_opts = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
+        if spec.runtime_env is not None:
+            logger.debug("Using custom runtime environment, this may take a while to build.")
+            actor_opts["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
+        return actor_opts
 
     @classmethod
     def get_actor(cls, spec: ModelSpec) -> Union[ray.remote, ray.actor.ActorHandle]:
@@ -153,26 +163,11 @@ class ModelHandle:
         # will need to be calculated from the target HW and model spec
         # (i.e. 0.5 on A100 vs. T4 are different).
         model_cls = spec.signature.func_or_cls
-        actor_options = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
-        if spec.runtime_env is not None:
-            logger.debug("Using custom runtime environment, this may take a while to build.")
-            actor_options["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
-        logger.debug(f"Creating actor: {actor_options}, {model_cls}")
 
-        # Add some memory logs to this actor
+        # Get the actor options from the model spec
         actor_options = cls._actor_options(spec)
-        actor_cls = ray.remote(**actor_options)(model_cls)
-        if NOS_MEMRAY_ENABLED:
-            import memray
 
-            flattened_name = spec.name.replace("/", "_")
-            log_name = "/tmp/ray/session_latest/logs/" f"{flattened_name}_mem_profile.bin"
-            if os.path.exists(log_name):
-                os.remove(log_name)
-            try:
-                memray.Tracker(log_name).__enter__()
-            except Exception:
-                print("Tracker may have already been initialized, skipping...")
+        actor_cls = ray.remote(**actor_options)(model_cls)
 
         # Check if the model class has the required method
         actor = actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
@@ -180,6 +175,19 @@ class ModelHandle:
             raise NotImplementedError(
                 f"Model class {model_cls} does not have {spec.signature.method_name} implemented."
             )
+        logger.debug(f"Creating actor [actor={actor}, opts={actor_options}, cls={model_cls}]")
+
+        # Add some memory logs to this actor
+        if NOS_MEMRAY_ENABLED:
+            # Replace all non-alphanumeric characters with underscores
+            actor_name = re.sub(r"\W+", "_", str(actor))
+            log_name = Path(NOS_RAY_LOGS_DIR) / f"{actor_name}_mem_profile.bin"
+            if log_name.exists():
+                log_name.unlink()
+            try:
+                memray.Tracker(log_name).__enter__()
+            except Exception:
+                logger.error("Failed to iniitialize memray tracker.")
         return actor
 
     def cleanup(self) -> None:
@@ -196,21 +204,24 @@ class ModelHandle:
             *args: Model arguments.
             **kwargs: Model keyword arguments.
         Returns:
-            ray.ObjectRef: Ray object reference.
+            Model response.
         """
-        assert len(self._actors) == 1, "Model should have atleast one replica."
+        assert len(self._actors) >= 1, "Model should have atleast one replica."
         if self.num_replicas > 1:
             logger.warning("Model has >1 replicas, use `.submit()` instead to fully utilize them.")
         actor_method_func = getattr(self._actors[0], self.spec.signature.method_name)
         response_ref: ray.ObjectRef = actor_method_func.remote(**kwargs)
         return ray.get(response_ref)
 
-    def submit(self, *args, **kwargs) -> None:
+    def submit(self, *args, **kwargs) -> str:
         """Submit a task to the actor pool.
 
         Args:
             *args: Model arguments.
             **kwargs: Model keyword arguments.
+
+        Returns:
+            str: Ray object reference as a string.
         """
         assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
 
@@ -222,6 +233,17 @@ class ModelHandle:
         if len(self._actor_pool._pending_submits):
             self._fetch_next()
         assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
+
+        # Get the future object reference for the last task submitted
+        future_ref: ray.ObjectRef = self._actor_pool._index_to_future[self._actor_pool._next_task_index - 1]
+        return future_ref.hex()
+
+    def get(self, future_ref: str = None) -> Any:
+        """Get the result future."""
+        if future_ref is not None:
+            return ray.get(ray.ObjectRef(future_ref))
+        else:
+            return self._actor_pool.get_next()
 
     def has_next(self) -> bool:
         """Check if the handle has a result in the queue."""
