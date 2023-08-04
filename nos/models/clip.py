@@ -225,7 +225,7 @@ for model_name in CLIP.configs:
         CLIP,
         init_args=(model_name,),
         method_name="encode_text",
-        inputs={"texts": Batch[str]},
+        inputs={"texts": Batch[str, 16]},
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
     )
     hub.register(
@@ -234,6 +234,6 @@ for model_name in CLIP.configs:
         CLIP,
         init_args=(model_name,),
         method_name="encode_image",
-        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(cfg.height, cfg.width, 3), dtype="uint8")]]},
+        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(cfg.height, cfg.width, 3), dtype="uint8")], 16]},
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
     )
