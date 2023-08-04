@@ -19,8 +19,6 @@ from ._docker import DockerRuntime
 from ._runtime import InferenceServiceRuntime
 
 
-__all__ = ["init", "shutdown"]
-
 
 _MIN_NUM_CPUS = 4
 _MIN_MEM_GB = 6
