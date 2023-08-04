@@ -10,12 +10,12 @@ import numpy as np
 from google.protobuf import empty_pb2
 from PIL import Image
 
+from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps, loads
 from nos.common.exceptions import (
     NosClientException,
     NosInferenceException,
     NosServerReadyException,
 )
-from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
 from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
 from nos.logging import logger
