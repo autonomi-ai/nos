@@ -11,8 +11,8 @@ from PIL import Image
 
 import nos
 from nos import hub
-from nos.client.exceptions import NosInputValidationException
 from nos.common import TaskType, TimingInfo, tqdm
+from nos.common.exceptions import NosInputValidationException
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.executors.ray import RayExecutor
 from nos.managers import ModelHandle, ModelManager
