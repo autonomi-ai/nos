@@ -105,17 +105,14 @@ BENCHMARK_IMAGE_SHAPES = [(640, 480), (1280, 720), (2880, 1620)]
 def test_pixeltable_integration():
     import pixeltable as pt
 
-    import nos
-    from nos.version import __version__ as nos_version
     from nos.common import timer
     from nos.common.io import VideoReader
     from nos.constants import NOS_CACHE_DIR
     from nos.test.utils import NOS_TEST_VIDEO, get_benchmark_video  # noqa: F401
+    from nos.version import __version__ as nos_version
 
     NOS_INTEGRATIONS_DIR = Path(NOS_CACHE_DIR) / "integrations"
     NOS_INTEGRATIONS_DIR.mkdir(exist_ok=True, parents=True)
-
-    print(nos_version)
 
     # Get benchmark video, and read first frame for image dimensions
     FILENAME = str(NOS_TEST_VIDEO)
@@ -237,7 +234,7 @@ def test_pixeltable_integration():
     logger.info(f"\nTiming records\n{timing_df}")
 
     # Save timing records
-    version_str = nos.__version__.replace(".", "-")
+    version_str = nos_version.replace(".", "-")
     date_str = datetime.utcnow().strftime("%Y%m%d")
     profile_path = Path(NOS_INTEGRATIONS_DIR) / f"nos-pixeltable-profile--{version_str}--{date_str}.json"
     timing_df.to_json(str(profile_path), orient="records", indent=2)
