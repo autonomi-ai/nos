@@ -481,22 +481,29 @@ class InferenceModule:
             Dict[str, Any]: Inference response.
         Raises:
             NosClientException: If the server fails to respond to the request.
+
+        Note: While encoding the inputs, we check if the input dictionary is consistent
+        with inputs/outputs defined in `spec.signature` and only then encode it.
         """
-        # Check if the input dictionary is consistent
-        # with inputs/outputs defined in `spec.signature`
-        # and then encode it.
+        # Encode the inputs
         st = time.perf_counter()
-        inputs = self._encode(inputs)
+        try:
+            inputs = self._encode(inputs)
+        except Exception as e:
+            raise NosClientException(f"Failed to encode inputs [model={self.model_name}, e={e}]", e)
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Encoded inputs [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
-        request = nos_service_pb2.InferenceRequest(
-            model=nos_service_pb2.ModelInfo(
-                task=self.task.value,
-                name=self.model_name,
-            ),
-            inputs=inputs,
-        )
+
         try:
+            # Prepare the request
+            request = nos_service_pb2.InferenceRequest(
+                model=nos_service_pb2.ModelInfo(
+                    task=self.task.value,
+                    name=self.model_name,
+                ),
+                inputs=inputs,
+            )
+            # Execute the request
             st = time.perf_counter()
             logger.debug(f"Executing request [model={self._spec.name}]]")
             response = self.stub.Run(request)
@@ -504,15 +511,19 @@ class InferenceModule:
                 logger.debug(
                     f"Executed request [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
                 )
-
-            st = time.perf_counter()
-            response = self._decode(response.response_bytes)
-            response = {k: loads(v) for k, v in response.items()}
-            if NOS_PROFILING_ENABLED:
-                logger.debug(
-                    f"Decoded response [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
-                )
-            return response
         except grpc.RpcError as e:
             logger.error(f"Run() failed [details={e.details()}, request={request}, inputs={inputs.keys()}]")
             raise NosInferenceException(f"Run() failed [model={self.model_name}, details={e.details()}]", e)
+
+        # Decode the response
+        st = time.perf_counter()
+        try:
+            response = self._decode(response.response_bytes)
+            response = {k: loads(v) for k, v in response.items()}
+        except Exception as e:
+            raise NosClientException(f"Failed to decode response [model={self.model_name}, e={e}]", e)
+        if NOS_PROFILING_ENABLED:
+            logger.debug(
+                f"Decoded response [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            )
+        return response
