@@ -73,7 +73,7 @@ for model_name in MonoDepth.configs:
         method_name="__call__",
         inputs={
             "images": Union[
-                Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 8],
+                Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 16],
                 Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 4],
             ]
         },

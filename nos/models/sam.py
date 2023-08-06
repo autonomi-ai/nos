@@ -67,6 +67,6 @@ for model_name in SAM.configs:
         SAM,
         init_args=(model_name,),
         method_name="__call__",
-        inputs={"images": Batch[ImageT[Image.Image]], "grid_size": int},
+        inputs={"images": Batch[ImageT[Image.Image], 1], "grid_size": int},
         outputs={"masks": Batch[ImageT[Image.Image]]},
     )

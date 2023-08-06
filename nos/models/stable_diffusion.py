@@ -400,6 +400,6 @@ for model_name in StableDiffusion.configs.keys():
         init_args=(model_name,),
         init_kwargs={"scheduler": "ddim", "dtype": torch.float16},
         method_name="__call__",
-        inputs={"prompts": Batch[str], "num_images": int, "height": int, "width": int},
+        inputs={"prompts": Batch[str, 1], "num_images": int, "height": int, "width": int},
         outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )
