@@ -1,7 +1,9 @@
 mkdocs
+mkdocs-blog-plugin
 mkdocs-exclude
 mkdocs-include-markdown-plugin
 mkdocs-material
+mkdocs-material-extensions>=1.1
 mkdocs-pymdownx-material-extras
 mkdocs-same-dir
 mkdocstrings

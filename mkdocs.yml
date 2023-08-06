@@ -5,22 +5,33 @@ repo_url: https://github.com/autonomi-ai/nos
 docs_dir: .
 site_dir: site
 nav:
-- <strong>🏠 Home</strong>: README.md
-- <strong>🔥 Quickstart</strong>: docs/QUICKSTART.md
-- <strong>📚 API Documentation</strong>:
+- 🏠 Home: README.md
+- 🔥 Quickstart: docs/QUICKSTART.md
+- 📚 API Docs:
   - Inference Client: docs/api/client.md
   - Model Specification: docs/api/common/spec.md
   - NOS Types: docs/api/common/types.md
   - NOS Tasks: docs/api/common/tasks.md
   - NOS Hub: docs/api/hub.md
-- <strong>🏁 Roadmap</strong>: docs/ROADMAP.md
-- <strong>🧾 Release Notes</strong>: docs/RELEASE-NOTES.md
-- <strong>🧑‍💻 Contributing</strong>: docs/CONTRIBUTING.md
-- <strong>❓ Support</strong>: docs/SUPPORT.md
+- ✍️ Blog:
+  - docs/blog/index.md
+  - 2023:
+    - docs/blog/posts/01-hello-world.md
+- 🏁 Roadmap: docs/ROADMAP.md
+- 🧾 Release Notes: docs/RELEASE-NOTES.md
+- 🧑‍💻 Contributing: docs/CONTRIBUTING.md
+- ❓ Support: docs/SUPPORT.md
+
 
 plugins:
 - include-markdown
 - autorefs
+- blog:
+    blog_dir: docs/blog
+    blog_toc: true
+    post_date_format: long
+    post_readtime: false
+
 - mkdocstrings:
     enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
     default_handler: python
@@ -76,6 +87,8 @@ theme:
     - navigation.path
     - navigation.expand
     - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
 
 extra:
   analytics:
