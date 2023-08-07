@@ -490,7 +490,8 @@ class InferenceModule:
         try:
             inputs = self._encode(inputs)
         except Exception as e:
-            raise NosClientException(f"Failed to encode inputs [model={self.model_name}, e={e}]", e)
+            logger.error(f"Failed to encode inputs [model={self.model_name}, inputs={inputs}, e={e}]")
+            raise NosClientException(f"Failed to encode inputs [model={self.model_name}, inputs={inputs}, e={e}]", e)
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Encoded inputs [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
@@ -521,6 +522,7 @@ class InferenceModule:
             response = self._decode(response.response_bytes)
             response = {k: loads(v) for k, v in response.items()}
         except Exception as e:
+            logger.error(f"Failed to decode response [model={self.model_name}, e={e}]")
             raise NosClientException(f"Failed to decode response [model={self.model_name}, e={e}]", e)
         if NOS_PROFILING_ENABLED:
             logger.debug(
