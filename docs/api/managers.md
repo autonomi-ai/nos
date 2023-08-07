@@ -1,0 +1,3 @@
+# Managers
+
+::: nos.managers.model
