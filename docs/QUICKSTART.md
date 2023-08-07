@@ -1,90 +1,108 @@
 # 🔥 Quickstart
 
-0. **Dependencies**
+## 🛠️ Install Dependencies
 
-    We highly recommend doing all of the following inside of a Conda or Virtualenv environment. You can install Conda on your machine following the official [guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Create a new env:
+You will need to install [Docker](https://docs.docker.com/get-docker/), [Nvidia Docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) and [Docker Compose](https://docs.docker.com/compose/install/).
+
+=== "Linux (Debian/Ubuntu)"
+    On Linux, you can install Docker and Docker Compose via the following commands:
     ```bash
-    conda create -n nos python=3.8
+    sudo apt-get update \
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
+    && sudo systemctl restart docker
     ```
 
-    (Note for NOS server) Python  3.8 is currently required to run the  server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
-
-    Install Pip as well if its missing:
+    Next, let's install Nvidia Docker. This will install the Nvidia Container Toolkit which is required to run GPU accelerated containers. This is only required if you plan to run the NOS server with GPU support.
     ```bash
-    conda install pip
+    sudo apt-get update nvidia-container-toolkit-base
     ```
 
-1. **Install NOS**
-
+    Finally, you should be able to run the following command without any errors and the `nvidia-smi` output:
     ```bash
-    pip install autonomi-nos[torch]
+    docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
     ```
 
-    Alternatively, if you have `torch` already installed, you can simply run:
-    ```bash
+    If you run into issues, refer to the official Nvidia install [guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) or just ping us on [#nos-support](https://discord.gg/qEvfUcgS5m).
+
+=== "MacOS (Intel/Apple Silicon)"
+    Download and install [Docker Desktop](https://docs.docker.com/desktop/mac/install/) directly from the Docker website.
+
+## 👩‍💻 Install NOS
+
+We highly recommend doing all of the following inside of a Conda or Virtualenv environment. You can install Conda on your machine following the official [guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Create a new env:
+```bash
+conda create -n nos python=3.8
+```
+
+=== "Without PyTorch"
+
+    ``` sh
     pip install autonomi-nos
     ```
 
-2. **(OPTIONAL) Install Docker dependencies for local NOS server**
+=== "With PyTorch"
 
-    If you are running the NOS server locally on a linux box, you will also need to install Docker
-    and Nvidia Docker.
-    ```bash
-    sudo apt-get update \
-    && sudo apt-get install -y nvidia-container-toolkit-base
+    ``` sh
+    pip install autonomi-nos[torch]"
     ```
-    If you run into issues, refer to the official Nvidia install [guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) or just ping us here.
+    This will install the `torch` extra dependencies for NOS. If you plan to run the NOS server locally (i.e. outside docker), you will also need to install the `server` extra dependencies:
+    ```sh
+    pip install autonomi-nos[torch,server]"
+    ```
 
-2. **Run the NOS server with Docker**
+    **Note:** For running the NOS server, Python 3.8 is currently required to run the server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
 
-    There are two ways to launch the Nos server:
+## ⚡️ Start the NOS backend server
 
-    **Via CLI**
+There are three ways to launch the NOS server:
+
+=== "Via SDK"
+
+    You can start the nos server programmatically via the NOS SDK:
+    ```python
+    import nos
+
+    nos.init(runtime="auto")
+    ```
+
+=== "Via CLI"
 
     Start the nos server with the appropriate backend:
     ```bash
-    nos docker start --runtime=[gpu, cpu]
+    nos docker start --runtime=gpu
     ```
+    Alternatively, you can run the server with CPU support by replacing `--runtime=gpu` with `--runtime=cpu`.
 
-    **Via Docker Compose**
+=== "Via Docker Compose"
 
     Navigate to the `examples/quickstart` folder and run:
     ```bash
     docker compose -f docker-compose.quickstart.yml up
     ```
 
-    This will spin up `nos-grpc-server` (visible under `docker ps`). We're now ready to issue
-    out first inference request!
+We're now ready to issue our first inference request with NOS!
 
-3. **Run Inference**
-    Try out an inference request via the CLI or [Python SDK](https://pypi.org/project/autonomi-nos):
 
-    **Via CLI**
-    ```bash
-    nos predict txt2img -i "dog riding horse"
-    ```
+## 🚀 Run Inference
+Try out an inference request via the CLI or [Python SDK](https://pypi.org/project/autonomi-nos):
 
-    **Via [Python SDK](https://pypi.org/project/autonomi-nos)**
+=== "Via [Python SDK](https://pypi.org/project/autonomi-nos)"
+
     ```python
     from nos.client import InferenceClient, TaskType
 
     client = InferenceClient()
     response = client.Run(
         task=TaskType.IMAGE_GENERATION
-        model="stabilityai/stable-diffusion-2",
-        texts=["dog riding horse"])
-    img = response["image"]
+        model_name="stabilityai/stable-diffusion-2",
+        texts=["astronaut on the moon"],
+        num_images=1, width=512, height=512)
+    img = response["images"][0]
     ```
 
-4. **Troubleshooting**
+=== "Via CLI"
+    ```bash
+    nos predict txt2img -i "dog riding horse"
+    ```
 
-```bash
-docker.errors.DockerException: Error while fetching server API version: ('Connection aborted.', ConnectionRefusedError(61, 'Connection refused'))
-```
-
-Docker service isn't running. On Linux/Ubunutu try:
-```bash
-sudo systemctl start docker
-```
-
-On MacOS, make sure Docker Desktop is running.
+If you run into issues after following this guide, feel free to ping us on [#nos-support](https://discord.gg/qEvfUcgS5m).

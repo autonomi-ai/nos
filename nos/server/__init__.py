@@ -63,7 +63,12 @@ def init(
     logging_level: Union[int, str] = logging.INFO,
     tag: Optional[str] = None,
 ) -> docker.models.containers.Container:
-    """Initialize the inference server.
+    """Initialize the NOS inference server (as a docker daemon).
+
+    The method first checks to see if your system requirements are met, before pulling the NOS docker image from Docker Hub
+    (if necessary) and starting the inference server (as a docker daemon). You can also specify the runtime to use (i.e. "cpu", "gpu"),
+    and the port to use for the inference server.
+
 
     Args:
         runtime (str, optional): The runtime to use (i.e. "cpu", "gpu"). Defaults to "auto".
