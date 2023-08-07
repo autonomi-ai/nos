@@ -28,7 +28,7 @@ Cut your inference costs by 10x.
 </p>
 
 
-TL;DR **NOS** is a PyTorch library for optimizing and running lightning-fast inference of popular computer vision models.
+> **NOS** is a PyTorch library for optimizing and running lightning-fast inference of popular computer vision models.
 
 Optimizing and serving models for production AI inference is still difficult, often leading to notoriously expensive cloud bills and often underutilized GPUs. That’s why we’re building **NOS** - a fast inference server for modern AI workloads. With a few lines of code, developers can optimize, serve, and auto-scale Pytorch model inference without having to deal with the complexities of ML compilers, HW-accelerators, or distributed inference. Simply put, NOS allows AI teams to cut inference costs up to **10x**, speeding up development time and time-to-market.
 
@@ -41,7 +41,9 @@ Optimizing and serving models for production AI inference is still difficult, of
 - ⚙️ **HW-accelerated:** Take full advantage of your HW (GPUs, ASICs) without compromise
 - ☁️ **Cloud-agnostic:** Run on any cloud HW (AWS, GCP, Azure, Lambda Labs, On-Prem)
 
-**NOS** inherits its name from **N**itrous **O**xide **S**ystem, the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
+
+> **NOS** inherits its name from **N**itrous **O**xide **S**ystem, the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
+
 
 ## Batteries Included
  - 💪 **SOTA Model Support:** NOS provides out-of-the-box support for popular CV models such as [Stable Diffusion](stabilityai/stable-diffusion-2), [OpenAI CLIP](openai/clip-vit-base-patch32), [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX) object detection, tracking and more

@@ -1,5 +1,3 @@
-## Model Specification
-
 ::: nos.common.spec.FunctionSignature
     handler: python
     options:

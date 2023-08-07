@@ -6,13 +6,26 @@ docs_dir: .
 site_dir: site
 nav:
 - 🏠 Home: README.md
-- 🔥 Quickstart: docs/QUICKSTART.md
-- 📚 API Docs:
-  - Inference Client: docs/api/client.md
-  - Model Specification: docs/api/common/spec.md
-  - NOS Types: docs/api/common/types.md
-  - NOS Tasks: docs/api/common/tasks.md
-  - NOS Hub: docs/api/hub.md
+- 🚀 Getting Started:
+  - 📦 Installation: docs/QUICKSTART.md
+  - 🔥 Quickstart: docs/QUICKSTART.md
+- 📚 Docs:
+  - Guides:
+    - Starting the NOS Server: docs/starting-the-server.md
+    - Inference Client: docs/api/client.md
+    - Model Specification: docs/api/common/spec.md
+  - API Reference:
+    - nos.common:
+      - nos.common.spec: docs/api/common/spec.md
+      - nos.common.types: docs/api/common/types.md
+      - nos.common.tasks: docs/api/common/tasks.md
+    - nos.client: docs/api/client.md
+    - nos.server: docs/api/server.md
+    - nos.hub: docs/api/hub.md
+    - nos.managers: docs/api/managers.md
+    - nos.executors: docs/api/executors.md
+  - FAQ: docs/FAQ.md
+
 - ✍️ Blog:
   - docs/blog/index.md
   - 2023:
@@ -40,11 +53,21 @@ plugins:
         paths: [.]
         options:
           members_order: source
-          show_source: false
-          show_root_heading: yes
-          separate_signature: true
           line_length: 80
+          docstring_options:
+            ignore_init_summary: false
+          merge_init_into_class: false
+          docstring_style: google
+          docstring_section_style: list
+          show_docstring_description: true
+          show_source: true
+          show_root_heading: yes
           show_bases: false
+          show_signature_annotations: true
+          separate_signature: true
+          signature_crossrefs: true
+
+- tags
 - same-dir
 - search
 - exclude:
@@ -64,6 +87,7 @@ markdown_extensions:
 - admonition
 - attr_list
 - md_in_html
+- pymdownx.details
 - pymdownx.emoji:
     emoji_index: !!python/name:materialx.emoji.twemoji
     emoji_generator: !!python/name:materialx.emoji.to_svg
@@ -89,11 +113,23 @@ theme:
     - navigation.indexes
     - navigation.sections
     - navigation.tabs
+    - navigation.tabs.sticky
 
 extra:
   analytics:
     provider: google
     property: G-J38LQZWLM3
+  social:
+    - icon: fontawesome/solid/paper-plane
+      link: mailto:support@autonomi.ai
+    - icon: fontawesome/brands/github
+      link: https://github.com/autonomi-ai/nos
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/74939899
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/autonomi_ai
+    - icon: fontawesome/brands/discord
+      link: https://discord.gg/QAGgvTuvgg
 
 copyright: >
   Copyright &copy; 2022 - 2023 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
