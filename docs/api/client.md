@@ -1,6 +1,6 @@
 ## NOS Inference Service
-::: nos.init
-::: nos.shutdown
+
+In this section, we expect that you have already installed NOS and have already [started the server](/docs/starting-the-server).
 
 ## ::: nos.client.grpc.InferenceClient
     handler: python

@@ -22,9 +22,13 @@ The NOS server can be started in three ways:
     Alternatively, you can run the server with CPU support by replacing `--runtime=gpu` with `--runtime=cpu`.
 
 === "Via Docker Compose"
+    Navigate to [`examples/quickstart`](https://github.com/autonomi-ai/nos/nos/examples/quickstart) to see an example of the YAML specification.
 
-    Navigate to [`examples/quickstart`](https://github.com/autonomi-ai/nos/nos/examples/quickstart) to see an example of
+    ```yaml
     {% include '../examples/quickstart/docker-compose.quickstart.yml' %}
+    ```
 
+## API Reference
+---
 ::: nos.init
 ::: nos.shutdown
