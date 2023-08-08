@@ -302,6 +302,7 @@ class InferenceModule:
         """Initialize the spec."""
         self._spec = self._client.GetModelInfo(ModelSpec(name=self.model_name, task=self.task))
         if not NOS_SHM_ENABLED:
+            logger.debug("Shared memory disabled.")
             self._shm_objects = None  # disables shm, and avoids registering/unregistering
 
     @property
@@ -393,7 +394,8 @@ class InferenceModule:
 
     def __del__(self):
         """Delete the shared memory."""
-        self.UnregisterSystemSharedMemory()
+        if self._shm_objects is not None:
+            self.UnregisterSystemSharedMemory()
 
     def GetModelInfo(self) -> ModelSpec:
         """Get the relevant model information from the model name."""
@@ -439,16 +441,16 @@ class InferenceModule:
             self._shm_objects = loads(response.response_bytes)
             logger.debug(f"Registered shm [namespace={self.namespace}, objects={self._shm_objects}]")
         except grpc.RpcError as e:
-            logger.error(f"Failed to register shm [request={shm_request}], error: {e.details()}")
-            raise NosClientException(f"Failed to register shm [request={shm_request}, e={e.details()}]", e)
+            logger.debug(f"Failed to register shm [request={shm_request}, e={e.details()}], skipping.")
+            self._shm_objects = None
 
     def UnregisterSystemSharedMemory(self) -> None:
         """Unregister system shared memory."""
-        if not NOS_SHM_ENABLED:
+        if self._shm_objects is None:
             logger.warning("Shared memory is not enabled, skipping.")
             return
 
-        if self._shm_objects is not None and len(self._shm_objects):
+        if len(self._shm_objects):
             logger.debug(
                 f"Unregistering shm [namespace={self.namespace}, objects={[(k, v) for k, v in self._shm_objects.items()]}"
             )

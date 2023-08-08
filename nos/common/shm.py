@@ -125,8 +125,8 @@ class SharedMemoryDataDict:
         """
         st = time.perf_counter()
         data = {k: loads(v) for k, v in data.items()}
-        logger.debug(f"Loaded shm dict [elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         if NOS_SHM_ENABLED:
+            logger.debug(f"Loaded shm dict [elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
             st = time.perf_counter()
             shm_keys = set()
             for k, v in data.items():
