@@ -7,13 +7,15 @@ site_dir: site
 nav:
 - 🏠 Home: README.md
 - 🚀 Getting Started:
-  - 📦 Installation: docs/QUICKSTART.md
-  - 🔥 Quickstart: docs/QUICKSTART.md
+  - 📦 Installation: docs/quickstart.md
+  - 🔥 Quickstart: docs/quickstart.md
 - 📚 Docs:
+  - Overview:
+    - NOS Architecture: docs/architecture-overview.md
   - Guides:
     - Starting the NOS Server: docs/starting-the-server.md
     - Inference Client: docs/api/client.md
-    - Model Specification: docs/api/common/spec.md
+    - Custom Models: docs/custom-models.md
   - API Reference:
     - nos.common:
       - nos.common.spec: docs/api/common/spec.md
@@ -24,16 +26,15 @@ nav:
     - nos.hub: docs/api/hub.md
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
-  - FAQ: docs/FAQ.md
+  - FAQ: docs/faq.md
 
 - ✍️ Blog:
   - docs/blog/index.md
   - 2023:
     - docs/blog/posts/01-hello-world.md
-- 🏁 Roadmap: docs/ROADMAP.md
-- 🧾 Release Notes: docs/RELEASE-NOTES.md
+- 🏁 Roadmap: docs/roadmap.md
 - 🧑‍💻 Contributing: docs/CONTRIBUTING.md
-- ❓ Support: docs/SUPPORT.md
+- ❓ Support: docs/support.md
 
 
 plugins:
