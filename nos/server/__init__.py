@@ -1,5 +1,6 @@
 import logging
 import math
+import platform
 import subprocess
 from collections import deque
 from typing import List, Optional, Union
@@ -10,6 +11,7 @@ import rich.status
 import docker
 import docker.errors
 import docker.models.containers
+from nos.common.shm import NOS_SHM_ENABLED
 from nos.common.system import has_gpu
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
@@ -58,7 +60,7 @@ def _check_system_requirements(runtime: str):
 def init(
     runtime: str = "auto",
     port: int = DEFAULT_GRPC_PORT,
-    utilization: float = 0.8,
+    utilization: float = 1.0,
     pull: bool = True,
     logging_level: Union[int, str] = logging.INFO,
     tag: Optional[str] = None,
@@ -163,6 +165,8 @@ def init(
     logger.debug(f"Starting inference container: [num_cpus={num_cpus}, mem_limit={mem_limit}g]")
 
     # Start container
+    # TOFIX (spillai): If macosx, shared memory is not supported
+    shm_enabled = NOS_SHM_ENABLED if platform.system() == "Linux" else False
     container = runtime.start(
         nano_cpus=int(num_cpus * 1e9),
         mem_limit=f"{mem_limit}g",
@@ -170,6 +174,7 @@ def init(
         ports={f"{DEFAULT_GRPC_PORT}/tcp": port},
         environment={
             "NOS_LOGGING_LEVEL": logging_level,
+            "NOS_SHM_ENABLED": int(shm_enabled),
         },
     )
     logger.info(
