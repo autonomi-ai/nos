@@ -14,8 +14,8 @@ nav:
     - NOS Architecture: docs/architecture-overview.md
   - Guides:
     - Starting the NOS Server: docs/starting-the-server.md
-    - Inference Client: docs/api/client.md
-    - Custom Models: docs/custom-models.md
+    - Running Inference: docs/running-inference.md
+    - Accelerating Models: docs/accelerating-models.md
   - API Reference:
     - nos.common:
       - nos.common.spec: docs/api/common/spec.md
