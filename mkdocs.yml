@@ -26,14 +26,13 @@ nav:
     - nos.hub: docs/api/hub.md
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
-  - FAQ: docs/faq.md
-
-- ✍️ Blog:
-  - docs/blog/index.md
-  - 2023:
-    - docs/blog/posts/01-hello-world.md
-- 🏁 Roadmap: docs/roadmap.md
-- 🧑‍💻 Contributing: docs/CONTRIBUTING.md
+#   - FAQ: docs/faq.md
+# - ✍️ Blog:
+#   - docs/blog/index.md
+#   - 2023:
+#     - docs/blog/posts/01-hello-world.md
+# - 🏁 Roadmap: docs/roadmap.md
+# - 🧑‍💻 Contributing: docs/CONTRIBUTING.md
 - ❓ Support: docs/support.md
 
 
