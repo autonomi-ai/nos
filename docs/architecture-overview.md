@@ -5,9 +5,7 @@
 
 ## Architecture Overview
 
-<figure markdown>
-  ![Unified NOS Inference Server](/docs/assets/nos-3-in-1.png){ width="100%" }
-</figure>
+![Unified NOS Inference Server](./assets/nos-3-in-1.png)
 
 
 ## Core Features
