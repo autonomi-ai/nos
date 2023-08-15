@@ -10,7 +10,6 @@ Benchmarks:
 from datetime import datetime
 from pathlib import Path
 
-import pandas as pd
 import pytest
 from loguru import logger
 
@@ -57,6 +56,7 @@ BENCHMARK_IMAGE_SHAPES = [(640, 480), (1280, 720), (2880, 1620)]
 
 
 def test_pixeltable_integration():
+    import pandas as pd
     import pixeltable as pt
 
     from nos.common import timer
@@ -64,6 +64,9 @@ def test_pixeltable_integration():
     from nos.constants import NOS_CACHE_DIR
     from nos.test.utils import NOS_TEST_VIDEO, get_benchmark_video  # noqa: F401
     from nos.version import __version__
+
+    pd.set_option("display.max_rows", 1000)
+    pd.set_option("display.max_columns", 30)
 
     NOS_INTEGRATIONS_DIR = Path(NOS_CACHE_DIR) / "integrations"
     NOS_INTEGRATIONS_DIR.mkdir(exist_ok=True, parents=True)
@@ -123,7 +126,7 @@ def test_pixeltable_integration():
     # RH, RW = 480, 640
     for (RW, RH) in [(224, 224)] + BENCHMARK_IMAGE_SHAPES:
         t.add_column(pt.Column(f"frame_{RW}x{RH}", computed_with=t.frame.resize((RW, RH))))
-    t.insert_rows([VIDEO_FILES],columns=["video",],)  # fmt: skip
+    t.insert([VIDEO_FILES],columns=["video",],)  # fmt: skip
 
     # Run inference (see acceptance criteria from timing table above)
     timing_records = []
