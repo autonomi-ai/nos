@@ -7,7 +7,13 @@ from nos.common.system import (
     get_torch_cuda_info,
     get_torch_info,
     get_torch_mps_info,
+    has_docker,
     has_gpu,
+    has_nvidia_docker,
+    has_nvidia_docker_runtime_enabled,
+    is_apple,
+    is_apple_silicon,
+    is_inside_docker,
 )
 from nos.test.utils import skip_if_no_torch_cuda
 
@@ -24,6 +30,14 @@ def test_system_info():
     #     assert info["docker"]["version"] is not None
     #     assert info["docker"]["sdk_version"] is not None
     #     assert info["docker"]["compose_version"] is not None
+
+    _ = has_gpu()
+    _ = has_docker()
+    _ = is_inside_docker()
+    _ = is_apple()
+    _ = is_apple_silicon()
+    _ = has_nvidia_docker()
+    _ = has_nvidia_docker_runtime_enabled()
 
 
 @skip_if_no_torch_cuda

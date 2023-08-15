@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
+import psutil
+
 import docker
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.constants import (  # noqa F401
@@ -56,6 +58,7 @@ class InferenceServiceRuntimeConfig:
             "NOS_SHM_ENABLED": int(NOS_SHM_ENABLED),
             "NOS_DASHBOARD_ENABLED": int(NOS_DASHBOARD_ENABLED),
             "NOS_MEMRAY_ENABLED": int(NOS_MEMRAY_ENABLED),
+            "OMP_NUM_THREADS": psutil.cpu_count(logical=False),
         }
     )
     """Environment variables."""

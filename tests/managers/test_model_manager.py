@@ -1,15 +1,19 @@
 """
 Test the model manager (nos.managers.ModelManager).
 
-NOTE: The benchmarks are only valid if the noop models have some overhead (i.e. 10ms+).
+See `model-manager-benchmarks.md` for full benchmark results.
+
+NOTE: The noop benchmarks are only valid if the noop models have some overhead (i.e. 10ms+).
 The following benchmarks were obtained with a noop model that sleeps for 10ms.
 
-Timing records (0.0.8 - 8/1/2023)
-noop       [B=16, replicas=1,  idx=390, pending=0, queue=0]: : 6256it [00:05, 1250.44it/s]
-noop async [B=16, replicas=1, idx=948, pending=0, queue=2]: : 15184it [00:11, 1378.09it/s]
-noop async [B=16, replicas=2, idx=1836, pending=0, queue=4]: : 29392it [00:12, 2328.83it/s]
-noop async [B=16, replicas=4, idx=1893, pending=0, queue=8]: : 30304it [00:12, 2390.17it/s]
-noop async [B=16, replicas=8, idx=1967, pending=0, queue=16]: : 31488it [00:12, 2464.90it/s]
+NOTE: Using OMP_NUM_THREADS=`psutil.cpu_percent(logical=False)`
+OMP_NUM_THREADS=32 ray start --head
+
+CPU benchmarks are run as:
+`CUDA_VISIBLE_DEVICES="" pytest -sv tests/managers/test_model_manager.py -k test_model_manager_inference -m benchmark`
+
+GPU benchmarks are run as:
+`pytest -sv tests/managers/test_model_manager.py -k test_model_manager_inference -m benchmark`
 
 """
 import numpy as np
@@ -239,6 +243,9 @@ def test_model_manager_inference(manager):  # noqa: F811
     from pathlib import Path
 
     import pandas as pd
+
+    pd.set_option("display.max_rows", 500)
+
     from PIL import Image
 
     from nos.common import timer, tqdm
@@ -301,7 +308,7 @@ def test_model_manager_inference(manager):  # noqa: F811
                         total=0,
                     ):
                         result = model(**inputs)
-                info.it = n + 1
+                info.niters = n + 1
                 info.n = (n + 1) * B
                 logger.info(info)
                 timing_records.append(info)
@@ -352,7 +359,7 @@ def test_model_manager_inference(manager):  # noqa: F811
                     with timer(f"{model_name}_{B}x{W}x{H}_async", replicas=replicas, B=B, shape=shape) as info:
                         for n, result in enumerate(handle_gen(model, inputs, pbar)):  # noqa: B007
                             assert result is not None
-                    info.it = n + 1
+                    info.niters = n + 1
                     info.n = (n + 1) * B
                     logger.info(info)
                     timing_records.append(info)
@@ -361,7 +368,8 @@ def test_model_manager_inference(manager):  # noqa: F811
                 continue
 
     timing_df = pd.DataFrame(
-        [r.to_dict() for r in timing_records], columns=["desc", "elapsed", "n", "replicas", "B", "shape"]
+        [r.to_dict() for r in timing_records],
+        columns=["desc", "elapsed", "n", "niters", "replicas", "B", "shape", "cpu_util"],
     )
     timing_df = timing_df.assign(
         elapsed=lambda x: x.elapsed.round(2),

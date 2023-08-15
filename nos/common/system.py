@@ -1,6 +1,7 @@
 import os
 import platform
 import subprocess
+from functools import lru_cache
 from io import StringIO
 from typing import Any, Dict, Optional, Union
 
@@ -11,13 +12,19 @@ from psutil import cpu_count, cpu_freq, virtual_memory
 from nos.logging import logger
 
 
+@lru_cache(maxsize=1)
+def cpu_info() -> Dict[str, Any]:
+    """Get cached CPU information."""
+    return get_cpu_info()
+
+
 def sh(command: str) -> None:
     """Execute shell command, returning stdout."""
     try:
         output = subprocess.run(command, shell=True, check=True, capture_output=True, text=True)
         return output.stdout.strip()
     except subprocess.CalledProcessError:
-        logger.error(f"Failed to execute command: {command}")
+        logger.debug(f"Failed to execute command: {command}")
         return None
 
 
@@ -52,6 +59,22 @@ def is_inside_docker() -> bool:
     """Check if within Docker."""
     cgroup = "/proc/self/cgroup"
     return os.path.isfile("/.dockerenv") or os.path.isfile(cgroup) and any("docker" in line for line in open(cgroup))
+
+
+def is_apple() -> bool:
+    """Check if CPU is Apple."""
+    return platform.system() == "Darwin"
+
+
+def is_apple_silicon() -> bool:
+    """Check if CPU is Apple Silicon.
+
+    Note (spillai):
+        >> arch = "arm64" if is_apple_silicon() else "x86_64"
+    """
+    info = cpu_info()
+    brand = info["brand_raw"]
+    return "apple m1" in brand.lower() or "apple m2" in brand.lower()
 
 
 def has_nvidia_docker() -> bool:
@@ -150,7 +173,7 @@ def get_docker_info() -> Optional[Dict[str, Any]]:
 
 def get_system_info(docker: bool = False, gpu: bool = False) -> Dict[str, Any]:
     """Get system information (including CPU, GPU, RAM, etc.)"""
-    cpu = get_cpu_info()
+    cpu = cpu_info()
     vmem = virtual_memory()
 
     info = {
