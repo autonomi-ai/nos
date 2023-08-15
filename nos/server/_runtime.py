@@ -169,14 +169,20 @@ class InferenceServiceRuntime:
         """
         logger.debug(f"Starting inference runtime with image: {self.cfg.image}")
 
+        # Override dict values
+        for k in ("ports", "volumes", "environment"):
+            if k in kwargs:
+                self.cfg.__dict__[k].update(kwargs.pop(k))
+                logger.debug(f"Updating runtime configuration [key={k}, value={self.cfg.__dict__[k]}]")
+
         # Override config with supplied kwargs
         for k in list(kwargs.keys()):
             value = kwargs[k]
             if hasattr(self.cfg, k):
                 setattr(self.cfg, k, value)
+                logger.debug(f"Overriding inference runtime config: {k}={value}")
             else:
                 self.cfg.kwargs[k] = value
-                logger.debug(f"Overriding inference runtime config: {k}={value}")
 
         # Start inference runtime
         container = self._runtime.start(
