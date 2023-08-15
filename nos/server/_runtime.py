@@ -30,7 +30,7 @@ NOS_DOCKER_IMAGE_GPU = f"autonomi/nos:{__version__}-gpu"
 NOS_DOCKER_IMAGE_TRT_RUNTIME = f"autonomi/nos:{__version__}-trt-runtime"
 
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
-NOS_INFERENCE_SERVICE_CMD = "nos-grpc-server"
+NOS_INFERENCE_SERVICE_CMD = ["./entrypoint.sh"]
 
 NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
@@ -45,7 +45,7 @@ class InferenceServiceRuntimeConfig:
     name: str = NOS_INFERENCE_SERVICE_CONTAINER_NAME
     """Container name (unique)."""
 
-    command: Union[str, List[str]] = field(default_factory=lambda: [NOS_INFERENCE_SERVICE_CMD])
+    command: Union[str, List[str]] = field(default_factory=lambda: NOS_INFERENCE_SERVICE_CMD)
     """Command to run."""
 
     ports: Dict[int, int] = field(default_factory=lambda: {DEFAULT_GRPC_PORT: DEFAULT_GRPC_PORT})

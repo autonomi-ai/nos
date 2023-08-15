@@ -123,19 +123,7 @@ def test_pixeltable_integration():
     # RH, RW = 480, 640
     for (RW, RH) in [(224, 224)] + BENCHMARK_IMAGE_SHAPES:
         t.add_column(pt.Column(f"frame_{RW}x{RH}", computed_with=t.frame.resize((RW, RH))))
-
-    # Insert video files, and compute detections
-    t.insert_rows(
-        [
-            [
-                FILENAME,
-            ]
-            for path in VIDEO_FILES
-        ],
-        columns=[
-            "video",
-        ],
-    )
+    t.insert_rows([VIDEO_FILES],columns=["video",],)  # fmt: skip
 
     # Run inference (see acceptance criteria from timing table above)
     timing_records = []

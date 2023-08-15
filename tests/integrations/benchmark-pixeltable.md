@@ -51,6 +51,25 @@ Timing records (0.0.7 - 2023-07-14) w/o SHM
 ```
 
 ### CPU benchmarks
+
+```bash
+Timing records (0.0.9 - 2023-08-15) - OMP_NUM_THREADS=32 - CPU (0h:04m:32s)
+                      desc  elapsed    n  latency_ms     fps
+0             noop_294x240     1.13  168        6.73  148.67
+1             noop_640x480     1.21  168        7.20  138.84
+2            noop_1280x720     4.99  168       29.70   33.67
+3           noop_2880x1620    17.31  168      103.04    9.71
+4     yolox_medium_294x240    17.43  168      103.75    9.64
+5     yolox_medium_640x480    17.17  168      102.20    9.78
+6    yolox_medium_1280x720    77.32  168      460.24    2.17
+7   yolox_medium_2880x1620    92.55  168      550.89    1.82
+8           openai_224x224     3.53  168       21.01   47.59
+9           openai_640x480     4.95  168       29.46   33.94
+10         openai_1280x720     6.79  168       40.42   24.74
+11        openai_2880x1620    16.77  168       99.82   10.02
+```
+
+
 ```bash
 Timing records (0.0.9 - 2023-08-15) - OMP_NUM_THREADS=1 - CPU (0h:27m:56s)
                       desc  elapsed    n  latency_ms     fps

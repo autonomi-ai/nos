@@ -105,7 +105,8 @@ RUN pip install . --no-deps && \
 WORKDIR /app/$PROJECT
 ENV NOS_ENV=${PYENV}
 
-CMD ["nos-grpc-server"]
+ADD scripts/entrypoint.sh .
+CMD ["./entrypoint.sh"]
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Install NOS test environment
