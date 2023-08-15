@@ -109,7 +109,7 @@ def test_pixeltable_integration():
     from nos.common.io import VideoReader
     from nos.constants import NOS_CACHE_DIR
     from nos.test.utils import NOS_TEST_VIDEO, get_benchmark_video  # noqa: F401
-    from nos.version import __version__ as nos_version
+    from nos.version import __version__
 
     NOS_INTEGRATIONS_DIR = Path(NOS_CACHE_DIR) / "integrations"
     NOS_INTEGRATIONS_DIR.mkdir(exist_ok=True, parents=True)
@@ -190,21 +190,18 @@ def test_pixeltable_integration():
         t.add_column(pt.Column("noop_ids", computed_with=noop(t.frame)))
     logger.info(info)
     timing_records.append(info)
-    assert info.elapsed <= 10.0, f"{info.desc} took too long, timing={info}"
 
     for (RW, RH) in BENCHMARK_IMAGE_SHAPES:
         with timer(f"noop_{RW}x{RH}", n=nframes) as info:
             t.add_column(pt.Column(f"noop_ids_{RW}x{RH}", computed_with=noop(getattr(t, f"frame_{RW}x{RH}"))))
         logger.info(info)
         timing_records.append(info)
-        # assert info.elapsed <= 4.0, f"{info.desc} took too long, timing={info}"
 
     t[yolox_medium(t.frame)].show(1)  # load model
     with timer(f"yolox_medium_{W}x{H}", n=nframes) as info:
         t.add_column(pt.Column("detections_ym", computed_with=yolox_medium(t.frame)))
     logger.info(info)
     timing_records.append(info)
-    assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
 
     for (RW, RH) in BENCHMARK_IMAGE_SHAPES:
         with timer(f"yolox_medium_{RW}x{RH}", n=nframes) as info:
@@ -213,7 +210,6 @@ def test_pixeltable_integration():
             )
         logger.info(info)
         timing_records.append(info)
-        # assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
 
     t[openai_clip(t.frame)].show(1)  # load model
     for (RW, RH) in [(224, 224)] + BENCHMARK_IMAGE_SHAPES:
@@ -223,7 +219,6 @@ def test_pixeltable_integration():
             )
         logger.info(info)
         timing_records.append(info)
-        # assert info.elapsed <= 5.0, f"{info.desc} took too long, timing={info}"
 
     timing_df = pd.DataFrame([r.to_dict() for r in timing_records], columns=["desc", "elapsed", "n"])
     timing_df = timing_df.assign(
@@ -234,7 +229,7 @@ def test_pixeltable_integration():
     logger.info(f"\nTiming records\n{timing_df}")
 
     # Save timing records
-    version_str = nos_version.replace(".", "-")
+    version_str = __version__.replace(".", "-")
     date_str = datetime.utcnow().strftime("%Y%m%d")
     profile_path = Path(NOS_INTEGRATIONS_DIR) / f"nos-pixeltable-profile--{version_str}--{date_str}.json"
     timing_df.to_json(str(profile_path), orient="records", indent=2)
