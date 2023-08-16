@@ -23,7 +23,7 @@ from nos.logging import LOGGING_LEVEL
 logger = logging.getLogger(__name__)
 
 NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
-NOS_RAY_RUNTIME_ENV = os.getenv("NOS_RAY_ENV", None)
+NOS_RAY_ENV = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", None))
 NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
 NOS_DASHBOARD_ENABLED = os.getenv("NOS_DASHBOARD_ENABLED", True)
 
@@ -32,7 +32,7 @@ NOS_DASHBOARD_ENABLED = os.getenv("NOS_DASHBOARD_ENABLED", True)
 class RayRuntimeSpec:
     namespace: str = NOS_RAY_NS
     """Namespace for Ray runtime."""
-    runtime_env: str = NOS_RAY_RUNTIME_ENV
+    runtime_env: str = NOS_RAY_ENV
     """Runtime environment for Ray runtime."""
 
 
@@ -74,8 +74,6 @@ class RayExecutor:
             timeout: Time to wait for Ray to start. Defaults to 60 seconds.
             retry_interval: Time to wait between retries. Defaults to 5 seconds.
         """
-        level = getattr(logging, LOGGING_LEVEL)
-
         # Ignore predefined RAY_ADDRESS environment variable.
         if "RAY_ADDRESS" in os.environ:
             del os.environ["RAY_ADDRESS"]
@@ -93,16 +91,10 @@ class RayExecutor:
                     "[bold green] InferenceExecutor :: Connecting to backend ... [/bold green]"
                 ) as status:
                     logger.debug(f"Connecting to executor: namespace={self.spec.namespace}")
-                    assert NOS_DASHBOARD_ENABLED, f"NOS_DASHBOARD_ENABLED={NOS_DASHBOARD_ENABLED}"
                     ray.init(
                         address="auto",
                         namespace=self.spec.namespace,
                         ignore_reinit_error=True,
-                        include_dashboard=NOS_DASHBOARD_ENABLED,
-                        configure_logging=True,
-                        logging_level=logging.ERROR,
-                        log_to_driver=level <= logging.ERROR,
-                        dashboard_host="0.0.0.0" if NOS_DASHBOARD_ENABLED else None,
                     )
                     status.stop()
                     console.print("[bold green] ✓ InferenceExecutor :: Connected to backend. [/bold green]")
@@ -143,10 +135,11 @@ class RayExecutor:
                 namespace=self.spec.namespace,
                 object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                 ignore_reinit_error=False,
-                include_dashboard=False,
+                include_dashboard=NOS_DASHBOARD_ENABLED,
                 configure_logging=True,
                 logging_level=logging.ERROR,
                 log_to_driver=level <= logging.ERROR,
+                dashboard_host="0.0.0.0" if NOS_DASHBOARD_ENABLED else None,
             )
             logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - start_t:.2f}s)")
         except ConnectionError as exc:

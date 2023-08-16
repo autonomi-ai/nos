@@ -138,6 +138,11 @@ class YOLOX:
             images = (
                 torch.stack([F.to_tensor(image) for image in images]) * 255
             )  # yolox expects non-normalized 0-255 tensor
+            # Pad image to be divisible by 32
+            _, _, H, W = images.shape
+            PH = int(np.ceil(H / 32) * 32)
+            PW = int(np.ceil(W / 32) * 32)
+            images = torch.nn.functional.pad(images, (0, PW - W, 0, PH - H))
             images = images.to(self.device)
             predictions = self.model(images)
             predictions = postprocess(

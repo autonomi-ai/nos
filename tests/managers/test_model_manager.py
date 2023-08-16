@@ -1,15 +1,20 @@
 """
 Test the model manager (nos.managers.ModelManager).
 
-NOTE: The benchmarks are only valid if the noop models have some overhead (i.e. 10ms+).
+See `model-manager-benchmarks.md` for full benchmark results.
+
+NOTE: The noop benchmarks are only valid if the noop models have some overhead (i.e. 10ms+).
 The following benchmarks were obtained with a noop model that sleeps for 10ms.
 
-Timing records (0.0.8 - 8/1/2023)
-noop       [B=16, replicas=1,  idx=390, pending=0, queue=0]: : 6256it [00:05, 1250.44it/s]
-noop async [B=16, replicas=1, idx=948, pending=0, queue=2]: : 15184it [00:11, 1378.09it/s]
-noop async [B=16, replicas=2, idx=1836, pending=0, queue=4]: : 29392it [00:12, 2328.83it/s]
-noop async [B=16, replicas=4, idx=1893, pending=0, queue=8]: : 30304it [00:12, 2390.17it/s]
-noop async [B=16, replicas=8, idx=1967, pending=0, queue=16]: : 31488it [00:12, 2464.90it/s]
+NOTE: Using OMP_NUM_THREADS=`psutil.cpu_percent(logical=False)`
+OMP_NUM_THREADS=32 ray start --head
+
+CPU benchmarks are run as:
+`CUDA_VISIBLE_DEVICES="" pytest -sv tests/managers/test_model_manager.py -k test_model_manager_inference -m benchmark`
+
+GPU benchmarks are run as:
+`pytest -sv tests/managers/test_model_manager.py -k test_model_manager_inference -m benchmark`
+
 """
 import numpy as np
 import pytest
@@ -215,7 +220,7 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         assert len(noop.pending) == 0
 
 
-BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 8)]
+BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 7)]  # [1, 16, 128]
 BENCHMARK_MODELS = [
     (TaskType.CUSTOM, "noop/process-images", [(224, 224), (640, 480), (1280, 720), (2880, 1620)]),
     (TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32", [(224, 224), (640, 480)]),
@@ -226,17 +231,30 @@ BENCHMARK_MODELS = [
         [(640, 480), (1280, 960), (2880, 1620)],
     ),
 ]
+BENCHMARK_WARMUP_SEC = 2
+BENCHMARK_DURATION_SEC = 10
 
 
 @pytest.mark.benchmark
 def test_model_manager_inference(manager):  # noqa: F811
     """Benchmark the model manager with a single model."""
+    from datetime import datetime
     from itertools import product
+    from pathlib import Path
+
+    import pandas as pd
+
+    pd.set_option("display.max_rows", 1000)
+    pd.set_option("display.max_columns", 30)
 
     from PIL import Image
 
-    from nos.common import tqdm
+    from nos.common import timer, tqdm
+    from nos.constants import NOS_CACHE_DIR
     from nos.test.utils import NOS_TEST_IMAGE
+    from nos.version import __version__
+
+    timing_records = []
 
     # Benchmark: for each model, and set of image-shapes
     for task, model_name, image_shapes in BENCHMARK_MODELS:
@@ -262,56 +280,16 @@ def test_model_manager_inference(manager):  # noqa: F811
             # Prepare inputs
             inputs = {"images": np.stack([img for _ in range(B)])}
 
-            # Warmup (sync)
-            model = model.scale(1)
-            for _ in tqdm(duration=2, desc=f"Warmup SYNC [model={model_name}, B={B}, shape={shape}]", total=0):
-                result = model(**inputs)
-                assert result is not None
-                assert isinstance(result, (np.ndarray, list, dict))
-                if isinstance(result, dict):
-                    for _k, v in result.items():
-                        assert isinstance(v, (np.ndarray, list))
-                        assert len(v) == B
-                else:
-                    assert len(result) == B
-
-            # Benchmark (30s, sync)
-            for _ in tqdm(
-                duration=30,
-                desc=f"Benchmark SYNC [model={model_name}, B={B}, shape={shape}]",
-                unit="images",
-                unit_scale=B,
-                total=0,
-            ):
-                result = model(**inputs)
-
-            # Benchmark (async)
-            def handle_gen(_handle, _inputs, _pbar):
-                for _idx in _pbar:
-                    _handle.submit(**_inputs)
-                    if _handle.full():
-                        yield _handle.get_next()
-                while _handle.has_next():
-                    yield _handle.get_next()
-
-            # Model scaling with replicas: submit + get (perf.)
-            for replicas in [2, 4]:
-                # Skip if total bytes processed are >= 256 MB
-                # to avoid GPU OOM errors.
-                if B * nbytes * replicas >= 256 * 1024**2:
-                    continue
-
-                # Scale up the model
-                model = model.scale(replicas)
-
-                # Warmup (async)
-                pbar = tqdm(
-                    duration=5,
-                    unit_scale=B,
-                    desc=f"Warmup ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+            # Benchmark: for each model, image-shape, and batch-size
+            try:
+                # Warmup (sync)
+                model = model.scale(1)
+                for _ in tqdm(
+                    duration=BENCHMARK_WARMUP_SEC,
+                    desc=f"Warmup SYNC [model={model_name}, B={B}, shape={shape}]",
                     total=0,
-                )
-                for result in handle_gen(model, inputs, pbar):
+                ):
+                    result = model(**inputs)
                     assert result is not None
                     assert isinstance(result, (np.ndarray, list, dict))
                     if isinstance(result, dict):
@@ -321,12 +299,92 @@ def test_model_manager_inference(manager):  # noqa: F811
                     else:
                         assert len(result) == B
 
-                # Benchmark (30s, async)
-                pbar = tqdm(
-                    duration=30,
-                    unit_scale=B,
-                    desc=f"Benchmark ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
-                    total=0,
-                )
-                for result in handle_gen(model, inputs, pbar):
-                    assert result is not None
+                # Benchmark (30s, sync)
+                with timer(f"{model_name}_{B}x{W}x{H}", replicas=1, B=B, shape=shape) as info:
+                    for n in tqdm(  # noqa: B007
+                        duration=BENCHMARK_DURATION_SEC,
+                        desc=f"Benchmark SYNC [model={model_name}, B={B}, shape={shape}]",
+                        unit="images",
+                        unit_scale=B,
+                        total=0,
+                    ):
+                        result = model(**inputs)
+                info.niters = n + 1
+                info.n = (n + 1) * B
+                logger.info(info)
+                timing_records.append(info)
+
+                # Benchmark (async)
+                def handle_gen(_handle, _inputs, _pbar):
+                    for _idx in _pbar:
+                        _handle.submit(**_inputs)
+                        if _handle.results.ready():
+                            yield _handle.get_next()
+                    while _handle.has_next():
+                        yield _handle.get_next()
+
+                # Model scaling with replicas: submit + get (perf.)
+                for replicas in [2, 4]:
+                    # Skip if total bytes processed are >= 256 MB
+                    # to avoid GPU OOM errors.
+                    if B * nbytes * replicas >= 256 * 1024**2:
+                        continue
+
+                    # Scale up the model
+                    model = model.scale(replicas)
+
+                    # Warmup (async)
+                    pbar = tqdm(
+                        duration=BENCHMARK_WARMUP_SEC,
+                        unit_scale=B,
+                        desc=f"Warmup ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+                        total=0,
+                    )
+                    for result in handle_gen(model, inputs, pbar):
+                        assert result is not None
+                        assert isinstance(result, (np.ndarray, list, dict))
+                        if isinstance(result, dict):
+                            for _k, v in result.items():
+                                assert isinstance(v, (np.ndarray, list))
+                                assert len(v) == B
+                        else:
+                            assert len(result) == B
+
+                    # Benchmark (30s, async)
+                    pbar = tqdm(
+                        duration=BENCHMARK_DURATION_SEC,
+                        unit_scale=B,
+                        desc=f"Benchmark ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+                        total=0,
+                    )
+                    with timer(f"{model_name}_{B}x{W}x{H}_async", replicas=replicas, B=B, shape=shape) as info:
+                        for n, result in enumerate(handle_gen(model, inputs, pbar)):  # noqa: B007
+                            assert result is not None
+                    info.niters = n + 1
+                    info.n = (n + 1) * B
+                    logger.info(info)
+                    timing_records.append(info)
+            except Exception as e:
+                logger.error(f"Failed to run model [model={model_name}, B={B}, shape={shape}]: {e}]")
+                continue
+
+    timing_df = pd.DataFrame(
+        [r.to_dict() for r in timing_records],
+        columns=["desc", "elapsed", "n", "niters", "replicas", "B", "shape", "cpu_util"],
+    )
+    timing_df = timing_df.assign(
+        elapsed=lambda x: x.elapsed.round(2),
+        latency_ms=lambda x: ((x.elapsed / x.n) * 1000).round(2),
+        throughput=lambda x: (1 / (x.elapsed / x.n)).round(2),
+    )
+    logger.info(f"\nTiming records\n{timing_df}")
+
+    NOS_BENCHMARK_DIR = Path(NOS_CACHE_DIR) / "benchmarks"
+    NOS_BENCHMARK_DIR.mkdir(exist_ok=True, parents=True)
+
+    # Save timing records
+    version_str = __version__.replace(".", "-")
+    date_str = datetime.utcnow().strftime("%Y%m%d")
+    profile_path = Path(NOS_BENCHMARK_DIR) / f"nos-model-manager-benchmark--{version_str}--{date_str}.json"
+    timing_df.to_json(str(profile_path), orient="records", indent=2)
+    logger.info(f"Saved timing records to: {str(profile_path)}")

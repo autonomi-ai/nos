@@ -2,6 +2,7 @@ import contextlib
 import time
 from typing import Any
 
+import psutil
 from tqdm import tqdm as _tqdm
 
 from .cloudpickle import dumps, loads
@@ -45,29 +46,47 @@ def tqdm(iterable: Any = None, *args, **kwargs) -> Any:
     return _tqdm(_iterable(), *args, **kwargs)
 
 
-class TimingInfo:
+class TimingInfo(dict):
     """Timing information for a context manager"""
 
     def __init__(self, desc: str, elapsed: float = 0.0, **kwargs):
+        """Initialize timing information
+
+        Args:
+            desc (str): Description of the context manager.
+            elapsed (float, optional): Elapsed time. Defaults to 0.0.
+            kwargs (Any): Additional key-value pairs to store.
+        """
+        self.__dict__ = self
         self.desc = desc
         self.elapsed = elapsed
-        self.kwargs = kwargs
+        super().__init__(**kwargs)
 
     def __repr__(self):
-        repr_str = f"{self.__class__.__name__}(desc={self.desc}"
-        if len(self.kwargs):
-            repr_str += ", " + ", ".join([f"{k}={v}" for k, v in self.kwargs.items()])
-        repr_str += f", elapsed={self.elapsed:.2f}s)"
+        repr_str = f"{self.__class__.__name__}("
+        if len(self):
+            repr_str += ", ".join([f"{k}={v}" for k, v in self.items()])
+        repr_str += ")"
         return repr_str
 
     def to_dict(self):
-        return {**self.kwargs, "desc": self.desc, "elapsed": self.elapsed}
+        return self.__dict__
 
 
 @contextlib.contextmanager
 def timer(desc: str = "", **kwargs):
-    """Simple context manager for timing code blocks"""
+    """Simple context manager for timing code blocks
+
+    Args:
+        desc (str, optional): Description of the context manager. Defaults to "".
+        kwargs (Any): Additional key-value pairs to store.
+
+    Yields:
+        TimingInfo: Timing information with additional fields (elapsed time, cpu_util, etc.)
+    """
     info = TimingInfo(desc, **kwargs)
     start = time.time()
+    _ = psutil.cpu_percent(interval=None)
     yield info
-    info.elapsed = time.time() - start
+    info.elapsed = round(time.time() - start, 3)
+    info.cpu_util = round(psutil.cpu_percent(interval=None), 2)

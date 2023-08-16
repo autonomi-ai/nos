@@ -14,6 +14,7 @@ from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps
 from nos.common.exceptions import (
     NosClientException,
     NosInferenceException,
+    NosInputValidationException,
     NosServerReadyException,
 )
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
@@ -482,7 +483,9 @@ class InferenceModule:
         Returns:
             Dict[str, Any]: Inference response.
         Raises:
-            NosClientException: If the server fails to respond to the request.
+            NosInputValidationException: If the inputs are inconsistent with the spec signature.
+            NosInferenceException: If the server fails to respond to the request.
+            NosClientException: If the outputs cannot be decoded.
 
         Note: While encoding the inputs, we check if the input dictionary is consistent
         with inputs/outputs defined in `spec.signature` and only then encode it.
@@ -493,7 +496,9 @@ class InferenceModule:
             inputs = self._encode(inputs)
         except Exception as e:
             logger.error(f"Failed to encode inputs [model={self.model_name}, inputs={inputs}, e={e}]")
-            raise NosClientException(f"Failed to encode inputs [model={self.model_name}, inputs={inputs}, e={e}]", e)
+            raise NosInputValidationException(
+                f"Failed to encode inputs [model={self.model_name}, inputs={inputs}, e={e}]", e
+            )
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Encoded inputs [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 

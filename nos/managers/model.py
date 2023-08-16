@@ -145,6 +145,11 @@ class ModelHandle:
     @classmethod
     def _actor_options(cls, spec: ModelSpec) -> Dict[str, Any]:
         """Get actor options from model specification."""
+        # TOFIX (spillai): When considering CPU-only models with num_cpus specified,
+        # OMP_NUM_THREADS will be set to the number of CPUs requested. Otherwise,
+        # if num_cpus is not specified, OMP_NUM_THREADS will default to 1.
+        # Instead, for now, we manually set the environment variable in `InferenceServiceRuntime`
+        # to the number of CPUs threads available.
         actor_opts = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
         if spec.runtime_env is not None:
             logger.debug("Using custom runtime environment, this may take a while to build.")

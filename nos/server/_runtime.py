@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
+import psutil
+
 import docker
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.constants import (  # noqa F401
@@ -28,7 +30,7 @@ NOS_DOCKER_IMAGE_GPU = f"autonomi/nos:{__version__}-gpu"
 NOS_DOCKER_IMAGE_TRT_RUNTIME = f"autonomi/nos:{__version__}-trt-runtime"
 
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
-NOS_INFERENCE_SERVICE_CMD = "nos-grpc-server"
+NOS_INFERENCE_SERVICE_CMD = ["./entrypoint.sh"]
 
 NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
@@ -43,7 +45,7 @@ class InferenceServiceRuntimeConfig:
     name: str = NOS_INFERENCE_SERVICE_CONTAINER_NAME
     """Container name (unique)."""
 
-    command: Union[str, List[str]] = field(default_factory=lambda: [NOS_INFERENCE_SERVICE_CMD])
+    command: Union[str, List[str]] = field(default_factory=lambda: NOS_INFERENCE_SERVICE_CMD)
     """Command to run."""
 
     ports: Dict[int, int] = field(default_factory=lambda: {DEFAULT_GRPC_PORT: DEFAULT_GRPC_PORT})
@@ -56,6 +58,7 @@ class InferenceServiceRuntimeConfig:
             "NOS_SHM_ENABLED": int(NOS_SHM_ENABLED),
             "NOS_DASHBOARD_ENABLED": int(NOS_DASHBOARD_ENABLED),
             "NOS_MEMRAY_ENABLED": int(NOS_MEMRAY_ENABLED),
+            "OMP_NUM_THREADS": psutil.cpu_count(logical=False),
         }
     )
     """Environment variables."""
@@ -166,14 +169,20 @@ class InferenceServiceRuntime:
         """
         logger.debug(f"Starting inference runtime with image: {self.cfg.image}")
 
+        # Override dict values
+        for k in ("ports", "volumes", "environment"):
+            if k in kwargs:
+                self.cfg.__dict__[k].update(kwargs.pop(k))
+                logger.debug(f"Updating runtime configuration [key={k}, value={self.cfg.__dict__[k]}]")
+
         # Override config with supplied kwargs
         for k in list(kwargs.keys()):
             value = kwargs[k]
             if hasattr(self.cfg, k):
                 setattr(self.cfg, k, value)
+                logger.debug(f"Overriding inference runtime config: {k}={value}")
             else:
                 self.cfg.kwargs[k] = value
-                logger.debug(f"Overriding inference runtime config: {k}={value}")
 
         # Start inference runtime
         container = self._runtime.start(

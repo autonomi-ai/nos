@@ -19,7 +19,7 @@ docker-build-mmdet-dev:
 docker-run-mmdet-grpc-server: docker-build-mmdet-dev
 	make .docker-run-mmdet TARGET=dev \
 	DOCKER_ARGS="--gpus all -v $(shell pwd):/nos -v ${HOME}/.nosd:/app/.nos -p 50051:50051 -p 8265:8265" \
-	DOCKER_CMD="nos-grpc-server"
+	DOCKER_CMD=""
 
 docker-run-mmdet-interactive: docker-build-mmdet-dev
 	make .docker-run-mmdet TARGET=dev \

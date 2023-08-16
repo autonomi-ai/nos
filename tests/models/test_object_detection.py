@@ -36,7 +36,6 @@ from PIL import Image
 from nos import hub
 from nos.common import TaskType
 from nos.models import YOLOX, FasterRCNN
-from nos.test.benchmark import run_benchmark
 from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
 
@@ -100,13 +99,14 @@ def _test_predict(_model, img_size):
             assert bbox.dtype == np.float32
             if not len(bbox):
                 continue
-            assert (bbox[:, 0] >= -5e-1).all() and (bbox[:, 0] <= W).all()
-            assert (bbox[:, 1] >= -5e-1).all() and (bbox[:, 1] <= H).all()
+            # Check if predictions are within 1% of the image dimensions
+            assert (bbox[:, 0] >= -W * 0.01).all() and (bbox[:, 0] <= W + W * 0.01).all()
+            assert (bbox[:, 1] >= -H * 0.01).all() and (bbox[:, 1] <= H + H * 0.01).all()
 
 
 @skip_if_no_torch_cuda
 @pytest.mark.parametrize("model_name", UNIQUE_MODELS)
-@pytest.mark.parametrize("img_size", [(640, 480), (1280, 960)])
+@pytest.mark.parametrize("img_size", [(640, 480), (1280, 720), (2880, 1620)])
 def test_object_detection_predict_one(model_name, img_size):
     logger.debug(f"Testing model: {model_name}")
     spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
@@ -128,16 +128,12 @@ def test_object_detection_predict_all(model_name):
 
 @skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.MODEL_BENCHMARK)
-@pytest.mark.parametrize("model_name", MODELS)
-# @pytest.mark.parametrize("img_size", [(640, 480), (1280, 960)])
-@pytest.mark.parametrize(
-    "img_size",
-    [
-        (640, 480),
-    ],
-)
+@pytest.mark.parametrize("model_name", UNIQUE_MODELS)
+@pytest.mark.parametrize("img_size", [(640, 480), (1280, 960)])
 def test_object_detection_predict_benchmark(model_name, img_size):
     """ "Benchmark inference for all object detection models."""
+
+    from nos.common import tqdm
 
     img = Image.open(NOS_TEST_IMAGE)
     img = img.resize(img_size)
@@ -145,8 +141,5 @@ def test_object_detection_predict_benchmark(model_name, img_size):
     logger.debug(f"Benchmarking model: {model_name}, img_size: {img_size}")
     spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
     model = hub.load(spec.name, task=spec.task)
-    time_ms = run_benchmark(
-        lambda: model(img),
-        num_iters=100,
-    )
-    logger.debug(f"[{model_name}]: {time_ms:.2f} ms / step")
+    for _ in tqdm(duration=10, unit="images", desc=f"{model_name}"):
+        model(img)
