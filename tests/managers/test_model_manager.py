@@ -245,7 +245,7 @@ def test_model_manager_inference(manager):  # noqa: F811
     import pandas as pd
 
     pd.set_option("display.max_rows", 1000)
-    pd.set_option("display.max_columns", 30)
+    pd.set_option("display.max_columns", 1000)
 
     from PIL import Image
 
