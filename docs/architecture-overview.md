@@ -16,6 +16,9 @@
 
 
 ## Core Components
+
+![NOS Architecture](./assets/nos-arch-8-16.png)
+
  NOS is built to be modular and extensible. The core components of NOS are:
 
 - [**`ModelManager`**](#modelmanager): Model manager for serving and running models with Ray actors.
