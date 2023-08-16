@@ -66,7 +66,7 @@ def test_pixeltable_integration():
     from nos.version import __version__
 
     pd.set_option("display.max_rows", 1000)
-    pd.set_option("display.max_columns", 30)
+    pd.set_option("display.max_columns", 1000)
 
     NOS_INTEGRATIONS_DIR = Path(NOS_CACHE_DIR) / "integrations"
     NOS_INTEGRATIONS_DIR.mkdir(exist_ok=True, parents=True)
