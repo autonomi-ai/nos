@@ -9,6 +9,8 @@ nav:
 - 🚀 Getting Started:
   - 📦 Installation: docs/quickstart.md
   - 🔥 Quickstart: docs/quickstart.md
+- 🤖 Demos:
+  - Discord Bot: docs/demos/discord-bot.md
 - 📚 Docs:
   - Overview:
     - NOS Architecture: docs/architecture-overview.md
