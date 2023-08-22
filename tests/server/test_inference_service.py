@@ -44,7 +44,7 @@ def test_model_manager(ray_executor: RayExecutor):  # noqa: F811
     # This should not raise any OOM errors as models are evicted
     # from the manager's cache.
     for idx, spec in enumerate(hub.list()):
-        handler: ModelHandle = manager.get(spec)
+        handler: ModelHandle = manager.load(spec)
         assert handler is not None
         assert isinstance(handler, ModelHandle)
 
@@ -64,7 +64,7 @@ def test_model_manager_inference(ray_executor: RayExecutor):  # noqa: F811
     spec = hub.load_spec("openai/clip-vit-base-patch32", task=TaskType.IMAGE_EMBEDDING)
 
     # Add the model to the manager (or via `manager.add()`)
-    handle: ModelHandle = manager.get(spec)
+    handle: ModelHandle = manager.load(spec)
     assert handle is not None
 
     img = Image.open(NOS_TEST_IMAGE)

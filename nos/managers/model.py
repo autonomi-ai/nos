@@ -83,8 +83,6 @@ class ModelHandle:
     """Ray actor pool."""
     _results_queue: ModelResultQueue = field(init=False, default_factory=ModelResultQueue)
     """Queue to fetch results from the actor pool."""
-    _results_queue_size: int = field(init=False, default=None)
-    """Maximum results queue size."""
     _actor_profile: Dict[str, Any] = field(init=False, default=None)
     """Actor profile."""
 
@@ -92,13 +90,13 @@ class ModelHandle:
         """Initialize the actor handles."""
         self._actors = [self.get_actor(self.spec) for _ in range(self.num_replicas)]
         self._actor_pool = ray.util.ActorPool(self._actors)
-        self._results_queue_size = self.num_replicas
+        self._results_queue.resize(self.num_replicas * 2)
 
     def __repr__(self) -> str:
         assert len(self._actors) == self.num_replicas
         opts = self._actor_options(self.spec)
         opts_str = ", ".join([f"{k}={v}" for k, v in opts.items()])
-        return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, qsize={self._results_queue_size}, opts=({opts_str}))"
+        return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, qsize={self.results._size}, opts=({opts_str}))"
 
     def scale(self, replicas: Union[int, str] = 1) -> "ModelHandle":
         """Scale the model handle to a new number of replicas.
@@ -120,22 +118,6 @@ class ModelHandle:
         logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")
         while self._actor_pool.has_next():
             self._fetch_next()
-        logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
-        del self._actor_pool
-        self._actor_pool = None
-        logger.debug(f"Scaling model [name={self.spec.name}].")
-
-        # Check if there are any pending submits
-        # on the actor pool, and wait until they are complete / added
-        # to the results queue.
-        if self._actor_pool.has_next() or len(self._actor_pool._pending_submits):
-            logger.warning(f"Pending futures detected, this may result in dropped queue items [name={self.spec.name}]")
-        logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")
-        while self._actor_pool.has_next():
-            self._fetch_next()
-        logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
-        del self._actor_pool
-        self._actor_pool = None
         logger.debug(f"Scaling model [name={self.spec.name}].")
 
         if replicas == len(self._actors):
@@ -154,10 +136,12 @@ class ModelHandle:
 
         # Update repicas and queue size
         self.num_replicas = replicas
+        self._results_queue.resize(self.num_replicas * 2)
 
         # Re-create the actor pool
-        logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
-        self._results_queue_size = 2 * self.num_replicas
+        logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
+        del self._actor_pool
+        self._actor_pool = None
 
         # Re-create the actor pool
         logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
@@ -236,50 +220,12 @@ class ModelHandle:
         Returns:
             Model response.
         """
+        assert len(self._actors) >= 1, "Model should have atleast one replica."
         if self.num_replicas > 1:
             logger.warning("Model has >1 replicas, use `.submit()` instead to fully utilize them.")
-        self.submit(*args, **kwargs)
-        self._fetch_next()
-        return self.get()
-
-    def submit(self, *args, **kwargs) -> None:
-        """Submit a task to the actor pool.
-
-        Args:
-            *args: Model arguments.
-            **kwargs: Model keyword arguments.
-        """
-        assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
-
-        # Submit the task to the actor pool, leveraging all replicas
-        self._actor_pool.submit(lambda a, v: getattr(a, self.spec.signature.method_name).remote(**v), kwargs)
-
-        # If there are pending submissions due to the actor pool being fully utilized,
-        # fetch the next result from the actor pool and put it in the queue.
-        if len(self._actor_pool._pending_submits):
-            self._fetch_next()
-        assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
-
-    def has_next(self) -> bool:
-        """Check if the handle has a result in the queue."""
-        return self._actor_pool.has_next() or len(self._results_queue)
-
-    def get(self) -> Any:
-        """Get the next result from the actor pool queue or by the object reference."""
-        if not len(self._results_queue):
-            self._results_queue.put(self._actor_pool.get_next())
-        return self._results_queue.get()
-
-    def full(self) -> bool:
-        """Check if the results queue is full."""
-        return len(self._results_queue) >= self._results_queue_size
-
-    def _fetch_next(self) -> None:
-        """Fetch results from the actor pool."""
-        self._results_queue.put(self._actor_pool.get_next())
-        if len(self._results_queue) > self._results_queue_size:
-            logger.warning("Results queue full, dropping results. Use `.get()` to get results.")
-            self._results_queue.get()
+        actor_method_func = getattr(self._actors[0], self.spec.signature.method_name)
+        response_ref: ray.ObjectRef = actor_method_func.remote(**kwargs)
+        return ray.get(response_ref)
 
     def submit(self, *args, **kwargs) -> str:
         """Submit a task to the actor pool.
@@ -393,8 +339,8 @@ class ModelManager:
         """
         return spec.id in self.handlers
 
-    def get(self, model_spec: ModelSpec) -> ModelHandle:
-        """Get a model handle from the manager.
+    def load(self, model_spec: ModelSpec) -> ModelHandle:
+        """Load a model handle from the manager using the model specification.
 
         Create a new model handle if it does not exist,
         else return an existing handle.
