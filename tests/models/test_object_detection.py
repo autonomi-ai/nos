@@ -48,6 +48,8 @@ env = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", "base_gpu"))
 logger.info(f"Using env: {env}")
 if env in ("nos_trt_dev", "nos_trt_runtime"):
     UNIQUE_MODELS += ["yolox/medium-trt"]
+if env in ("nos-mmlab-py38"):
+    UNIQUE_MODELS += ["open-mmlab/efficientdet-d3", "open-mmlab/yolox_s"]
 
 
 def _test_predict(_model, img_size):

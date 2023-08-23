@@ -98,6 +98,7 @@ class Hub:
         model_id = ModelSpec.get_id(spec.name, spec.task)
         if model_id not in cls.get()._registry:
             cls.get()._registry[model_id] = spec
+            logger.debug(f"Loading model spec: {model_id}")
         return spec
 
 
