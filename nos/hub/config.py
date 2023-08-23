@@ -1,7 +1,12 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Dict, List, Union
 
 from nos.constants import NOS_MODELS_DIR
+from nos.logging import logger
+
+
+NOS_CUSTOM_MODELS_DIR = Path(NOS_MODELS_DIR) / "custom"
 
 
 @dataclass(frozen=True)
@@ -88,4 +93,85 @@ class MMLabConfig:
 
     @property
     def cached_checkpoint(self) -> str:
+        if Path(self.checkpoint).exists():
+            return self.checkpoint
         return cached_checkpoint(self.checkpoint, self.model_name)
+
+
+@dataclass(frozen=True)
+class MMLabHub:
+    """OpenMMlab model registry."""
+
+    work_dirs: List[Union[str, Path]] = field(default_factory=lambda: [NOS_CUSTOM_MODELS_DIR])
+    """List of model working directories with pre-trained models."""
+
+    _models: Dict[str, MMLabConfig] = field(default_factory=dict)
+    """Model registry."""
+
+    def __post_init__(self):
+        """Post-initialization."""
+        for directory in self.work_dirs:
+            logger.debug(f"Registering checkpoints from directory: {directory}")
+            self._register_checkpoints(str(directory))
+
+    def _register_checkpoints(self, directory: str, namespace: str = "custom"):
+        """Register checkpoints from a directory.
+
+        Registered models:
+            - {namespace}_{model_stem}_{checkpoint_stem}: Specific checkpoint.
+            - {namespace}_{model_stem}_latest: Latest checkpoint.
+        """
+        directory = Path(directory)
+        if not directory.exists():
+            logger.debug(f"Skipping directory, does not exist [dir={directory}].")
+            return
+
+        # Create one entry per model .pth file
+        # {namespace}_{model_stem}_{checkpoint_stem}
+        for path in directory.rglob("*.pth"):
+            model_dir = path.parent
+            model_stem = model_dir.stem
+            config = model_dir / f"{model_stem}.py"
+            checkpoint = path
+            assert config.exists(), f"Failed to find config: {config}."
+            assert checkpoint.exists(), f"Failed to find checkpoint: {checkpoint}."
+            mm_config = MMLabConfig(config=str(config), checkpoint=str(checkpoint))
+            key = f"{namespace}_{model_stem}_{path.stem}"
+            self._models[key] = mm_config
+            logger.debug(f"Registering model [key={key}, cfg={mm_config}]")
+
+        # Create one entry for the latest checkpoint
+        # {namespace}_{model_stem}_latest
+        for path in directory.rglob("last_checkpoint"):
+            model_dir = path.parent
+            model_stem = model_dir.stem
+            if path.exists():
+                latest_filename = None
+                try:
+                    with open(str(path), "r") as f:
+                        latest_filename = f.read().strip()
+                        latest_basename = Path(latest_filename).name
+                    config = checkpoint.parent / f"{model_stem}.py"
+                    checkpoint = model_dir / latest_basename
+                    assert checkpoint.exists(), f"Failed to find latest checkpoint: {checkpoint}."
+                    mm_config = MMLabConfig(config=str(config), checkpoint=str(checkpoint))
+                    key = f"{namespace}_{model_stem}_latest"
+                    self._models[key] = mm_config
+                    logger.debug(f"Registering latest model [key={model_stem}, cfg={mm_config}]")
+                except Exception as e:
+                    logger.warning(f"Failed to load latest checkpoint: {e}")
+
+    def __contains__(self, key: str) -> bool:
+        return key in self._models
+
+    def __getitem__(self, key: str) -> MMLabConfig:
+        return self._models[key]
+
+    def __len__(self) -> int:
+        return len(self._models)
+
+    def __iter__(self):
+        return iter(self._models)
+
+    def get(self, key: str) -> MMLabConfig:
+        return self.__getitem__(key)

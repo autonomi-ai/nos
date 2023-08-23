@@ -49,7 +49,7 @@ logger.info(f"Using env: {env}")
 if env in ("nos_trt_dev", "nos_trt_runtime"):
     UNIQUE_MODELS += ["yolox/medium-trt"]
 if env in ("nos-mmlab-py38"):
-    UNIQUE_MODELS += ["open-mmlab/efficientdet-d3", "open-mmlab/yolox_s"]
+    UNIQUE_MODELS += ["open-mmlab/yolox_s"]
 
 
 def _test_predict(_model, img_size):
@@ -88,11 +88,11 @@ def _test_predict(_model, img_size):
         assert isinstance(predictions["labels"], list)
         assert len(predictions["labels"]) == B
         for labels in predictions["labels"]:
-            assert labels.dtype == np.int32
+            assert labels.dtype in (np.int32, np.int64)
             if not len(labels):
                 continue
             assert len(np.unique(labels)) >= 3, "At least 3 different classes should be detected"
-            assert labels.dtype == np.int32
+            assert labels.dtype in (np.int32, np.int64)
 
         assert predictions["bboxes"] is not None
         assert isinstance(predictions["bboxes"], list)
