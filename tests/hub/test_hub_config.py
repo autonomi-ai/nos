@@ -8,6 +8,10 @@ def test_hub_mmlab_hub_config():
     assert hub is not None
     assert len(hub) >= 0
 
+    # Test singleton
+    hub_ = MMLabHub()
+    assert hub is hub_
+
     for key in hub:
         # Get item by key
         cfg = hub[key]

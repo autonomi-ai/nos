@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Union
 
+from nos.common.metaclass import SingletonMetaclass
 from nos.constants import NOS_MODELS_DIR
 from nos.logging import logger
 
@@ -99,10 +100,12 @@ class MMLabConfig:
 
 
 @dataclass(frozen=True)
-class MMLabHub:
+class MMLabHub(metaclass=SingletonMetaclass):
     """OpenMMlab model registry."""
 
-    work_dirs: List[Union[str, Path]] = field(default_factory=lambda: [NOS_CUSTOM_MODELS_DIR])
+    work_dirs: List[Union[str, Path]] = field(
+        default_factory=lambda: [NOS_CUSTOM_MODELS_DIR / "openmmlab/mmdetection"]
+    )
     """List of model working directories with pre-trained models."""
 
     _models: Dict[str, MMLabConfig] = field(default_factory=dict)
