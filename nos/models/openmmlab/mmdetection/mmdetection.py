@@ -10,7 +10,7 @@ from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
-from nos.hub import MMLabConfig
+from nos.hub import MMLabConfig, MMLabHub
 
 
 @dataclass(frozen=True)
@@ -47,6 +47,8 @@ class MMDetection:
             config="configs/yolox/yolox_tiny_8xb8-300e_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_tiny_8x8_300e_coco/yolox_tiny_8x8_300e_coco_20211124_171234-b4047906.pth",
         ),
+        # Note: The following registers the configs for all models in the local hub.
+        **MMLabHub().configs,
     }
 
     def __init__(self, model_name: str = "open-mmlab/efficientdet-d3"):

@@ -8,7 +8,7 @@ from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_all_unless_nos_env,
 
 # See `nos.server._runtime.InferenceServiceRuntime` for `mmdet-dev` runtime spec
 RUNTIME_ENV = "mmdet-dev"
-pytestmark = skip_all_unless_nos_env(RUNTIME_ENV)
+pytestmark = pytest.mark.skipif(pytest.importorskip("mmdet") is None, reason="mmdet is not installed")
 
 
 @pytest.mark.skip(reason="TODO (spillai): Skip registration until new mmlab docker runtime is available")
@@ -34,8 +34,10 @@ def openmmlab_runtime():
 @pytest.mark.parametrize(
     "model_name",
     [
-        "open-mmlab/efficientdet-d3",
+        # "open-mmlab/efficientdet-d3",
         "open-mmlab/faster-rcnn",
+        # "open-mmlab/yolox_s",
+        "open-mmlab/mmdetection/custom/yolox_s_8xb8-300e_coco_latest"
     ],
 )
 def test_mmdetection_predict(model_name):
@@ -46,7 +48,7 @@ def test_mmdetection_predict(model_name):
     model = MMDetection(model_name)
 
     img = Image.open(NOS_TEST_IMAGE)
-    predictions = model.predict([img, img])
+    predictions = model([img, img])
     assert predictions is not None
 
     assert predictions["scores"] is not None

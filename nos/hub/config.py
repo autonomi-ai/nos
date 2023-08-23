@@ -108,7 +108,7 @@ class MMLabHub(metaclass=SingletonMetaclass):
     )
     """List of model working directories with pre-trained models."""
 
-    _models: Dict[str, MMLabConfig] = field(default_factory=dict)
+    configs: Dict[str, MMLabConfig] = field(default_factory=dict)
     """Model registry."""
 
     def __post_init__(self):
@@ -117,7 +117,7 @@ class MMLabHub(metaclass=SingletonMetaclass):
             logger.debug(f"Registering checkpoints from directory: {directory}")
             self._register_checkpoints(str(directory))
 
-    def _register_checkpoints(self, directory: str, namespace: str = "custom"):
+    def _register_checkpoints(self, directory: str, namespace: str = "open-mmlab/mmdetection/custom"):
         """Register checkpoints from a directory.
 
         Registered models:
@@ -139,8 +139,8 @@ class MMLabHub(metaclass=SingletonMetaclass):
             assert config.exists(), f"Failed to find config: {config}."
             assert checkpoint.exists(), f"Failed to find checkpoint: {checkpoint}."
             mm_config = MMLabConfig(config=str(config), checkpoint=str(checkpoint))
-            key = f"{namespace}_{model_stem}_{path.stem}"
-            self._models[key] = mm_config
+            key = f"{namespace}/{model_stem}_{path.stem}"
+            self.configs[key] = mm_config
             logger.debug(f"Registering model [key={key}, cfg={mm_config}]")
 
         # Create one entry for the latest checkpoint
@@ -158,23 +158,23 @@ class MMLabHub(metaclass=SingletonMetaclass):
                     checkpoint = model_dir / latest_basename
                     assert checkpoint.exists(), f"Failed to find latest checkpoint: {checkpoint}."
                     mm_config = MMLabConfig(config=str(config), checkpoint=str(checkpoint))
-                    key = f"{namespace}_{model_stem}_latest"
-                    self._models[key] = mm_config
+                    key = f"{namespace}/{model_stem}_latest"
+                    self.configs[key] = mm_config
                     logger.debug(f"Registering latest model [key={model_stem}, cfg={mm_config}]")
                 except Exception as e:
                     logger.warning(f"Failed to load latest checkpoint: {e}")
 
     def __contains__(self, key: str) -> bool:
-        return key in self._models
+        return key in self.configs
 
     def __getitem__(self, key: str) -> MMLabConfig:
-        return self._models[key]
+        return self.configs[key]
 
     def __len__(self) -> int:
-        return len(self._models)
+        return len(self.configs)
 
     def __iter__(self):
-        return iter(self._models)
+        return iter(self.configs)
 
     def get(self, key: str) -> MMLabConfig:
         return self.__getitem__(key)
