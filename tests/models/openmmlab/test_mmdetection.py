@@ -3,7 +3,7 @@ from loguru import logger
 
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.server._runtime import InferenceServiceRuntime
-from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_all_unless_nos_env, skip_if_no_torch_cuda
+from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
 
 # See `nos.server._runtime.InferenceServiceRuntime` for `mmdet-dev` runtime spec
@@ -34,13 +34,14 @@ def openmmlab_runtime():
 @pytest.mark.parametrize(
     "model_name",
     [
-        # "open-mmlab/efficientdet-d3",
+        "open-mmlab/efficientdet-d3",
         "open-mmlab/faster-rcnn",
-        # "open-mmlab/yolox_s",
-        "open-mmlab/mmdetection/custom/yolox_s_8xb8-300e_coco_latest"
+        "open-mmlab/yolox-small",
+        "open-mmlab/mmdetection/custom/yolox_s_8xb8-300e_coco_latest",
     ],
 )
 def test_mmdetection_predict(model_name):
+
     from PIL import Image
 
     from nos.models.openmmlab import MMDetection

@@ -1,4 +1,6 @@
+import sys
 from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -10,7 +12,16 @@ from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
+from nos.common.git import cached_repo
 from nos.hub import MMLabConfig, MMLabHub
+
+
+
+def import_repo(*args, **kwargs) -> str:
+    """Import the mmdetection repository for efficientdet imports under `projects/` and `configs`."""
+    repo_dir = cached_repo(*args, **kwargs)
+    sys.path.insert(0, repo_dir)
+    return repo_dir
 
 
 @dataclass(frozen=True)
@@ -24,44 +35,54 @@ class MMDetection:
 
     configs = {
         "open-mmlab/efficientdet-d3": MMDetectionConfig(
-            config="configs/efficientdet/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco.py",
+            config="projects/EfficientDet/configs/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v3.0/efficientdet/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco/efficientdet_effb3_bifpn_8xb16-crop896-300e_coco_20230223_122457-e6f7a833.pth",
         ),
         "open-mmlab/faster-rcnn": MMDetectionConfig(
-            config="configs/faster-rcnn/faster-rcnn_r50_fpn_1x_coco.py",
+            config="configs/faster_rcnn/faster-rcnn_r50_fpn_1x_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/faster_rcnn/faster_rcnn_r50_fpn_1x_coco/faster_rcnn_r50_fpn_1x_coco_20200130-047c8118.pth",
         ),
-        "open-mmlab/yolox_s": MMDetectionConfig(
+        "open-mmlab/yolox-small": MMDetectionConfig(
             config="configs/yolox/yolox_s_8xb8-300e_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_s_8x8_300e_coco/yolox_s_8x8_300e_coco_20211121_095711-4592a793.pth",
         ),
-        "open-mmlab/yolox_l": MMDetectionConfig(
+        "open-mmlab/yolox-large": MMDetectionConfig(
             config="configs/yolox/yolox_l_8xb8-300e_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_l_8x8_300e_coco/yolox_l_8x8_300e_coco_20211126_140236-d3bd2b23.pth",
         ),
-        "open-mmlab/yolox_x": MMDetectionConfig(
+        "open-mmlab/yolox-xlarge": MMDetectionConfig(
             config="configs/yolox/yolox_x_8xb8-300e_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_x_8x8_300e_coco/yolox_x_8x8_300e_coco_20211126_140254-1ef88d67.pth",
         ),
-        "open-mmlab/yolox_tiny": MMDetectionConfig(
+        "open-mmlab/yolox-tiny": MMDetectionConfig(
             config="configs/yolox/yolox_tiny_8xb8-300e_coco.py",
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_tiny_8x8_300e_coco/yolox_tiny_8x8_300e_coco_20211124_171234-b4047906.pth",
         ),
         # Note: The following registers the configs for all models in the local hub.
         **MMLabHub().configs,
     }
+    """MMDetection model configurations."""
 
-    def __init__(self, model_name: str = "open-mmlab/efficientdet-d3"):
+    repo_dir: str = import_repo("https://github.com/open-mmlab/mmdetection.git", tag="v3.1.0")
+    """The path to the mmdetection repository."""
+
+    def __init__(self, model_name: str = "open-mmlab/yolox-small"):
         from mmdet.apis import inference_detector, init_detector
 
         try:
             self.cfg = MMDetection.configs[model_name]
         except KeyError:
             raise ValueError(f"Invalid model_name: {model_name}, available models: {MMDetection.configs.keys()}")
+        
+        # Get the config and checkpoint paths
+        config = str(Path(MMDetection.repo_dir) / self.cfg.config)
+        if not Path(config).exists():
+            raise IOError(f"Invalid config [cfg={config}, model_name={model_name}]")
         checkpoint = self.cfg.cached_checkpoint
-        config = str(Path(__file__).parent / self.cfg.config)
-        # TODO (spillai): Add config validation
-        assert Path(config).exists(), f"Config {config} does not exist."
+        if not Path(checkpoint).exists():
+            raise IOError(f"Invalid checkpoint [ckpt={checkpoint}, model_name={model_name}]")
+
+        # Initialize the model for inference
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = init_detector(config, checkpoint, device=self.device)
         self.inference_detector = inference_detector
