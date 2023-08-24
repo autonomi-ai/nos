@@ -16,6 +16,12 @@ from nos.hub import MMLabConfig, MMLabHub
 from nos.logging import redirect_stdout_to_logger
 
 
+try:
+    import mmdet
+except ImportError:
+    mmdet = None
+
+
 def import_repo(*args, **kwargs) -> str:
     """Import the mmdetection repository for efficientdet imports under `projects/` and `configs`."""
     # Fetch the remote repository for model `configs`
@@ -104,23 +110,24 @@ class MMDetection:
             }
 
 
-# TODO (spillai): Skip registration until new mmlab docker runtime is available
-for model_name in MMDetection.configs:
-    hub.register(
-        model_name,
-        TaskType.OBJECT_DETECTION_2D,
-        MMDetection,
-        init_args=(model_name,),
-        method_name="__call__",
-        inputs={
-            "images": Union[
-                Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 16],
-                Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 4],
-            ]
-        },
-        outputs={
-            "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
-            "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
-            "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
-        },
-    )
+# Note (spillai): Skip registration if mmdet is not importable in the current runtime.
+if mmdet is not None:
+    for model_name in MMDetection.configs:
+        hub.register(
+            model_name,
+            TaskType.OBJECT_DETECTION_2D,
+            MMDetection,
+            init_args=(model_name,),
+            method_name="__call__",
+            inputs={
+                "images": Union[
+                    Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 16],
+                    Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 4],
+                ]
+            },
+            outputs={
+                "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
+                "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
+                "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
+            },
+        )
