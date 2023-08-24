@@ -4,7 +4,7 @@ from typing import Dict, List, Union
 
 from nos.common.metaclass import SingletonMetaclass
 from nos.constants import NOS_MODELS_DIR
-from nos.logging import logger
+from nos.logging import logger, redirect_stdout_to_logger
 
 
 NOS_CUSTOM_MODELS_DIR = Path(NOS_MODELS_DIR) / "custom"
@@ -56,7 +56,9 @@ def cached_checkpoint(url: str, model_id: str) -> str:
 
     # Download the checkpoint and place it in the model directory (with the same filename)
     directory = Path(NOS_MODELS_DIR) / model_id
-    download_url(url, str(directory))
+    # Capture stdout and stderr, and redirect to logger
+    with redirect_stdout_to_logger(level="DEBUG"):
+        download_url(url, str(directory))
     filename = directory / Path(url).name
 
     # Check that the file exists

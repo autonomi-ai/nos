@@ -37,7 +37,9 @@ def openmmlab_runtime():
         "open-mmlab/efficientdet-d3",
         "open-mmlab/faster-rcnn",
         "open-mmlab/yolox-small",
-        "open-mmlab/mmdetection/custom/yolox_s_8xb8-300e_coco_latest",
+        # Note (spillai): For now, we can only test pre-trained models,
+        # but we should be able to use custom models as listed below.
+        # "open-mmlab/mmdetection/custom/yolox_s_8xb8-300e_coco_latest",
     ],
 )
 def test_mmdetection_predict(model_name):

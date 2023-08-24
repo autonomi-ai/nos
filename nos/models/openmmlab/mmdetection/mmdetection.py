@@ -1,6 +1,5 @@
 import sys
 from dataclasses import dataclass
-from functools import cached_property
 from pathlib import Path
 from typing import Dict, List, Union
 
@@ -10,16 +9,19 @@ from PIL import Image
 
 from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
+from nos.common.git import cached_repo
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
-from nos.common.git import cached_repo
 from nos.hub import MMLabConfig, MMLabHub
-
+from nos.logging import redirect_stdout_to_logger
 
 
 def import_repo(*args, **kwargs) -> str:
     """Import the mmdetection repository for efficientdet imports under `projects/` and `configs`."""
+    # Fetch the remote repository for model `configs`
     repo_dir = cached_repo(*args, **kwargs)
+    # Note (spillai): We need to import the mmdetection repository for efficientdet
+    # imports under `projects/`
     sys.path.insert(0, repo_dir)
     return repo_dir
 
@@ -73,7 +75,7 @@ class MMDetection:
             self.cfg = MMDetection.configs[model_name]
         except KeyError:
             raise ValueError(f"Invalid model_name: {model_name}, available models: {MMDetection.configs.keys()}")
-        
+
         # Get the config and checkpoint paths
         config = str(Path(MMDetection.repo_dir) / self.cfg.config)
         if not Path(config).exists():
@@ -84,7 +86,8 @@ class MMDetection:
 
         # Initialize the model for inference
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.model = init_detector(config, checkpoint, device=self.device)
+        with redirect_stdout_to_logger(level="DEBUG"):
+            self.model = init_detector(config, checkpoint, device=self.device)
         self.inference_detector = inference_detector
 
     def __call__(
