@@ -17,9 +17,11 @@ from nos.logging import redirect_stdout_to_logger
 
 
 try:
-    import mmdet
+    import mmdet  # noqa: F401
+
+    mmdet_available = True
 except ImportError:
-    mmdet = None
+    mmdet_available = None
 
 
 def import_repo(*args, **kwargs) -> str:
@@ -111,7 +113,7 @@ class MMDetection:
 
 
 # Note (spillai): Skip registration if mmdet is not importable in the current runtime.
-if mmdet is not None:
+if mmdet_available is not None:
     for model_name in MMDetection.configs:
         hub.register(
             model_name,
