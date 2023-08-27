@@ -62,6 +62,12 @@ class ModelHandle:
         # Fetch the next result from the queue
         >> response = model.get()
 
+        # Submit a task to the model handle,
+        # this will add results to the queue
+        >> model_handle.submit(**model_inputs)
+        # Fetch the next result from the queue
+        >> response = model_handle.get()
+
         # Cleanup model resources
         >> model_handle.cleanup()
         ```
@@ -77,7 +83,6 @@ class ModelHandle:
     """Ray actor pool."""
     _results_queue: ModelResultQueue = field(init=False, default_factory=ModelResultQueue)
     """Queue to fetch results from the actor pool."""
-
     _actor_profile: Dict[str, Any] = field(init=False, default=None)
     """Actor profile."""
 
@@ -113,13 +118,11 @@ class ModelHandle:
         logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")
         while self._actor_pool.has_next():
             self._fetch_next()
-        logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
-        del self._actor_pool
-        self._actor_pool = None
         logger.debug(f"Scaling model [name={self.spec.name}].")
 
         if replicas == len(self._actors):
             logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={replicas}].")
+            return self
         elif replicas > len(self._actors):
             self._actors += [self.get_actor(self.spec) for _ in range(replicas - len(self._actors))]
             logger.debug(f"Scaling up model [name={self.spec.name}, replicas={replicas}].")
@@ -134,6 +137,11 @@ class ModelHandle:
         # Update repicas and queue size
         self.num_replicas = replicas
         self._results_queue.resize(self.num_replicas * 2)
+
+        # Re-create the actor pool
+        logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
+        del self._actor_pool
+        self._actor_pool = None
 
         # Re-create the actor pool
         logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
@@ -173,7 +181,6 @@ class ModelHandle:
 
         # Get the actor options from the model spec
         actor_options = cls._actor_options(spec)
-
         actor_cls = ray.remote(**actor_options)(model_cls)
 
         # Check if the model class has the required method
@@ -332,8 +339,8 @@ class ModelManager:
         """
         return spec.id in self.handlers
 
-    def get(self, model_spec: ModelSpec) -> ModelHandle:
-        """Get a model handle from the manager.
+    def load(self, model_spec: ModelSpec) -> ModelHandle:
+        """Load a model handle from the manager using the model specification.
 
         Create a new model handle if it does not exist,
         else return an existing handle.

@@ -31,9 +31,9 @@ def test_model_manager(manager):  # noqa: F811
     # This should not raise any OOM errors as models are evicted
     # from the manager's cache.
     for idx, spec in enumerate(hub.list()):
-        # Note: `manager.get()` is a wrapper around `manager.add()`
+        # Note: `manager.load()` is a wrapper around `manager.add()`
         # and creates a single replica of the model.
-        handler: ModelHandle = manager.get(spec)
+        handler: ModelHandle = manager.load(spec)
         assert handler is not None
         assert isinstance(handler, ModelHandle)
 
@@ -46,7 +46,7 @@ def test_model_manager(manager):  # noqa: F811
 
     # Test noop with model manager
     spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
-    noop: ModelHandle = manager.get(spec)
+    noop: ModelHandle = manager.load(spec)
     assert noop is not None
     assert isinstance(noop, ModelHandle)
 
@@ -131,7 +131,7 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
 
     # Check if the model can be loaded with the ModelManager
     # Note: This will be executed as a Ray actor within a custom runtime env.
-    model_handle = manager.get(spec)
+    model_handle = manager.load(spec)
     assert model_handle is not None
     assert isinstance(model_handle, ModelHandle)
 
@@ -159,7 +159,7 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
     from nos.common import tqdm
 
     spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
-    noop: ModelHandle = manager.get(spec)
+    noop: ModelHandle = manager.load(spec)
     assert noop is not None
     assert isinstance(noop, ModelHandle)
 
@@ -203,7 +203,7 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         assert len(result) == B
 
         logger.debug(f"NoOp ({replicas}): {noop}")
-        pbar = tqdm(duration=10, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
+        pbar = tqdm(duration=5, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
 
         # warmup: submit()
         for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
@@ -262,7 +262,7 @@ def test_model_manager_inference(manager):  # noqa: F811
         spec = hub.load_spec(model_name, task=task)
 
         # Add the model to the manager (or via `manager.add()`)
-        model: ModelHandle = manager.get(spec)
+        model: ModelHandle = manager.load(spec)
         assert model is not None
 
         # Benchmark: for each image-shape and batch-size

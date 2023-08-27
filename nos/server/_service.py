@@ -94,7 +94,7 @@ class InferenceService:
         # Initialize the model (if not already initialized)
         # This call should also evict models and garbage collect if
         # too many models are loaded are loaded simultaneously.
-        model_handle: ModelHandle = self.model_manager.get(model_spec)
+        model_handle: ModelHandle = self.model_manager.load(model_spec)
 
         # Get the model handle and call it remotely (with model spec, actor handle)
         st = time.perf_counter()

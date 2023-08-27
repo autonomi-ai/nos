@@ -34,6 +34,8 @@ NOS_INFERENCE_SERVICE_CMD = ["./entrypoint.sh"]
 
 NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
+NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
+
 
 @dataclass
 class InferenceServiceRuntimeConfig:
