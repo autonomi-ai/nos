@@ -35,6 +35,7 @@ def cached_repo(
     repo_name = Path(repo_url).stem
 
     cached_repos_dir = NOS_CACHE_DIR / "repos"
+    cached_repos_dir.mkdir(parents=True, exist_ok=True)
     cached_dir = cached_repos_dir / repo_name
 
     cached_subdir = None

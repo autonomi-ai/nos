@@ -46,7 +46,7 @@ def test_mmdetection_predict(model_name):
 
     from PIL import Image
 
-    from nos.models.openmmlab import MMDetection
+    from nos.models import MMDetection
 
     model = MMDetection(model_name)
 
