@@ -336,9 +336,9 @@ class ModelSpec:
     are specified in a separate file."""
 
     class Config:
-        """Custom configuration to keep _metadata private for now."""
+        """Custom configuration to enable private attributes."""
 
-        underscore_attrs_are_private = True
+        underscore_attrs_are_private: bool = True
 
     def __repr__(self):
         return f"""ModelSpec(name={self.name}, task={self.task})""" f"""\n    {self.signature}"""
@@ -354,10 +354,6 @@ class ModelSpec:
         except Exception:
             metadata = None
         return metadata
-
-    # @property
-    # def task(self) -> TaskType:
-    #     return self.metadata.task
 
     @staticmethod
     def get_id(model_name: str, task: TaskType = None) -> str:
