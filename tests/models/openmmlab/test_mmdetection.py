@@ -3,12 +3,12 @@ from loguru import logger
 
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.server._runtime import InferenceServiceRuntime
-from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_all_unless_nos_env, skip_if_no_torch_cuda
+from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
 
 # See `nos.server._runtime.InferenceServiceRuntime` for `mmdet-dev` runtime spec
 RUNTIME_ENV = "mmdet-dev"
-pytestmark = skip_all_unless_nos_env(RUNTIME_ENV)
+pytestmark = pytest.mark.skipif(pytest.importorskip("mmdet") is None, reason="mmdet is not installed")
 
 
 @pytest.mark.skip(reason="TODO (spillai): Skip registration until new mmlab docker runtime is available")
@@ -36,17 +36,22 @@ def openmmlab_runtime():
     [
         "open-mmlab/efficientdet-d3",
         "open-mmlab/faster-rcnn",
+        "open-mmlab/yolox-small",
+        # Note (spillai): For now, we can only test pre-trained models,
+        # but we should be able to use custom models as listed below.
+        # "open-mmlab/mmdetection/custom/yolox_s_8xb8-300e_coco_latest",
     ],
 )
 def test_mmdetection_predict(model_name):
+
     from PIL import Image
 
-    from nos.models.openmmlab import MMDetection
+    from nos.models import MMDetection
 
     model = MMDetection(model_name)
 
     img = Image.open(NOS_TEST_IMAGE)
-    predictions = model.predict([img, img])
+    predictions = model([img, img])
     assert predictions is not None
 
     assert predictions["scores"] is not None

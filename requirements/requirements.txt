@@ -1,6 +1,7 @@
 av>=10.0.0
 cloudpickle>=2.2.1
 docker>=6.0.0
+gitpython
 grpcio-tools<=1.49.1
 loguru>=0.7.0
 opencv-python-headless>=4.6.0.66

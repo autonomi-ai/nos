@@ -43,11 +43,27 @@ MODELS = list(FasterRCNN.configs.keys()) + list(YOLOX.configs.keys())
 UNIQUE_MODELS = list(FasterRCNN.configs.keys())[:1] + list(YOLOX.configs.keys())[:1]
 
 
-# Only enable YOLOX TRT models in trt-dev and trt-runtime environments
+def package_installed(package_name: str) -> bool:
+    """Check if the current environment has a package installed"""
+    import importlib
+
+    try:
+        importlib.import_module(package_name)
+        return True
+    except ImportError:
+        return False
+
+
+# Only enable models in environments with specific import dependencies
 env = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", "base_gpu"))
 logger.info(f"Using env: {env}")
-if env in ("nos_trt_dev", "nos_trt_runtime"):
+
+
+if package_installed("torch_tensorrt"):
     UNIQUE_MODELS += ["yolox/medium-trt"]
+
+if package_installed("mmdet"):
+    UNIQUE_MODELS += ["open-mmlab/yolox-small"]
 
 
 def _test_predict(_model, img_size):
@@ -86,11 +102,11 @@ def _test_predict(_model, img_size):
         assert isinstance(predictions["labels"], list)
         assert len(predictions["labels"]) == B
         for labels in predictions["labels"]:
-            assert labels.dtype == np.int32
+            assert labels.dtype in (np.int32, np.int64)
             if not len(labels):
                 continue
             assert len(np.unique(labels)) >= 3, "At least 3 different classes should be detected"
-            assert labels.dtype == np.int32
+            assert labels.dtype in (np.int32, np.int64)
 
         assert predictions["bboxes"] is not None
         assert isinstance(predictions["bboxes"], list)
