@@ -17,6 +17,7 @@ import rich.console
 import rich.panel
 import rich.status
 
+from nos.common.metaclass import SingletonMetaclass
 from nos.logging import LOGGING_LEVEL
 
 
@@ -37,20 +38,16 @@ class RayRuntimeSpec:
 
 
 @dataclass
-class RayExecutor:
+class RayExecutor(metaclass=SingletonMetaclass):
     """Executor for Ray."""
 
-    _instance: "RayExecutor" = None
-    """Singleton instance of RayExecutor."""
     spec: RayRuntimeSpec = RayRuntimeSpec()
     """Runtime spec for Ray."""
 
     @classmethod
     def get(cls) -> "RayExecutor":
         """Get the singleton instance of RayExecutor."""
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        return cls()
 
     def is_initialized(self) -> bool:
         """Check if Ray is initialized."""
