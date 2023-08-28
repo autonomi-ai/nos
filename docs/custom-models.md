@@ -34,4 +34,4 @@ spec = ModelSpec.from_cls(
 spec
 ```
 
-We use Ray to orchestrate custom model workers with configure runtime environments. For example, if you want to run a model on a custom runtime environment, you can provide custom `pip` requirements (see [example](/docs/custom-model-support.md)).
+We use Ray to orchestrate custom model workers with configure runtime environments.

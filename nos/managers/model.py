@@ -211,7 +211,7 @@ class ModelHandle:
         self._actors = []
         gc.collect()
 
-    def __call__(self, *args, **kwargs) -> Any:
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """Call the task immediately.
 
         Args:
@@ -227,7 +227,7 @@ class ModelHandle:
         response_ref: ray.ObjectRef = actor_method_func.remote(**kwargs)
         return ray.get(response_ref)
 
-    def submit(self, *args, **kwargs) -> str:
+    def submit(self, *args: Any, **kwargs: Any) -> str:
         """Submit a task to the actor pool.
 
         Args:

@@ -1,5 +1,5 @@
 !!! note
-    In this section, we expect that you have already installed NOS and have already [started the server](/docs/starting-the-server).
+    In this section, we expect that you have already installed NOS and have already [started the server](./starting-the-server.md).
 
 ```python
 import nos
@@ -39,7 +39,7 @@ img = Image.open("sample.jpg")
 predictions = detect2d(images=[img])
 ```
 
-!!!note In essense, the `client.Module` is an [`InferenceModule`](/docs/api/client.md#nosclientgrpcinferencemodule)  that provides a *logical* handle for the model on the remote server. The model handle could contain multiple replicas, or live in a specialized runtime (GPU, ASICs), however, the user does not need to be aware of these abstractions. Instead, you can simply call the model as a regular Python function where the task gets dispatched to the associated set of remote workers.
+!!!note In essense, the `client.Module` is an [`InferenceModule`](./api/client.md#nosclientgrpcinferencemodule)  that provides a *logical* handle for the model on the remote server. The model handle could contain multiple replicas, or live in a specialized runtime (GPU, ASICs), however, the user does not need to be aware of these abstractions. Instead, you can simply call the model as a regular Python function where the task gets dispatched to the associated set of remote workers.
 
 ## More examples
 
