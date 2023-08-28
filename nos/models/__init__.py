@@ -15,4 +15,5 @@ from .monodepth import MonoDepth  # noqa: F401
 from .openmmlab.mmdetection import MMDetection  # noqa: F401
 from .sam import SAM
 from .stable_diffusion import StableDiffusion  # noqa: F401
+from .super_resolution import SuperResolution  # noqa: F401
 from .yolox import YOLOX  # noqa: F401
