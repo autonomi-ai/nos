@@ -113,3 +113,6 @@ docker-compose-upd-cpu: docker-build-cpu
 
 docker-compose-upd-gpu: docker-build-gpu
 	docker compose -f docker-compose.gpu.yml up
+
+docker-compose-upd-discord-bot: docker-build-gpu
+	docker compose -f docker-compose.discord.yml up
