@@ -1,10 +1,9 @@
 authors:
   spillai:
     avatar: https://github.com/spillai.png
+    description: NOS Core Developer
     name: Sudeep Pillai
-    description: NOS Core Developer
-  
   outtanames:
-    name: Scott Loftin
-    description: NOS Core Developer
     avatar: https://github.com/outtanames.png
+    description: NOS Core Developer
+    name: Scott Loftin

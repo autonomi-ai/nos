@@ -15,6 +15,8 @@ class TaskType(str, Enum):
     """Image classification."""
     IMAGE_GENERATION = "image_generation"
     """Image generation."""
+    IMAGE_SUPER_RESOLUTION = "image_super_resolution"
+    """Image super-resolution."""
 
     IMAGE_EMBEDDING = "image_embedding"
     """Image embedding."""
