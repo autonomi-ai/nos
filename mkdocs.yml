@@ -28,11 +28,11 @@ nav:
     - nos.hub: docs/api/hub.md
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
-#   - FAQ: docs/faq.md
-# - ✍️ Blog:
-#   - docs/blog/index.md
-#   - 2023:
-#     - docs/blog/posts/01-hello-world.md
+  - FAQ: docs/faq.md
+- ✍️ Blog:
+  - docs/blog/index.md
+  - 2023:
+    - docs/blog/posts/01-hello-world.md
 # - 🏁 Roadmap: docs/roadmap.md
 # - 🧑‍💻 Contributing: docs/CONTRIBUTING.md
 - ❓ Support: docs/support.md
@@ -42,10 +42,9 @@ plugins:
 - include-markdown
 - autorefs
 - blog:
+    enabled: !ENV [ENABLE_BLOG, true]
     blog_dir: docs/blog
     blog_toc: true
-    post_date_format: long
-    post_readtime: false
 
 - mkdocstrings:
     enabled: !ENV [ENABLE_MKDOCSTRINGS, true]

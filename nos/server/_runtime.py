@@ -100,8 +100,8 @@ class InferenceServiceRuntime:
     This class is responsible for handling the lifecycle of the
     inference service docker runtime.
 
-    Parameters:
-        cfg (InferenceServiceConfig): Inference service configuration.
+    Attributes:
+        configs (InferenceServiceConfig): Inference service configuration.
     """
 
     configs = {
@@ -163,7 +163,7 @@ class InferenceServiceRuntime:
             container for container in containers if container.name.startswith(NOS_INFERENCE_SERVICE_CONTAINER_NAME)
         ]
 
-    def start(self, **kwargs) -> docker.models.containers.Container:
+    def start(self, **kwargs: Any) -> docker.models.containers.Container:
         """Start the inference runtime.
 
         Args:

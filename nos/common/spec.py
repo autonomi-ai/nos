@@ -408,7 +408,7 @@ class ModelSpec:
         return loads(minfo.response_bytes)
 
     @classmethod
-    def from_cls(cls, func_or_cls: Callable, method_name: str = "__call__", **kwargs) -> "ModelSpec":
+    def from_cls(cls, func_or_cls: Callable, method_name: str = "__call__", **kwargs: Any) -> "ModelSpec":
         """Wrap custom models/classes into a nos-compatible model spec.
 
         Args:

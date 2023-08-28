@@ -1,4 +1,4 @@
-mkdocs
+mkdocs>=1.5.2
 mkdocs-blog-plugin
 mkdocs-exclude
 mkdocs-include-markdown-plugin
