@@ -8,7 +8,8 @@ computation and containerize them in docker to isolate the environment.
 import logging
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Optional
 
 import psutil
@@ -16,6 +17,7 @@ import ray
 import rich.console
 import rich.panel
 import rich.status
+from ray.job_submission import JobSubmissionClient
 
 from nos.common.metaclass import SingletonMetaclass
 from nos.logging import LOGGING_LEVEL
@@ -27,6 +29,7 @@ NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
 NOS_RAY_ENV = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", None))
 NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
 NOS_DASHBOARD_ENABLED = os.getenv("NOS_DASHBOARD_ENABLED", True)
+RAY_JOB_CLIENT_ADDRESS = "http://127.0.0.1:8265"
 
 
 @dataclass
@@ -167,6 +170,31 @@ class RayExecutor(metaclass=SingletonMetaclass):
             if proc.name() == "raylet":
                 return proc.pid
         return None
+
+    @cached_property
+    def jobs(self) -> "RayJobExecutor":
+        """Get the ray jobs executor."""
+        return RayJobExecutor()
+
+
+@dataclass
+class RayJobExecutor(metaclass=SingletonMetaclass):
+    """Ray job executor."""
+
+    client: JobSubmissionClient = field(init=False)
+    """Job submission client."""
+
+    def __post_init__(self):
+        """Post-initialization."""
+        if not ray.is_initialized():
+            raise RuntimeError("Ray executor is not initialized.")
+        self.client = JobSubmissionClient(RAY_JOB_CLIENT_ADDRESS)
+
+    def submit(self, *args, **kwargs) -> str:
+        """Submit a job to Ray."""
+        job_id = self.client.submit_job(*args, **kwargs)
+        logger.debug(f"Submitted job with id: {job_id}")
+        return job_id.replace("raysubmit_", "")
 
 
 def init(*args, **kwargs) -> bool:

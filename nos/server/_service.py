@@ -19,6 +19,7 @@ from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor
 from nos.logging import logger
 from nos.managers import ModelHandle, ModelManager
+from nos.models.dreambooth.config import StableDiffusionTrainingJobConfig
 from nos.protoc import import_module
 from nos.version import __version__
 
@@ -33,6 +34,52 @@ def load_spec(model_name: str, task: TaskType) -> ModelSpec:
     model_spec: ModelSpec = hub.load_spec(model_name, task=task)
     logger.info(f"Loaded model spec [task={model_spec.task.value}, name={model_spec.name}]")
     return model_spec
+
+
+class TrainingService:
+    """Ray-executor based training service."""
+
+    config_cls = {
+        "stable-diffusion-dreambooth-lora": StableDiffusionTrainingJobConfig,
+    }
+
+    def __init__(self):
+        self.executor = RayExecutor.get()
+        try:
+            self.executor.init()
+        except Exception as e:
+            err_msg = f"Failed to initialize executor [e={e}]"
+            logger.info(err_msg)
+            raise RuntimeError(err_msg)
+
+    def train(self, method: str, training_inputs: Dict[str, Any], metadata: Dict[str, Any] = None) -> str:
+        """Train / Fine-tune a model by submitting a job to the RayJobExecutor.
+
+        Args:
+            method (str): Training method (e.g. `stable-diffusion-dreambooth-lora`).
+            training_inputs (Dict[str, Any]): Training inputs.
+        Returns:
+            str: Job ID.
+        """
+        try:
+            config_cls = self.config_cls[method]
+        except KeyError:
+            raise NotImplementedError(f"Training not supported for method [method={method}]")
+
+        # Check if the training inputs are correctly specified
+        config = config_cls(method=method, **training_inputs)
+        try:
+            pass
+        except Exception as e:
+            raise ValueError(f"Invalid training inputs [training_inputs={training_inputs}, e={e}]")
+
+        # Submit the training job as a Ray job
+        configd = config.job_dict()
+        logger.debug("Submitting training job")
+        logger.debug(f"config\n{configd}]")
+        job_id = self.executor.jobs.submit(**configd)
+        logger.debug(f"Submitted training job [job_id={job_id}, config={configd}]")
+        return job_id
 
 
 class InferenceService:
@@ -233,6 +280,28 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             return nos_service_pb2.InferenceResponse(response_bytes=dumps(response))
         except (grpc.RpcError, Exception) as e:
             msg = f"Failed to execute request [task={model_request.task}, model={model_request.name}]"
+            msg += f"{traceback.format_exc()}"
+            logger.error(f"{msg}, e={e}")
+            context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
+
+    def Train(
+        self, request: nos_service_pb2.TrainingRequest, context: grpc.ServicerContext
+    ) -> nos_service_pb2.TrainingResponse:
+        model_request = request.model
+        logger.debug(f"=> Received training request [task={model_request.task}, model={model_request.name}]")
+        if model_request.task not in (TaskType.IMAGE_GENERATION.value,):
+            context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid training task [task={model_request.task}]")
+
+        try:
+            st = time.perf_counter()
+            logger.info(f"Training request [task={model_request.task}, model={model_request.name}]")
+            response = self.train(model_request.name, task=TaskType(model_request.task), inputs=request.inputs)
+            logger.info(
+                f"Trained request dispatched [id={id}, task={model_request.task}, model={model_request.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            )
+            return nos_service_pb2.TrainingResponse(response_bytes=dumps(response))
+        except (grpc.RpcError, Exception) as e:
+            msg = f"Failed to train request [task={model_request.task}, model={model_request.name}]"
             msg += f"{traceback.format_exc()}"
             logger.error(f"{msg}, e={e}")
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
