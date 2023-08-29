@@ -211,7 +211,7 @@ class RayJobExecutor(metaclass=SingletonMetaclass):
     def logs(self, job_id: str) -> str:
         """Get logs for a job."""
         return self.client.get_job_logs(job_id)
-
+    
 
 def init(*args, **kwargs) -> bool:
     """Initialize Ray executor."""
