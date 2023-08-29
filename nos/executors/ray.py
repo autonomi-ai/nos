@@ -194,7 +194,23 @@ class RayJobExecutor(metaclass=SingletonMetaclass):
         """Submit a job to Ray."""
         job_id = self.client.submit_job(*args, **kwargs)
         logger.debug(f"Submitted job with id: {job_id}")
-        return job_id.replace("raysubmit_", "")
+        return job_id
+
+    def list(self) -> str:
+        """List all jobs."""
+        return self.client.list_jobs()
+
+    def info(self, job_id: str) -> str:
+        """Get info for a job."""
+        return self.client.get_job_info(job_id)
+
+    def status(self, job_id: str) -> str:
+        """Get status for a job."""
+        return self.client.get_job_status(job_id)
+
+    def logs(self, job_id: str) -> str:
+        """Get logs for a job."""
+        return self.client.get_job_logs(job_id)
 
 
 def init(*args, **kwargs) -> bool:
