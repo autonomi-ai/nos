@@ -65,7 +65,7 @@ class StableDiffusionDreamboothHub:
         if self.work_dir is None:
             self.work_dir = NOS_MODELS_DIR / self.namespace
         logger.debug(f"Registering checkpoints from directory: {self.work_dir}")
-        self._register_checkpoints(str(self.work_dir))
+        self.update()
 
     def _register_checkpoints(self, directory: str):
         """Register checkpoints from a directory.
@@ -109,7 +109,7 @@ class StableDiffusionDreamboothHub:
                 # Register the model
                 key = f"{self.namespace}/{uuid}"
                 self.configs[key] = sd_config
-                logger.debug(f"Registering model [key={model_name}, cfg={sd_config}]")
+                logger.debug(f"Registering model [key={key}, model={model_name}, cfg={sd_config}]")
             except Exception as e:
                 logger.warning(f"Failed to load latest checkpoint: {e}")
 
@@ -128,13 +128,17 @@ class StableDiffusionDreamboothHub:
     def get(self, key: str) -> StableDiffusionDreamboothConfigType:
         return self.__getitem__(key)
 
+    def update(self) -> None:
+        """Update the registry."""
+        self._register_checkpoints(str(self.work_dir))
+
 
 class StableDiffusionLoRA:
     """Stable Diffusion LoRA model for DreamBooth."""
 
-    configs = {}
+    configs = StableDiffusionDreamboothHub(namespace="custom").configs
 
-    def __init__(self, model_name: str = "stabilityai/stable-diffusion-2-1", dtype: str = torch.dtype):
+    def __init__(self, model_name: str = "stabilityai/stable-diffusion-2-1", dtype: torch.dtype = torch.float16):
         from diffusers import DiffusionPipeline, DPMSolverMultistepScheduler
 
         try:
@@ -151,12 +155,31 @@ class StableDiffusionLoRA:
             self.device = "cpu"
             self.dtype = torch.float32
 
-        self.pipe = DiffusionPipeline.from_pretrained(model_name, torch_dtype=dtype)
+        self.pipe = DiffusionPipeline.from_pretrained(self.cfg.model_name, torch_dtype=self.dtype)
         self.pipe.scheduler = DPMSolverMultistepScheduler.from_config(self.pipe.scheduler.config)
         self.pipe.to(self.device)
 
-        # Load attention processors one by one
+        # Update attention processors
+        self.update_attn_procs(model_name)
+
+    def update_attn_procs(self, model_name: str):
+        """Update attention processors."""
+        try:
+            cfg = StableDiffusionLoRA.configs[model_name]
+        except KeyError:
+            raise ValueError(
+                f"Invalid model_name: {model_name}, available models: {StableDiffusionLoRA.configs.keys()}"
+            )
+
+        if self.cfg.model_name != cfg.model_name:
+            raise ValueError(f"Invalid model weights, [new_model={model_name}, expected_model={self.cfg.model_name}]")
+
+        if not Path(self.cfg.attn_procs).exists():
+            raise IOError(f"Failed to find attention processors [path={self.cfg.attn_procs}].")
+
+        logger.debug(f"Updating attention processors [path={self.cfg.attn_procs}].")
         self.pipe.unet.load_attn_procs(self.cfg.attn_procs)
+        logger.debug(f"Updated attention processors [path={self.cfg.attn_procs}].")
 
     def __call__(
         self,
