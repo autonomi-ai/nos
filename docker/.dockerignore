@@ -24,3 +24,5 @@ dist
 bdist
 *.cache
 *.ts
+
+site/
