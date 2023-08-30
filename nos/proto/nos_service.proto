@@ -78,17 +78,6 @@ message GenericResponse {
   bytes response_bytes = 1;
 }
 
-
-// Training job request / responses
-message TrainingJobRequest {
-  string method = 1;
-  map <string, bytes> inputs = 2;
-}
-
-message TrainingJobResponse {
-  bytes response_bytes = 1;
-}
-
 // Service definition
 service InferenceService {
   // Check health status of the inference server.
@@ -107,7 +96,10 @@ service InferenceService {
   rpc Run(InferenceRequest) returns (InferenceResponse) {}
 
   // Dispatch a training request
-  rpc Train(TrainingJobRequest) returns (TrainingJobResponse) {}
+  rpc Train(GenericRequest) returns (GenericResponse) {}
+
+  // Job status
+  rpc GetJobStatus(GenericRequest) returns (GenericResponse) {}
 
   // Register shared memory
   rpc RegisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}

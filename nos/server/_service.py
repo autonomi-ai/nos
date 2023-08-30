@@ -248,23 +248,44 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
     def Train(
-        self, request: nos_service_pb2.TrainingJobRequest, context: grpc.ServicerContext
-    ) -> nos_service_pb2.TrainingJobResponse:
-        logger.debug(f"=> Received training request [method={request.method}]")
-        if request.method not in TrainingService.config_cls:
-            context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid training task [method={request.method}]")
+        self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
+    ) -> nos_service_pb2.GenericResponse:
+        request = loads(request.request_bytes)
+        logger.debug(f"=> Received training request [method={request['method']}]")
+        if request["method"] not in TrainingService.config_cls:
+            context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid training task [method={request['method']}]")
 
         try:
             st = time.perf_counter()
-            logger.info(f"Training request [method={request.method}]")
-            job_id = self.train(request.method, training_inputs=request.inputs)
+            logger.info(f"Training request [method={request['method']}]")
+            job_id = self.train(request["method"], inputs=request["inputs"], metadata=request["metadata"])
             response = {"job_id": job_id}
             logger.info(
-                f"Trained request dispatched [id={id}, method={request.method}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                f"Trained request dispatched [id={id}, method={request['method']}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )
-            return nos_service_pb2.TrainingResponse(response_bytes=dumps(response))
+            return nos_service_pb2.GenericResponse(response_bytes=dumps(response))
         except (grpc.RpcError, Exception) as e:
-            msg = f"Failed to train request [method={request.method}]"
+            msg = f"Failed to train request [method={request['method']}]"
+            msg += f"{traceback.format_exc()}"
+            logger.error(f"{msg}, e={e}")
+            context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
+
+    def GetJobStatus(
+        self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
+    ) -> nos_service_pb2.GenericResponse:
+        request = loads(request.request_bytes)
+        logger.debug(f"=> Received job status request [job_id={request['job_id']}]")
+
+        try:
+            st = time.perf_counter()
+            logger.info(f"Job status request [job_id={request['job_id']}]")
+            response = self.jobs.status(request["job_id"])
+            logger.info(
+                f"Job status request [job_id={request['job_id']}, response={response}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            )
+            return nos_service_pb2.GenericResponse(response_bytes=dumps(response))
+        except (grpc.RpcError, Exception) as e:
+            msg = f"Failed to get job status [job_id={request['job_id']}]"
             msg += f"{traceback.format_exc()}"
             logger.error(f"{msg}, e={e}")
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")

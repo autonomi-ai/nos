@@ -167,6 +167,20 @@ class InferenceClient:
         except grpc.RpcError as e:
             raise NosServerReadyException(f"Failed to get service info (details={e.details()})", e)
 
+    def GetServiceRuntime(self) -> str:
+        """Get service runtime.
+
+        Returns:
+            str: Service runtime (e.g. cpu, gpu, local).
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
+            return response.runtime
+        except grpc.RpcError as e:
+            raise NosServerReadyException(f"Failed to get service info (details={e.details()})", e)
+
     def CheckCompatibility(self) -> bool:
         """Check if the service version is compatible with the client.
 
@@ -270,24 +284,26 @@ class InferenceClient:
         module: InferenceModule = self.Module(task, model_name)
         return module(**inputs)
 
-    def Train(self, method: str, **inputs: Dict[str, Any]) -> nos_service_pb2.TrainingJobResponse:
+    def Train(
+        self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None
+    ) -> nos_service_pb2.GenericResponse:
         """Training module.
 
         Args:
             method (str): Training method (e.g. `stable-diffusion-dreambooth-lora`).
-            **inputs (Dict[str, Any]): Training inputs.
+            inputs (Dict[str, Any]): Training inputs.
+            metadata (Dict[str, Any], optional): Metadata for the training job. Defaults to None.
         Returns:
             str: Job ID.
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
         try:
-            request = nos_service_pb2.TrainingJobRequest(
-                method=method,
-                inputs=inputs,
+            request = nos_service_pb2.GenericRequest(
+                request_bytes=dumps({"method": method, "inputs": inputs, "metadata": metadata})
             )
             response = self.stub.Train(request)
-            return response.job_id
+            return loads(response.response_bytes)
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to train model (details={(e.details())})", e)
 
@@ -296,11 +312,37 @@ class InferenceClient:
 
         Note: This is meant for remote volume mounts especially useful for training.
         """
-        info = self.GetServiceInfo()
-        root = Path.home() / ".nos" if info.runtime == "local" else Path.home() / ".nosd"
+        runtime = self.GetServiceRuntime()
+        root = Path.home() / ".nos" if runtime == "local" else Path.home() / ".nosd"
         path = root / f"volumes/{name}_{uuid.uuid4().hex[:8]}"
         path.mkdir(parents=True, exist_ok=True)
         return str(path)
+
+    def Wait(self, job_id: str, timeout: int = 60, retry_interval: int = 5) -> None:
+        """Wait for job to finish.
+
+        Args:
+            job_id (str): Job ID.
+            timeout (int, optional): Timeout in seconds. Defaults to 60.
+            retry_interval (int, optional): Retry interval in seconds. Defaults to 5.
+        """
+        st = time.time()
+        response = None
+        while time.time() - st <= timeout:
+            try:
+                response: nos_service_pb2.GenericResponse = self.stub.GetJobStatus(
+                    nos_service_pb2.GenericRequest(request_bytes=dumps({"job_id": job_id}))
+                )
+                response = loads(response.response_bytes)
+                if str(response) != "PENDING" and str(response) != "RUNNING":
+                    return response
+                else:
+                    logger.debug(f"Waiting for job to finish [job_id={job_id}, response={response}]")
+                    time.sleep(retry_interval)
+            except Exception:
+                logger.warning("Failed to fetch job status ... (elapsed={:.0f}s)".format(time.time() - st))
+        logger.warning(f"Job timed out [job_id={job_id}]")
+        return response
 
 
 @dataclass

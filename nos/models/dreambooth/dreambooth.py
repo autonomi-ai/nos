@@ -200,3 +200,21 @@ class StableDiffusionLoRA:
             height=height if height is not None else self.cfg.resolution,
             width=width if width is not None else self.cfg.resolution,
         ).images
+
+
+from nos import hub
+from nos.common import Batch, ImageSpec, ImageT, TaskType
+
+
+for model_name in StableDiffusionLoRA.configs.keys():
+    logger.debug(f"Registering model: {model_name}")
+    hub.register(
+        model_name,
+        TaskType.IMAGE_GENERATION,
+        StableDiffusionLoRA,
+        init_args=(model_name,),
+        init_kwargs={"dtype": torch.float16},
+        method_name="__call__",
+        inputs={"prompts": Batch[str, 1], "num_images": int, "height": int, "width": int},
+        outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+    )
