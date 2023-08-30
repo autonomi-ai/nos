@@ -15,7 +15,7 @@ pytestmark = pytest.mark.server
 
 def test_training_service(ray_executor: RayExecutor):  # noqa: F811
     """Test training service."""
-    from nos.experimental.train import TrainingService
+    from nos.server.train import TrainingService
 
     # Test training service
     svc = TrainingService()

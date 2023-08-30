@@ -127,6 +127,7 @@ def test_shm_registry(client_with_server, request):  # noqa: F811
         # assert len(shm_files) == 0, "Expected no shared memory regions, but found some."
 
 
+@pytest.mark.benchmark
 @pytest.mark.parametrize(
     "client_with_server",
     ("local_grpc_client_with_server", "grpc_client_with_cpu_backend", "grpc_client_with_gpu_backend"),

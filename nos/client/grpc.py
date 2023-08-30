@@ -1,8 +1,10 @@
 """gRPC client for NOS service."""
 import secrets
 import time
+import uuid
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
+from pathlib import Path
 from typing import Any, Callable, Dict, List
 
 import grpc
@@ -267,6 +269,38 @@ class InferenceClient:
         """
         module: InferenceModule = self.Module(task, model_name)
         return module(**inputs)
+
+    def Train(self, method: str, **inputs: Dict[str, Any]) -> nos_service_pb2.TrainingJobResponse:
+        """Training module.
+
+        Args:
+            method (str): Training method (e.g. `stable-diffusion-dreambooth-lora`).
+            **inputs (Dict[str, Any]): Training inputs.
+        Returns:
+            str: Job ID.
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            request = nos_service_pb2.TrainingJobRequest(
+                method=method,
+                inputs=inputs,
+            )
+            response = self.stub.Train(request)
+            return response.job_id
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to train model (details={(e.details())})", e)
+
+    def Volume(self, name: str) -> str:
+        """Remote volume module for NOS.
+
+        Note: This is meant for remote volume mounts especially useful for training.
+        """
+        info = self.GetServiceInfo()
+        root = Path.home() / ".nos" if info.runtime == "local" else Path.home() / ".nosd"
+        path = root / f"volumes/{name}_{uuid.uuid4().hex[:8]}"
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
 
 
 @dataclass

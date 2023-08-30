@@ -13,7 +13,7 @@ GRPC_PORT = 50055
 
 @pytest.mark.client
 @pytest.mark.parametrize("runtime", ["cpu", "gpu", "auto"])
-def test_nos_init(runtime):  # noqa: F811
+def test_client_init(runtime):  # noqa: F811
     """Test the NOS server daemon initialization."""
 
     # Initialize the server
@@ -44,8 +44,8 @@ def test_nos_init(runtime):  # noqa: F811
 @pytest.mark.client
 @pytest.mark.benchmark(group=PyTestGroup.INTEGRATION)
 @pytest.mark.parametrize("runtime", ["gpu"])
-def test_nos_object_detection_benchmark(runtime):  # noqa: F811
-    """Test the NOS server daemon initialization."""
+def test_client_inference_benchmark(runtime):  # noqa: F811
+    """Test and benchmark end-to-end client inference interface."""
     from itertools import islice
 
     import cv2
@@ -55,7 +55,7 @@ def test_nos_object_detection_benchmark(runtime):  # noqa: F811
     from nos.logging import logger
 
     # Initialize the server
-    container = nos.init(runtime=runtime, port=GRPC_PORT, utilization=0.8)
+    container = nos.init(runtime=runtime, port=GRPC_PORT, utilization=1)
     assert container is not None
     assert container.id is not None
     containers = InferenceServiceRuntime.list()
@@ -103,3 +103,49 @@ def test_nos_object_detection_benchmark(runtime):  # noqa: F811
     nos.shutdown()
     containers = InferenceServiceRuntime.list()
     assert len(containers) == 0
+
+
+@pytest.mark.client
+@pytest.mark.benchmark(group=PyTestGroup.INTEGRATION)
+@pytest.mark.parametrize("runtime", ["local"])
+def test_client_training(runtime):  # noqa: F811
+    """Test end-to-end client training interface."""
+    import shutil
+    import tempfile
+    from pathlib import Path
+
+    from nos.logging import logger
+    from nos.test.utils import NOS_TEST_IMAGE
+
+    # Initialize the server
+    container = nos.init(runtime=runtime, port=GRPC_PORT, utilization=1)
+    assert container is not None
+    assert container.id is not None
+    containers = InferenceServiceRuntime.list()
+    assert len(containers) == 1
+
+    # Test waiting for server to start
+    # This call should be instantaneous as the server is already ready for the test
+    client = InferenceClient(f"[::]:{GRPC_PORT}")
+    assert client.WaitForServer(timeout=180, retry_interval=5)
+    assert client.IsHealthy()
+
+    logger.debug("Testing training service...")
+    # Copy test image to temporary directory and test training service
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_image = Path(tmp_dir) / "test_image.jpg"
+        shutil.copy(NOS_TEST_IMAGE, tmp_image)
+
+        volume_dir = client.Volume("dreambooth_training")
+        logger.debug(f"Copying files from {tmp_dir} to {volume_dir}...")
+        shutil.copytree(tmp_dir, volume_dir, dirs_exist_ok=True)
+
+        client.Train(
+            method="stable-diffusion-dreambooth-lora",
+            inputs={
+                "model_name": "stabilityai/stable-diffusion-2-1",
+                "instance_directory": volume_dir,
+                "instance_prompt": "A photo of a bench on the moon",
+            },
+        )
+    logger.debug("Training service test passed.")

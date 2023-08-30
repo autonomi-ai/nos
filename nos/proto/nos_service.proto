@@ -65,6 +65,7 @@ message PingResponse {
 // Service information repsonse
 message ServiceInfoResponse {
     string version = 1;  // (e.g. "0.1.0")
+    string runtime = 2;  // (e.g. "cpu", "gpu", "local" etc)
 }
 
 // Register system shared memory request
@@ -74,6 +75,17 @@ message GenericRequest {
 
 // Register system shared memory response
 message GenericResponse {
+  bytes response_bytes = 1;
+}
+
+
+// Training job request / responses
+message TrainingJobRequest {
+  string method = 1;
+  map <string, bytes> inputs = 2;
+}
+
+message TrainingJobResponse {
   bytes response_bytes = 1;
 }
 
@@ -94,6 +106,9 @@ service InferenceService {
   // Run the inference request
   rpc Run(InferenceRequest) returns (InferenceResponse) {}
 
+  // Dispatch a training request
+  rpc Train(TrainingJobRequest) returns (TrainingJobResponse) {}
+
   // Register shared memory
   rpc RegisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
 
@@ -107,15 +122,4 @@ service InferenceService {
   // Delete model from deployment
   // TODO (spillai): To be implemented later (for power-users)
   // rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {}
-}
-
-
-message TrainingRequest {
-  ModelInfo model = 1;
-  map <string, bytes> inputs = 2;
-  map <string, bytes> outputs = 3;
-}
-
-message TrainingResponse {
-  bytes response_bytes = 1;
 }

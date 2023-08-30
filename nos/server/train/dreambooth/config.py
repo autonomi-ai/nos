@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any, Dict
 
 from nos.common.git import cached_repo
-from nos.experimental.train.config import TrainingJobConfig
 from nos.logging import logger
 from nos.models.dreambooth.dreambooth import StableDiffusionDreamboothConfigs
+from nos.server.train.config import TrainingJobConfig
 
 
 GIT_TAG = "v0.20.1"
@@ -71,8 +71,9 @@ class StableDiffusionTrainingJobConfig:
         runtime_env["working_dir"] = self.repo_directory
 
         # Create a new short unique name using method and uuid (with 8 characters)
-        job_id = f"{self.method}_{uuid.uuid4().hex[:8]}"
-        self.job_config = TrainingJobConfig(uuid=job_id, runtime_env=runtime_env)
+        model_id = f"{self.method}_{uuid.uuid4().hex[:8]}"
+        self.job_config = TrainingJobConfig(uuid=model_id, runtime_env=runtime_env)
+        job_id = self.job_config.uuid
         working_directory = Path(self.job_config.working_directory)
 
         # Copy the instance directory to the working directory

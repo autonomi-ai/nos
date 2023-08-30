@@ -2,9 +2,9 @@ from typing import Any, Dict
 
 from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor, RayJobExecutor
-from nos.experimental.train.dreambooth.config import StableDiffusionTrainingJobConfig
 from nos.logging import logger
 from nos.protoc import import_module
+from nos.server.train.dreambooth.config import StableDiffusionTrainingJobConfig
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
@@ -19,13 +19,10 @@ class TrainingService:
     }
 
     def __init__(self):
+        """Initialize the training service."""
         self.executor = RayExecutor.get()
-        try:
-            self.executor.init()
-        except Exception as e:
-            err_msg = f"Failed to initialize executor [e={e}]"
-            logger.info(err_msg)
-            raise RuntimeError(err_msg)
+        if not self.executor.is_initialized():
+            raise RuntimeError("Ray executor is not initialized")
 
     def train(self, method: str, training_inputs: Dict[str, Any], metadata: Dict[str, Any] = None) -> str:
         """Train / Fine-tune a model by submitting a job to the RayJobExecutor.

@@ -20,6 +20,7 @@ from nos.executors.ray import RayExecutor
 from nos.logging import logger
 from nos.managers import ModelHandle, ModelManager
 from nos.protoc import import_module
+from nos.server.train._train_service import TrainingService
 from nos.version import __version__
 
 
@@ -49,14 +50,10 @@ class InferenceService:
     """
 
     def __init__(self):
-        self.model_manager = ModelManager()
         self.executor = RayExecutor.get()
-        try:
-            self.executor.init()
-        except Exception as e:
-            err_msg = f"Failed to initialize executor [e={e}]"
-            logger.info(err_msg)
-            raise RuntimeError(err_msg)
+        if not self.executor.is_initialized():
+            raise RuntimeError("Ray executor is not initialized")
+        self.model_manager = ModelManager()
         if NOS_SHM_ENABLED:
             self.shm_manager = SharedMemoryTransportManager()
         else:
@@ -115,7 +112,7 @@ class InferenceService:
         return response
 
 
-class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, InferenceService):
+class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, InferenceService, TrainingService):
     """
     Experimental gRPC-based inference service.
 
@@ -126,6 +123,13 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
     """
 
     def __init__(self, *args, **kwargs):
+        self.executor = RayExecutor.get()
+        try:
+            self.executor.init()
+        except Exception as e:
+            err_msg = f"Failed to initialize executor [e={e}]"
+            logger.info(err_msg)
+            raise RuntimeError(err_msg)
         super().__init__(*args, **kwargs)
 
     def Ping(self, request: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.PingResponse:
@@ -136,7 +140,13 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         self, request: empty_pb2.Empty, context: grpc.ServicerContext
     ) -> nos_service_pb2.ServiceInfoResponse:
         """Get information on the service."""
-        return nos_service_pb2.ServiceInfoResponse(version=__version__)
+        from nos.common.system import has_gpu, is_inside_docker
+
+        if is_inside_docker():
+            runtime = "gpu" if has_gpu() else "cpu"
+        else:
+            runtime = "local"
+        return nos_service_pb2.ServiceInfoResponse(version=__version__, runtime=runtime)
 
     def ListModels(self, request: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.ModelListResponse:
         """List all models."""
@@ -238,23 +248,23 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
     def Train(
-        self, request: nos_service_pb2.TrainingRequest, context: grpc.ServicerContext
-    ) -> nos_service_pb2.TrainingResponse:
-        model_request = request.model
-        logger.debug(f"=> Received training request [task={model_request.task}, model={model_request.name}]")
-        if model_request.task not in (TaskType.IMAGE_GENERATION.value,):
-            context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid training task [task={model_request.task}]")
+        self, request: nos_service_pb2.TrainingJobRequest, context: grpc.ServicerContext
+    ) -> nos_service_pb2.TrainingJobResponse:
+        logger.debug(f"=> Received training request [method={request.method}]")
+        if request.method not in TrainingService.config_cls:
+            context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid training task [method={request.method}]")
 
         try:
             st = time.perf_counter()
-            logger.info(f"Training request [task={model_request.task}, model={model_request.name}]")
-            response = self.train(model_request.name, task=TaskType(model_request.task), inputs=request.inputs)
+            logger.info(f"Training request [method={request.method}]")
+            job_id = self.train(request.method, training_inputs=request.inputs)
+            response = {"job_id": job_id}
             logger.info(
-                f"Trained request dispatched [id={id}, task={model_request.task}, model={model_request.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                f"Trained request dispatched [id={id}, method={request.method}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )
             return nos_service_pb2.TrainingResponse(response_bytes=dumps(response))
         except (grpc.RpcError, Exception) as e:
-            msg = f"Failed to train request [task={model_request.task}, model={model_request.name}]"
+            msg = f"Failed to train request [method={request.method}]"
             msg += f"{traceback.format_exc()}"
             logger.error(f"{msg}, e={e}")
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
