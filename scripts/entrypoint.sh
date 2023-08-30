@@ -7,4 +7,6 @@ echo "Starting Ray server with OMP_NUM_THREADS=${OMP_NUM_THREADS}..."
 OMP_NUM_THREADS=${OMP_NUM_THREADS} ray start --head
 
 echo "Starting NOS server..."
-nos-grpc-server && python ./nos_bot.py
+nos-grpc-server &
+echo "Starting NOS bot..."
+python ./nos_bot.py

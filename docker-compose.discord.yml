@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   nos-server:
-    image: autonomi/nos:latest-gpu
+    image: autonomi/nos:latest-discord
     build:
       context: .
       dockerfile: docker/Dockerfile.discord
