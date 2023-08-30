@@ -20,7 +20,7 @@ from nos.common.exceptions import (
     NosServerReadyException,
 )
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
-from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
+from nos.constants import DEFAULT_GRPC_PORT, NOS_HOME, NOS_PROFILING_ENABLED
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -307,14 +307,17 @@ class InferenceClient:
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to train model (details={(e.details())})", e)
 
-    def Volume(self, name: str) -> str:
+    def Volume(self, name: str = None) -> str:
         """Remote volume module for NOS.
 
         Note: This is meant for remote volume mounts especially useful for training.
         """
         runtime = self.GetServiceRuntime()
-        root = Path.home() / ".nos" if runtime == "local" else Path.home() / ".nosd"
-        path = root / f"volumes/{name}_{uuid.uuid4().hex[:8]}"
+        root = NOS_HOME / "volumes" if runtime == "local" else Path.home() / ".nosd/volumes"
+        if name is None:
+            root.mkdir(parents=True, exist_ok=True)
+            return str(root)
+        path = root / f"{name}_{uuid.uuid4().hex[:8]}"
         path.mkdir(parents=True, exist_ok=True)
         return str(path)
 

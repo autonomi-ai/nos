@@ -6,6 +6,8 @@ from typing import Dict, List, Union
 import torch
 from PIL import Image
 
+from nos import hub
+from nos.common import Batch, ImageSpec, ImageT, TaskType
 from nos.hub.config import NOS_MODELS_DIR
 from nos.logging import logger
 
@@ -200,10 +202,6 @@ class StableDiffusionLoRA:
             height=height if height is not None else self.cfg.resolution,
             width=width if width is not None else self.cfg.resolution,
         ).images
-
-
-from nos import hub
-from nos.common import Batch, ImageSpec, ImageT, TaskType
 
 
 for model_name in StableDiffusionLoRA.configs.keys():

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from nos.common.git import cached_repo
+from nos.constants import NOS_HOME
 from nos.logging import logger
 from nos.models.dreambooth.dreambooth import StableDiffusionDreamboothConfigs
 from nos.server.train.config import TrainingJobConfig
@@ -14,6 +15,7 @@ from nos.server.train.config import TrainingJobConfig
 
 GIT_TAG = "v0.20.1"
 
+NOS_VOLUME_DIR = NOS_HOME / "volumes"
 RUNTIME_ENVS = {
     "diffusers-latest": {
         "working_dir": "./nos/experimental/",
@@ -77,6 +79,8 @@ class StableDiffusionTrainingJobConfig:
         working_directory = Path(self.job_config.working_directory)
 
         # Copy the instance directory to the working directory
+        self.instance_directory = NOS_VOLUME_DIR / self.instance_directory
+        logger.debug(f"Instance directory [dir={self.instance_directory}]")
         if not Path(self.instance_directory).exists():
             raise IOError(f"Failed to load instance_directory={self.instance_directory}.")
         instance_directory = working_directory / "instances"
