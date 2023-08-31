@@ -592,7 +592,7 @@ class InferenceModule:
             )
             # Execute the request
             st = time.perf_counter()
-            logger.debug(f"Executing request [model={self._spec.name}]]")
+            logger.debug(f"Executing request [model={self._spec.name}]")
             response = self.stub.Run(request)
             if NOS_PROFILING_ENABLED:
                 logger.debug(

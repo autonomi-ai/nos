@@ -28,18 +28,19 @@ def register_model(model_name: str, *args, **kwargs):
     logger.debug(f"Updated registry with newer configs [namespace=custom, size={len(sd_hub)}, prev_size={psize}]")
 
     # Register the model
-    logger.debug(f"Registering new model [model={model_name}]")
+    model_id = f"custom/{model_name}"
+    logger.debug(f"Registering new model [model={model_id}]")
     hub.register(
-        model_name,
+        model_id,
         TaskType.IMAGE_GENERATION,
         StableDiffusionLoRA,
-        init_args=(model_name,),
+        init_args=(model_id,),
         init_kwargs={"dtype": torch.float16},
         method_name="__call__",
         inputs={"prompts": Batch[str, 1], "num_images": int, "height": int, "width": int},
         outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )
-    logger.debug(f"Registering new model [{model_name}]")
+    logger.debug(f"Registering new model [model={model_id}]")
 
 
 class TrainingService:
@@ -85,12 +86,11 @@ class TrainingService:
         job_id = self.executor.jobs.submit(**configd)
         logger.debug(f"Submitted training job [job_id={job_id}, config={configd}]")
 
-        hooks = {
-            "on_completed": [(register_model, (job_id,), {})],
-        }
+        hooks = {"on_completed": (register_model, (job_id,), {})}
 
         # Spawn a thread to monitor the job
-        def monitor_job(job_id: str, timeout: int = 180, retry_interval: int = 5):
+        def monitor_job_hook(job_id: str, timeout: int = 600, retry_interval: int = 5):
+            """Hook for monitoring the job status and running callbacks on completion."""
             st = time.time()
             while time.time() - st < timeout:
                 status = self.executor.jobs.status(job_id)
@@ -105,7 +105,7 @@ class TrainingService:
                     logger.debug(f"Training job not completed yet [job_id={job_id}, status={status}]")
                     time.sleep(retry_interval)
 
-        threading.Thread(target=monitor_job, args=(job_id,), daemon=True).start()
+        threading.Thread(target=monitor_job_hook, args=(job_id,), daemon=True).start()
         return job_id
 
     @property

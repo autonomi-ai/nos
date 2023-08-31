@@ -148,10 +148,10 @@ def test_client_training(client_with_server, request):  # noqa: F811
     model_id = response["job_id"]
     logger.debug(f"Training service test completed [model_id={model_id}].")
 
-    # model_id = "stable-diffusion-dreambooth-lora_16cd4490"
-
     # Wait for the model to be ready
-    response = client.Wait(job_id=model_id, timeout=180, retry_interval=5)
+    # For e.g. model_id = "stable-diffusion-dreambooth-lora_16cd4490"
+    # model_id = "stable-diffusion-dreambooth-lora_ef939db5"
+    response = client.Wait(job_id=model_id, timeout=600, retry_interval=5)
     logger.debug(f"Training service test completed [model_id={model_id}, response={response}].")
     time.sleep(10)
 
