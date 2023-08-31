@@ -187,8 +187,7 @@ class StableDiffusionLoRA:
         self,
         prompts: Union[str, List[str]],
         num_images: int = 1,
-        num_inference_steps: int = 50,
-        guidance_scale: float = 7.5,
+        num_inference_steps: int = 30,
         height: int = None,
         width: int = None,
     ) -> List[Image.Image]:
@@ -198,7 +197,6 @@ class StableDiffusionLoRA:
         return self.pipe(
             prompts * num_images,
             num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
             height=height if height is not None else self.cfg.resolution,
             width=width if width is not None else self.cfg.resolution,
         ).images

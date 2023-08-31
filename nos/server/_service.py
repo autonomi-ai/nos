@@ -279,7 +279,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         try:
             st = time.perf_counter()
             logger.info(f"Job status request [job_id={request['job_id']}]")
-            response = self.jobs.status(request["job_id"])
+            response = str(self.jobs.status(request["job_id"]))
             logger.info(
                 f"Job status request [job_id={request['job_id']}, response={response}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )

@@ -340,10 +340,12 @@ class InferenceClient:
                 if str(response) != "PENDING" and str(response) != "RUNNING":
                     return response
                 else:
-                    logger.debug(f"Waiting for job to finish [job_id={job_id}, response={response}]")
-                    time.sleep(retry_interval)
-            except Exception:
-                logger.warning("Failed to fetch job status ... (elapsed={:.0f}s)".format(time.time() - st))
+                    logger.debug(
+                        f"Waiting for job to finish [job_id={job_id}, response={response}, elapsed={time.time() - st:.0f}s]"
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to fetch job status ... [elapsed={time.time() - st:.0f}s, e={e}]")
+            time.sleep(retry_interval)
         logger.warning(f"Job timed out [job_id={job_id}]")
         return response
 

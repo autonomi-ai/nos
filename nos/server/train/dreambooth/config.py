@@ -109,7 +109,7 @@ class StableDiffusionTrainingJobConfig:
             f""" --resolution={self.resolution}"""
             f""" --train_batch_size=1"""
             f""" --gradient_accumulation_steps=1"""
-            f""" --checkpointing_steps=100"""
+            f""" --checkpointing_steps={self.max_train_steps // 5}"""
             f""" --learning_rate=1e-4"""
             f''' --lr_scheduler="constant"'''
             f""" --lr_warmup_steps=0"""
