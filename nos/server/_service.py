@@ -20,7 +20,7 @@ from nos.executors.ray import RayExecutor
 from nos.logging import logger
 from nos.managers import ModelHandle, ModelManager
 from nos.protoc import import_module
-from nos.server.train._train_service import TrainingService
+from nos.server.train._service import TrainingService
 from nos.version import __version__
 
 

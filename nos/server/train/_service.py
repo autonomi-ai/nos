@@ -6,7 +6,8 @@ from nos.exceptions import ModelNotFoundError
 from nos.executors.ray import RayExecutor, RayJobExecutor
 from nos.logging import logger
 from nos.protoc import import_module
-from nos.server.train.dreambooth.config import StableDiffusionTrainingJobConfig
+
+from .dreambooth.config import StableDiffusionTrainingJobConfig
 
 
 nos_service_pb2 = import_module("nos_service_pb2")

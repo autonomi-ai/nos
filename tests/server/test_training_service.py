@@ -27,7 +27,7 @@ def test_training_service(ray_executor: RayExecutor):  # noqa: F811
 
         job_id = svc.train(
             method="stable-diffusion-dreambooth-lora",
-            training_inputs={
+            inputs={
                 "model_name": "stabilityai/stable-diffusion-2-1",
                 "instance_directory": tmp_dir,
                 "instance_prompt": "A photo of a bench on the moon",
@@ -57,26 +57,8 @@ def test_training_service(ray_executor: RayExecutor):  # noqa: F811
     assert status is not None
     logger.debug(f"Status for job {job_id}: {status}")
 
-
-def test_inference_service_with_trained_model(ray_executor: RayExecutor):  # noqa: F811
-    """Test inference service."""
-    from nos.server._service import InferenceService
-
-    # Test training service
-    InferenceService()
-    # job_id = svc.execute(
-    #     method="stable-diffusion-dreambooth-lora",
-    #     inference_inputs={
-    #         "model_name": "stabilityai/stable-diffusion-2-1",
-    #         "instance_directory": tmp_dir,
-    #         "instance_prompt": "A photo of a bench on the moon",
-    #         "resolution": 512,
-    #         "max_train_steps": 100,
-    #         "seed": 0,
-    #     },
-    #     metadata={
-    #         "name": "sdv21-dreambooth-lora-test-bench",
-    #     },
-    # )
-    # assert job_id is not None
-    # logger.debug(f"Submitted job with id: {job_id}")
+    # Wait for the job to complete
+    status = svc.jobs.wait(job_id, timeout=600, retry_interval=5)
+    assert status is not None
+    logger.debug(f"Status for job {job_id}: {status}")
+    assert status == "SUCCEEDED"

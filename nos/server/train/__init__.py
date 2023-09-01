@@ -1,1 +1,1 @@
-from ._train_service import TrainingService  # noqa: F401
+from ._service import TrainingService  # noqa: F401

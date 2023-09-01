@@ -1,3 +1,4 @@
+"""Example discord both with Stable Diffusion LoRA fine-tuning support."""
 import asyncio
 import io
 import os
@@ -39,11 +40,9 @@ class LoRAPromptModel:
 
 
 NOS_PLAYGROUND_CHANNEL = "nos-playground"
-
 BASE_MODEL = "runwayml/stable-diffusion-v1-5"
-# BASE_MODEL = "stabilityai/stable-diffusion-2-1"
 
-# Init nos server, wait for it to spin up then confirm its healthy:
+# Init NOS server, wait for it to spin up then confirm its healthy.
 client = InferenceClient()
 
 logger.debug("Waiting for server to start...")
@@ -58,22 +57,34 @@ NOS_VOLUME_DIR = Path(client.Volume())
 NOS_TRAINING_VOLUME_DIR = Path(client.Volume("nos-playground"))
 logger.debug(f"Creating training data volume [volume={NOS_TRAINING_VOLUME_DIR}]")
 
-# Set permissions for our bot to allow it to read messages:
+# Set permissions for our bot to allow it to read messages
 intents = discord.Intents.default()
 intents.message_content = True
 
-# Create our bot, with the command prefix set to "/":
+# Create our bot, with the command prefix set to "/"
 bot = commands.Bot(command_prefix="/", intents=intents)
 
 logger.debug("Starting bot, initializing existing threads ...")
 
-# Maps channel_id -> LoRAPromptModel
+# Simple persistent dict/database for storing models
+# This maps (channel-id -> LoRAPromptModel)
 MODEL_DB = Cache(str(NOS_TMP_DIR / NOS_PLAYGROUND_CHANNEL))
 
 
 @bot.command()
 async def generate(ctx, *, prompt):
-    """Create a callback to read messages and generate images from prompt"""
+    """Create a callback to read messages and generate images from prompt
+
+    Usage:
+        1. In the main channel, you can run:
+            /generate a photo of a dog on the moon
+        to generate an image with the pre-trained SDv1.5 model.
+
+        2. In a thread that has been created by fine-tuning a new model,
+        you can run:
+            /generate a photo of a sks dog on the moon
+        to generate the specific instance of the dog using the fine-tuned model.
+    """
     logger.debug(
         f"/generate [prompt={prompt}, channel={ctx.channel.name}, channel_id={ctx.channel.id}, user={ctx.author.name}]"
     )
@@ -146,6 +157,13 @@ async def generate(ctx, *, prompt):
 
 @bot.command()
 async def train(ctx, *, prompt):
+    """Fine-tune a new model with the provided prompt and images.
+
+    Example:
+        Upload a few images of your favorite dog, and then run:
+        `/train sks a photo of a sks dog on the moon`
+    """
+
     logger.debug(f"/train [channel={ctx.channel.name}, channel_id={ctx.channel.id}, user={ctx.author.name}]")
 
     if ctx.channel.name != NOS_PLAYGROUND_CHANNEL:
@@ -246,28 +264,24 @@ async def train(ctx, *, prompt):
         image_bytes.seek(0)
         await _thread.send(f"{prompt}", file=discord.File(image_bytes, filename=f"{ctx.message.id}.png"))
 
-    # def post_on_training_complete():
-    #     asyncio.run(post_on_training_complete_async())
-
     logger.debug(f"Starting thread to watch training job [id={thread_id}, job_id={job_id}]")
-    # threading.Thread(target=post_on_training_complete, daemon=True).start()
     asyncio.run_coroutine_threadsafe(post_on_training_complete_async(), loop)
     logger.debug(f"Started thread to watch training job [id={thread_id}, job_id={job_id}]")
 
 
-# Pull API token out of environment and run the bot:
-bot_token = os.environ.get("DISCORD_BOT_TOKEN")
-if bot_token is None:
-    raise Exception("DISCORD_BOT_TOKEN environment variable not set")
-logger.debug(f"Starting bot with token [token={bot_token[:5]}****]")
-# bot.loop.run_until_complete(setup())
-
-
-async def run_bot():
-    await bot.start(bot_token)
+async def run_bot(token: str):
+    """Start the bot with the user-provided token."""
+    await bot.start(token)
 
 
 if __name__ == "__main__":
+    # Get the bot token from the environment
+    token = os.environ.get("DISCORD_BOT_TOKEN")
+    if token is None:
+        raise Exception("DISCORD_BOT_TOKEN environment variable not set")
+    logger.debug(f"Starting bot with token [token={token[:5]}****]")
+
+    # Start the asyncio event loop, and run the bot
     loop = asyncio.get_event_loop()
-    loop.create_task(run_bot())
+    loop.create_task(run_bot(token))
     loop.run_forever()
