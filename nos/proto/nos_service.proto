@@ -108,3 +108,14 @@ service InferenceService {
   // TODO (spillai): To be implemented later (for power-users)
   // rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {}
 }
+
+
+message TrainingRequest {
+  ModelInfo model = 1;
+  map <string, bytes> inputs = 2;
+  map <string, bytes> outputs = 3;
+}
+
+message TrainingResponse {
+  bytes response_bytes = 1;
+}

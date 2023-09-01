@@ -8,7 +8,8 @@ computation and containerize them in docker to isolate the environment.
 import logging
 import os
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Optional
 
 import psutil
@@ -16,7 +17,9 @@ import ray
 import rich.console
 import rich.panel
 import rich.status
+from ray.job_submission import JobSubmissionClient
 
+from nos.common.metaclass import SingletonMetaclass
 from nos.logging import LOGGING_LEVEL
 
 
@@ -26,6 +29,7 @@ NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
 NOS_RAY_ENV = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", None))
 NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
 NOS_DASHBOARD_ENABLED = os.getenv("NOS_DASHBOARD_ENABLED", True)
+RAY_JOB_CLIENT_ADDRESS = "http://127.0.0.1:8265"
 
 
 @dataclass
@@ -37,20 +41,16 @@ class RayRuntimeSpec:
 
 
 @dataclass
-class RayExecutor:
+class RayExecutor(metaclass=SingletonMetaclass):
     """Executor for Ray."""
 
-    _instance: "RayExecutor" = None
-    """Singleton instance of RayExecutor."""
     spec: RayRuntimeSpec = RayRuntimeSpec()
     """Runtime spec for Ray."""
 
     @classmethod
     def get(cls) -> "RayExecutor":
         """Get the singleton instance of RayExecutor."""
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        return cls()
 
     def is_initialized(self) -> bool:
         """Check if Ray is initialized."""
@@ -170,6 +170,47 @@ class RayExecutor:
             if proc.name() == "raylet":
                 return proc.pid
         return None
+
+    @cached_property
+    def jobs(self) -> "RayJobExecutor":
+        """Get the ray jobs executor."""
+        return RayJobExecutor()
+
+
+@dataclass
+class RayJobExecutor(metaclass=SingletonMetaclass):
+    """Ray job executor."""
+
+    client: JobSubmissionClient = field(init=False)
+    """Job submission client."""
+
+    def __post_init__(self):
+        """Post-initialization."""
+        if not ray.is_initialized():
+            raise RuntimeError("Ray executor is not initialized.")
+        self.client = JobSubmissionClient(RAY_JOB_CLIENT_ADDRESS)
+
+    def submit(self, *args, **kwargs) -> str:
+        """Submit a job to Ray."""
+        job_id = self.client.submit_job(*args, **kwargs)
+        logger.debug(f"Submitted job with id: {job_id}")
+        return job_id
+
+    def list(self) -> str:
+        """List all jobs."""
+        return self.client.list_jobs()
+
+    def info(self, job_id: str) -> str:
+        """Get info for a job."""
+        return self.client.get_job_info(job_id)
+
+    def status(self, job_id: str) -> str:
+        """Get status for a job."""
+        return self.client.get_job_status(job_id)
+
+    def logs(self, job_id: str) -> str:
+        """Get logs for a job."""
+        return self.client.get_job_logs(job_id)
 
 
 def init(*args, **kwargs) -> bool:

@@ -1,10 +1,7 @@
-import pytest
-
 from nos.executors.ray import RayExecutor
 from nos.test.conftest import ray_executor  # noqa: F401
 
 
-@pytest.mark.skip(reason="Not yet implemented.")
 def test_ray_executor(ray_executor: RayExecutor):  # noqa: F811
     """Test ray executor singleton."""
     assert ray_executor.is_initialized()
@@ -19,7 +16,6 @@ def test_ray_executor(ray_executor: RayExecutor):  # noqa: F811
     assert isinstance(pid, int)
 
 
-@pytest.mark.skip(reason="Not yet implemented.")
 def test_ray_load_spec_compatibility(ray_executor: RayExecutor):  # noqa: F811
     """Test hub.load_spec compatibility with RayExecutor"""
     import ray
@@ -31,14 +27,13 @@ def test_ray_load_spec_compatibility(ray_executor: RayExecutor):  # noqa: F811
     assert len(models) > 0
 
     # Create actors for each model
-    for model_name in models:
-        spec = hub.load_spec(model_name)
+    for spec in models:
         assert spec is not None
         assert isinstance(spec, ModelSpec)
 
         # Create actor class
-        actor_class = ray.remote(spec.cls)
+        actor_class = ray.remote(spec.signature.func_or_cls)
         # Create actor handle from actor class
-        actor_handle = actor_class.remote(*spec.args, **spec.kwargs)
+        actor_handle = actor_class.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
         assert actor_handle is not None
         del actor_handle

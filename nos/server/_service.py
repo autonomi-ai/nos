@@ -237,6 +237,28 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             logger.error(f"{msg}, e={e}")
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
+    def Train(
+        self, request: nos_service_pb2.TrainingRequest, context: grpc.ServicerContext
+    ) -> nos_service_pb2.TrainingResponse:
+        model_request = request.model
+        logger.debug(f"=> Received training request [task={model_request.task}, model={model_request.name}]")
+        if model_request.task not in (TaskType.IMAGE_GENERATION.value,):
+            context.abort(grpc.StatusCode.NOT_FOUND, f"Invalid training task [task={model_request.task}]")
+
+        try:
+            st = time.perf_counter()
+            logger.info(f"Training request [task={model_request.task}, model={model_request.name}]")
+            response = self.train(model_request.name, task=TaskType(model_request.task), inputs=request.inputs)
+            logger.info(
+                f"Trained request dispatched [id={id}, task={model_request.task}, model={model_request.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            )
+            return nos_service_pb2.TrainingResponse(response_bytes=dumps(response))
+        except (grpc.RpcError, Exception) as e:
+            msg = f"Failed to train request [task={model_request.task}, model={model_request.name}]"
+            msg += f"{traceback.format_exc()}"
+            logger.error(f"{msg}, e={e}")
+            context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
+
 
 def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 1) -> None:
     """Start the gRPC server."""

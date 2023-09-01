@@ -69,7 +69,7 @@ class MMDetection:
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_tiny_8x8_300e_coco/yolox_tiny_8x8_300e_coco_20211124_171234-b4047906.pth",
         ),
         # Note: The following registers the configs for all models in the local hub.
-        **MMLabHub().configs,
+        **MMLabHub(namespace="openmmlab/mmdetection").configs,
     }
     """MMDetection model configurations."""
 
