@@ -27,3 +27,19 @@ def test_client_cloudpickle_serialization(grpc_client):  # noqa: F811
 
     predict_fn = dumps(predict_module_wrap)
     assert isinstance(predict_fn, bytes)
+
+    def train_wrap():
+        return grpc_client.Train(
+            method="stable-diffusion-dreambooth-lora",
+            inputs={
+                "model_name": "stabilityai/stable-diffusion-2-1",
+                "instance_directory": "/tmp",
+                "instance_prompt": "A photo of a bench on the moon",
+            },
+            metadata={
+                "name": "sdv21-dreambooth-lora-test-bench",
+            },
+        )
+
+    train_fn = dumps(train_wrap)
+    assert isinstance(train_fn, bytes)

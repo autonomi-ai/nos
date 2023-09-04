@@ -1,8 +1,10 @@
 """gRPC client for NOS service."""
 import secrets
 import time
+import uuid
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
+from pathlib import Path
 from typing import Any, Callable, Dict, List
 
 import grpc
@@ -18,7 +20,7 @@ from nos.common.exceptions import (
     NosServerReadyException,
 )
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
-from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
+from nos.constants import DEFAULT_GRPC_PORT, NOS_HOME, NOS_PROFILING_ENABLED
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -165,6 +167,20 @@ class InferenceClient:
         except grpc.RpcError as e:
             raise NosServerReadyException(f"Failed to get service info (details={e.details()})", e)
 
+    def GetServiceRuntime(self) -> str:
+        """Get service runtime.
+
+        Returns:
+            str: Service runtime (e.g. cpu, gpu, local).
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
+            return response.runtime
+        except grpc.RpcError as e:
+            raise NosServerReadyException(f"Failed to get service info (details={e.details()})", e)
+
     def CheckCompatibility(self) -> bool:
         """Check if the service version is compatible with the client.
 
@@ -267,6 +283,71 @@ class InferenceClient:
         """
         module: InferenceModule = self.Module(task, model_name)
         return module(**inputs)
+
+    def Train(
+        self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None
+    ) -> nos_service_pb2.GenericResponse:
+        """Training module.
+
+        Args:
+            method (str): Training method (e.g. `stable-diffusion-dreambooth-lora`).
+            inputs (Dict[str, Any]): Training inputs.
+            metadata (Dict[str, Any], optional): Metadata for the training job. Defaults to None.
+        Returns:
+            str: Job ID.
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            request = nos_service_pb2.GenericRequest(
+                request_bytes=dumps({"method": method, "inputs": inputs, "metadata": metadata})
+            )
+            response = self.stub.Train(request)
+            return loads(response.response_bytes)
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to train model (details={(e.details())})", e)
+
+    def Volume(self, name: str = None) -> str:
+        """Remote volume module for NOS.
+
+        Note: This is meant for remote volume mounts especially useful for training.
+        """
+        runtime = self.GetServiceRuntime()
+        root = NOS_HOME / "volumes" if runtime == "local" else Path.home() / ".nosd/volumes"
+        if name is None:
+            root.mkdir(parents=True, exist_ok=True)
+            return str(root)
+        path = root / f"{name}_{uuid.uuid4().hex[:8]}"
+        path.mkdir(parents=True, exist_ok=True)
+        return str(path)
+
+    def Wait(self, job_id: str, timeout: int = 60, retry_interval: int = 5) -> None:
+        """Wait for job to finish.
+
+        Args:
+            job_id (str): Job ID.
+            timeout (int, optional): Timeout in seconds. Defaults to 60.
+            retry_interval (int, optional): Retry interval in seconds. Defaults to 5.
+        """
+        st = time.time()
+        response = None
+        while time.time() - st <= timeout:
+            try:
+                response: nos_service_pb2.GenericResponse = self.stub.GetJobStatus(
+                    nos_service_pb2.GenericRequest(request_bytes=dumps({"job_id": job_id}))
+                )
+                response = loads(response.response_bytes)
+                if str(response) != "PENDING" and str(response) != "RUNNING":
+                    return response
+                else:
+                    logger.debug(
+                        f"Waiting for job to finish [job_id={job_id}, response={response}, elapsed={time.time() - st:.0f}s]"
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to fetch job status ... [elapsed={time.time() - st:.0f}s, e={e}]")
+            time.sleep(retry_interval)
+        logger.warning(f"Job timed out [job_id={job_id}]")
+        return response
 
 
 @dataclass
@@ -513,7 +594,7 @@ class InferenceModule:
             )
             # Execute the request
             st = time.perf_counter()
-            logger.debug(f"Executing request [model={self._spec.name}]]")
+            logger.debug(f"Executing request [model={self._spec.name}]")
             response = self.stub.Run(request)
             if NOS_PROFILING_ENABLED:
                 logger.debug(

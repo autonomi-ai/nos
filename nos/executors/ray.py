@@ -212,6 +212,21 @@ class RayJobExecutor(metaclass=SingletonMetaclass):
         """Get logs for a job."""
         return self.client.get_job_logs(job_id)
 
+    def wait(self, job_id: str, timeout: int = 600, retry_interval: int = 5) -> str:
+        """Wait for a job to complete."""
+        status = None
+        st = time.time()
+        while time.time() - st < timeout:
+            status = self.status(job_id)
+            if str(status) == "SUCCEEDED":
+                logger.debug(f"Training job completed [job_id={job_id}, status={status}]")
+                return status
+            else:
+                logger.debug(f"Training job not completed yet [job_id={job_id}, status={status}]")
+                time.sleep(retry_interval)
+        logger.warning(f"Training job timed out [job_id={job_id}, status={status}]")
+        return status
+
 
 def init(*args, **kwargs) -> bool:
     """Initialize Ray executor."""
