@@ -18,6 +18,7 @@ nav:
     - Starting the NOS Server: docs/starting-the-server.md
     - Running Inference: docs/running-inference.md
     - Accelerating Models: docs/accelerating-models.md
+    # - Fine-tuning Models: docs/fine-tuning-models.md
   - API Reference:
     - nos.common:
       - nos.common.spec: docs/api/common/spec.md
@@ -29,10 +30,10 @@ nav:
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
   - FAQ: docs/faq.md
-- ✍️ Blog:
-  - docs/blog/index.md
-  - 2023:
-    - docs/blog/posts/01-hello-world.md
+# - ✍️ Blog:
+#   - docs/blog/index.md
+#   - 2023:
+#     - docs/blog/posts/01-hello-world.md
 # - 🏁 Roadmap: docs/roadmap.md
 # - 🧑‍💻 Contributing: docs/CONTRIBUTING.md
 - ❓ Support: docs/support.md
