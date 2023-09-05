@@ -8,6 +8,7 @@ from nos.logging import logger
 from nos.protoc import import_module
 
 from .dreambooth.config import StableDiffusionTrainingJobConfig
+from .openmmlab.mmdetection.config import MMDetectionTrainingJobConfig
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
@@ -49,6 +50,7 @@ class TrainingService:
 
     config_cls = {
         "stable-diffusion-dreambooth-lora": StableDiffusionTrainingJobConfig,
+        "openmmlab/mmdetection": MMDetectionTrainingJobConfig,
     }
 
     def __init__(self):

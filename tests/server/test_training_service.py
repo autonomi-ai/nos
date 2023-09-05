@@ -13,13 +13,8 @@ from nos.test.utils import NOS_TEST_IMAGE
 pytestmark = pytest.mark.server
 
 
-def test_training_service(ray_executor: RayExecutor):  # noqa: F811
-    """Test training service."""
-    from nos.server.train import TrainingService
-
-    # Test training service
-    svc = TrainingService()
-
+def submit_dreambooth_lora_job(svc) -> str:  # noqa: F811
+    """Submit a dreambooth LoRA job."""
     # Copy test image to temporary directory and test training service
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_image = Path(tmp_dir) / "test_image.jpg"
@@ -41,6 +36,40 @@ def test_training_service(ray_executor: RayExecutor):  # noqa: F811
         )
         assert job_id is not None
         logger.debug(f"Submitted job with id: {job_id}")
+    return job_id
+
+
+def submit_mmdetection_job(svc) -> str:  # noqa: F811
+    """Submit a mmdetection job."""
+    job_id = svc.train(
+        method="openmmlab/mmdetection",
+        inputs={
+            "config_filename": "configs/yolox/yolox_s_8xb8-300e_coco_ft.py",
+        },
+        metadata={
+            "name": "yolox-s-8xb8-300e-coco-ft",
+        },
+    )
+    assert job_id is not None
+    logger.debug(f"Submitted job with id: {job_id}")
+    return job_id
+
+
+@pytest.mark.parametrize("method", ["stable-diffusion-dreambooth-lora", "openmmlab/mmdetection"])
+def test_training_service_dreambooth(ray_executor: RayExecutor, method):  # noqa: F811
+    """Test training service for dreambooth LoRA."""
+    from nos.server.train import TrainingService
+
+    # Test training service
+    svc = TrainingService()
+
+    # Submit a job
+    if method == "stable-diffusion-dreambooth-lora":
+        job_id = submit_dreambooth_lora_job(svc)
+    elif method == "openmmlab/mmdetection":
+        job_id = submit_mmdetection_job(svc)
+    else:
+        raise ValueError(f"Invalid method: {method}")
 
     # Get logs for the job
     logs = svc.jobs.logs(job_id)

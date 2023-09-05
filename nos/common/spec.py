@@ -198,8 +198,8 @@ class RuntimeEnv:
     """Conda environment specification."""
 
     @classmethod
-    def from_packages(cls, packages: List[str]) -> Dict[str, Any]:
-        return cls(conda={"dependencies": ["pip", {"pip": packages}]})
+    def from_packages(cls, packages: List[str], **kwargs) -> Dict[str, Any]:
+        return cls(conda={"dependencies": ["pip", {"pip": packages}]}, **kwargs)
 
 
 @dataclass

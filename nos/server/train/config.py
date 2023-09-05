@@ -36,10 +36,10 @@ class TrainingJobConfig:
         {uuid}_job_config.json: Job configuration for the training job.
     """
 
-    runtime_env: Dict[str, str]
+    runtime_env: RuntimeEnv = field(init=False, default=None)
     """The runtime environment to use for the training job."""
 
-    uuid: str = field(default_factory=lambda: str(uuid.uuid4()))
+    uuid: str = field(default_factory=lambda: str(uuid.uuid4().hex[:8]))
     """The UUID for creating a unique training job directory."""
 
     output_directory: str = field(init=False, default=None)
@@ -49,8 +49,8 @@ class TrainingJobConfig:
     """The working directory for the training job."""
 
     def __post_init__(self):
-        # Setup the instance and output directories
-        logger.debug("Setting up instance and output directories")
+        # Setup the output directories
+        logger.debug("Setting up output directories")
         working_directory = Path(self.working_directory / self.uuid)
         working_directory.mkdir(parents=True, exist_ok=True)
         logger.debug(f"Finished setting up instance and output directories [working_directory={working_directory}]")
@@ -65,6 +65,6 @@ class TrainingJobConfig:
 
         # Write the metadata and job configuration files
         logger.debug(f"Writing metadata and job configuration files to {working_directory}")
-        with open(str(working_directory / f"{self.uuid}_job_config.json"), "w") as fp:
+        with open(str(working_directory / f"{self.uuid}_config.json"), "w") as fp:
             json.dump(asdict(self), fp, indent=2)
         logger.debug(f"Finished writing metadata and job configuration files to {working_directory}")

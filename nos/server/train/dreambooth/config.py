@@ -8,7 +8,7 @@ from typing import Any, Dict
 
 from nos.common.git import cached_repo
 from nos.common.spec import RuntimeEnv
-from nos.constants import NOS_HOME
+from nos.constants import NOS_HOME, NOS_MODELS_DIR
 from nos.logging import logger
 from nos.models.dreambooth.dreambooth import StableDiffusionDreamboothConfigs
 from nos.server.train.config import TrainingJobConfig
@@ -26,9 +26,10 @@ RUNTIME_ENVS = {
     },
 }
 
+NOS_CUSTOM_MODELS_DIR = NOS_MODELS_DIR / "custom"
 
 @dataclass
-class StableDiffusionTrainingJobConfig:
+class StableDiffusionTrainingJobConfig(TrainingJobConfig):
     """Configuration for a stable-diffusion training job."""
 
     model_name: str
@@ -52,8 +53,10 @@ class StableDiffusionTrainingJobConfig:
     seed: int = 0
     """Random seed."""
 
-    job_config: TrainingJobConfig = field(init=False, default=None)
-    """The job configuration for the training job."""
+    runtime_env: RuntimeEnv = field(
+        init=False, 
+        default_factory=lambda: RUNTIME_ENVS["diffusers-latest"]["runtime_env"])
+    """The runtime environment for the training job."""
 
     repo_directory: str = field(
         init=False,
@@ -65,6 +68,8 @@ class StableDiffusionTrainingJobConfig:
     )
     """The repository to use for the training job."""
 
+    working_directory: str = field(default= NOS_CUSTOM_MODELS_DIR / f"{self.method}_{self.uuid}")
+
     def __post_init__(self):
         if self.method not in StableDiffusionDreamboothConfigs:
             raise ValueError(
@@ -72,14 +77,13 @@ class StableDiffusionTrainingJobConfig:
             )
 
         # Setup the working directories (output, repo)
-        runtime_env = RUNTIME_ENVS["diffusers-latest"].copy()
-        runtime_env["working_dir"] = self.repo_directory
+        # runtime_env = RUNTIME_ENVS["diffusers-latest"].copy()
+        # runtime_env["working_dir"] = self.repo_directory
 
         # Create a new short unique name using method and uuid (with 8 characters)
-        model_id = f"{self.method}_{uuid.uuid4().hex[:8]}"
-        self.job_config = TrainingJobConfig(uuid=model_id, runtime_env=runtime_env)
-        job_id = self.job_config.uuid
-        working_directory = Path(self.job_config.working_directory)
+        # model_id = f"{self.method}_{uuid.uuid4().hex[:8]}"
+        # self.job_config = TrainingJobConfig(uuid=model_id, runtime_env=runtime_env)
+        working_directory = Path(self.working_directory)
 
         # Copy the instance directory to the working directory
         self.instance_directory = NOS_VOLUME_DIR / self.instance_directory
@@ -96,7 +100,7 @@ class StableDiffusionTrainingJobConfig:
 
         # Write the metadata and model configuration files
         logger.debug(f"Writing metadata and job configuration files to {working_directory}")
-        with open(str(working_directory / f"{job_id}_metadata.json"), "w") as fp:
+        with open(str(working_directory / f"{self.uuid}_metadata.json"), "w") as fp:
             json.dump(asdict(self), fp, indent=2)
         logger.debug(f"Finished writing metadata and job configuration files to {working_directory}")
 
