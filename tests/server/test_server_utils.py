@@ -13,20 +13,28 @@ num_cpus = psutil.cpu_count(logical=False)
 pytestmark = pytest.mark.skipif(not has_docker() or num_cpus < 4, reason="docker is not installed")
 
 
-def test_nos_init():
+@pytest.mark.parametrize(
+    "runtime",
+    [
+        "auto",
+        "cpu",
+        "gpu",
+    ],
+)
+def test_nos_init(runtime):
     """Test the NOS server daemon initialization.
 
     See tests/client/test_client_integration.py for the end-to-end integration with client.
     """
 
     # Initialize the server
-    container_1 = nos.init(logging_level=logging.DEBUG)
+    container_1 = nos.init(runtime=runtime, logging_level=logging.DEBUG)
     assert container_1 is not None
 
     containers = InferenceServiceRuntime.list()
     assert len(containers) == 1
 
-    container_2 = nos.init(logging_level="DEBUG")
+    container_2 = nos.init(runtime=runtime, logging_level="DEBUG")
     assert container_2 is not None
     assert container_1.id == container_2.id
 
@@ -41,6 +49,13 @@ def test_nos_init():
 
     # Shutdown the server again (should not raise an error)
     nos.shutdown()
+
+
+def test_nos_init_local():
+    import ray
+
+    nos.init(runtime="local", logging_level=logging.DEBUG)
+    assert ray.is_initialized(), "Ray should be initialized."
 
 
 def test_nos_init_variants():

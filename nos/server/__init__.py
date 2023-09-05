@@ -73,7 +73,7 @@ def init(
 
 
     Args:
-        runtime (str, optional): The runtime to use (i.e. "cpu", "gpu"). Defaults to "auto".
+        runtime (str, optional): The runtime to use (i.e. "auto", "local", "cpu", "gpu"). Defaults to "auto".
             In "auto" mode, the runtime will be automatically detected.
         port (int, optional): The port to use for the inference server. Defaults to DEFAULT_GRPC_PORT.
         utilization (float, optional): The target cpu/memory utilization of inference server. Defaults to 0.8.
@@ -84,10 +84,19 @@ def init(
             appropriate version is used.
     """
     # Check arguments
-    available_runtimes = list(InferenceServiceRuntime.configs.keys()) + ["auto"]
+    available_runtimes = list(InferenceServiceRuntime.configs.keys()) + ["auto", "local"]
     if runtime not in available_runtimes:
         raise ValueError(f"Invalid inference service runtime: {runtime}, available: {available_runtimes}")
 
+    # If runtime is "local", return early with ray executor
+    if runtime == "local":
+        from nos.executors.ray import RayExecutor
+
+        executor = RayExecutor.get()
+        executor.init()
+        return
+
+    # Check arguments
     if utilization <= 0.25 or utilization > 1:
         raise ValueError(f"Invalid utilization: {utilization}, must be in (0.25, 1].")
 
