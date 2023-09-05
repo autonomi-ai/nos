@@ -21,7 +21,7 @@ import pytest
 from loguru import logger
 
 from nos import hub
-from nos.common import ModelSpec, TaskType
+from nos.common import ModelSpec, RuntimeEnv, TaskType
 from nos.managers import ModelHandle, ModelManager
 from nos.test.conftest import model_manager as manager  # noqa: F401, F811
 
@@ -30,7 +30,14 @@ def test_model_manager(manager):  # noqa: F811
     # Test adding several models back to back with the same manager.
     # This should not raise any OOM errors as models are evicted
     # from the manager's cache.
+
+    # Only test unique functions/classes
+    func_or_cls = set()
     for idx, spec in enumerate(hub.list()):
+        if spec.signature.func_or_cls not in func_or_cls:
+            func_or_cls.add(spec.signature.func_or_cls)
+        else:
+            continue
         # Note: `manager.load()` is a wrapper around `manager.add()`
         # and creates a single replica of the model.
         handler: ModelHandle = manager.load(spec)
@@ -41,8 +48,8 @@ def test_model_manager(manager):  # noqa: F811
         logger.debug(f"idx: {idx}")
         logger.debug(f"Model manager: {manager}, spec: {spec}")
 
-    # Check if the model manager contains the model.
-    assert spec in manager
+        # Check if the model manager contains the model.
+        assert spec in manager
 
     # Test noop with model manager
     spec = hub.load_spec("noop/process-images", task=TaskType.CUSTOM)
@@ -124,7 +131,7 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
         CustomModel,
         init_args=(),
         init_kwargs={"model_name": "resnet18"},
-        pip=["onnx", "onnxruntime", "pydantic<2"],
+        runtime_env=RuntimeEnv.from_packages(["onnx", "onnxruntime", "pydantic<2"]),
     )
     assert spec is not None
     assert isinstance(spec, ModelSpec)

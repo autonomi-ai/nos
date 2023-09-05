@@ -31,6 +31,12 @@ def ray_executor():
 
 @pytest.fixture
 def model_manager(ray_executor):  # noqa: F811
+    """Model manager fixture for testing purposes.
+
+    Note (spillai): This is currently scoped to the object-level to avoid
+    issues with the Ray runtime. This will be scoped to the session-level
+    once we have a proper Ray runtime for testing.
+    """
     from nos.managers import ModelManager
 
     manager = ModelManager()
