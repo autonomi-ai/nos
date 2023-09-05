@@ -408,12 +408,15 @@ class ModelSpec:
         return loads(minfo.response_bytes)
 
     @classmethod
-    def from_cls(cls, func_or_cls: Callable, method_name: str = "__call__", **kwargs: Any) -> "ModelSpec":
+    def from_cls(
+        cls, func_or_cls: Callable, method_name: str = "__call__", runtime_env: RuntimeEnv = None, **kwargs: Any
+    ) -> "ModelSpec":
         """Wrap custom models/classes into a nos-compatible model spec.
 
         Args:
             func_or_cls (Callable): Model function or class. For now, only classes are supported.
             method_name (str): Method name to be executed.
+            runtime_env (RuntimeEnv): Runtime environment specification.
             **kwargs: Additional keyword arguments.
                 These include `init_args` and `init_kwargs` to initialize the model instance.
 
@@ -442,7 +445,10 @@ class ModelSpec:
         call_outputs = {"result": sig.return_annotation}
 
         # Build the model spec from the function signature
-        pip = kwargs.pop("pip", None)
+        # TODO (spillai): Provide additional RayRuntimeEnvConfig as `config`
+        # config = dict(setup_timeout_seconds=10 * 60, eager_install=True)
+        if runtime_env:
+            logger.debug(f"Using custom runtime_env [env={runtime_env}]")
         spec = cls(
             name=func_or_cls.__name__,
             task=TaskType.CUSTOM,
@@ -454,6 +460,6 @@ class ModelSpec:
                 inputs=call_inputs,
                 outputs=call_outputs,
             ),
-            runtime_env=RuntimeEnv.from_packages(pip) if pip else None,
+            runtime_env=runtime_env,
         )
         return spec

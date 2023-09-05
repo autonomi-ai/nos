@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from nos.common.git import cached_repo
+from nos.common.spec import RuntimeEnv
 from nos.constants import NOS_HOME
 from nos.logging import logger
 from nos.models.dreambooth.dreambooth import StableDiffusionDreamboothConfigs
@@ -19,7 +20,9 @@ NOS_VOLUME_DIR = NOS_HOME / "volumes"
 RUNTIME_ENVS = {
     "diffusers-latest": {
         "working_dir": "./nos/experimental/",
-        "pip": [f"https://github.com/huggingface/diffusers/archive/refs/tags/{GIT_TAG}.zip", "accelerate>=0.22.0"],
+        "runtime_env": RuntimeEnv.from_packages(
+            [f"https://github.com/huggingface/diffusers/archive/refs/tags/{GIT_TAG}.zip", "accelerate>=0.22.0"]
+        ),
     },
 }
 

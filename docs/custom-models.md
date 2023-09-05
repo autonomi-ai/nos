@@ -22,14 +22,14 @@ class CustomModel(nn.Module):
 ### Wrapping a Custom Pytorch Model with `nos.trace`
 
 ```python
-from nos.common import ModelSpec, TaskType
+from nos.common import ModelSpec, TaskType, RuntimeEnv
 
 # Get the model spec for remote execution
 spec = ModelSpec.from_cls(
     CustomModel,
     init_args=(),
     init_kwargs={"model_name": "resnet18"},
-    pip=["onnx", "onnxruntime", "pydantic<2"],
+    runtime_env=RuntimeEnv.from_packages(["onnx", "onnxruntime", "pydantic<2"]),
 )
 spec
 ```

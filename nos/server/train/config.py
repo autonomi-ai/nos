@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Dict
 
+from nos.common.spec import RuntimeEnv
 from nos.constants import NOS_MODELS_DIR
 from nos.logging import logger
 
@@ -11,11 +12,15 @@ from nos.logging import logger
 RUNTIME_ENVS = {
     "diffusers-latest": {
         "working_dir": "./nos/experimental/",
-        "pip": ["https://github.com/huggingface/diffusers/archive/refs/tags/v0.20.1.zip", "accelerate>=0.22.0"],
+        "runtime_env": RuntimeEnv.from_packages(
+            ["https://github.com/huggingface/diffusers/archive/refs/tags/v0.20.1.zip", "accelerate>=0.22.0"]
+        ),
     },
     "mmdetection-latest": {
         "working_dir": "./nos/experimental/",
-        "pip": ["https://github.com/open-mmlab/mmdetection/archive/refs/tags/v3.1.0.zip"],
+        "runtime_env": RuntimeEnv.from_packages(
+            ["https://github.com/open-mmlab/mmdetection/archive/refs/tags/v3.1.0.zip"]
+        ),
     },
 }
 
