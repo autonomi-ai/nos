@@ -18,6 +18,7 @@ nav:
     - Starting the NOS Server: docs/starting-the-server.md
     - Running Inference: docs/running-inference.md
     - Accelerating Models: docs/accelerating-models.md
+    - Fine-tuning Models: docs/fine-tuning-models.md
   - API Reference:
     - nos.common:
       - nos.common.spec: docs/api/common/spec.md
