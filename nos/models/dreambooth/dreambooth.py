@@ -140,15 +140,25 @@ class StableDiffusionLoRA:
 
     configs = StableDiffusionDreamboothHub(namespace="custom").configs
 
-    def __init__(self, model_name: str = "stabilityai/stable-diffusion-2-1", dtype: torch.dtype = torch.float16):
+    def __init__(
+        self,
+        model_name: str = "stabilityai/stable-diffusion-2-1",
+        weights_dir=None,
+        dtype: torch.dtype = torch.float16,
+    ):
         from diffusers import DiffusionPipeline, DPMSolverMultistepScheduler
 
-        try:
-            self.cfg = StableDiffusionLoRA.configs[model_name]
-        except KeyError:
-            raise ValueError(
-                f"Invalid model_name: {model_name}, available models: {StableDiffusionLoRA.configs.keys()}"
-            )
+        if weights_dir:
+            # Manually specified weights directory, create a config
+            self.cfg = StableDiffusionDreamboothLoRAConfig(model_name=model_name, attn_procs=str(weights_dir))
+            StableDiffusionLoRA.configs[model_name] = self.cfg
+        else:
+            try:
+                self.cfg = StableDiffusionLoRA.configs[model_name]
+            except KeyError:
+                raise ValueError(
+                    f"Invalid model_name: {model_name}, available models: {StableDiffusionLoRA.configs.keys()}"
+                )
 
         if torch.cuda.is_available():
             self.device = "cuda"
@@ -162,7 +172,7 @@ class StableDiffusionLoRA:
         self.pipe.to(self.device)
 
         # Update attention processors
-        self.update_attn_procs(model_name)
+        self.pipe.load_lora_weights(weights_dir, weight_name="pytorch_lora_weights.safetensors")
 
     def update_attn_procs(self, model_name: str):
         """Update attention processors."""
