@@ -23,6 +23,9 @@ class TrainingJobConfig:
             <uuid>_config.json: Configuration for the training job.
     """
 
+    method: str = field(default="nos/custom")
+    """Training method (e.g. `diffusers/stable-diffusion-dreambooth-lora` etc)."""
+
     runtime_env: RuntimeEnv = field(init=False, default=None)
     """The runtime environment to use for the training job."""
 
@@ -38,7 +41,7 @@ class TrainingJobConfig:
 
     def __post_init__(self):
         logger.debug("Set up working directories")
-        working_directory = Path(self.working_directory) / self.uuid
+        working_directory = Path(self.working_directory) / f"{self.method}_{self.uuid}"
         working_directory.mkdir(parents=True, exist_ok=True)
         self.working_directory = str(working_directory)
         logger.debug(f"Finished setting up working directories [working_dir={working_directory}]")
@@ -71,6 +74,5 @@ class TrainingJobConfig:
         return {
             "entrypoint": self.entrypoint,
             "submission_id": self.uuid,
-            "runtime_env": self.runtime_env,
-            "metadata": self.metadata,
+            "runtime_env": self.runtime_env.asdict(),
         }

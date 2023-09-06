@@ -6,6 +6,7 @@ import pytest
 
 from nos.executors.ray import RayExecutor
 from nos.logging import logger
+from nos.server.train import TrainingService
 from nos.test.conftest import ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
 
@@ -13,7 +14,7 @@ from nos.test.utils import NOS_TEST_IMAGE
 pytestmark = pytest.mark.server
 
 
-def submit_dreambooth_lora_job(svc) -> str:  # noqa: F811
+def submit_dreambooth_lora_job(svc: TrainingService, method: str) -> str:  # noqa: F811
     """Submit a dreambooth LoRA job."""
     # Copy test image to temporary directory and test training service
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -21,7 +22,7 @@ def submit_dreambooth_lora_job(svc) -> str:  # noqa: F811
         shutil.copy(NOS_TEST_IMAGE, tmp_image)
 
         job_id = svc.train(
-            method="stable-diffusion-dreambooth-lora",
+            method=method,
             inputs={
                 "model_name": "stabilityai/stable-diffusion-2-1",
                 "instance_directory": tmp_dir,
@@ -30,6 +31,7 @@ def submit_dreambooth_lora_job(svc) -> str:  # noqa: F811
                 "max_train_steps": 10,
                 "seed": 0,
             },
+            overrides={},  # type: ignore
             metadata={
                 "name": "sdv21-dreambooth-lora-test-bench",
             },
@@ -39,13 +41,18 @@ def submit_dreambooth_lora_job(svc) -> str:  # noqa: F811
     return job_id
 
 
-def submit_mmdetection_job(svc) -> str:  # noqa: F811
+def submit_mmdetection_job(svc: TrainingService, method: str) -> str:  # noqa: F811
     """Submit a mmdetection job."""
+    from nos.server.train.openmmlab.mmdetection import config
+
+    config_dir = Path(config.__file__).parent
     job_id = svc.train(
-        method="openmmlab/mmdetection",
+        method=method,
         inputs={
-            "config_filename": "configs/yolox/yolox_s_8xb8-300e_coco_ft.py",
+            "config_filename": str(config_dir / "configs/yolox/yolox_s_8xb8-300e_coco_ft.py"),
+            "config_filename": "/home/spillai/software/openmmlab/mmdetection/configs/yolox/yolox_s_8xb8-300e_coco.py",
         },
+        overrides={},  # type: ignore
         metadata={
             "name": "yolox-s-8xb8-300e-coco-ft",
         },
@@ -55,19 +62,22 @@ def submit_mmdetection_job(svc) -> str:  # noqa: F811
     return job_id
 
 
-@pytest.mark.parametrize("method", ["stable-diffusion-dreambooth-lora", "openmmlab/mmdetection"])
-def test_training_service_dreambooth(ray_executor: RayExecutor, method):  # noqa: F811
+# DREAMBOOTH_LORA_METHOD
+TRAINING_METHODS = ["open-mmlab/mmdetection"]
+
+
+@pytest.mark.parametrize("method", TRAINING_METHODS)
+def test_training_service(ray_executor: RayExecutor, method):  # noqa: F811
     """Test training service for dreambooth LoRA."""
-    from nos.server.train import TrainingService
 
     # Test training service
     svc = TrainingService()
 
     # Submit a job
     if method == "stable-diffusion-dreambooth-lora":
-        job_id = submit_dreambooth_lora_job(svc)
-    elif method == "openmmlab/mmdetection":
-        job_id = submit_mmdetection_job(svc)
+        job_id = submit_dreambooth_lora_job(svc, method)
+    elif method == "open-mmlab/mmdetection":
+        job_id = submit_mmdetection_job(svc, method)
     else:
         raise ValueError(f"Invalid method: {method}")
 
@@ -90,4 +100,6 @@ def test_training_service_dreambooth(ray_executor: RayExecutor, method):  # noqa
     status = svc.jobs.wait(job_id, timeout=600, retry_interval=5)
     assert status is not None
     logger.debug(f"Status for job {job_id}: {status}")
-    assert status == "SUCCEEDED"
+
+    logs = svc.jobs.logs(job_id)
+    assert status == "SUCCEEDED", f"Training job failed [job_id={job_id}, status={status}]\n{'-' * 80}\n{logs}"

@@ -10,9 +10,24 @@ class RuntimeEnv:
     conda: Dict[str, Any]
     """Conda environment specification."""
 
+    working_dir: str = field(default=None)
+    """Working directory."""
+
+    worker_process_setup_hook: Any = field(default=None)
+    """Worker process setup hook."""
+
     @classmethod
     def from_packages(cls, packages: List[str], **kwargs) -> Dict[str, Any]:
         return cls(conda={"dependencies": ["pip", {"pip": packages}]}, **kwargs)
+
+    def asdict(self):
+        """Return a dictionary representation of the runtime environment."""
+        return {
+            "conda": self.conda,
+            "env_vars": None,
+            "working_dir": self.working_dir,
+            "worker_process_setup_hook": self.worker_process_setup_hook,
+        }
 
 
 @dataclass

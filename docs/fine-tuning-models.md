@@ -6,21 +6,24 @@ In this tutorial, we're going to show how we can fine-tune models through the NO
 import shutil
 from pathlib import Path
 
+from nos.client import Client, TaskType
 from nos.common import TaskType
 from nos.types import TrainingJobResponse
 from nos.logging import logger
-from nos.test.utils import NOS_TEST_IMAGE
 
 # Test waiting for server to start
 # This call should be instantaneous as the server is already ready for the test
-client = InferenceClient()
+client = Client()
 logger.debug("Waiting for server to start...")
 client.WaitForServer()
 
 logger.debug("Confirming server is healthy...")
 if not client.IsHealthy():
     raise RuntimeError("NOS server is not healthy")
+```
 
+**1. Export training dataset view**
+```python
 # Create a volume for training data
 # Note: Volumes need to be cross-mounted on the server
 volume_dir = client.Volume("datasets/coco128/<snapshot_id>")
@@ -28,10 +31,14 @@ volume_dir = client.Volume("datasets/coco128/<snapshot_id>")
 # Export the pixeltable training data to the volume
 # Note: Additional dataset schemas can be supported (e.g. COCO, VOC, etc.)
 pt_table.save(volume_dir, schema="pixeltable")
+```
 
+**2. Fine-tune YOLO-X on exported dataset view**
+
+```python
 # Train a new YOLOX-s model on the dataset view
 response: TrainingJobResponse = client.Train(
-    method="openmmlab/mmdetection",
+    method="open-mmlab/mmdetection",
     # Standard training inputs exposed by the NOS API
     inputs={
         "model_name": "open-mmlab/yolox-small",
@@ -58,18 +65,23 @@ logger.debug(f"Training job dispatched [job_id={job_id}].")
 
 # Check status for the training job to complete
 status = client.GetTrainingJobStatus(job_id)
+logger.debug(f"Training job [status={status}]")
 
-logger.debug(f"Training service dispatched [model_id={model_id}].")
+# TrainingJobResponse
+# model_id       - unique model ID assigned to the trained model
+# job_id         - unique job ID assigned to the training job
+# experiment_uri - remote URI to the experiment statistics
+# model_uri      - remote URI to the trained model
+# status         - status of the training job
+
 
 ```
-
----
-### 🚀 2. Running inference with fine-tuned models
+**3. Running inference with the fine-tuned model**
 
 Once trained, models are automatically registered under the `custom/` namespace. Each fine-tuned model is assigned a unique `model_id` that can be used to retrieve the model handle.
 
 ```python
-from nos.client import InferenceClient, TaskType
+from nos.client import Client, TaskType
 from nos.test.utils import NOS_TEST_IMAGE
 
 # Test inference with the fine-tuned model

@@ -17,7 +17,13 @@ conda env create -n <env_name> -f conda/envs/base-gpu-cu118/base-gpu-cu118.yml
 Install the necessary packages from conda and PyPI.
 
 ```bash
+mamba install pytorch torchvision pytorch-cuda=11.8 python=3.8.10 -c pytorch -c nvidia
 pip install ... # PyPI packages
+```
+
+Optionally, you can install cuda-nvcc (cudatoolkit) for compiling CUDA kernels:
+```bash
+mamba install cudatoolkit=11.8 cuda-nvcc=11.8 -c nvidia
 ```
 
 3. Export the environment

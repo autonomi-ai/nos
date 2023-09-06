@@ -71,14 +71,14 @@ model = dict(
 
 # dataset settings
 custom_imports = dict(
-    imports=["nos.experimental.train.mmdet.datasets"],
+    imports=["nos.server.train.openmmlab.mmdetection.datasets"],
     allow_failed_imports=False
 )
 data_root = "data/coco/"
 dataset_type = "HuggingfaceDataset"
 
-data_root = "/mnt/hd2/datasets/coco/coco/"
-dataset_type = "CocoDataset"
+# data_root = "/mnt/hd2/datasets/coco/coco/"
+# dataset_type = "CocoDataset"
 
 # Example to use different file client
 # Method 1: simply set the data root and let the file I/O module

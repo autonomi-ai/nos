@@ -7,7 +7,6 @@ from nos.common.runtime_env import RuntimeEnvironmentsHub
 from nos.common.spec import RuntimeEnv
 from nos.constants import NOS_HOME, NOS_MODELS_DIR
 from nos.logging import logger
-from nos.models.dreambooth.dreambooth import StableDiffusionDreamboothConfigs
 from nos.server.train.config import TrainingJobConfig
 
 
@@ -31,9 +30,6 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
 
     model_name: str = "stabilityai/stable-diffusion-2-1"
     """Model name (e.g `stabilityai/stable-diffusion-2-1`)."""
-
-    method: str = "diffusers/stable-diffusion-dreambooth-lora"
-    """Stable diffusion training method (choice of `stable-diffusion-dreambooth-lora`)."""
 
     instance_directory: str = None
     """Image instance directory (e.g. dog)."""
@@ -65,10 +61,6 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
     """The repository to use for the training job."""
 
     def __post_init__(self):
-        if self.method not in StableDiffusionDreamboothConfigs:
-            raise ValueError(
-                f"Invalid method: {self.method}, available methods: [{','.join(k for k in StableDiffusionDreamboothConfigs)}]"
-            )
         if self.instance_directory is None:
             raise ValueError("instance_directory must be specified.")
         if self.instance_prompt is None:
@@ -78,19 +70,12 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
             f"{self.__class__.__name__} [uuid={self.uuid}, working_dir={self.working_directory}, instance_dir={self.instance_directory}]"
         )
 
-        # Setup the working directories
-        logger.debug("Set up working directories")
-        working_directory = Path(self.working_directory) / f"{self.method}_{self.uuid}"
-        working_directory.mkdir(parents=True, exist_ok=True)
-        self.working_directory = str(working_directory)
-        logger.debug(f"Finished setting up working directories [working_dir={working_directory}]")
-
         # # Copy the instance directory to the working directory
         # instance_volume_directory = NOS_VOLUME_DIR / self.instance_directory
         # logger.debug(f"Instance volume directory [dir={instance_volume_directory}]")
         # if not Path(instance_volume_directory).exists():
         #     raise IOError(f"Failed to load instance_directory={instance_volume_directory}.")
-        instance_directory = Path(working_directory) / "instances"
+        instance_directory = Path(self.working_directory) / "instances"
         # shutil.copytree(instance_volume_directory, str(instance_directory))
         # nfiles = len(os.listdir(instance_directory))
         # logger.debug(f"Copied instance directory to {working_directory} [nfiles={nfiles}]")
@@ -122,5 +107,5 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
         """The job configuration for the Ray training job."""
         return {
             **super().job_configuration(),
-            "entrypoint_resources": {"gpu": 1},
+            "entrypoint_num_gpus": 1,
         }

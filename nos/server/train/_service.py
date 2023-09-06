@@ -49,8 +49,8 @@ class TrainingService:
     """Ray-executor based training service."""
 
     config_cls = {
-        "stable-diffusion-dreambooth-lora": StableDiffusionDreamboothTrainingJobConfig,
-        "openmmlab/mmdetection": MMDetectionTrainingJobConfig,
+        "diffusers/stable-diffusion-dreambooth-lora": StableDiffusionDreamboothTrainingJobConfig,
+        "open-mmlab/mmdetection": MMDetectionTrainingJobConfig,
     }
 
     def __init__(self):
@@ -59,34 +59,40 @@ class TrainingService:
         if not self.executor.is_initialized():
             raise RuntimeError("Ray executor is not initialized")
 
-    def train(self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None) -> str:
+    def train(
+        self, method: str, inputs: Dict[str, Any], overrides: Dict[str, Any] = None, metadata: Dict[str, Any] = None
+    ) -> str:
         """Train / Fine-tune a model by submitting a job to the RayJobExecutor.
+
+            See https://docs.ray.io/en/latest/cluster/running-applications/job-submission/doc/ray.job_submission.JobSubmissionClient.submit_job.html#ray.job_submission.JobSubmissionClient.submit_job
+            for more details on the job configuration.
 
         Args:
             method (str): Training method (e.g. `stable-diffusion-dreambooth-lora`).
             inputs (Dict[str, Any]): Training inputs.
+            overrides (Dict[str, Any], optional): Overrides for the training inputs / configuration. Defaults to None.
+            metadata (Dict[str, Any], optional): Metadata to attach to the training job. Defaults to None.
         Returns:
             str: Job ID.
         """
+        # Check if the training method and inputs are correctly specified
         try:
             config_cls = self.config_cls[method]
+            logger.debug(f"Using training config class [method={method}, config_cls={config_cls}]")
+            config = config_cls(method=method, **inputs)
+            logger.debug(f"Created training config [config={config}]")
         except KeyError:
+            logger.error(f"Training not supported for method [method={method}]")
             raise ModelNotFoundError(f"Training not supported for method [method={method}]")
-
-        # Check if the training inputs are correctly specified
-        config = config_cls(method=method, **inputs)
-        try:
-            pass
         except Exception as e:
+            logger.error(f"Invalid training inputs [inputs={inputs}, e={e}]")
             raise ValueError(f"Invalid training inputs [inputs={inputs}, e={e}]")
 
         # Submit the training job as a Ray job
-        configd = config.job_dict()
-        if metadata is not None:
-            configd["metadata"] = metadata
+        configd = config.job_configuration()
         logger.debug("Submitting training job")
         logger.debug(f"config\n{configd}]")
-        job_id = self.executor.jobs.submit(**configd)
+        job_id = self.executor.jobs.submit(**configd, metadata=metadata)
         logger.debug(f"Submitted training job [job_id={job_id}, config={configd}]")
 
         hooks = {"on_completed": (register_model, (job_id,), {})}

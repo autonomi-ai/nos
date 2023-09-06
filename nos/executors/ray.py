@@ -217,9 +217,12 @@ class RayJobExecutor(metaclass=SingletonMetaclass):
         status = None
         st = time.time()
         while time.time() - st < timeout:
-            status = self.status(job_id)
-            if str(status) == "SUCCEEDED":
+            status = str(self.status(job_id))
+            if status == "SUCCEEDED":
                 logger.debug(f"Training job completed [job_id={job_id}, status={status}]")
+                return status
+            elif status == "FAILED" or status == "CANCELLED":
+                logger.debug(f"Training job exited early [job_id={job_id}, status={status}]")
                 return status
             else:
                 logger.debug(f"Training job not completed yet [job_id={job_id}, status={status}]")
