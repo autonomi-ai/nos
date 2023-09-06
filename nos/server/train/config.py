@@ -1,39 +1,26 @@
 import json
 import uuid
+from typing import Any, Dict
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict
 
 from nos.common.spec import RuntimeEnv
-from nos.constants import NOS_MODELS_DIR
+from nos.constants import NOS_CACHE_DIR
 from nos.logging import logger
 
 
-RUNTIME_ENVS = {
-    "diffusers-latest": {
-        "working_dir": "./nos/experimental/",
-        "runtime_env": RuntimeEnv.from_packages(
-            ["https://github.com/huggingface/diffusers/archive/refs/tags/v0.20.1.zip", "accelerate>=0.22.0"]
-        ),
-    },
-    "mmdetection-latest": {
-        "working_dir": "./nos/experimental/",
-        "runtime_env": RuntimeEnv.from_packages(
-            ["https://github.com/open-mmlab/mmdetection/archive/refs/tags/v3.1.0.zip"]
-        ),
-    },
-}
-
-NOS_CUSTOM_MODELS_DIR = NOS_MODELS_DIR / "custom"
+NOS_TRAINING_JOBS_DIR = NOS_CACHE_DIR / "jobs"
 
 
 @dataclass
 class TrainingJobConfig:
     """Generic configuration for a training job.
 
-    Training job contents are written to `~/.nos/tmp/{uuid}/`.
-        {uuid}_metadata.json: Metadata for the training job.
-        {uuid}_job_config.json: Job configuration for the training job.
+    Training job contents are written to `~/.nos/cache/jobs/<uuid>/`.
+        cache/jobs/<uuid>:
+            weights/: Output directory for weights.
+            weights/<epoch>.pth: Weights for each epoch.
+            <uuid>_config.json: Configuration for the training job.
     """
 
     runtime_env: RuntimeEnv = field(init=False, default=None)
@@ -41,30 +28,49 @@ class TrainingJobConfig:
 
     uuid: str = field(default_factory=lambda: str(uuid.uuid4().hex[:8]))
     """The UUID for creating a unique training job directory."""
+    """Note, this is typically overriden by the subclass."""
 
-    output_directory: str = field(init=False, default=None)
-    """The output directory for the training job."""
-
-    working_directory: str = field(default=NOS_CUSTOM_MODELS_DIR)
+    working_directory: str = field(default=NOS_TRAINING_JOBS_DIR)
     """The working directory for the training job."""
 
+    metadata: Dict[str, Any] = field(default=None)
+    """Metadata for the training job."""
+
     def __post_init__(self):
-        # Setup the output directories
-        logger.debug("Setting up output directories")
-        working_directory = Path(self.working_directory / self.uuid)
+        logger.debug("Set up working directories")
+        working_directory = Path(self.working_directory) / self.uuid
         working_directory.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"Finished setting up instance and output directories [working_directory={working_directory}]")
-
-        # Create an output directory for weights
-        output_directory = working_directory / "weights"
-        output_directory.mkdir(parents=True, exist_ok=True)
-
-        # Set the instance and output directories
         self.working_directory = str(working_directory)
-        self.output_directory = str(output_directory)
+        logger.debug(f"Finished setting up working directories [working_dir={working_directory}]")
 
-        # Write the metadata and job configuration files
-        logger.debug(f"Writing metadata and job configuration files to {working_directory}")
-        with open(str(working_directory / f"{self.uuid}_config.json"), "w") as fp:
+    def save(self):
+        """Save the training job configuration."""
+        logger.debug(f"Writing configuration files [working_dir={self.working_directory}]")
+        with open(str(Path(self.working_directory) / f"{self.uuid}_config.json"), "w") as fp:
             json.dump(asdict(self), fp, indent=2)
-        logger.debug(f"Finished writing metadata and job configuration files to {working_directory}")
+        logger.debug(f"Finished writing configuration files [working_dir={self.working_directory}]")
+
+    @property
+    def entrypoint(self):
+        """The entrypoint to run for the training job."""
+        raise NotImplementedError()
+
+    @property
+    def weights_directory(self) -> str:
+        """The weights / output directory for the training job."""
+        weights_directory = Path(self.working_directory) / "weights"
+        weights_directory.mkdir(parents=True, exist_ok=True)
+        return str(weights_directory)
+
+    def job_configuration(self) -> Dict[str, Any]:
+        """The job configuration for the Ray training job.
+        
+        See ray.job_submission.JobSubmissionClient.submit_job() for more details:
+            https://docs.ray.io/en/latest/cluster/running-applications/job-submission/doc/ray.job_submission.JobSubmissionClient.submit_job.html#ray.job_submission.JobSubmissionClient.submit_job
+        """
+        return {
+            "entrypoint": self.entrypoint,
+            "submission_id": self.uuid,
+            "runtime_env": self.runtime_env,
+            "metadata": self.metadata,
+        }

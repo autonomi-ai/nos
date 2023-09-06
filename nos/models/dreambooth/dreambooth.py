@@ -33,8 +33,8 @@ class StableDiffusionDreamboothLoRAConfig:
 
 StableDiffusionDreamboothConfigType = Union[StableDiffusionDreamboothConfig, StableDiffusionDreamboothLoRAConfig]
 StableDiffusionDreamboothConfigs = {
-    "stable-diffusion-dreambooth": StableDiffusionDreamboothConfig,
-    "stable-diffusion-dreambooth-lora": StableDiffusionDreamboothLoRAConfig,
+    "diffusers/stable-diffusion-dreambooth": StableDiffusionDreamboothConfig,
+    "diffusers/stable-diffusion-dreambooth-lora": StableDiffusionDreamboothLoRAConfig,
 }
 
 

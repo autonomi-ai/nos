@@ -7,7 +7,7 @@ from nos.executors.ray import RayExecutor, RayJobExecutor
 from nos.logging import logger
 from nos.protoc import import_module
 
-from .dreambooth.config import StableDiffusionTrainingJobConfig
+from .dreambooth.config import StableDiffusionDreamboothTrainingJobConfig
 from .openmmlab.mmdetection.config import MMDetectionTrainingJobConfig
 
 
@@ -49,7 +49,7 @@ class TrainingService:
     """Ray-executor based training service."""
 
     config_cls = {
-        "stable-diffusion-dreambooth-lora": StableDiffusionTrainingJobConfig,
+        "stable-diffusion-dreambooth-lora": StableDiffusionDreamboothTrainingJobConfig,
         "openmmlab/mmdetection": MMDetectionTrainingJobConfig,
     }
 

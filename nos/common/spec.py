@@ -10,6 +10,7 @@ from pydantic.dataclasses import dataclass
 
 from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import NosInputValidationException
+from nos.common.runtime_env import RuntimeEnv
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
 from nos.constants import NOS_MODELS_DIR
@@ -190,16 +191,6 @@ class FunctionSignature:
             Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]: Outputs spec.
         """
         return {k: parse_annotated_type(v) for k, v in self.outputs.items()}
-
-
-@dataclass
-class RuntimeEnv:
-    conda: Dict[str, Any]
-    """Conda environment specification."""
-
-    @classmethod
-    def from_packages(cls, packages: List[str], **kwargs) -> Dict[str, Any]:
-        return cls(conda={"dependencies": ["pip", {"pip": packages}]}, **kwargs)
 
 
 @dataclass

@@ -87,6 +87,8 @@ exclude = '''
       | build
       | dist
       | nos/models/openmmlab/configs/mmdetection/
+      | nos/server/train/openmmlab/mmdetection/configs/
+      | tests/test_data/
     )/
 '''
 
