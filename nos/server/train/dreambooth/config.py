@@ -1,7 +1,4 @@
-import json
-import os
-import shutil
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict
 
@@ -73,9 +70,9 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
                 f"Invalid method: {self.method}, available methods: [{','.join(k for k in StableDiffusionDreamboothConfigs)}]"
             )
         if self.instance_directory is None:
-            raise ValueError(f"instance_directory must be specified.")
+            raise ValueError("instance_directory must be specified.")
         if self.instance_prompt is None:
-            raise ValueError(f"instance_prompt must be specified.")
+            raise ValueError("instance_prompt must be specified.")
 
         logger.debug(
             f"{self.__class__.__name__} [uuid={self.uuid}, working_dir={self.working_directory}, instance_dir={self.instance_directory}]"
@@ -109,16 +106,16 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
             f"""--pretrained_model_name_or_path={self.model_name} """
             f"""--instance_data_dir={self.instance_directory} """
             f"""--output_dir={self.weights_directory} """
-            f'''--instance_prompt="{self.instance_prompt}" '''
+            f"""--instance_prompt="{self.instance_prompt}" """
             f"""--resolution={self.resolution} """
             f"""--train_batch_size=1 """
             f"""--gradient_accumulation_steps=1 """
             f"""--checkpointing_steps={self.max_train_steps // 5} """
             f"""--learning_rate=1e-4"""
-            f'''--lr_scheduler="constant" '''
+            f"""--lr_scheduler="constant" """
             f""" --lr_warmup_steps=0 """
             f"""--max_train_steps={self.max_train_steps} """
-            f'''--seed="{self.seed}" '''
+            f"""--seed="{self.seed}" """
         )
 
     def job_configuration(self) -> Dict[str, Any]:

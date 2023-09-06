@@ -1,8 +1,8 @@
 import json
 import uuid
-from typing import Any, Dict
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
+from typing import Any, Dict
 
 from nos.common.spec import RuntimeEnv
 from nos.constants import NOS_CACHE_DIR
@@ -64,7 +64,7 @@ class TrainingJobConfig:
 
     def job_configuration(self) -> Dict[str, Any]:
         """The job configuration for the Ray training job.
-        
+
         See ray.job_submission.JobSubmissionClient.submit_job() for more details:
             https://docs.ray.io/en/latest/cluster/running-applications/job-submission/doc/ray.job_submission.JobSubmissionClient.submit_job.html#ray.job_submission.JobSubmissionClient.submit_job
         """

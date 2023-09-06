@@ -71,7 +71,7 @@ model = dict(
 
 # dataset settings
 custom_imports = dict(
-    imports=["nos.experimental.train.mmdet.datasets"], 
+    imports=["nos.experimental.train.mmdet.datasets"],
     allow_failed_imports=False
 )
 data_root = "data/coco/"

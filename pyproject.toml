@@ -73,23 +73,14 @@ exclude = [
 [tool.black]
 line-length = 119
 target-version = ['py38']
-exclude = '''
-    /(
-        \.data
-      | \.eggs
-      | \.git
-      | \.hg
-      | \.mypy_cache
-      | \.tox
-      | \.venv
-      | _build
-      | buck-out
-      | build
-      | dist
-      | nos/models/openmmlab/configs/mmdetection/
-      | nos/server/train/openmmlab/mmdetection/configs/
-      | tests/test_data/
-    )/
+force-exclude = '''
+/(
+    \.eggs
+    | \.git
+    | build
+    | dist
+    | tests/test_data/
+)
 '''
 
 [tool.ruff]
@@ -136,7 +127,6 @@ exclude = [
     "build",
     "dist",
     "venv",
-    "nos/models/openmmlab/mmdetection/configs",
     ]
 
 # Allow unused variables when underscore-prefixed.

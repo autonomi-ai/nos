@@ -1,8 +1,4 @@
-import json
-import os
-import shutil
-import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict
 
@@ -47,9 +43,7 @@ class MMDetectionTrainingJobConfig(TrainingJobConfig):
         if not Path(self.config_filename).exists():
             raise IOError(f"Failed to load config [filename={self.config_filename}].")
 
-        logger.debug(
-            f"{self.__class__.__name__} [uuid={self.uuid}, working_dir={self.working_directory}]"
-        )
+        logger.debug(f"{self.__class__.__name__} [uuid={self.uuid}, working_dir={self.working_directory}]")
 
         # Setup the working directories (output, repo)
         # runtime_env = RuntimeEnvironmentsHub[RUNTIME_ENV_NAME].copy()
