@@ -46,13 +46,16 @@ def submit_mmdetection_job(svc: TrainingService, method: str) -> str:  # noqa: F
     from nos.server.train.openmmlab.mmdetection import config
 
     config_dir = Path(config.__file__).parent
+    logger.debug(f"Config dir: {config_dir}")
     job_id = svc.train(
         method=method,
         inputs={
-            "config_filename": str(config_dir / "configs/yolox/yolox_s_8xb8-300e_coco_ft.py"),
-            "config_filename": "/home/spillai/software/openmmlab/mmdetection/configs/yolox/yolox_s_8xb8-300e_coco.py",
+            "config_filename": "configs/yolox/yolox_s_8xb8-300e_coco.py",
         },
-        overrides={},  # type: ignore
+        overrides={
+            "data_root": "data/coco/",
+            "dataset_type": "HuggingfaceDataset",
+        },  # type: ignore
         metadata={
             "name": "yolox-s-8xb8-300e-coco-ft",
         },

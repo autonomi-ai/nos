@@ -22,7 +22,40 @@ if not client.IsHealthy():
     raise RuntimeError("NOS server is not healthy")
 ```
 
-**1. Export training dataset view**
+
+**1. Get the training schema for the task type**
+```python
+# Get the training schema for the task type
+schema: TrainingSchema = client.GetTrainingInputSchema(task=TaskType.OBJECT_DETECTION_2D)
+
+# Input dataset schema (TrainingSchema)
+schema: TrainingSchema = dict(
+    inputs=[
+        dict(name="image_id", type=int,
+            description="Unique image identifier for the image"),
+        dict(name="image_path", type=str,
+            description="Image path (relative to the dataset root)"),
+        dict(name="gt_bboxes", type=np.ndarray,
+            description="Ground-truth bounding boxes [(x1, y1, x2, y2), ...]"),
+        dict(name="gt_labels", type=np.ndarray,
+            description="Ground-truth labels [label_id, ...]"),
+        dict(name="dataset_split", type=str,
+            description="Split (e.g. train, val, test, etc.)"),
+    ],
+    overrides=...
+    metadata=...,
+)
+
+# Supported dataset schemas
+ - dataframe: pandas.DataFrame
+    - input_uri: Union[Path, RemotePath, pd.DataFrame]
+ - coco: COCO dataset schema (input_uri should be a cross-mounted directory/volume)
+    - input_uri: Union[Path, RemotePath]
+ - ...
+
+```
+
+**2. Export training dataset view**
 ```python
 # Create a volume for training data
 # Note: Volumes need to be cross-mounted on the server
@@ -30,20 +63,20 @@ volume_dir = client.Volume("datasets/coco128/<snapshot_id>")
 
 # Export the pixeltable training data to the volume
 # Note: Additional dataset schemas can be supported (e.g. COCO, VOC, etc.)
-pt_table.save(volume_dir, schema="pixeltable")
+dataset_uri = pt_table.export(volume_dir, schema="dataframe")
 ```
 
-**2. Fine-tune YOLO-X on exported dataset view**
+**3. Fine-tune YOLO-X on exported dataset view**
 
 ```python
 # Train a new YOLOX-s model on the dataset view
 response: TrainingJobResponse = client.Train(
-    method="open-mmlab/mmdetection",
+    task=TaskType.OBJECT_DETECTION_2D,
+    model_name="open-mmlab/yolox-small",
     # Standard training inputs exposed by the NOS API
     inputs={
-        "model_name": "open-mmlab/yolox-small",
-        "input_directory": volume_dir,
-        "dataset_schema": "pixeltable",
+        "dataset_uri": dataset_uri,
+        "dataset_schema": "dataframe",
     },
     # Additional training inputs (overridden) specific to the model
     # Note: Every config parameter can be overridden if needed.
@@ -76,7 +109,7 @@ logger.debug(f"Training job [status={status}]")
 
 
 ```
-**3. Running inference with the fine-tuned model**
+**4. Running inference with the fine-tuned model**
 
 Once trained, models are automatically registered under the `custom/` namespace. Each fine-tuned model is assigned a unique `model_id` that can be used to retrieve the model handle.
 
