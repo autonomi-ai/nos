@@ -1,3 +1,5 @@
+import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict
@@ -16,7 +18,7 @@ RUNTIME_ENV_NAME = "huggingface/diffusers-latest"
 RuntimeEnvironmentsHub.register(
     RUNTIME_ENV_NAME,
     RuntimeEnv.from_packages(
-        [f"https://github.com/huggingface/diffusers/archive/refs/tags/{GIT_TAG}.zip", "accelerate>=0.22.0"]
+        [f"https://github.com/huggingface/diffusers/archive/refs/tags/{GIT_TAG}.zip", "accelerate>=0.22.0", "bitsandbytes>=0.40.0", "xformers>=0.0.20"]
     ),
 )
 
@@ -70,15 +72,15 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
             f"{self.__class__.__name__} [uuid={self.uuid}, working_dir={self.working_directory}, instance_dir={self.instance_directory}]"
         )
 
-        # # Copy the instance directory to the working directory
-        # instance_volume_directory = NOS_VOLUME_DIR / self.instance_directory
-        # logger.debug(f"Instance volume directory [dir={instance_volume_directory}]")
-        # if not Path(instance_volume_directory).exists():
-        #     raise IOError(f"Failed to load instance_directory={instance_volume_directory}.")
+        # Copy the instance directory to the working directory
+        instance_volume_directory = NOS_VOLUME_DIR / self.instance_directory
+        logger.debug(f"Instance volume directory [dir={instance_volume_directory}]")
+        if not Path(instance_volume_directory).exists():
+            raise IOError(f"Failed to load instance_directory={instance_volume_directory}.")
         instance_directory = Path(self.working_directory) / "instances"
-        # shutil.copytree(instance_volume_directory, str(instance_directory))
-        # nfiles = len(os.listdir(instance_directory))
-        # logger.debug(f"Copied instance directory to {working_directory} [nfiles={nfiles}]")
+        shutil.copytree(instance_volume_directory, str(instance_directory))
+        nfiles = len(os.listdir(instance_directory))
+        logger.debug(f"Copied instance directory from {instance_directory} [nfiles={nfiles}]")
 
         # Set the instance and output directories
         self.instance_directory = str(instance_directory)
@@ -87,7 +89,7 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
     def entrypoint(self):
         """The entrypoint to run for the training job."""
         return (
-            f"""accelerate launch train_dreambooth_lora.py"""
+            f"""accelerate launch train_dreambooth_lora.py """
             f"""--pretrained_model_name_or_path={self.model_name} """
             f"""--instance_data_dir={self.instance_directory} """
             f"""--output_dir={self.weights_directory} """
@@ -109,3 +111,33 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
             **super().job_configuration(),
             "entrypoint_num_gpus": 1,
         }
+
+class StableDiffusionXLDreamboothTrainingJobConfig(StableDiffusionDreamboothTrainingJobConfig):
+    
+    resolution: int = 1024
+    """Image resolution."""
+
+    @property
+    def entrypoint(self):
+        """The entrypoint to run for the training job."""
+        return (
+            f"""accelerate launch train_dreambooth_lora_sdxl.py"""
+            f"""--pretrained_model_name_or_path={self.model_name} """
+            f"""--instance_data_dir={self.instance_directory} """
+            f"""--output_dir={self.weights_directory} """
+            f"""--instance_prompt="{self.instance_prompt}" """
+            f"""--resolution={self.resolution} """
+            f"""--train_batch_size=1 """
+            f"""--checkpointing_steps={self.max_train_steps // 5} """
+            f"""--learning_rate=1e-5"""
+            f"""--lr_scheduler="constant" """
+            f""" --lr_warmup_steps=0 """
+            f"""--max_train_steps={self.max_train_steps} """
+            f"""--seed="{self.seed}" """
+            f"""--gradient_accumulation_steps=4 """
+            f"""--enable_xformers_memory_efficient_attention """
+            f"""--gradient_checkpointing """
+            f"""--use_8bit_adam """
+            f"""--mixed_precision="fp16" """
+        )
+            

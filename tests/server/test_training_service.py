@@ -10,7 +10,6 @@ from nos.server.train import TrainingService
 from nos.test.conftest import ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
 
-
 pytestmark = pytest.mark.server
 
 
@@ -65,9 +64,9 @@ def submit_mmdetection_job(svc: TrainingService, method: str) -> str:  # noqa: F
     return job_id
 
 
-# DREAMBOOTH_LORA_METHOD
-TRAINING_METHODS = ["open-mmlab/mmdetection"]
-
+# TRAINING_METHODS = list(TrainingService.config_cls.keys())
+# TRAINING_METHODS = ["open-mmlab/mmdetection"]
+TRAINING_METHODS = ["diffusers/stable-diffusion-dreambooth-lora"]
 
 @pytest.mark.parametrize("method", TRAINING_METHODS)
 def test_training_service(ray_executor: RayExecutor, method):  # noqa: F811
@@ -77,7 +76,7 @@ def test_training_service(ray_executor: RayExecutor, method):  # noqa: F811
     svc = TrainingService()
 
     # Submit a job
-    if method == "stable-diffusion-dreambooth-lora":
+    if method == "diffusers/stable-diffusion-dreambooth-lora":
         job_id = submit_dreambooth_lora_job(svc, method)
     elif method == "open-mmlab/mmdetection":
         job_id = submit_mmdetection_job(svc, method)
