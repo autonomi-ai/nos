@@ -72,6 +72,7 @@ MODEL_DB = Cache(str(NOS_TMP_DIR / NOS_PLAYGROUND_CHANNEL))
 
 CIVIT_BASE_URL = "https://civitai.com/api/v1/models/"
 
+
 @bot.command()
 async def civit(ctx, *, prompt):
     """
@@ -81,21 +82,22 @@ async def civit(ctx, *, prompt):
 
         tokens = ctx.message.content.split()
         if len(tokens) < 3:
-            ctx.send('Please provide both a civit model URL and a prompt.')
+            ctx.send("Please provide both a civit model URL and a prompt.")
             return
-        if tokens[1].startswith('http'):
-            model_id = tokens[1].split('/')[4]
-            model_name = tokens[1].split('/')[5]
+        if tokens[1].startswith("http"):
+            model_id = tokens[1].split("/")[4]
+            model_name = tokens[1].split("/")[5]
             model_url = CIVIT_BASE_URL + model_id
             logger.debug("Model Url: " + model_url)
-            prompt = ' '.join(tokens[2:])
+            prompt = " ".join(tokens[2:])
             logger.debug("Prompt: " + prompt)
-            await ctx.message.add_reaction("✅") 
+            await ctx.message.add_reaction("✅")
         else:
-            ctx.send('Please provide a Civit model url as the second argument.')
+            ctx.send("Please provide a Civit model url as the second argument.")
             return
 
         import requests
+
         response = requests.get(model_url)
         assert response.status_code == 200
         response_json = response.json()
@@ -122,6 +124,7 @@ async def civit(ctx, *, prompt):
         thread_id = thread.id
 
         import os
+
         if not os.path.exists(str(full_weights_path)):
             download_url = first_model_version["downloadUrl"]
             weights_dir.mkdir(parents=True, exist_ok=True)
@@ -133,6 +136,7 @@ async def civit(ctx, *, prompt):
                 f.write(response.content)
 
         from nos.models.dreambooth.dreambooth import StableDiffusionLoRA
+
         model = StableDiffusionLoRA(weights_dir=full_weights_path, model_name="runwayml/stable-diffusion-v1-5")
 
         # Save this model to the database
@@ -141,7 +145,7 @@ async def civit(ctx, *, prompt):
 
         (img,) = model(prompts=prompt, num_images=1)
 
-        image_bytes =  io.BytesIO()
+        image_bytes = io.BytesIO()
         img.save(image_bytes, format="PNG")
         image_bytes.seek(0)
         await thread.send(f"{prompt}", file=discord.File(image_bytes, filename=f"{ctx.message.id}.png"))
