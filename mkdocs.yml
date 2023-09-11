@@ -11,6 +11,7 @@ nav:
   - 🔥 Quickstart: docs/quickstart.md
 - 🤖 Demos:
   - Discord Bot: docs/demos/discord-bot.md
+# - 🏃‍♂️ Benchmarks: docs/benchmarks/index.md
 - 📚 Docs:
   - Overview:
     - NOS Architecture: docs/architecture-overview.md
@@ -72,6 +73,7 @@ plugins:
 - tags
 - same-dir
 - search
+- table-reader
 - exclude:
     glob:
       - nos/cli/README.md
