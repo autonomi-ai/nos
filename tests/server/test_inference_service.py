@@ -324,8 +324,8 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
     )
     logger.info(f"\nTiming records\n{timing_df}")
 
-    NOS_DIR = Path(nos.__file__).parent.parent / ".nos"
-    NOS_BENCHMARK_DIR = NOS_DIR / "benchmark"
+    nos_data_dir = Path(nos.__file__).parent.parent / ".data"
+    NOS_BENCHMARK_DIR = nos_data_dir / "benchmark"
     NOS_BENCHMARK_DIR.mkdir(parents=True, exist_ok=True)
     version_str = nos.__version__.replace(".", "-")
     profile_path = Path(NOS_BENCHMARK_DIR) / f"nos-{backend}-inference-benchmark--{version_str}--{date_str}.json"
