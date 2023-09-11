@@ -8,12 +8,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import discord
+import requests
 from discord.ext import commands
 from diskcache import Cache
 
 from nos.client import InferenceClient, TaskType
 from nos.constants import NOS_TMP_DIR
 from nos.logging import logger
+from nos.models.dreambooth.dreambooth import StableDiffusionLoRA
 
 
 @dataclass
@@ -88,15 +90,13 @@ async def civit(ctx, *, prompt):
             model_id = tokens[1].split("/")[4]
             model_name = tokens[1].split("/")[5]
             model_url = CIVIT_BASE_URL + model_id
-            logger.debug("Model Url: " + model_url)
+            logger.debug(f"Civit Model Url: {model_url}")
             prompt = " ".join(tokens[2:])
-            logger.debug("Prompt: " + prompt)
+            logger.debug(f"Prompt: {prompt}")
             await ctx.message.add_reaction("✅")
         else:
             ctx.send("Please provide a Civit model url as the second argument.")
             return
-
-        import requests
 
         response = requests.get(model_url)
         assert response.status_code == 200
@@ -109,11 +109,10 @@ async def civit(ctx, *, prompt):
             return
 
         # Create weights directory (these need to be different for each model)
-        logger.debug("Model id: " + str(model_name))
         weights_dir = Path(str(model_name)) / "weights"
         weights_name = "pytorch_lora_weights.safetensors"
         full_weights_path = weights_dir / weights_name
-        logger.debug("Saving Lora weights to: " + str(full_weights_path))
+        logger.debug(f"Saving Lora weights to: {full_weights_path}")
 
         # create a thread so we can keep generating images with this model
         message_id = str(ctx.message.id)
@@ -122,8 +121,6 @@ async def civit(ctx, *, prompt):
 
         # Save the thread id
         thread_id = thread.id
-
-        import os
 
         if not os.path.exists(str(full_weights_path)):
             download_url = first_model_version["downloadUrl"]
@@ -134,8 +131,6 @@ async def civit(ctx, *, prompt):
 
             with open(str(full_weights_path), "wb") as f:
                 f.write(response.content)
-
-        from nos.models.dreambooth.dreambooth import StableDiffusionLoRA
 
         model = StableDiffusionLoRA(weights_dir=full_weights_path, model_name="runwayml/stable-diffusion-v1-5")
 
