@@ -8,12 +8,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import discord
+import requests
 from discord.ext import commands
 from diskcache import Cache
 
 from nos.client import InferenceClient, TaskType
 from nos.constants import NOS_TMP_DIR
 from nos.logging import logger
+from nos.models.dreambooth.dreambooth import StableDiffusionLoRA
 
 
 @dataclass
@@ -69,6 +71,72 @@ logger.debug("Starting bot, initializing existing threads ...")
 # Simple persistent dict/database for storing models
 # This maps (channel-id -> LoRAPromptModel)
 MODEL_DB = Cache(str(NOS_TMP_DIR / NOS_PLAYGROUND_CHANNEL))
+
+CIVIT_BASE_URL = "https://civitai.com/api/v1/models/"
+
+
+@bot.command()
+async def civit(ctx, *, prompt):
+    """
+    Generate an image using a specific Civit model provided as a model url.
+    """
+    if ctx.channel.name == NOS_PLAYGROUND_CHANNEL:
+
+        tokens = ctx.message.content.split()
+        if len(tokens) < 3:
+            ctx.send("Please provide both a civit model URL and a prompt.")
+            return
+        if tokens[1].startswith("http"):
+            model_id = tokens[1].split("/")[4]
+            model_name = tokens[1].split("/")[5]
+            model_url = CIVIT_BASE_URL + model_id
+            logger.debug(f"Civit Model Url: {model_url}")
+            prompt = " ".join(tokens[2:])
+            logger.debug(f"Prompt: {prompt}")
+            await ctx.message.add_reaction("✅")
+        else:
+            ctx.send("Please provide a Civit model url as the second argument.")
+            return
+
+        response = requests.get(model_url)
+        assert response.status_code == 200
+        response_json = response.json()
+        assert len(response_json) > 0
+
+        first_model_version = response_json["modelVersions"][0]
+        if first_model_version["baseModel"] != "SD 1.5":
+            ctx.send("We currently only support SD 1.5 models.")
+            return
+
+        # Create weights directory (these need to be different for each model)
+        weights_dir = Path(str(model_name)) / "weights"
+        weights_name = "pytorch_lora_weights.safetensors"
+        full_weights_path = weights_dir / weights_name
+        logger.debug(f"Saving Lora weights to: {full_weights_path}")
+
+        # create a thread so we can keep generating images with this model
+        message_id = str(ctx.message.id)
+        thread = await ctx.message.create_thread(name=f"{model_name} ({message_id})")
+        logger.debug(f"Created thread [id={thread.id}, name={thread.name}]")
+
+        if not os.path.exists(str(full_weights_path)):
+            download_url = first_model_version["downloadUrl"]
+            weights_dir.mkdir(parents=True, exist_ok=True)
+
+            response = requests.get(download_url)
+            assert response.status_code == 200
+
+            with open(str(full_weights_path), "wb") as f:
+                f.write(response.content)
+
+        model = StableDiffusionLoRA(weights_dir=full_weights_path, model_name="runwayml/stable-diffusion-v1-5")
+
+        (img,) = model(prompts=prompt, num_images=1)
+
+        image_bytes = io.BytesIO()
+        img.save(image_bytes, format="PNG")
+        image_bytes.seek(0)
+        await thread.send(f"{prompt}", file=discord.File(image_bytes, filename=f"{ctx.message.id}.png"))
 
 
 @bot.command()
