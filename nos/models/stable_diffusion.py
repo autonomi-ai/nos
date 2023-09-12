@@ -49,7 +49,7 @@ class StableDiffusion:
         "stabilityai/stable-diffusion-2-1": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-2-1",
         ),
-        "stabilityai/sdxl": StableDiffusionConfig(
+        "stabilityai/stable-diffusion-xl-base-1.0": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-xl-base-1.0",
         ),
     }
@@ -90,11 +90,11 @@ class StableDiffusion:
             self.scheduler = EulerDiscreteScheduler.from_pretrained(self.cfg.model_name, subfolder="scheduler")
         else:
             raise ValueError(f"Unknown scheduler: {scheduler}, choose from: ['ddim', 'euler-discrete']")
+
         self.pipe = DiffusionPipeline.from_pretrained(
             self.cfg.model_name,
             scheduler=self.scheduler,
             torch_dtype=self.dtype,
-            revision=self.revision,
         )
         self.pipe = self.pipe.to(self.device)
 
