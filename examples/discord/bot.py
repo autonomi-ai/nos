@@ -120,7 +120,6 @@ async def civit(ctx, *, prompt):
         logger.debug(f"Created thread [id={thread.id}, name={thread.name}]")
 
         # Save the thread id
-        thread_id = thread.id
 
         if not os.path.exists(str(full_weights_path)):
             download_url = first_model_version["downloadUrl"]
@@ -133,10 +132,6 @@ async def civit(ctx, *, prompt):
                 f.write(response.content)
 
         model = StableDiffusionLoRA(weights_dir=full_weights_path, model_name="runwayml/stable-diffusion-v1-5")
-
-        # Save this model to the database
-        MODEL_DB[thread_id] = model
-        logger.debug(f"Saved model [id={thread_id}, model={MODEL_DB[thread_id]}]")
 
         (img,) = model(prompts=prompt, num_images=1)
 
