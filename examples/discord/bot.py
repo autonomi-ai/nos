@@ -119,8 +119,6 @@ async def civit(ctx, *, prompt):
         thread = await ctx.message.create_thread(name=f"{model_name} ({message_id})")
         logger.debug(f"Created thread [id={thread.id}, name={thread.name}]")
 
-        # Save the thread id
-
         if not os.path.exists(str(full_weights_path)):
             download_url = first_model_version["downloadUrl"]
             weights_dir.mkdir(parents=True, exist_ok=True)
