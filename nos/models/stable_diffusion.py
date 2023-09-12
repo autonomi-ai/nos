@@ -49,6 +49,9 @@ class StableDiffusion:
         "stabilityai/stable-diffusion-2-1": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-2-1",
         ),
+        "stabilityai/sdxl": StableDiffusionConfig(
+            model_name="stabilityai/stable-diffusion-xl-base-1.0",
+        ),
     }
 
     def __init__(
