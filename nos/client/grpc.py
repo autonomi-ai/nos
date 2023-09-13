@@ -1,10 +1,8 @@
 """gRPC client for NOS service."""
 import secrets
 import time
-import uuid
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
-from pathlib import Path
 from typing import Any, Callable, Dict, List
 
 import grpc
@@ -20,7 +18,7 @@ from nos.common.exceptions import (
     NosServerReadyException,
 )
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
-from nos.constants import DEFAULT_GRPC_PORT, NOS_HOME, NOS_PROFILING_ENABLED
+from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -298,28 +296,14 @@ class InferenceClient:
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
-        try:
-            request = nos_service_pb2.GenericRequest(
-                request_bytes=dumps({"method": method, "inputs": inputs, "metadata": metadata})
-            )
-            response = self.stub.Train(request)
-            return loads(response.response_bytes)
-        except grpc.RpcError as e:
-            raise NosClientException(f"Failed to train model (details={(e.details())})", e)
+        raise NotImplementedError("Training not supported yet.")
 
     def Volume(self, name: str = None) -> str:
         """Remote volume module for NOS.
 
         Note: This is meant for remote volume mounts especially useful for training.
         """
-        runtime = self.GetServiceRuntime()
-        root = NOS_HOME / "volumes" if runtime == "local" else Path.home() / ".nosd/volumes"
-        if name is None:
-            root.mkdir(parents=True, exist_ok=True)
-            return str(root)
-        path = root / f"{name}_{uuid.uuid4().hex[:8]}"
-        path.mkdir(parents=True, exist_ok=True)
-        return str(path)
+        raise NotImplementedError("Volumes not supported yet.")
 
     def Wait(self, job_id: str, timeout: int = 60, retry_interval: int = 5) -> None:
         """Wait for job to finish.

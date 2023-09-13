@@ -2,6 +2,19 @@
 
 ```bash
 
+Timing records (0.0.10 - 2023-09-13)
+                     desc  elapsed    n  latency_ms     fps
+0            noop_294x240     1.10  168        6.55  152.73
+1            noop_640x480     1.16  168        6.90  144.83
+2           noop_1280x720     4.70  168       27.98   35.74
+3          noop_2880x1620    17.13  168      101.96    9.81
+4    yolox_medium_294x240     1.88  168       11.19   89.36
+5    yolox_medium_640x480     2.00  168       11.90   84.00
+6   yolox_medium_1280x720     9.44  168       56.19   17.80
+7  yolox_medium_2880x1620    21.80  168      129.76    7.71
+8          openai_224x224     1.31  168        7.80  128.24
+9                   sdv21     7.20    2       42.86   23.33
+
 Timing records (0.0.8 - 2023-08-01) w/ SHM
                       desc  elapsed    n  latency_ms     fps
 0             noop_294x240     1.11  168        6.61  151.35

@@ -331,7 +331,7 @@ class ModelSpec:
     """Model function signature."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
-    _metadata: ModelSpecMetadata = field(init=False, default=None)
+    metadata_: ModelSpecMetadata = field(init=False, default=None)
     """Model specification metadata. The contents of the metadata (profiles, metrics, etc)
     are specified in a separate file."""
 

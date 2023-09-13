@@ -381,7 +381,6 @@ class ModelManager:
         self.handlers[model_id] = ModelHandle(spec)
         logger.debug(f"Added model [{self.handlers[model_id]}]")
         logger.debug(self)
-
         return self.handlers[model_id]
 
     def evict(self) -> ModelHandle:
@@ -400,5 +399,6 @@ class ModelManager:
         # Explicitly cleanup the model handle (including all actors)
         handle.cleanup()
         logger.debug(f"Deleted model [model_id={model_id}]")
+        logger.debug(self)
         assert model_id not in self.handlers, f"Model should have been evicted [model_id={model_id}]"
         return handle
