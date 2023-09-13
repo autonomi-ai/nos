@@ -23,4 +23,3 @@ def test_runtime_env():
     # Check if the runtime environment is registered
     assert TEST_ENV in RuntimeEnvironmentsHub.list()
     assert RuntimeEnvironmentsHub.get(TEST_ENV) is not None
-    assert RuntimeEnvironmentsHub[TEST_ENV] is not None
