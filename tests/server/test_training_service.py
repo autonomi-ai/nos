@@ -1,3 +1,4 @@
+import contextlib
 import shutil
 import tempfile
 from pathlib import Path
@@ -125,13 +126,90 @@ def test_training_service_all(ray_executor: RayExecutor, method):  # noqa: F811
     assert status == "SUCCEEDED", f"Training job failed [job_id={job_id}, status={status}]\n{'-' * 80}\n{logs}"
 
 
-def test_training_service_mmdet_gpu(grpc_client_with_mmdet_gpu_backend):  # noqa: F811
-    """Test training service for mmdetection fine-tuning."""
-    client = grpc_client_with_mmdet_gpu_backend
+@contextlib.contextmanager
+def training_volume_ctx(client, name):
+    """Context manager for creating and removing a training data volume (used for testing purposes only)."""
+    import uuid
+
+    volume_uid = uuid.uuid4().hex[:8]
+    logger.debug(f"Creating training data volume [name={name}, volume_uid={volume_uid}]")
+    volume_dir = Path(client.Volume(f"{name}-{volume_uid}"))
+    logger.debug(f"Created training data volume [path={volume_dir}]")
+    yield volume_dir
+    logger.debug(f"Removing training data volume [path={volume_dir}]")
+    shutil.rmtree(volume_dir)
+
+
+def test_training_service_dreambooth_lora_gpu(grpc_server_docker_runtime_diffusers_gpu, grpc_client_gpu):  # noqa: F811
+    """Test training service for dreambooth LoRA fine-tuning.
+
+    Note: Here, we spin up a custom docker runtime based on `diffusers-gpu` RuntimeEnv.
+    For more details, see `nos/server/train/dreambooth/config.py` and `nos-internal/runtimes/diffusers`
+    """
+
+    client = grpc_client_gpu
     assert client is not None
+    client.WaitForServer(timeout=180, retry_interval=5)
+    logger.debug("diffusers-gpu training server started!")
     assert client.IsHealthy()
 
-    # Test training service
+    # Create training data volume
+    volume_dir = Path(client.Volume())
+
+    # Submit training job
+    with training_volume_ctx(client, "sdv21-dreambooth-lora-test") as training_volume_dir:
+        # Get training volume key
+        training_volume_key = training_volume_dir.relative_to(volume_dir)
+        logger.debug(f"Created training data volume [path={training_volume_dir}, key={training_volume_key}]")
+
+        # Copy test image to temporary directory and test training service
+        shutil.copy(NOS_TEST_IMAGE, training_volume_dir / "test_image.jpg")
+
+        response = client.Train(
+            # see nos/server/train/_service.py (TrainingService.config_cls) for configuration mapping
+            method="diffusers/stable-diffusion-dreambooth-lora",
+            # see nos/server/train/dreambooth/config.py for input values
+            inputs={
+                "model_name": "stabilityai/stable-diffusion-2-1",
+                "instance_directory": training_volume_key,
+                "instance_prompt": "A photo of a bench on the moon",
+                "resolution": 512,
+                "max_train_steps": 10,
+                "seed": 0,
+            },
+            metadata={
+                "name": "sdv21-dreambooth-lora-test-bench",
+            },  # type: ignore
+        )
+        assert response is not None
+
+        # Wait for the job to complete
+        try:
+            job_id = response["job_id"]
+            status = client.Wait(job_id, timeout=600, retry_interval=5)
+            assert status is not None
+            assert status == "SUCCEEDED", f"Training job failed [job_id={job_id}, status={status}]"
+            logger.debug(f"Status for job {job_id}: {status}")
+        except Exception as e:
+            logger.debug(f"Failed to train model [e={e}], see ray logs for more details")
+            # fmt: off
+            input("Press any key to continue ...")  # noqa: T001
+            # fmt: on
+
+
+def test_training_service_mmdet_gpu(grpc_server_docker_runtime_mmdet_gpu, grpc_client_gpu):  # noqa: F811
+    """Test training service for mmdetection fine-tuning.
+
+    Note: Here, we spin up a custom docker runtime based on `mmdet-gpu` RuntimeEnv.
+    For more details, see nos/server/train/openmmlab/mmdetection/config.py. and `nos-internal/runtimes/mmdet`
+    """
+    client = grpc_client_gpu
+    assert client is not None
+    client.WaitForServer(timeout=180, retry_interval=5)
+    logger.debug("mmdet-gpu training server started!")
+    assert client.IsHealthy()
+
+    # Submit training job
     response = client.Train(
         # see nos/server/train/_service.py (TrainingService.config_cls) for configuration mapping
         method="open-mmlab/mmdetection",
@@ -148,3 +226,16 @@ def test_training_service_mmdet_gpu(grpc_client_with_mmdet_gpu_backend):  # noqa
         },
     )
     assert response is not None
+
+    # Wait for the job to complete
+    try:
+        job_id = response["job_id"]
+        status = client.Wait(job_id, timeout=600, retry_interval=5)
+        assert status is not None
+        assert status == "SUCCEEDED", f"Training job failed [job_id={job_id}, status={status}]"
+        logger.debug(f"Status for job {job_id}: {status}")
+    except Exception as e:
+        logger.debug(f"Failed to train model [e={e}], see ray logs for more details")
+        # fmt: off
+        input("Press any key to continue ...")  # noqa: T001
+        # fmt: on

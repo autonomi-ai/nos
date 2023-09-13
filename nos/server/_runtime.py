@@ -124,9 +124,6 @@ class InferenceServiceRuntime:
             image="autonomi/nos:latest-trt-runtime",
             name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-trt-runtime",
             gpu=True,
-            environment={
-                "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
-            },
             kwargs={
                 "nano_cpus": int(8e9),
                 "mem_limit": "12g",

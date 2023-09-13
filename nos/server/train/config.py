@@ -1,6 +1,7 @@
 import json
 import uuid
 from dataclasses import asdict, dataclass, field
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict
 
@@ -20,7 +21,7 @@ NOS_WORKING_DIR.mkdir(parents=True, exist_ok=True)
 class TrainingJobConfig:
     """Generic configuration for a training job.
 
-    Training job contents are written to `~/.nos/cache/jobs/<uuid>/`.
+    Training job contents are written to `~/.nos/cache/jobs/method_<uuid>/`.
         cache/jobs/<uuid>:
             weights/: Output directory for weights.
             weights/<epoch>.pth: Weights for each epoch.
@@ -37,37 +38,39 @@ class TrainingJobConfig:
     """The UUID for creating a unique training job directory."""
     """Note, this is typically overriden by the subclass."""
 
-    working_directory: str = field(default=NOS_JOBS_DIR)
+    working_directory: str = field(default=None)
     """The working directory for the training job."""
 
     metadata: Dict[str, Any] = field(default=None)
     """Metadata for the training job."""
 
-    def __post_init__(self):
-        logger.debug("Set up working directories")
-        working_directory = Path(self.working_directory) / f"{self.method}_{self.uuid}"
-        working_directory.mkdir(parents=True, exist_ok=True)
-        self.working_directory = str(working_directory)
-        logger.debug(f"Finished setting up working directories [working_dir={working_directory}]")
+    @cached_property
+    def output_directory(self) -> str:
+        """The job output directory for the training job (i.e. cache/jobs/method_<uuid>/)."""
+        if self.working_directory is None:
+            self.working_directory = str(NOS_JOBS_DIR)
+        output_directory = Path(self.working_directory) / f"{self.method}_{self.uuid}"
+        output_directory.mkdir(parents=True, exist_ok=True)
+        return str(output_directory)
+
+    @cached_property
+    def weights_directory(self) -> str:
+        """The weights / output directory for the training job (i.e. cache/jobs/<uuid>/weights/)."""
+        output_directory = Path(self.output_directory) / "weights"
+        output_directory.mkdir(parents=True, exist_ok=True)
+        return str(output_directory)
 
     def save(self):
         """Save the training job configuration."""
-        logger.debug(f"Writing configuration files [working_dir={self.working_directory}]")
-        with open(str(Path(self.working_directory) / f"{self.uuid}_config.json"), "w") as fp:
+        logger.debug(f"Writing configuration files [path={self.output_directory}]")
+        with open(str(Path(self.output_directory) / f"{self.uuid}_config.json"), "w") as fp:
             json.dump(asdict(self), fp, indent=2)
-        logger.debug(f"Finished writing configuration files [working_dir={self.working_directory}]")
+        logger.debug(f"Finished writing configuration files [path={self.output_directory}]")
 
     @property
     def entrypoint(self):
         """The entrypoint to run for the training job."""
         raise NotImplementedError()
-
-    @property
-    def weights_directory(self) -> str:
-        """The weights / output directory for the training job."""
-        weights_directory = Path(self.working_directory) / "weights"
-        weights_directory.mkdir(parents=True, exist_ok=True)
-        return str(weights_directory)
 
     def job_configuration(self) -> Dict[str, Any]:
         """The job configuration for the Ray training job.
@@ -90,9 +93,8 @@ class NoOpTrainingJobConfig(TrainingJobConfig):
     """No-op configuration."""
 
     def __post_init__(self):
-        super().__post_init__()
         logger.debug(
-            f"{self.__class__.__name__} [uuid={self.uuid}, config={self.config}, working_dir={self.working_directory}]"
+            f"{self.__class__.__name__} [uuid={self.uuid}, config={self.config}, working_dir={self.output_directory}]"
         )
 
     @property

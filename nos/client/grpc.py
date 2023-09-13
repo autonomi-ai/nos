@@ -1,7 +1,6 @@
 """gRPC client for NOS service."""
 import secrets
 import time
-import uuid
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
 from pathlib import Path
@@ -307,8 +306,12 @@ class InferenceClient:
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to train model (details={(e.details())})", e)
 
-    def Volume(self, name: str = None) -> str:
+    def Volume(self, name: str = None, overwrite: bool = False) -> str:
         """Remote volume module for NOS.
+
+        Args:
+            name (str, optional): Name of the volume. Defaults to None.
+            overwrite (bool, optional): Overwrite the volume if it already exists. Defaults to False.
 
         Note: This is meant for remote volume mounts especially useful for training.
         """
@@ -317,7 +320,9 @@ class InferenceClient:
         if name is None:
             root.mkdir(parents=True, exist_ok=True)
             return str(root)
-        path = root / f"{name}_{uuid.uuid4().hex[:8]}"
+        path = root / f"{name}"
+        if path.exists() and not overwrite:
+            raise IOError(f"Volume already exists, set `overwrite=True` to ignore this error [path={path}]")
         path.mkdir(parents=True, exist_ok=True)
         return str(path)
 

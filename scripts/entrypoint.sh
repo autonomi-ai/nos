@@ -10,4 +10,3 @@ OMP_NUM_THREADS=${OMP_NUM_THREADS:-${NCORES}} ray start --head --dashboard-host 
 
 echo "Starting NOS server..."
 nos-grpc-server
-q

@@ -1,5 +1,4 @@
 import os
-import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict
@@ -51,6 +50,9 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
     seed: int = 0
     """Random seed."""
 
+    config: Dict[str, Any] = field(default_factory=dict)  # noqa: E128
+    """Training config overrides as a dictionary."""
+
     runtime_env: RuntimeEnv = field(init=False, default_factory=lambda: RuntimeEnvironmentsHub.get(RUNTIME_ENV_NAME))
     """The runtime environment for the training job."""
 
@@ -59,23 +61,20 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
             raise ValueError("instance_directory must be specified.")
         if self.instance_prompt is None:
             raise ValueError("instance_prompt must be specified.")
-
         logger.debug(
-            f"{self.__class__.__name__} [uuid={self.uuid}, working_dir={self.working_directory}, instance_dir={self.instance_directory}]"
+            f"{self.__class__.__name__} [uuid={self.uuid}, output_dir={self.output_directory}, instance_dir={self.instance_directory}]"
         )
 
         # Copy the instance directory to the working directory
         instance_volume_directory = NOS_VOLUME_DIR / self.instance_directory
-        logger.debug(f"Instance volume directory [dir={instance_volume_directory}]")
+        logger.debug(f"Instance volume directory [key={self.instance_directory}, path={instance_volume_directory}]")
         if not Path(instance_volume_directory).exists():
             raise IOError(f"Failed to load instance_directory={instance_volume_directory}.")
-        instance_directory = Path(self.working_directory) / "instances"
-        shutil.copytree(instance_volume_directory, str(instance_directory))
-        nfiles = len(os.listdir(instance_directory))
-        logger.debug(f"Copied instance directory from {instance_directory} [nfiles={nfiles}]")
+        nfiles = len(os.listdir(instance_volume_directory))
+        logger.debug(f"Copied instance directory from {instance_volume_directory} [nfiles={nfiles}]")
 
         # Set the instance and output directories
-        self.instance_directory = str(instance_directory)
+        self.instance_directory = str(instance_volume_directory)
 
     @property
     def entrypoint(self):
@@ -87,12 +86,12 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
             f"""--output_dir={self.weights_directory} """
             f"""--instance_prompt="{self.instance_prompt}" """
             f"""--resolution={self.resolution} """
-            f"""--train_batch_size=1 """
-            f"""--gradient_accumulation_steps=1 """
+            f"""--train_batch_size={self.config.get("train_batch_size", 1)} """
+            f"""--gradient_accumulation_steps={self.config.get("gradient_accumulation_steps", 1)} """
             f"""--checkpointing_steps={self.max_train_steps // 5} """
-            f"""--learning_rate=1e-4"""
-            f"""--lr_scheduler="constant" """
-            f""" --lr_warmup_steps=0 """
+            f"""--learning_rate={self.config.get("learning_rate", 1e-4)} """
+            f"""--lr_scheduler="{self.config.get("lr_scheduler", "constant")}" """
+            f"""--lr_warmup_steps={self.config.get("lr_warmup_steps", 0)} """
             f"""--max_train_steps={self.max_train_steps} """
             f"""--seed="{self.seed}" """
         )
@@ -118,18 +117,18 @@ class StableDiffusionXLDreamboothTrainingJobConfig(StableDiffusionDreamboothTrai
             f"""--pretrained_model_name_or_path={self.model_name} """
             f"""--instance_data_dir={self.instance_directory} """
             f"""--output_dir={self.weights_directory} """
-            f"""--instance_prompt="{self.instance_prompt}" """
+            f"""--instance_prompt='{self.instance_prompt}' """
             f"""--resolution={self.resolution} """
-            f"""--train_batch_size=1 """
+            f"""--train_batch_size={self.config.get("train_batch_size", 1)} """
             f"""--checkpointing_steps={self.max_train_steps // 5} """
-            f"""--learning_rate=1e-5"""
-            f"""--lr_scheduler="constant" """
-            f""" --lr_warmup_steps=0 """
+            f"""--learning_rate={self.config.get("learning_rate", 1e-5)} """
+            f"""--lr_scheduler='{self.config.get("lr_scheduler", "constant")}' """
+            f"""--lr_warmup_steps={self.config.get("lr_warmup_steps", 0)} """
             f"""--max_train_steps={self.max_train_steps} """
-            f"""--seed="{self.seed}" """
-            f"""--gradient_accumulation_steps=4 """
+            f"""--seed='{self.seed}' """
+            f"""--gradient_accumulation_steps={self.config.get("gradient_accumulation_steps", 1)} """
             f"""--enable_xformers_memory_efficient_attention """
             f"""--gradient_checkpointing """
             f"""--use_8bit_adam """
-            f"""--mixed_precision="fp16" """
+            f"""--mixed_precision='{self.config.get("mixed_precision", "fp16")}' """
         )
