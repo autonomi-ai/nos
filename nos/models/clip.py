@@ -11,7 +11,6 @@ from nos import hub
 from nos.common import EmbeddingSpec, ImageSpec, TaskType
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
-from nos.compilers import compile
 from nos.constants import NOS_MODELS_DIR
 from nos.hub import HuggingFaceHubConfig
 from nos.logging import logger
@@ -125,6 +124,8 @@ class CLIPTensorRT(CLIP):
         import torch_tensorrt.fx.converter_registry as registry
         from torch_tensorrt.fx.tracer.acc_tracer import acc_ops
         from transformers.modeling_outputs import BaseModelOutputWithPooling
+
+        from nos.compilers import compile
 
         assert isinstance(inputs, list), f"inputs must be a list, got {type(inputs)}"
         assert len(inputs) == 1, f"inputs must be a list of length 1, got {len(inputs)}"

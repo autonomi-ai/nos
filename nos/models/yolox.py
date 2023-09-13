@@ -12,7 +12,6 @@ from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
-from nos.compilers import compile
 from nos.constants import NOS_MODELS_DIR
 from nos.hub import TorchHubConfig
 from nos.logging import logger
@@ -183,6 +182,9 @@ class YOLOXTensorRT(YOLOX):
 
     def __compile__(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> torch.nn.Module:
         """Model compilation flow."""
+        from nos.compilers import compile
+
+        
         assert isinstance(inputs, list), f"inputs must be a list, got {type(inputs)}"
         assert len(inputs) == 1, f"inputs must be a list of length 1, got {len(inputs)}"
         keys = {"input"}
