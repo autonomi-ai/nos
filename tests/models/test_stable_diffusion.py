@@ -3,21 +3,11 @@ from typing import List
 import pytest
 
 from nos.test.utils import PyTestGroup, skip_if_no_torch_cuda
-
-
-MODEL_NAME = "runwayml/stable-diffusion-v1-5"
-
-
-@pytest.fixture(scope="module")
-def model():
-    from nos.models import StableDiffusion  # noqa: F401
-
-    # TODO (spillai): @pytest.parametrize("scheduler", ["ddim", "euler-discrete"])
-    yield StableDiffusion(model_name=MODEL_NAME, scheduler="ddim")
+from nos.models.stable_diffusion import StableDiffusion
 
 
 @pytest.mark.benchmark(group=PyTestGroup.HUB)
-def test_stable_diffusion_predict(model):
+def test_stable_diffusion_predict():
     """Use StableDiffusion to generate an image from a text prompt.
 
     Note: This test should be able to run with CPU or GPU.
@@ -27,17 +17,20 @@ def test_stable_diffusion_predict(model):
     """
     from PIL import Image
 
-    images: List[Image.Image] = model.__call__(
-        "astronaut on a horse on the moon",
-        num_images=1,
-        num_inference_steps=100,
-        guidance_scale=7.5,
-        width=512,
-        height=512,
-    )
-    (image,) = images
-    assert image is not None
-    assert image.size == (512, 512)
+    for config in StableDiffusion.configs.values():
+        import pdb; pdb.set_trace()
+        model = StableDiffusion(model_name=config.model_name, scheduler="ddim")
+        images: List[Image.Image] = model.__call__(
+            "astronaut on a horse on the moon",
+            num_images=1,
+            num_inference_steps=100,
+            guidance_scale=7.5,
+            width=512,
+            height=512,
+        )
+        (image,) = images
+        assert image is not None
+        assert image.size == (512, 512)
 
 
 @pytest.mark.benchmark(group=PyTestGroup.HUB)
