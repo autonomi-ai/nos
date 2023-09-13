@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Dict
 
-from nos.common.git import cached_repo
 from nos.common.runtime_env import RuntimeEnv, RuntimeEnvironmentsHub
 from nos.constants import NOS_HOME
 from nos.logging import logger
@@ -9,18 +9,19 @@ from nos.server.train.config import TrainingJobConfig
 
 
 # Register the runtime environment for fine-tuning open-mmlab/mmdetection models
-GIT_TAG = "v3.1.0"
-RUNTIME_ENV_NAME = "open-mmlab/mmdetection-latest"
+RUNTIME_ENV_NAME = "mmdet-gpu"
+WORKING_DIR = "/app/mmdetection"
+
 RuntimeEnvironmentsHub.register(
     RUNTIME_ENV_NAME,
     RuntimeEnv(
-        conda="mmdet-cu118",
-        working_dir=cached_repo(
-            f"https://github.com/open-mmlab/mmdetection/archive/refs/tags/{GIT_TAG}.zip", repo_name="mmdetection"
-        ),
+        runtime=RUNTIME_ENV_NAME,
+        working_dir=WORKING_DIR,
     ),
 )
+
 NOS_VOLUME_DIR = NOS_HOME / "volumes"
+NOS_VOLUME_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -33,21 +34,26 @@ class MMDetectionTrainingJobConfig(TrainingJobConfig):
     config_overrides: Dict[str, Any] = field(default_factory=dict)
     """Model config overrides as a dictionary."""
 
-    runtime_env: RuntimeEnv = field(init=False, default_factory=lambda: RuntimeEnvironmentsHub.get(RUNTIME_ENV_NAME))
-    """The runtime environment for the training job."""
+    runtime_env: str = field(default_factory=lambda: RuntimeEnvironmentsHub.get(RUNTIME_ENV_NAME))
+    """The runtime environment to use for the training job."""
 
     def __post_init__(self):
-        # config_filename = Path(__file__).parent / Path(self.config_filename)
-        # if not Path(self.config_filename).exists():
-        #     raise IOError(f"Failed to load config [filename={self.config_filename}].")
-        # logger.debug(f"{self.__class__.__name__} [uuid={self.uuid}, working_dir={self.working_directory}]")
-
         from mmengine.config import Config
 
+        # Load the config file
+        config_filename = Path(WORKING_DIR) / self.config_filename
+        if not Path(config_filename).exists():
+            raise IOError(f"Failed to load config [filename={config_filename}].")
+        logger.debug(f"{self.__class__.__name__} [uuid={self.uuid}, working_dir={self.working_directory}]")
+
         # Override the configuration with defaults for fine-tuning
+        # turn off black formatting for this section
+        # fmt: off
         frozen_config = {
             "val_dataloader": None,
             "val_evaluator": None,
+            "val_cfg": None,
+            "test_cfg": None,
             "test_dataloader": None,
             "test_evaluator": None,
             "optim_wrapper": {
@@ -55,29 +61,28 @@ class MMDetectionTrainingJobConfig(TrainingJobConfig):
             },
             "max_epochs": 2,
         }
+        # fmt: on
         for k, v in self.config_overrides.items():
             if k in frozen_config:
                 raise ValueError(f"Cannot override frozen key [key={k}, value={v}].")
             logger.debug(f"Overriding model config [key={k}, value={v}].")
 
-        # Load the config file and merge with overrides
-        cfg = Config.fromfile(self.config_filename)
+        # Merge with overrides and save the updated config file
+        cfg = Config.fromfile(config_filename)
         cfg.merge({**frozen_config, **self.config_overrides})
-        logger.debug(f"Loaded config [filename={self.config_filename}, cfg={cfg}].")
+        logger.debug(f"Loaded config [filename={config_filename}, cfg={cfg}].")
 
-        # Move the config file from the volume directory to the repo's configs directory
-        # config_filename = NOS_VOLUME_DIR / self.config_filename
-        # if not config_filename.exists():
-        #     raise IOError(f"Failed to load config from volume [filename={config_filename}, volume={NOS_VOLUME_DIR}].")
-        # config_dest = self.working_directory / Path(self.config_filename).name
-        # shutil.copy(config_filename, config_dest)
-        # self.config_filename = config_dest
-        # logger.debug(f"Copied config file to working directory [filename={self.config_filename}].")
+        # Save the updated config file to the working directory
+        config_dest = config_filename.parent / f"{config_filename.name}_ft.py"
+        logger.debug(f"Writing updated config [filename={config_dest}].")
+        cfg.dump(str(config_dest))
+        self.config_filename = config_dest
+        logger.debug(f"Saved updated config [filename={self.config_filename}].")
 
     @property
     def entrypoint(self):
         """The entrypoint to run for the training job."""
-        entrypoint = """ls"""  # python tools/train.py {self.config_filename}"""
+        entrypoint = f"""cd {WORKING_DIR} && python tools/train.py {self.config_filename}"""
         logger.debug(
             f"Running training job [uuid={self.uuid}, working_dir={self.working_directory}, entrypoint={entrypoint}]."
         )

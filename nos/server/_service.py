@@ -257,7 +257,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
 
         try:
             st = time.perf_counter()
-            logger.info(f"Training request [method={request['method']}]")
+            logger.info(f"Training request [method={request['method']}, request={request}]")
             job_id = self.train(request["method"], inputs=request["inputs"], metadata=request["metadata"])
             response = {"job_id": job_id}
             logger.info(

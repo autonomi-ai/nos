@@ -1,5 +1,4 @@
-import threading
-import time
+import json
 from typing import Any, Dict
 
 from nos.exceptions import ModelNotFoundError
@@ -7,6 +6,7 @@ from nos.executors.ray import RayExecutor, RayJobExecutor
 from nos.logging import logger
 from nos.protoc import import_module
 
+from .config import NoOpTrainingJobConfig
 from .dreambooth.config import StableDiffusionDreamboothTrainingJobConfig, StableDiffusionXLDreamboothTrainingJobConfig
 from .openmmlab.mmdetection.config import MMDetectionTrainingJobConfig
 
@@ -49,6 +49,7 @@ class TrainingService:
     """Ray-executor based training service."""
 
     config_cls = {
+        "nos/noop-train": NoOpTrainingJobConfig,
         "diffusers/stable-diffusion-dreambooth-lora": StableDiffusionDreamboothTrainingJobConfig,
         "diffusers/stable-diffusion-xl-dreambooth-lora": StableDiffusionXLDreamboothTrainingJobConfig,
         "open-mmlab/mmdetection": MMDetectionTrainingJobConfig,
@@ -60,9 +61,7 @@ class TrainingService:
         if not self.executor.is_initialized():
             raise RuntimeError("Ray executor is not initialized")
 
-    def train(
-        self, method: str, inputs: Dict[str, Any], overrides: Dict[str, Any] = None, metadata: Dict[str, Any] = None
-    ) -> str:
+    def train(self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None) -> str:
         """Train / Fine-tune a model by submitting a job to the RayJobExecutor.
 
             See https://docs.ray.io/en/latest/cluster/running-applications/job-submission/doc/ray.job_submission.JobSubmissionClient.submit_job.html#ray.job_submission.JobSubmissionClient.submit_job
@@ -71,7 +70,6 @@ class TrainingService:
         Args:
             method (str): Training method (e.g. `stable-diffusion-dreambooth-lora`).
             inputs (Dict[str, Any]): Training inputs.
-            overrides (Dict[str, Any], optional): Overrides for the training inputs / configuration. Defaults to None.
             metadata (Dict[str, Any], optional): Metadata to attach to the training job. Defaults to None.
         Returns:
             str: Job ID.
@@ -91,31 +89,31 @@ class TrainingService:
 
         # Submit the training job as a Ray job
         configd = config.job_configuration()
-        logger.debug("Submitting training job")
-        logger.debug(f"config\n{configd}]")
+        logger.debug("Submitting training job with configuration ... 👇")
+        logger.debug(f"\n{json.dumps(configd, indent=2)}")
         job_id = self.executor.jobs.submit(**configd, metadata=metadata)
-        logger.debug(f"Submitted training job [job_id={job_id}, config={configd}]")
+        logger.debug(f"Submitted training job [job_id={job_id}]")
 
-        hooks = {"on_completed": (register_model, (job_id,), {})}
+        # hooks = {"on_completed": (register_model, (job_id,), {})}
 
-        # Spawn a thread to monitor the job
-        def monitor_job_hook(job_id: str, timeout: int = 600, retry_interval: int = 5):
-            """Hook for monitoring the job status and running callbacks on completion."""
-            st = time.time()
-            while time.time() - st < timeout:
-                status = self.executor.jobs.status(job_id)
-                if str(status) == "SUCCEEDED":
-                    logger.debug(f"Training job completed [job_id={job_id}, status={status}]")
-                    cb, args, kwargs = hooks["on_completed"]
-                    logger.debug(f"Running callback [cb={cb}, args={args}, kwargs={kwargs}]")
-                    cb(*args, **kwargs)
-                    logger.debug(f"Callback completed [cb={cb}, args={args}, kwargs={kwargs}]")
-                    break
-                else:
-                    logger.debug(f"Training job not completed yet [job_id={job_id}, status={status}]")
-                    time.sleep(retry_interval)
+        # # Spawn a thread to monitor the job
+        # def monitor_job_hook(job_id: str, timeout: int = 600, retry_interval: int = 5):
+        #     """Hook for monitoring the job status and running callbacks on completion."""
+        #     st = time.time()
+        #     while time.time() - st < timeout:
+        #         status = self.executor.jobs.status(job_id)
+        #         if str(status) == "SUCCEEDED":
+        #             logger.debug(f"Training job completed [job_id={job_id}, status={status}]")
+        #             cb, args, kwargs = hooks["on_completed"]
+        #             logger.debug(f"Running callback [cb={cb}, args={args}, kwargs={kwargs}]")
+        #             cb(*args, **kwargs)
+        #             logger.debug(f"Callback completed [cb={cb}, args={args}, kwargs={kwargs}]")
+        #             break
+        #         else:
+        #             logger.debug(f"Training job not completed yet [job_id={job_id}, status={status}]")
+        #             time.sleep(retry_interval)
 
-        threading.Thread(target=monitor_job_hook, args=(job_id,), daemon=True).start()
+        # threading.Thread(target=monitor_job_hook, args=(job_id,), daemon=True).start()
         return job_id
 
     @property

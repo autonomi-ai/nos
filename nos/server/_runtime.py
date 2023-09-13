@@ -24,15 +24,12 @@ from ._docker import DockerRuntime
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
-
 NOS_DOCKER_IMAGE_CPU = f"autonomi/nos:{__version__}-cpu"
 NOS_DOCKER_IMAGE_GPU = f"autonomi/nos:{__version__}-gpu"
 NOS_DOCKER_IMAGE_TRT_RUNTIME = f"autonomi/nos:{__version__}-trt-runtime"
 
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
 NOS_INFERENCE_SERVICE_CMD = ["./entrypoint.sh"]
-
-NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
 NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
@@ -145,7 +142,7 @@ class InferenceServiceRuntime:
             name (str, optional): Inference runtime name. Defaults to "nos-inference-service".
         """
         if runtime not in self.configs:
-            raise ValueError(f"Invalid inference runtime: {runtime}, available: {list(self.configs.keys())}")
+            raise ValueError(f"Invalid runtime: {runtime}, available: {list(self.configs.keys())}")
         self.cfg = copy.deepcopy(self.configs[runtime])
         if name is not None:
             self.cfg.name = name
@@ -153,7 +150,7 @@ class InferenceServiceRuntime:
         self._runtime = DockerRuntime.get()
 
     def __repr__(self) -> str:
-        return f"InferenceServiceRuntime(image={self.cfg.image}, name={self.cfg.name}, gpu={self.cfg.gpu})"
+        return f"{self.__class__.__name__}(image={self.cfg.image}, name={self.cfg.name}, gpu={self.cfg.gpu})"
 
     @classmethod
     def list(self, **kwargs) -> List[docker.models.containers.Container]:
@@ -169,7 +166,7 @@ class InferenceServiceRuntime:
         Args:
             **kwargs: Additional keyword-arguments to pass to `DockerRuntime.start`.
         """
-        logger.debug(f"Starting inference runtime with image: {self.cfg.image}")
+        logger.debug(f"Starting runtime with image: {self.cfg.image}")
 
         # Override dict values
         for k in ("ports", "volumes", "environment"):
@@ -182,7 +179,7 @@ class InferenceServiceRuntime:
             value = kwargs[k]
             if hasattr(self.cfg, k):
                 setattr(self.cfg, k, value)
-                logger.debug(f"Overriding inference runtime config: {k}={value}")
+                logger.debug(f"Overriding runtime config: {k}={value}")
             else:
                 self.cfg.kwargs[k] = value
 
@@ -199,7 +196,7 @@ class InferenceServiceRuntime:
             ipc_mode=self.cfg.ipc_mode,
             **self.cfg.kwargs,
         )
-        logger.debug(f"Started inference runtime: {self}")
+        logger.debug(f"Started runtime: {self}")
         return container
 
     def stop(self, timeout: int = 30) -> docker.models.containers.Container:

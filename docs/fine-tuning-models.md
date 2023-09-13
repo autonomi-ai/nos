@@ -82,7 +82,7 @@ response: TrainingJobResponse = client.Train(
     # Note: Every config parameter can be overridden if needed.
     overrides={
         "load_from": "https://.../yolox_s-42aa3d00.pth",
-        "optimizer": dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
+        "optim_wrapper": {"optimizer": dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)},
         "max_epochs": 100,
     },
     # Additional metadata to attach to the training job

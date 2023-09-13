@@ -9,7 +9,11 @@ from nos.constants import NOS_CACHE_DIR
 from nos.logging import logger
 
 
-NOS_TRAINING_JOBS_DIR = NOS_CACHE_DIR / "jobs"
+NOS_JOBS_DIR = NOS_CACHE_DIR / "jobs"
+NOS_WORKING_DIR = NOS_CACHE_DIR / "working_dirs"
+
+NOS_JOBS_DIR.mkdir(parents=True, exist_ok=True)
+NOS_WORKING_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -26,14 +30,14 @@ class TrainingJobConfig:
     method: str = field(default="nos/custom")
     """Training method (e.g. `diffusers/stable-diffusion-dreambooth-lora` etc)."""
 
-    runtime_env: RuntimeEnv = field(init=False, default=None)
+    runtime_env: RuntimeEnv = field(init=False, default_factory=lambda: RuntimeEnv())
     """The runtime environment to use for the training job."""
 
     uuid: str = field(default_factory=lambda: str(uuid.uuid4().hex[:8]))
     """The UUID for creating a unique training job directory."""
     """Note, this is typically overriden by the subclass."""
 
-    working_directory: str = field(default=NOS_TRAINING_JOBS_DIR)
+    working_directory: str = field(default=NOS_JOBS_DIR)
     """The working directory for the training job."""
 
     metadata: Dict[str, Any] = field(default=None)
@@ -76,3 +80,22 @@ class TrainingJobConfig:
             "submission_id": self.uuid,
             "runtime_env": self.runtime_env.asdict(),
         }
+
+
+@dataclass
+class NoOpTrainingJobConfig(TrainingJobConfig):
+    """Configuration for a no-op training job."""
+
+    config: Dict[str, Any] = field(default_factory=dict)
+    """No-op configuration."""
+
+    def __post_init__(self):
+        super().__post_init__()
+        logger.debug(
+            f"{self.__class__.__name__} [uuid={self.uuid}, config={self.config}, working_dir={self.working_directory}]"
+        )
+
+    @property
+    def entrypoint(self):
+        """The entrypoint to run for the training job."""
+        return f"cd {self.working_directory} && echo 'No-op training job'"

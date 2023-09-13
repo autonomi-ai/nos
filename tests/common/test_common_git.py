@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,11 @@ def test_common_cached_repo():
     )
     assert subdir is not None
     assert Path(subdir).exists()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        subdir = cached_repo(repo_url, subdirectory="examples/dreambooth", tag=tag, force=True, output_dir=tmpdir)
+        assert subdir is not None
+        assert Path(subdir).exists()
 
     with pytest.raises(ValueError):
         subdir = cached_repo(repo_url.replace(".git", ""), subdirectory="examples/dreambooth", tag="v0.20.1")

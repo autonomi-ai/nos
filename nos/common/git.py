@@ -18,6 +18,7 @@ def cached_repo(
     tag: str = None,
     depth: int = None,
     force: bool = False,
+    output_dir: str = None,
 ) -> str:
     """Clone a repository and cache it locally.
 
@@ -30,6 +31,7 @@ def cached_repo(
         tag (str): The tag to checkout.
         depth (int): The depth to clone the repository.
         force (bool): If True, the repository will be cloned even if it already exists.
+        output_dir (str): The output directory to cache the repository.
 
     Returns:
         str: The path to the cached directory.
@@ -48,7 +50,12 @@ def cached_repo(
             raise ValueError("Must specify `repo_name` for HTTPS repositories.")
         repo_name = repo_name
 
-    cached_repos_dir = NOS_CACHE_DIR / "repos"
+    if output_dir is None:
+        cached_repos_dir = NOS_CACHE_DIR / "repos"
+        logger.debug(f"Using default cache directory [dir={cached_repos_dir}]")
+    else:
+        cached_repos_dir = Path(output_dir)
+        logger.debug(f"Using custom cache directory [dir={cached_repos_dir}]")
     cached_repos_dir.mkdir(parents=True, exist_ok=True)
     cached_dir = cached_repos_dir / repo_name
 

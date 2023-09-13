@@ -106,7 +106,7 @@ def grpc_server_docker_runtime_cpu():
 
     # Start grpc server runtime (CPU)
     container = runtime.start(
-        ports={f"{DEFAULT_GRPC_PORT}/tcp": GRPC_TEST_PORT_CPU},
+        ports={DEFAULT_GRPC_PORT: GRPC_TEST_PORT_CPU},
         environment={
             "NOS_LOGGING_LEVEL": "DEBUG",
         },
@@ -142,7 +142,7 @@ def grpc_server_docker_runtime_gpu():
 
     # Start grpc server runtime (GPU)
     container = runtime.start(
-        ports={f"{DEFAULT_GRPC_PORT}/tcp": GRPC_TEST_PORT_GPU},
+        ports={DEFAULT_GRPC_PORT: GRPC_TEST_PORT_GPU},
         environment={
             "NOS_LOGGING_LEVEL": "DEBUG",
         },

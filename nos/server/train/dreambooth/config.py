@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict
 
-from nos.common.git import cached_repo
 from nos.common.runtime_env import RuntimeEnvironmentsHub
 from nos.common.spec import RuntimeEnv
 from nos.constants import NOS_HOME, NOS_MODELS_DIR
@@ -13,17 +12,20 @@ from nos.server.train.config import TrainingJobConfig
 
 
 # Register the runtime environment for fine-tuning LoRA models
-GIT_TAG = "v0.20.1"
-RUNTIME_ENV_NAME = "huggingface/diffusers-latest"
+RUNTIME_ENV_NAME = "diffusers-gpu"
+WORKING_DIR = "/app/diffusers/examples/dreambooth"
+
 RuntimeEnvironmentsHub.register(
     RUNTIME_ENV_NAME,
-    RuntimeEnv.from_packages(
-        [f"https://github.com/huggingface/diffusers/archive/refs/tags/{GIT_TAG}.zip", "accelerate>=0.22.0", "bitsandbytes>=0.40.0", "xformers>=0.0.20"]
+    RuntimeEnv(
+        runtime=RUNTIME_ENV_NAME,
+        working_dir=WORKING_DIR,
     ),
 )
 
 NOS_VOLUME_DIR = NOS_HOME / "volumes"
 NOS_CUSTOM_MODELS_DIR = NOS_MODELS_DIR / "custom"
+NOS_VOLUME_DIR.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -52,16 +54,6 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
     runtime_env: RuntimeEnv = field(init=False, default_factory=lambda: RuntimeEnvironmentsHub.get(RUNTIME_ENV_NAME))
     """The runtime environment for the training job."""
 
-    repo_directory: str = field(
-        init=False,
-        default=cached_repo(
-            f"https://github.com/huggingface/diffusers/archive/refs/tags/{GIT_TAG}.zip",
-            repo_name="diffusers",
-            subdirectory="examples/dreambooth",
-        ),
-    )
-    """The repository to use for the training job."""
-
     def __post_init__(self):
         if self.instance_directory is None:
             raise ValueError("instance_directory must be specified.")
@@ -89,7 +81,7 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
     def entrypoint(self):
         """The entrypoint to run for the training job."""
         return (
-            f"""accelerate launch train_dreambooth_lora.py """
+            f"""cd {WORKING_DIR} && accelerate launch train_dreambooth_lora.py """
             f"""--pretrained_model_name_or_path={self.model_name} """
             f"""--instance_data_dir={self.instance_directory} """
             f"""--output_dir={self.weights_directory} """
@@ -112,8 +104,9 @@ class StableDiffusionDreamboothTrainingJobConfig(TrainingJobConfig):
             "entrypoint_num_gpus": 1,
         }
 
+
 class StableDiffusionXLDreamboothTrainingJobConfig(StableDiffusionDreamboothTrainingJobConfig):
-    
+
     resolution: int = 1024
     """Image resolution."""
 
@@ -140,4 +133,3 @@ class StableDiffusionXLDreamboothTrainingJobConfig(StableDiffusionDreamboothTrai
             f"""--use_8bit_adam """
             f"""--mixed_precision="fp16" """
         )
-            

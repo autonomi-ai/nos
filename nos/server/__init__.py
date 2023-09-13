@@ -19,6 +19,7 @@ from nos.version import __version__
 
 from ._docker import DockerRuntime
 from ._runtime import InferenceServiceRuntime
+from .train._runtime import CustomServiceRuntime
 
 
 _MIN_NUM_CPUS = 4
@@ -84,9 +85,11 @@ def init(
             appropriate version is used.
     """
     # Check arguments
-    available_runtimes = list(InferenceServiceRuntime.configs.keys()) + ["auto", "local"]
+    available_runtimes = (
+        list(InferenceServiceRuntime.configs.keys()) + list(CustomServiceRuntime.configs.keys()) + ["auto", "local"]
+    )
     if runtime not in available_runtimes:
-        raise ValueError(f"Invalid inference service runtime: {runtime}, available: {available_runtimes}")
+        raise ValueError(f"Invalid service runtime: {runtime}, available: {available_runtimes}")
 
     # If runtime is "local", return early with ray executor
     if runtime == "local":
@@ -119,26 +122,32 @@ def init(
         runtime = "gpu" if has_gpu() else "cpu"
         logger.debug(f"Detected system runtime: {runtime}")
     else:
-        if runtime not in InferenceServiceRuntime.configs:
-            raise ValueError(
-                f"Invalid inference service runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
-            )
+        if runtime not in {**InferenceServiceRuntime.configs, **CustomServiceRuntime.configs}:
+            raise ValueError(f"Invalid service runtime: {runtime}, available: {available_runtimes}")
+
+    # Get runtime class
+    runtime_cls = None
+    if runtime in InferenceServiceRuntime.configs:
+        runtime_cls = InferenceServiceRuntime
+    elif runtime in CustomServiceRuntime.configs:
+        runtime_cls = CustomServiceRuntime
+        logger.debug(f"Using custom service runtime [runtime={runtime}]")
+    else:
+        raise ValueError(f"Invalid service runtime class [runtime={runtime}]")
 
     # Check if the latest inference server is already running
     # If the running container's tag is inconsistent with the current version,
     # we will shutdown the running container and start a new one.
-    containers = InferenceServiceRuntime.list()
+    containers = runtime_cls.list()
     if len(containers) == 1:
-        logger.debug("Found an existing inference server running, checking if it is the latest version.")
-        if InferenceServiceRuntime.configs[runtime].image not in containers[0].image.tags:
-            logger.info(
-                "Active inference server is not the latest version, shutting down before starting the latest one."
-            )
+        logger.debug("Found an existing NOS server running, checking if it is the latest version.")
+        if runtime_cls.configs[runtime].image not in containers[0].image.tags:
+            logger.info("Active NOS server is not the latest version, shutting down before starting the latest one.")
             _stop_container(containers[0])
         else:
             (container,) = containers
             logger.info(
-                f"Inference server already running (name={container.name}, image={container.image}, id={container.id[:12]})."
+                f"NOS server already running (name={container.name}, image={container.image}, id={container.id[:12]})."
             )
             return container
     elif len(containers) > 1:
@@ -155,11 +164,11 @@ def init(
 
     # Pull docker image (if necessary)
     if pull:
-        _pull_image(InferenceServiceRuntime.configs[runtime].image)
+        _pull_image(runtime_cls.configs[runtime].image)
 
     # Start inference server
-    runtime = InferenceServiceRuntime(runtime=runtime)
-    logger.info(f"Starting inference service: [name={runtime.cfg.name}, runtime={runtime}]")
+    runtime = runtime_cls(runtime=runtime)
+    logger.info(f"Starting NOS service: [name={runtime.cfg.name}, runtime={runtime}]")
 
     # Determine number of cpus, system memory before starting container
     # Note (spillai): MacOSX compatibility issue where docker does not have access to
@@ -171,7 +180,7 @@ def init(
         min(cl.info().get("MemTotal", psutil.virtual_memory().total), psutil.virtual_memory().available) / 1024**3
     )
     mem_limit = max(_MIN_MEM_GB, utilization * math.floor(mem_limit))
-    logger.debug(f"Starting inference container: [num_cpus={num_cpus}, mem_limit={mem_limit}g]")
+    logger.debug(f"Starting NOS container: [num_cpus={num_cpus}, mem_limit={mem_limit}g]")
 
     # Start container
     # TOFIX (spillai): If macosx, shared memory is not supported
@@ -187,7 +196,7 @@ def init(
         },
     )
     logger.info(
-        f"Inference service started: [name={runtime.cfg.name}, runtime={runtime}, image={container.image}, id={container.id[:12]}]"
+        f"NOS service started: [name={runtime.cfg.name}, runtime={runtime}, image={container.image}, id={container.id[:12]}]"
     )
     return container
 

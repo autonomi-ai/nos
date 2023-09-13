@@ -10,9 +10,29 @@ from nos.server.train import TrainingService
 from nos.test.conftest import ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
 
+
 pytestmark = pytest.mark.server
 
 
+def submit_noop_job(svc: TrainingService, method: str) -> str:  # noqa: F811
+    """Submit a noop job."""
+    job_id = svc.train(
+        method=method,
+        inputs={
+            "config": {
+                "foo": "bar",
+            },
+        },
+        metadata={
+            "name": "noop-test",
+        },
+    )
+    assert job_id is not None
+    logger.debug(f"Submitted job with id: {job_id}")
+    return job_id
+
+
+# Note (spillai): Currently, these are not being used as we run them within the custom service runtimes
 def submit_dreambooth_lora_job(svc: TrainingService, method: str) -> str:  # noqa: F811
     """Submit a dreambooth LoRA job."""
     # Copy test image to temporary directory and test training service
@@ -30,7 +50,6 @@ def submit_dreambooth_lora_job(svc: TrainingService, method: str) -> str:  # noq
                 "max_train_steps": 10,
                 "seed": 0,
             },
-            overrides={},  # type: ignore
             metadata={
                 "name": "sdv21-dreambooth-lora-test-bench",
             },
@@ -40,6 +59,7 @@ def submit_dreambooth_lora_job(svc: TrainingService, method: str) -> str:  # noq
     return job_id
 
 
+# Note (spillai): Currently, these are not being used as we run them within the custom service runtimes
 def submit_mmdetection_job(svc: TrainingService, method: str) -> str:  # noqa: F811
     """Submit a mmdetection job."""
     from nos.server.train.openmmlab.mmdetection import config
@@ -50,11 +70,11 @@ def submit_mmdetection_job(svc: TrainingService, method: str) -> str:  # noqa: F
         method=method,
         inputs={
             "config_filename": "configs/yolox/yolox_s_8xb8-300e_coco.py",
+            "config_overrides": {
+                "data_root": "data/coco/",
+                "dataset_type": "HuggingfaceDataset",
+            },
         },
-        overrides={
-            "data_root": "data/coco/",
-            "dataset_type": "HuggingfaceDataset",
-        },  # type: ignore
         metadata={
             "name": "yolox-s-8xb8-300e-coco-ft",
         },
@@ -64,22 +84,20 @@ def submit_mmdetection_job(svc: TrainingService, method: str) -> str:  # noqa: F
     return job_id
 
 
-# TRAINING_METHODS = list(TrainingService.config_cls.keys())
-# TRAINING_METHODS = ["open-mmlab/mmdetection"]
-TRAINING_METHODS = ["diffusers/stable-diffusion-dreambooth-lora"]
+TRAINING_METHODS = ["nos/noop-train"]
+
 
 @pytest.mark.parametrize("method", TRAINING_METHODS)
-def test_training_service(ray_executor: RayExecutor, method):  # noqa: F811
-    """Test training service for dreambooth LoRA."""
+def test_training_service_all(ray_executor: RayExecutor, method):  # noqa: F811
+    """Test training service locally."""
 
     # Test training service
     svc = TrainingService()
 
     # Submit a job
-    if method == "diffusers/stable-diffusion-dreambooth-lora":
-        job_id = submit_dreambooth_lora_job(svc, method)
-    elif method == "open-mmlab/mmdetection":
-        job_id = submit_mmdetection_job(svc, method)
+    # See nos/server/train/_service.py (TrainingService.config_cls) for training methods supported
+    if method == "nos/noop-train":
+        job_id = submit_noop_job(svc, method)
     else:
         raise ValueError(f"Invalid method: {method}")
 
@@ -105,3 +123,28 @@ def test_training_service(ray_executor: RayExecutor, method):  # noqa: F811
 
     logs = svc.jobs.logs(job_id)
     assert status == "SUCCEEDED", f"Training job failed [job_id={job_id}, status={status}]\n{'-' * 80}\n{logs}"
+
+
+def test_training_service_mmdet_gpu(grpc_client_with_mmdet_gpu_backend):  # noqa: F811
+    """Test training service for mmdetection fine-tuning."""
+    client = grpc_client_with_mmdet_gpu_backend
+    assert client is not None
+    assert client.IsHealthy()
+
+    # Test training service
+    response = client.Train(
+        # see nos/server/train/_service.py (TrainingService.config_cls) for configuration mapping
+        method="open-mmlab/mmdetection",
+        # see nos/server/train/openmmlab/mmdetection/config.py for input values
+        inputs={
+            "config_filename": "configs/yolox/yolox_s_8xb8-300e_coco.py",
+            "config_overrides": {
+                "data_root": "data/coco/",
+                "dataset_type": "HuggingfaceDataset",
+            },
+        },  # type: ignore
+        metadata={
+            "name": "yolox-s-8xb8-300e-coco-ft",
+        },
+    )
+    assert response is not None

@@ -7,7 +7,10 @@ from nos.logging import logger
 
 @dataclass
 class RuntimeEnv:
-    conda: Dict[str, Any]
+    runtime: str = "cpu"
+    """NOS runtime (e.g. cpu, gpu)."""
+
+    conda: Dict[str, Any] = field(default=None)
     """Conda environment specification."""
 
     working_dir: str = field(default=None)
