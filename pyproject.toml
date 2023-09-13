@@ -64,7 +64,7 @@ exclude = [
     "makefiles",
     "requirements",
     "tests",
-    "nos*experimental*",
+    "nos*test*",
 ]
 
 [tool.setuptools.package-data]
@@ -86,7 +86,6 @@ exclude = '''
       | buck-out
       | build
       | dist
-      | nos/models/openmmlab/configs/mmdetection/
     )/
 '''
 
