@@ -37,17 +37,17 @@ conda create -n nos python=3.8
 === "Without PyTorch"
 
     ``` sh
-    pip install autonomi-nos
+    pip install torch-nos
     ```
 
 === "With PyTorch"
 
     ``` sh
-    pip install autonomi-nos[torch]"
+    pip install torch-nos[torch]"
     ```
     This will install the `torch` extra dependencies for NOS. If you plan to run the NOS server locally (i.e. outside docker), you will also need to install the `server` extra dependencies:
     ```sh
-    pip install autonomi-nos[torch,server]"
+    pip install torch-nos[torch,server]"
     ```
 
     **Note:** For running the NOS server, Python 3.8 is currently required to run the server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
@@ -84,9 +84,9 @@ We're now ready to issue our first inference request with NOS!
 
 
 ## 🚀 Run Inference
-Try out an inference request via the CLI or [Python SDK](https://pypi.org/project/autonomi-nos):
+Try out an inference request via the CLI or [Python SDK](https://pypi.org/project/torch-nos):
 
-=== "Via [Python SDK](https://pypi.org/project/autonomi-nos)"
+=== "Via [Python SDK](https://pypi.org/project/torch-nos)"
 
     ```python
     from nos.client import InferenceClient, TaskType
