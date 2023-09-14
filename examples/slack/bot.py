@@ -4,6 +4,7 @@ from slack_sdk.errors import SlackApiError
 from flask import Flask, request, Response
 import nos
 from nos.client import InferenceClient, TaskType
+from nos.logging import logger
 
 app = Flask(__name__)
 
@@ -13,6 +14,15 @@ client = WebClient(token=os.environ['SLACK_BOT_TOKEN'])
 nos.init(runtime='gpu')
 
 nos_client = InferenceClient()
+
+logger.debug("Waiting for server to start...")
+nos_client.WaitForServer()
+
+logger.debug("Confirming server is healthy...")
+if not nos_client.IsHealthy():
+    raise RuntimeError("NOS server is not healthy")
+
+logger.debug("Server is healthy!")
 
 BASE_MODEL = "runwayml/stable-diffusion-v1-5"
 
