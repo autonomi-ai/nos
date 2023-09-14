@@ -13,6 +13,8 @@ from pathlib import Path
 import pytest
 from loguru import logger
 
+from nos.test.utils import PyTestGroup
+
 
 # Skip this entire test if pixeltable is not installed
 pytestmark = pytest.mark.skipif(pytest.importorskip("pixeltable") is None, reason="pixeltable is not installed")
@@ -33,7 +35,7 @@ def cleanup():
         if container.name == PIXELTABLE_CONTAINER_NAME:
             try:
                 container.remove(force=True)
-                logger.info(f"Stopping container: {container.name}")
+                logger.debug(f"Stopping container: {container.name}")
             except Exception as e:
                 raise RuntimeError(f"Failed to shutdown inference server: {e}")
 
@@ -58,7 +60,7 @@ def test_pixeltable_installation():
 BENCHMARK_IMAGE_SHAPES = [(640, 480), (1280, 720), (2880, 1620)]
 
 
-def test_pixeltable_integration():
+def pixeltable_integration(write_profile: bool = False):
     import pandas as pd
     import pixeltable as pt
 
@@ -148,13 +150,13 @@ def test_pixeltable_integration():
     t[noop(t.frame)].show(1)  # noop (warmup)
     with timer(f"noop_{W}x{H}", n=nframes) as info:
         t.add_column(pt.Column("noop_ids", computed_with=noop(t.frame)))
-    logger.info(info)
+    logger.debug(info)
     timing_records.append(info)
 
     for (RW, RH) in BENCHMARK_IMAGE_SHAPES:
         with timer(f"noop_{RW}x{RH}", n=nframes) as info:
             t.add_column(pt.Column(f"noop_ids_{RW}x{RH}", computed_with=noop(getattr(t, f"frame_{RW}x{RH}"))))
-        logger.info(info)
+        logger.debug(info)
         timing_records.append(info)
 
     # YOLOX
@@ -162,7 +164,7 @@ def test_pixeltable_integration():
         t[yolo_model(t.frame)].show(1)  # load model
         with timer(f"yolox_{name}_{W}x{H}", n=nframes) as info:
             t.add_column(pt.Column(f"detections_yolo_{name}", computed_with=yolo_model(t.frame)))
-        logger.info(info)
+        logger.debug(info)
         timing_records.append(info)
 
         for (RW, RH) in BENCHMARK_IMAGE_SHAPES:
@@ -172,7 +174,7 @@ def test_pixeltable_integration():
                         f"detections_yolo_{name}_{RW}x{RH}", computed_with=yolo_model(getattr(t, f"frame_{RW}x{RH}"))
                     )
                 )
-            logger.info(info)
+            logger.debug(info)
             timing_records.append(info)
 
     # CLIP
@@ -182,21 +184,21 @@ def test_pixeltable_integration():
             t.add_column(
                 pt.Column(f"embedding_clip_{RW}x{RH}", computed_with=openai_clip(getattr(t, f"frame_{RW}x{RH}")))
             )
-        logger.info(info)
+        logger.debug(info)
         timing_records.append(info)
 
     # SDv2
     prompts_t[sdv21(prompts_t.prompt, 1, 512, 512)].show(1)  # load model
     with timer("sdv21", n=len(PROMPTS)) as info:
         prompts_t.add_column(pt.Column("img_sdv21", computed_with=sdv21(prompts_t.prompt, 1, 512, 512), stored=True))
-    logger.info(info)
+    logger.debug(info)
     timing_records.append(info)
 
     # SDXL
     # prompts_t[sdxl(prompts_t.prompt, 1, 1024, 1024)].show(1)  # load model
     # with timer(f"sdxl", n=len(PROMPTS)) as info:
     #     prompts_t.add_column(pt.Column("img_sdxl", computed_with=sdxl(prompts_t.prompt, 1, 1024, 1024), stored=True))
-    # logger.info(info)
+    # logger.debug(info)
     # timing_records.append(info)
 
     timing_df = pd.DataFrame([r.to_dict() for r in timing_records], columns=["desc", "elapsed", "n"])
@@ -207,9 +209,23 @@ def test_pixeltable_integration():
     )
     logger.info(f"\nTiming records\n{timing_df}")
 
-    # Save timing records
-    version_str = __version__.replace(".", "-")
-    date_str = datetime.utcnow().strftime("%Y%m%d")
-    profile_path = Path(NOS_INTEGRATIONS_DIR) / f"nos-pixeltable-profile--{version_str}--{date_str}.json"
-    timing_df.to_json(str(profile_path), orient="records", indent=2)
-    logger.info(f"Saved timing records to: {str(profile_path)}")
+    if write_profile:
+        # Save timing records
+        version_str = __version__.replace(".", "-")
+        date_str = datetime.utcnow().strftime("%Y%m%d")
+        profile_path = Path(NOS_INTEGRATIONS_DIR) / f"nos-pixeltable-profile--{version_str}--{date_str}.json"
+        timing_df.to_json(str(profile_path), orient="records", indent=2)
+        logger.info(f"Saved timing records to: {str(profile_path)}")
+
+
+def test_pixeltable_integration():
+    pixeltable_integration()
+
+
+@pytest.mark.benchmark(group=PyTestGroup.STRESS)
+def test_stress_pixeltable_integration():
+    """10-hour stress test pixeltable integration."""
+    from nos.common import tqdm
+
+    for _ in tqdm(duration=10 * 60 * 60, desc="Pixeltable integration/stress tests"):
+        pixeltable_integration()

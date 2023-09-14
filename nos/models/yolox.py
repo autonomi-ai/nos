@@ -184,7 +184,6 @@ class YOLOXTensorRT(YOLOX):
         """Model compilation flow."""
         from nos.compilers import compile
 
-        
         assert isinstance(inputs, list), f"inputs must be a list, got {type(inputs)}"
         assert len(inputs) == 1, f"inputs must be a list of length 1, got {len(inputs)}"
         keys = {"input"}

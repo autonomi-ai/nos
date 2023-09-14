@@ -17,7 +17,7 @@ nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def ray_executor():
     from nos.executors.ray import RayExecutor
 

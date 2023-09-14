@@ -16,6 +16,7 @@ class PyTestGroup(Enum):
 
     UNIT = "unit"
     INTEGRATION = "integration"
+    STRESS = "stress"
     HUB = "hub"
     BENCHMARK = "benchmark"
     MODEL_BENCHMARK = "model-benchmark"
