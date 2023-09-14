@@ -291,7 +291,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
 
-def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 1) -> None:
+def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 4) -> None:
     """Start the gRPC server."""
     from concurrent import futures
 

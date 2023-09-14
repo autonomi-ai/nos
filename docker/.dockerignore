@@ -24,5 +24,6 @@ dist
 bdist
 *.cache
 *.ts
+*.pyc
 
 site/

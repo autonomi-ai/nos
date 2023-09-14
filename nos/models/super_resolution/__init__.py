@@ -11,7 +11,6 @@ from nos import hub
 from nos.common import EmbeddingSpec, ImageSpec, TaskType
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
-from nos.compilers import compile
 from nos.constants import NOS_MODELS_DIR
 from nos.logging import logger
 

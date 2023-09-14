@@ -26,6 +26,7 @@ def test_dreambooth_lora():
 
 @skip_if_no_torch_cuda
 def test_dreambooth_lora_civit():
+    import tempfile
     from pathlib import Path
 
     # Dowload some weights from civit AI through their REST API:
@@ -41,25 +42,20 @@ def test_dreambooth_lora_civit():
     first_model_version = response_json["modelVersions"][0]
     assert first_model_version["baseModel"] == "SD 1.5"
 
-    weights_dir = Path("howls_castle") / "weights"
-    weights_name = "pytorch_lora_weights.safetensors"
-    full_weights_path = weights_dir / weights_name
-
-    import os
-
-    if not os.path.exists(str(full_weights_path)):
-        download_url = first_model_version["downloadUrl"]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        weights_dir = Path(tmpdir) / "howls_castle" / "weights"
         weights_dir.mkdir(parents=True, exist_ok=True)
+        weights_path = weights_dir / "pytorch_lora_weights.safetensors"
 
-        response = requests.get(download_url)
-        assert response.status_code == 200
+        if not weights_path.exists():
+            download_url = first_model_version["downloadUrl"]
+            response = requests.get(download_url)
+            assert response.status_code == 200
 
-        with open(str(full_weights_path), "wb") as f:
-            f.write(response.content)
+            with open(str(weights_path), "wb") as f:
+                f.write(response.content)
 
-    model = StableDiffusionLoRA(weights_dir=full_weights_path, model_name="runwayml/stable-diffusion-v1-5")
-    (img,) = model(prompts="a castle on a hillside", num_images=1)
-    # save this image
-    img.save("/home/scott/dev/nos/tests/test_output/test_dreambooth_lora_howls.png")
+        model = StableDiffusionLoRA(weights_dir=str(weights_path), model_name="runwayml/stable-diffusion-v1-5")
+        (img,) = model(prompts="a castle on a hillside", num_images=1)
     assert img is not None
     assert isinstance(img, Image.Image)

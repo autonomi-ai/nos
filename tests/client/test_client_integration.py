@@ -42,10 +42,9 @@ def test_client_init(runtime):  # noqa: F811
 
 
 @pytest.mark.client
-@pytest.mark.benchmark(group=PyTestGroup.INTEGRATION)
 @pytest.mark.parametrize("runtime", ["gpu"])
-def test_client_inference_benchmark(runtime):  # noqa: F811
-    """Test and benchmark end-to-end client inference interface."""
+def test_client_inference_integration(runtime):  # noqa: F811
+    """Test end-to-end client inference interface."""
     from itertools import islice
 
     import cv2
@@ -53,6 +52,7 @@ def test_client_inference_benchmark(runtime):  # noqa: F811
     from nos.common import TaskType, tqdm
     from nos.common.io import VideoReader
     from nos.logging import logger
+    from nos.models import StableDiffusion
 
     # Initialize the server
     container = nos.init(runtime=runtime, port=GRPC_PORT, utilization=1)
@@ -73,9 +73,10 @@ def test_client_inference_benchmark(runtime):  # noqa: F811
     assert len(video) > 0
     iterations = 30 if runtime == "cpu" else min(500, len(video))
 
-    # TXT2IMG
-    if runtime == "gpu":
-        task, model_name = TaskType.IMAGE_GENERATION, "runwayml/stable-diffusion-v1-5"
+    # SDv1.4, SDv1.5, SDv2.0, SDv2.1, and SDXL
+    task = TaskType.IMAGE_GENERATION
+    for _, config in StableDiffusion.configs.items():
+        model_name = config.model_name
         model = client.Module(task=task, model_name=model_name)
         assert model is not None
         assert model.GetModelInfo() is not None
