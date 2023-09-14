@@ -1,7 +1,7 @@
 """Pixeltable integration tests
 
 Requirements:
-- test in client-only environment (pip install autonomi-nos pixeltable)
+- test in client-only environment (pip install torch-nos pixeltable)
 
 Benchmarks:
 - See benchmark-pixeltable.md

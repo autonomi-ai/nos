@@ -5,21 +5,19 @@ Cut your inference costs by 10x.
 </h4>
 
 
-
-
 <p align="center">
 <a href="https://www.autonomi.ai/"><b>Website</b></a> | <a href="https://autonomi-ai.github.io/nos/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
 </p>
 
 <p align="center">
-<a href="https://pypi.org/project/autonomi-nos/">
-    <img alt="PyPi Version" src="https://badge.fury.io/py/autonomi-nos.svg">
+<a href="https://pypi.org/project/torch-nos/">
+    <img alt="PyPi Version" src="https://badge.fury.io/py/torch-nos.svg">
 </a>
-<a href="https://pypi.org/project/autonomi-nos/">
-    <img alt="PyPi Version" src="https://img.shields.io/pypi/pyversions/autonomi-nos">
+<a href="https://pypi.org/project/torch-nos/">
+    <img alt="PyPi Version" src="https://img.shields.io/pypi/pyversions/torch-nos">
 </a>
-<a href="https://pypi.org/project/autonomi-nos/">
-    <img alt="PyPi Downloads" src="https://img.shields.io/pypi/dm/autonomi-nos">
+<a href="https://pypi.org/project/torch-nos/">
+    <img alt="PyPi Downloads" src="https://img.shields.io/pypi/dm/torch-nos">
 </a>
 <a href="https://discord.gg/QAGgvTuvgg">
     <img alt="Discord" src="https://img.shields.io/badge/discord-chat-purple?color=%235765F2&label=discord&logo=discord">
@@ -60,7 +58,7 @@ Cut your inference costs by 10x.
 Get started with NOS in a few lines of code:
 
 ```shell
-pip install autonomi-nos[torch]
+pip install torch-nos[torch]
 ```
 
 - [API Documentation](https://autonomi-ai.github.io/nos/)
