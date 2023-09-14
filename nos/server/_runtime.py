@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Union
 import psutil
 
 import docker
+from docker.types import LogConfig
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.constants import (  # noqa F401
     DEFAULT_GRPC_PORT,
@@ -31,8 +32,6 @@ NOS_DOCKER_IMAGE_TRT_RUNTIME = f"autonomi/nos:{__version__}-trt-runtime"
 
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
 NOS_INFERENCE_SERVICE_CMD = ["./entrypoint.sh"]
-
-NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
 NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
@@ -89,6 +88,7 @@ class InferenceServiceRuntimeConfig:
         default_factory=lambda: {
             "nano_cpus": int(6e9),
             "mem_limit": "6g",
+            "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
         }
     )
     """Additional keyword-arguments to pass to `DockerRuntime.start`."""
@@ -112,6 +112,7 @@ class InferenceServiceRuntime:
             kwargs={
                 "nano_cpus": int(6e9),
                 "mem_limit": "6g",
+                "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
             },
         ),
         "gpu": InferenceServiceRuntimeConfig(
@@ -121,6 +122,7 @@ class InferenceServiceRuntime:
             kwargs={
                 "nano_cpus": int(8e9),
                 "mem_limit": "12g",
+                "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
             },
         ),
         "trt-runtime": InferenceServiceRuntimeConfig(
@@ -133,6 +135,7 @@ class InferenceServiceRuntime:
             kwargs={
                 "nano_cpus": int(8e9),
                 "mem_limit": "12g",
+                "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
             },
         ),
     }
