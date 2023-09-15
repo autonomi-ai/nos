@@ -1,17 +1,16 @@
-
-
 def test_nos_imports():
-    import nos
+    pass
 
 
 def test_nos_internal_imports():
     import nos
-    
+
     # Try importing the internal module
     try:
-        import autonomi.nos._internal
+        import nos._internal  # noqa: F401, F403
+
         success = True
     except ImportError:
         success = False
-    
-    assert success == nos._internal_available
+
+    assert success == nos.internal_libs_available()

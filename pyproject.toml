@@ -75,12 +75,11 @@ exclude = [
     "makefiles",
     "requirements",
     "tests",
-    "nos*test*",
 ]
 
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.proto"]
+"*" = ["*.json", "*.proto", "test_data/*.*"]
 
 [tool.black]
 line-length = 119

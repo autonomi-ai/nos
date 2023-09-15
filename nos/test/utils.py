@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 
-NOS_TEST_DATA_DIR = Path(__file__).parent.parent.parent / "tests/test_data"
+NOS_TEST_DATA_DIR = Path(__file__).parent / "test_data"
 NOS_TEST_IMAGE = NOS_TEST_DATA_DIR / "test.jpg"
 NOS_TEST_VIDEO = NOS_TEST_DATA_DIR / "test.mp4"
 NOS_TEST_AUDIO = NOS_TEST_DATA_DIR / "test_speech.flac"

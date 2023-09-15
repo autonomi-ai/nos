@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Dict, List, Union
 
 import numpy as np
@@ -12,9 +11,7 @@ from nos import hub
 from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
-from nos.constants import NOS_MODELS_DIR
 from nos.hub import TorchHubConfig
-from nos.logging import logger
 
 
 @dataclass(frozen=True)
@@ -155,76 +152,6 @@ class YOLOX:
                 "scores": [(p[:, 4] * p[:, 5]) for p in predictions],  # obj_conf * class_conf
                 "labels": [p[:, 6].astype(np.int32) for p in predictions],
             }
-
-
-class YOLOXTensorRT(YOLOX):
-    """TensorRT accelerated for YOLOX with Torch TensorRT."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.verbose = kwargs.get("verbose", False)
-        self._model_dir = Path(NOS_MODELS_DIR, f"cache/{self.cfg.model_name}")
-        self._model_dir.mkdir(parents=True, exist_ok=True)
-        self._patched = False
-        self._patched_shape = None
-
-    @staticmethod
-    def _get_model_id(name: str, shape: torch.Size, dtype: torch.dtype) -> str:
-        """Get model id from model name, shape and dtype."""
-        replacements = {"/": "-", " ": "-"}
-        for k, v in replacements.items():
-            name = name.replace(k, v)
-        shape = list(map(int, shape))
-        shape_str = "x".join([str(s) for s in shape])
-        precision_str = str(dtype).split(".")[-1]
-        return f"{name}_{shape_str}_{precision_str}"
-
-    def __compile__(self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32) -> torch.nn.Module:
-        """Model compilation flow."""
-        from nos.compilers import compile
-
-        assert isinstance(inputs, list), f"inputs must be a list, got {type(inputs)}"
-        assert len(inputs) == 1, f"inputs must be a list of length 1, got {len(inputs)}"
-        keys = {"input"}
-        args = dict(zip(keys, inputs))
-
-        # Check if we have a cached model
-        slug = "backbone"
-        model_id = YOLOXTensorRT._get_model_id(f"{self.cfg.model_name}--{slug}", inputs[0].shape, precision)
-        filename = f"{self._model_dir}/{model_id}.torchtrt.pt"
-        if Path(filename).exists():
-            logger.debug(f"Found cached {model_id}: {filename}")
-            trt_model = torch.load(filename)
-            self.model.backbone = trt_model
-            return
-
-        # Compile the model backbone
-        try:
-            trt_model = compile(self.model.backbone, args, concrete_args=None, precision=precision, slug=model_id)
-            logger.debug(f"Saving compiled {model_id} model to {filename}")
-            torch.save(trt_model, filename)
-            self.model.backbone = trt_model
-            logger.debug(f"Patched {model_id} model")
-        except Exception as e:
-            logger.error(f"Failed to compile {model_id} model: {e}")
-
-    def __call__(
-        self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]
-    ) -> Dict[str, np.ndarray]:
-        """Predict bounding boxes for images."""
-        images = prepare_images(images)
-        B = len(images)
-        H, W = images[0].shape[:2]
-        if not self._patched:
-            assert H is not None and W is not None, "Must provide image size for first call to __call__"
-            inputs = [torch.rand(B, 3, H, W).to(self.device)]
-            self.__compile__(inputs, precision=torch.float32)
-            self._patched = True  # we set this to patched even if the compilation fails
-            self._patched_shape = (B, H, W)
-        if (B, H, W) != self._patched_shape:
-            raise ValueError(f"Image size changed from {self._patched_shape} to {(B, H, W)}")
-        return super().__call__(images)
 
 
 for model_name in YOLOX.configs:
