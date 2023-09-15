@@ -2,13 +2,18 @@ name: Publish Docker image
 
 on:
    release:
-     types: [prereleased]
+     types: [released]
 
 jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
+      - name: Run CI tests
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: ci.yml
+
       - name: Check out the repo
         uses: actions/checkout@v2
 
@@ -18,7 +23,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Docker image
-        run: make .docker-build TARGET=test DOCKER_TARGET=server BASE_IMAGE=python:3.8.10-slim
-      - name: Push docker image
-        run: make .docker-push-base TARGET=test
+      - name: Build Docker images
+        run: make docker-build-all
+      - name: Push docker images
+        run: make docker-push-all 
