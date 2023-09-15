@@ -26,4 +26,4 @@ jobs:
       - name: Build Docker images
         run: make docker-build-all
       - name: Push docker images
-        run: make docker-push-all 
+        run: make docker-push-all
