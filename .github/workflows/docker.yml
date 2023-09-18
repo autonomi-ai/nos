@@ -29,4 +29,6 @@ jobs:
       #   run: make docker-push-all
 
       - name: Build pypi packages
+        run: make dist
+      - name: Publish pypi packages
         run: make -f makefiles/Makefile.admin.mk create-pypi-release-test
