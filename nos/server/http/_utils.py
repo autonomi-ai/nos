@@ -4,8 +4,9 @@ from io import BytesIO
 from typing import Any, Dict
 
 import numpy as np
-from PIL import Image
 from fastapi import UploadFile
+from PIL import Image
+
 
 def encode_item(v: Any) -> Any:
     """Encode an item to a JSON-serializable object."""
@@ -66,5 +67,6 @@ def image_to_base64_str(image: Image.Image) -> str:
 
 class CustomJSONEncoder(json.JSONEncoder):
     """Custom JSON encoder."""
+
     def default(self, obj):
         return encode_dict(obj)

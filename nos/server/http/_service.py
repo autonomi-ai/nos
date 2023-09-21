@@ -1,27 +1,16 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from fastapi import Depends, FastAPI, status
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from fastapi import File, UploadFile, status
 
 from nos.client import DEFAULT_GRPC_PORT, InferenceClient
 from nos.common import TaskType
 from nos.logging import logger
 from nos.protoc import import_module
-from nos.server.http._utils import encode_dict, decode_file_object
 from nos.version import __version__
 
-
-class InferenceRequest(BaseModel):
-    task: str
-    """Task used for inference"""
-    model_name: str
-    """Model identifier"""
-    inputs: Dict[str, Any]
-    """Input data for inference"""
-    data: Optional[UploadFile] = File(None)
-    """Uploaded image / video / audio file for inference"""
+from ._types import InferenceRequest
+from ._utils import decode_file_object, encode_dict
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
@@ -57,10 +46,9 @@ def ping(client=Depends(get_client)) -> JSONResponse:
 
 
 @app.post(f"/{API_VERSION}/infer", status_code=status.HTTP_201_CREATED)
-def infer(request: InferenceRequest, 
-          client=Depends(get_client)) -> JSONResponse:
+def infer(request: InferenceRequest, client=Depends(get_client)) -> JSONResponse:
     """Perform inference on the given input data.
-    
+
     $ curl -X "POST" \
       "http://localhost:8000/v1/infer" \
       -H "Content-Type: multipart/form-data" \
@@ -102,3 +90,22 @@ def infer(request: InferenceRequest,
     response = model(**inputs)
     logger.debug(f"Inference [task={task}, model_name={request.model_name}, response={response}]")
     return JSONResponse(content=encode_dict(response), status_code=status.HTTP_201_CREATED)
+
+
+def main():
+    """Main function."""
+    import argparse
+
+    import uvicorn
+
+    parser = argparse.ArgumentParser(description="NOS REST API Service")
+    parser.add_argument("--host", type=str, default="localhost", help="Host address")
+    parser.add_argument("--port", type=int, default=8000, help="Port number")
+    parser.add_argument("--debug", action="store_true", help="Debug mode")
+    args = parser.parse_args()
+
+    uvicorn.run(app, host=args.host, port=args.port, debug=args.debug)
+
+
+if __name__ == "__main__":
+    main()

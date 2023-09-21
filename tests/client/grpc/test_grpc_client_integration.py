@@ -13,7 +13,7 @@ GRPC_PORT = 50055
 
 @pytest.mark.client
 @pytest.mark.parametrize("runtime", ["cpu", "gpu", "auto"])
-def test_client_init(runtime):  # noqa: F811
+def test_grpc_client_init(runtime):  # noqa: F811
     """Test the NOS server daemon initialization."""
 
     # Initialize the server
@@ -43,7 +43,7 @@ def test_client_init(runtime):  # noqa: F811
 
 @pytest.mark.client
 @pytest.mark.parametrize("runtime", ["gpu"])
-def test_client_inference_integration(runtime):  # noqa: F811
+def test_grpc_client_inference_integration(runtime):  # noqa: F811
     """Test end-to-end client inference interface."""
     from itertools import islice
 
@@ -112,7 +112,7 @@ def test_client_inference_integration(runtime):  # noqa: F811
     "client_with_server",
     ("local_grpc_client_with_server",),
 )
-def test_client_training(client_with_server, request):  # noqa: F811
+def test_grpc_client_training(client_with_server, request):  # noqa: F811
     """Test end-to-end client training interface."""
     import shutil
     from pathlib import Path
