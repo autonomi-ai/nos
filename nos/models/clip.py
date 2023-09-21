@@ -1,8 +1,6 @@
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List, Union
 
-import cv2
 import numpy as np
 import torch
 from PIL import Image
@@ -11,9 +9,7 @@ from nos import hub
 from nos.common import EmbeddingSpec, ImageSpec, TaskType
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
-from nos.constants import NOS_MODELS_DIR
 from nos.hub import HuggingFaceHubConfig
-from nos.logging import logger
 
 
 @dataclass(frozen=True)
@@ -92,129 +88,6 @@ class CLIP:
             ).to(self.device)
             text_features = self.model.get_text_features(**inputs)
             return text_features.cpu().numpy()
-
-
-class CLIPTensorRT(CLIP):
-    """TensorRT accelerated for CLIP with Torch TensorRT."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self._model_dir = Path(NOS_MODELS_DIR, f"cache/{self.cfg.model_name}")
-        self._model_dir.mkdir(parents=True, exist_ok=True)
-        self._patched = {}
-        self._patched_shape = None
-
-    @staticmethod
-    def _get_model_id(name: str, shape: torch.Size, dtype: torch.dtype) -> str:
-        """Get model id from model name, shape and dtype."""
-        replacements = {"/": "-", " ": "-"}
-        for k, v in replacements.items():
-            name = name.replace(k, v)
-        shape = list(map(int, shape))
-        shape_str = "x".join([str(s) for s in shape])
-        precision_str = str(dtype).split(".")[-1]
-        return f"{name}_{shape_str}_{precision_str}"
-
-    def _compile_vision_model(
-        self, inputs: List[torch.Tensor], precision: torch.dtype = torch.float32
-    ) -> torch.nn.Module:
-        """Vision model compilation flow."""
-        import torch.nn as nn
-        import torch_tensorrt.fx.converter_registry as registry
-        from torch_tensorrt.fx.tracer.acc_tracer import acc_ops
-        from transformers.modeling_outputs import BaseModelOutputWithPooling
-
-        from nos.compilers import compile
-
-        assert isinstance(inputs, list), f"inputs must be a list, got {type(inputs)}"
-        assert len(inputs) == 1, f"inputs must be a list of length 1, got {len(inputs)}"
-        logger.debug(f"Compiling {self.cfg.model_name} (vision_model) with precision: {precision}")
-
-        class _CLIPVisionTransformer(nn.Module):
-            """Wrapper for the vision model with patched outputs.
-
-            We need this since the compilation removes the output types and
-            requires us to patch the outputs manually with the correct types
-            so that they can be used identically to the original model.
-            """
-
-            def __init__(self, model):
-                super().__init__()
-                self.model = model
-
-            def forward(self, *args, **kwargs):
-                return BaseModelOutputWithPooling(self.model(*args, **kwargs))
-
-        # TODO (spillai): The compilation for CLIP requires acc_ops_expand_tensor to be disabled
-        # to avoid the assertion thrown by the TRT backend. This is a temporary workaround
-        # until the issue is fixed upstream.
-        logger.debug("Disabling acc_ops.expand_tensor for CLIP compilation")
-        expand_op = None
-        if acc_ops.expand in registry.CONVERTERS.keys():
-            expand_op = registry.CONVERTERS.pop(acc_ops.expand)
-            logger.debug(f"Disabled {acc_ops.expand} from registry.CONVERTERS")
-
-        # Check if we have a cached model
-        model_id = CLIPTensorRT._get_model_id(f"{self.cfg.model_name}", inputs[0].shape, precision)
-        filename = f"{self._model_dir}/{model_id}.torchtrt.pt"
-        if Path(filename).exists():
-            logger.debug(f"Found cached {model_id}: {filename}")
-            trt_model = torch.load(filename)
-            self.model.vision_model = _CLIPVisionTransformer(trt_model)
-            return
-
-        # Compile the model backbone
-        # Note (spillai): Currently we hard-code the iamge size to 1x3x224x224
-        B, H, W = 1, self.cfg.height, self.cfg.width
-        args = {
-            "pixel_values": torch.randn((B, 3, H, W), dtype=precision, device="cuda"),
-            "output_attentions": self.model.config.output_attentions,
-            "output_hidden_states": self.model.config.output_hidden_states,
-            "return_dict": True,
-        }
-        try:
-            trt_model = compile(self.model.vision_model, args, concrete_args=None, precision=precision, slug=model_id)
-            logger.debug(f"Saving compiled {model_id} model to {filename}")
-            torch.save(trt_model, filename)
-            self.model.vision_model = _CLIPVisionTransformer(trt_model)
-            logger.debug(f"Patched {model_id} model")
-        except Exception as e:
-            import traceback
-
-            logger.error(f"Failed to compile {model_id} model\n{traceback.format_exc()}")
-            raise e
-
-        # Restore acc_ops.expand_tensor
-        if expand_op is not None:
-            logger.debug("Restoring acc_ops.expand_tensor for CLIP compilation")
-            registry.CONVERTERS[acc_ops.expand] = expand_op
-            logger.debug(f"Restored {acc_ops.expand} to registry.CONVERTERS")
-
-    def encode_image(self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]]) -> np.ndarray:
-        """Encode image into an embedding."""
-        images = prepare_images(images)
-
-        # Resize images if necessary
-        if self._patched_shape is None:
-            H, W = self.cfg.height, self.cfg.width
-        else:
-            _, H, W = self._patched_shape
-        images = [cv2.resize(image, (W, H)) if image.shape[-2:] != (H, W) else image for image in images]
-
-        if not len(self._patched):
-            # Note (spillai): Force compilation with resized images
-            inputs = [torch.tensor(images)]
-            self._compile_vision_model(inputs, precision=self.model.dtype)
-            self._patched["vision_model"] = True
-            self._patched_shape = (len(images), H, W)
-
-        with torch.inference_mode():
-            inputs = self.processor(images=images, return_tensors="pt").to(self.device)
-            if self.device != "cuda" and self.model.dtype == torch.float16:
-                inputs = {k: v.half() for k, v in inputs.items()}
-            image_features = self.model.get_image_features(**inputs)
-            return image_features.cpu().numpy()
 
 
 # Register all CLIP models (for both tasks img2vec and txt2vec)

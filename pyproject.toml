@@ -9,20 +9,31 @@ license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.7.10"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Programming Language :: Python",
-    "Topic :: Software Development :: Libraries",
+    "Environment :: Console",
+    "Environment :: GPU",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research","Topic :: Software Development :: Libraries",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Image Processing",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+
 ]
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [project.urls]
 "Documentation" = "https://autonomi-ai.github.io/nos/"
 "Source Code" = "https://github.com/autonomi-ai/nos"
+"Homepage" = "https://www.autonomi.ai/"
 
 [tool.setuptools.dynamic]
 version = {attr = "nos.version.__version__"}
@@ -48,7 +59,7 @@ nos-grpc-server = "nos.server._service:main"
 # see https://setuptools.pypa.io/en/latest/userguide/dependency_management.html
 [options]
 dependency_links = [
-    "https://download.pytorch.org/whl/cu117",
+    "https://download.pytorch.org/whl/cu118",
 ]
 
 [tool.setuptools]
@@ -64,11 +75,11 @@ exclude = [
     "makefiles",
     "requirements",
     "tests",
-    "nos*test*",
 ]
 
+
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.proto"]
+"*" = ["*.json", "*.proto", "test_data/*.*"]
 
 [tool.black]
 line-length = 119
