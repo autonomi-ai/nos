@@ -1,23 +1,23 @@
 version: "3.8"
 
 services:
-  #bot:
-  #  image: autonomi/nos:latest-discord-app
-  #  build:
-  #    context: .
-  #    dockerfile: Dockerfile
-  #    args:
-  #      - BASE_IMAGE=autonomi/nos:latest-cpu
-  #  env_file:
-  #    - .env
-  #  environment:
-  #    - NOS_HOME=/app/.nos
-  #    - NOS_LOGGING_LEVEL=DEBUG
-  #  volumes:
-  #    - ~/.nosd:/app/.nos
-  #    - /dev/shm:/dev/shm
-  #  network_mode: host
-  #  ipc: host
+  bot:
+    image: autonomi/nos:latest-discord-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BASE_IMAGE=autonomi/nos:latest-cpu
+    env_file:
+      - .env
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL=DEBUG
+    volumes:
+      - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
+    network_mode: host
+    ipc: host
 
   server:
     image: autonomi/nos:latest-gpu
