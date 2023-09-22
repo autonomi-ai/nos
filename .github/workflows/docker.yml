@@ -28,6 +28,8 @@ jobs:
       # - name: Push docker images
       #   run: make docker-push-all
 
+      - name: Install dependencies
+        run: make develop-cpu
       - name: Build pypi packages
         run: make dist
       - name: Publish pypi packages
