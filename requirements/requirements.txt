@@ -1,4 +1,5 @@
 av>=10.0.0
+build
 cloudpickle>=2.2.1
 docker>=6.0.0
 gitpython
