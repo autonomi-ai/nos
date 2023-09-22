@@ -1,4 +1,5 @@
 av>=10.0.0
+build
 cloudpickle>=2.2.1
 docker>=6.0.0
 gitpython
@@ -14,4 +15,3 @@ rich>=12.5.1
 tqdm
 typer>=0.7.0
 typing_extensions>=4.5.0
-build
