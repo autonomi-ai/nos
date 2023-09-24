@@ -1,11 +1,23 @@
 # Copyright 2022- Autonomi AI, Inc. All rights reserved.
 #
-NOS_VERSION := $(shell python -c 'from nos.version import __version__; print(__version__)')
+NOS_VERSION := $(shell python -c 'from nos.version import __version__; print(__version__.replace("-", "."))')
+PYPI_USERNAME :=
+PYPI_PASSWORD :=
 
-create-pypi-release-test:  ## package and upload a release
-	twine upload --repository testpypi dist/torch_nos-${NOS_VERSION}-py3-none-any.whl --
+WHL_GREP_PATTERN := .*\$(NOS_VERSION).*\.whl
 
-create-pypi-release:  ## package, git tag/release and upload a release to PyPI
+create-pypi-release-loose-test:
+	@echo "looking for nos whl file..."
+	@for file in dist/*; do \
+		echo "examining file: $$file"; \
+		if [ -f "$$file" ] && echo "$$file" | grep -qE "$(WHL_GREP_PATTERN)"; then \
+			echo "Uploading: $$file"; \
+			twine upload --repository testpypi "$$file" --username $(PYPI_USERNAME) --password $(PYPI_PASSWORD); \
+		fi; \
+	done
+	@echo "Upload completed"
+
+create-pypi-release:  ## package, git tag/release and upload a release to PyP I
 	@echo -n "Are you sure you want to create a PyPI release? [y/N] " && read ans && [ $${ans:-N} = y ]
 	echo "Uploading dist/torch_nos-${NOS_VERSION}-py3-none-any.whl"
 	twine upload dist/torch_nos-${NOS_VERSION}-py3-none-any.whl

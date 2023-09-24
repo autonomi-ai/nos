@@ -1,4 +1,6 @@
 black[jupyter]==22.3.0
 build==0.10.0
+build
 pre-commit==3.2.2
 ruff==0.0.262
+twine
