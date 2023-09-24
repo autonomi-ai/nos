@@ -33,4 +33,4 @@ jobs:
       - name: Build pypi packages
         run: make dist
       - name: Publish pypi packages
-        run: make -f makefiles/Makefile.admin.mk create-pypi-release-test
+        run: make -f makefiles/Makefile.admin.mk create-pypi-release-loose-test PYPI_USERNAME=${{ secrets.PYPI_USERNAME }} PYPI_PASSWORD=${{ secrets.PYPI_PASSWORD }}
