@@ -4,10 +4,6 @@ NOS_VERSION := $(shell python -c 'from nos.version import __version__; print(__v
 PYPI_USERNAME :=
 PYPI_PASSWORD :=
 
-# twine upload .whl files in the directory that contain the string NOS_VERSION:
-create-pypi-release-loose-test:
-	twine upload --repository testpypi dist/*${NOS_VERSION}*.whl --
-
 WHL_GREP_PATTERN := .*\$(NOS_VERSION).*\.whl
 
 create-pypi-release-loose-test:
