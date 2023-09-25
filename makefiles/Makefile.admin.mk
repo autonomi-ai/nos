@@ -17,6 +17,18 @@ create-pypi-release-loose-test:
 	done
 	@echo "Upload completed"
 
+
+create-pypi-release-loose-:
+	@echo "looking for nos whl file..."
+	@for file in dist/*; do \
+		echo "examining file: $$file"; \
+		if [ -f "$$file" ] && echo "$$file" | grep -qE "$(WHL_GREP_PATTERN)"; then \
+			echo "Uploading: $$file"; \
+			twine upload --repository "$$file" --username $(PYPI_USERNAME) --password $(PYPI_PASSWORD); \
+		fi; \
+	done
+	@echo "Upload completed"
+
 create-pypi-release:  ## package, git tag/release and upload a release to PyP I
 	@echo -n "Are you sure you want to create a PyPI release? [y/N] " && read ans && [ $${ans:-N} = y ]
 	echo "Uploading dist/torch_nos-${NOS_VERSION}-py3-none-any.whl"

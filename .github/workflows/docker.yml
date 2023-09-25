@@ -2,7 +2,7 @@ name: Publish Docker image
 
 on:
    release:
-     types: [prereleased]
+     types: [released]
 
 jobs:
   push_to_registry:
@@ -33,4 +33,4 @@ jobs:
       - name: Build pypi packages
         run: make dist
       - name: Publish pypi packages
-        run: make -f makefiles/Makefile.admin.mk create-pypi-release-loose-test PYPI_USERNAME=${{ secrets.PYPI_USERNAME }} PYPI_PASSWORD=${{ secrets.PYPI_PASSWORD }}
+        run: make -f makefiles/Makefile.admin.mk create-pypi-release-loose PYPI_USERNAME=${{ secrets.PYPI_USERNAME }} PYPI_PASSWORD=${{ secrets.PYPI_PASSWORD }}
