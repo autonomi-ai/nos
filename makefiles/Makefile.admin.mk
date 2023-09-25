@@ -18,7 +18,7 @@ create-pypi-release-loose-test:
 	@echo "Upload completed"
 
 
-create-pypi-release-loose-:
+create-pypi-release-loose:
 	@echo "looking for nos whl file..."
 	@for file in dist/*; do \
 		echo "examining file: $$file"; \
