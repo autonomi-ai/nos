@@ -2,6 +2,24 @@
 
 ```bash
 
+Timing records (0.0.11 - 2023-09-25)
+                      desc  elapsed    n  latency_ms     fps
+0             noop_294x240     1.14  168        6.79  147.37
+1             noop_640x480     1.19  168        7.08  141.18
+2            noop_1280x720     4.93  168       29.35   34.08
+3           noop_2880x1620    17.32  168      103.10    9.70
+4     yolox_medium_294x240     1.93  168       11.49   87.05
+5     yolox_medium_640x480     1.94  168       11.55   86.60
+6    yolox_medium_1280x720     9.41  168       56.01   17.85
+7   yolox_medium_2880x1620    20.93  168      124.58    8.03
+8       yolox_tiny_294x240     1.98  168       11.79   84.85
+9       yolox_tiny_640x480     1.68  168       10.00  100.00
+10     yolox_tiny_1280x720     7.68  168       45.71   21.88
+11    yolox_tiny_2880x1620    21.31  168      126.85    7.88
+12          openai_224x224     2.71  168       16.13   61.99
+13           sdv21_512x512     7.21    2     3605.00    0.28
+14          sdxl_1024x1024    22.02    2    11010.00    0.09
+
 Timing records (0.0.10 - 2023-09-13)
                      desc  elapsed    n  latency_ms     fps
 0            noop_294x240     1.10  168        6.55  152.73
@@ -13,7 +31,7 @@ Timing records (0.0.10 - 2023-09-13)
 6   yolox_medium_1280x720     9.44  168       56.19   17.80
 7  yolox_medium_2880x1620    21.80  168      129.76    7.71
 8          openai_224x224     1.31  168        7.80  128.24
-9                   sdv21     7.20    2       42.86   23.33
+9           sdv21_512x512     7.20    2           -       -
 
 Timing records (0.0.8 - 2023-08-01) w/ SHM
                       desc  elapsed    n  latency_ms     fps

@@ -44,7 +44,7 @@ class StableDiffusion:
         "stabilityai/stable-diffusion-2-1": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-2-1",
         ),
-        "stabilityai/stable-diffusion-xl-base-1.0": StableDiffusionConfig(
+        "stabilityai/stable-diffusion-xl-base-1-0": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-xl-base-1.0",
         ),
     }

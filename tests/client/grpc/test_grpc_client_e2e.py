@@ -86,7 +86,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
         assert "embedding" in response
 
     # IMG2BBOX
-    task, model_name = TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"
+    task, model_name = TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn"
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None
@@ -171,7 +171,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
         assert "embedding" in response
 
     # IMG2BBOX
-    task, model_name = TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"
+    task, model_name = TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn"
     model = client.Module(task=task, model_name=model_name)
     assert model is not None
     assert model.GetModelInfo() is not None

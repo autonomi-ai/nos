@@ -27,7 +27,7 @@ class MonoDepth:
     """Monodepth models for depth understanding."""
 
     configs = {
-        "isl-org/MiDaS_small": DepthConfig(
+        "isl-org/MiDaS-small": DepthConfig(
             repo="isl-org/MiDaS",
             model_name="MiDaS_small",
         ),
@@ -37,7 +37,7 @@ class MonoDepth:
         ),
     }
 
-    def __init__(self, model_name: str = "isl-org/MiDaS_small"):
+    def __init__(self, model_name: str = "isl-org/MiDaS-small"):
         """Initialize the model."""
         try:
             self.cfg = MonoDepth.configs[model_name]

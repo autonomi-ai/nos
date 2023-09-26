@@ -58,7 +58,7 @@ class InferenceClient:
         >>> visual_model = client.Module(TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32")  # instantiate CLIP module
         >>> visual_model(images=img)  # predict with CLIP
 
-        >>> fastrcnn_model = client.Module(TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn")  # instantiate FasterRCNN module
+        >>> fastrcnn_model = client.Module(TaskType.OBJECT_DETECTION_2D, "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn")  # instantiate FasterRCNN module
         >>> fastrcnn_model(images=img)
         ```
     """

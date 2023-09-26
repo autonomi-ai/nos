@@ -148,10 +148,10 @@ def _predict_txt2img(
 def _predict_img2bbox(
     ctx: typer.Context,
     model_name: str = typer.Option(
-        "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
+        "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn",
         "-m",
         "--model-name",
-        help="Name of the model to use (e.g. torchvision/fasterrcnn_mobilenet_v3_large_320_fpn).",
+        help="Name of the model to use (e.g. torchvision/fasterrcnn-mobilenet-v3-large-320-fpn).",
     ),
     filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
 ) -> None:
@@ -179,7 +179,7 @@ def _predict_segmentation(
         "facebook/sam-vit-large",
         "-m",
         "--model-name",
-        help="Name of the model to use (e.g. torchvision/fasterrcnn_mobilenet_v3_large_320_fpn).",
+        help="Name of the model to use (e.g. facebook/sam-vit-large).",
     ),
     filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
 ) -> None:
