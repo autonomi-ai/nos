@@ -102,7 +102,7 @@ def pixeltable_integration(write_profile: bool = False):
     from pixeltable.functions.object_detection_2d import yolox_medium, yolox_tiny
 
     sdv21 = imagen.stabilityai_stable_diffusion_2_1
-    getattr(imagen, "stabilityai_stable_diffusion_xl_base_1.0")
+    sdxl = imagen.stabilityai_stable_diffusion_xl_base_1_0
 
     # Setup pixeltable database
     try:
@@ -188,24 +188,26 @@ def pixeltable_integration(write_profile: bool = False):
         timing_records.append(info)
 
     # SDv2
-    prompts_t[sdv21(prompts_t.prompt, 1, 512, 512)].show(1)  # load model
-    with timer("sdv21", n=len(PROMPTS)) as info:
-        prompts_t.add_column(pt.Column("img_sdv21", computed_with=sdv21(prompts_t.prompt, 1, 512, 512), stored=True))
+    H, W = 512, 512
+    prompts_t[sdv21(prompts_t.prompt, 1, H, W)].show(1)  # load model
+    with timer(f"sdv21_{W}x{H}", n=len(PROMPTS)) as info:
+        prompts_t.add_column(pt.Column("img_sdv21", computed_with=sdv21(prompts_t.prompt, 1, H, W), stored=True))
     logger.debug(info)
     timing_records.append(info)
 
     # SDXL
-    # prompts_t[sdxl(prompts_t.prompt, 1, 1024, 1024)].show(1)  # load model
-    # with timer(f"sdxl", n=len(PROMPTS)) as info:
-    #     prompts_t.add_column(pt.Column("img_sdxl", computed_with=sdxl(prompts_t.prompt, 1, 1024, 1024), stored=True))
-    # logger.debug(info)
-    # timing_records.append(info)
+    H, W = 1024, 1024
+    prompts_t[sdxl(prompts_t.prompt, 1, H, W)].show(1)  # load model
+    with timer(f"sdxl_{W}x{H}", n=len(PROMPTS)) as info:
+        prompts_t.add_column(pt.Column("img_sdxl", computed_with=sdxl(prompts_t.prompt, 1, H, W), stored=True))
+    logger.debug(info)
+    timing_records.append(info)
 
     timing_df = pd.DataFrame([r.to_dict() for r in timing_records], columns=["desc", "elapsed", "n"])
     timing_df = timing_df.assign(
         elapsed=lambda x: x.elapsed.round(2),
-        latency_ms=lambda x: ((x.elapsed / nframes) * 1000).round(2),
-        fps=lambda x: (1 / (x.elapsed / nframes)).round(2),
+        latency_ms=lambda x: ((x.elapsed / x.n) * 1000).round(2),
+        fps=lambda x: (1 / (x.elapsed / x.n)).round(2),
     )
     logger.info(f"\nTiming records\n{timing_df}")
 

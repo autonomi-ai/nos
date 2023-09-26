@@ -1,6 +1,7 @@
 import copy
 import inspect
 import json
+import re
 from dataclasses import asdict, field
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin
@@ -335,10 +336,13 @@ class ModelSpec:
     """Model specification metadata. The contents of the metadata (profiles, metrics, etc)
     are specified in a separate file."""
 
-    class Config:
-        """Custom configuration to enable private attributes."""
-
-        underscore_attrs_are_private: bool = True
+    def __post_init__(self):
+        """Post initialization."""
+        regex = re.compile(r"^[a-zA-Z0-9/-]+$")  # model-identifier can only have alphanumerics, /, and -
+        if not regex.match(self.name):
+            raise ValueError(
+                f"Invalid model name, name={self.name} can only contain alphanumerics characters, `/` and '-'."
+            )
 
     def __repr__(self):
         return f"""ModelSpec(name={self.name}, task={self.task})""" f"""\n    {self.signature}"""

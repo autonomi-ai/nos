@@ -133,6 +133,22 @@ def test_common_model_spec(img2vec_signature):
         )
         assert spec is not None
 
+    # Test if ModelSpec initialization fails if the model id contains underscores or special characters
+    for name in ["openai_clip", "openai/clip-1.0", "openai\\clip"]:
+        with pytest.raises(ValueError):
+            ModelSpec(
+                name=name,
+                task=TaskType.IMAGE_EMBEDDING,
+                signature=FunctionSignature(
+                    inputs=img2vec_signature.inputs,
+                    outputs=img2vec_signature.outputs,
+                    func_or_cls=TestImg2VecModel,
+                    init_args=("openai/clip",),
+                    init_kwargs={},
+                    method_name="__call__",
+                ),
+            )
+
 
 def test_common_model_spec_variations():
     # Create signatures for all tasks (without func_or_cls, init_args, init_kwargs, method_name)
