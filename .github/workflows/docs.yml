@@ -1,10 +1,12 @@
 name: Generate / Deploy Docs
+
 on:
-  push:
-    branches:
-      - main
+  release:
+    types: [released]
+
 permissions:
   contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
