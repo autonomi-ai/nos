@@ -22,13 +22,13 @@ class FasterRCNN:
     """FasterRCNN model from torchvision"""
 
     configs = {
-        "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn": FasterRCNNConfig(
+        "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn": FasterRCNNConfig(
             model_name="torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
             repo="pytorch/vision",
         ),
     }
 
-    def __init__(self, model_name: str = "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn"):
+    def __init__(self, model_name: str = "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn"):
         from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
 
         try:
@@ -57,10 +57,10 @@ class FasterRCNN:
 
 
 hub.register(
-    "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
+    "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn",
     TaskType.OBJECT_DETECTION_2D,
     FasterRCNN,
-    init_args=("torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",),
+    init_args=("torchvision/fasterrcnn-mobilenet-v3-large-320-fpn",),
     method_name="__call__",
     inputs={
         "images": Union[

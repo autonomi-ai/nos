@@ -200,7 +200,7 @@ BENCHMARK_MODELS = [
     (TaskType.OBJECT_DETECTION_2D, "yolox/medium", [(640, 480), (1280, 720), (2880, 1620)]),
     (
         TaskType.OBJECT_DETECTION_2D,
-        "torchvision/fasterrcnn_mobilenet_v3_large_320_fpn",
+        "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn",
         [(640, 480), (1280, 720), (2880, 1620)],
     ),
 ]
