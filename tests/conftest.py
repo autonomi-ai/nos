@@ -7,6 +7,8 @@ from nos.test.conftest import (  # noqa: F401, E402  # noqa: F401, E402
     grpc_server,
     grpc_server_docker_runtime_cpu,
     grpc_server_docker_runtime_gpu,
+    http_client,
     local_grpc_client_with_server,
+    local_http_client_with_server,
     ray_executor,
 )

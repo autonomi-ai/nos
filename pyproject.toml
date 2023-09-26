@@ -41,6 +41,7 @@ dependencies = {file = ["requirements/requirements.txt"]}
 
   [tool.setuptools.dynamic.optional-dependencies]
     torch = {file = ["requirements/requirements.torch.gpu.txt"]}
+    http = {file = ["requirements/requirements.http.txt"]}
     extras = {file = ["requirements/requirements.extras.txt"]}
     server = {file = [
         "requirements/requirements.server.txt",
@@ -54,6 +55,7 @@ dependencies = {file = ["requirements/requirements.txt"]}
 [project.scripts]
 nos = "nos.cli.cli:app_cli"
 nos-grpc-server = "nos.server._service:main"
+nos-http-server = "nos.server.http._service:main"
 
 # for specifying additional pypi index urls
 # see https://setuptools.pypa.io/en/latest/userguide/dependency_management.html

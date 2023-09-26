@@ -74,6 +74,14 @@ class InferenceClient:
         self._stub: nos_service_pb2_grpc.InferenceServiceStub = None
         self._uuid: str = secrets.token_hex(4)
 
+    def __repr__(self) -> str:
+        """Returns the string representation of the client.
+
+        Returns:
+            str: String representation of the client.
+        """
+        return f"InferenceClient(address={self.address})"
+
     def __getstate__(self) -> InferenceClientState:
         """Returns the state of the client for serialization purposes.
 
