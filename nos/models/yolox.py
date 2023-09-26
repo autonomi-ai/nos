@@ -173,20 +173,3 @@ for model_name in YOLOX.configs:
             "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
         },
     )
-
-# for model_name in YOLOXTensorRT.configs:
-#     hub.register(
-#         model_name,
-#         TaskType.OBJECT_DETECTION_2D,
-#         YOLOXTensorRT,
-#         init_args=(model_name,),
-#         method_name="__call__",
-#         inputs={
-#             "images": Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 1],
-#         },
-#         outputs={
-#             "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
-#             "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
-#             "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="int32")]],
-#         },
-#     )

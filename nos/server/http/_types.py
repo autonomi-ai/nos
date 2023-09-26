@@ -1,6 +1,5 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
-from fastapi import File, UploadFile
 from pydantic import BaseModel
 
 
@@ -11,5 +10,3 @@ class InferenceRequest(BaseModel):
     """Model identifier"""
     inputs: Dict[str, Any]
     """Input data for inference"""
-    data: Optional[UploadFile] = File(None)
-    """Uploaded image / video / audio file for inference"""
