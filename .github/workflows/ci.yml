@@ -54,3 +54,18 @@ jobs:
         run: make lint
       - name: Test
         run: make test-cpu
+
+  build-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+      - uses: actions/cache@v2
+        with:
+          key: ${{ github.ref }}
+          path: .cache
+      - run: pip install -r requirements/requirements.docs.txt
+      - run: mkdocs build --clean

@@ -1,10 +1,16 @@
 name: Generate / Deploy Docs
+
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+    paths:
+      - "nos/version.py"
+  release:
+    types: [released]
+
 permissions:
   contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

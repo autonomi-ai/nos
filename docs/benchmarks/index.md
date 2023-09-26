@@ -1,12 +1,3 @@
-## Benchmarks
- - [0.0.9a2](./benchmarks.md#009a2)
- - [0.0.7a3](./benchmarks.md#007a3)
-
-## Profiles
- - [NVIDIA GeForce RTX 4090](./profiles.md#nvidia-geforce-rtx-4090)
- - [NVIDIA GeForce RTX 2080 Ti](./profiles.md#nvidia-geforce-rtx-2080-ti)
- - [NVIDIA GeForce RTX 2080](./profiles.md#nvidia-geforce-rtx-2080)
-
 ## FLOPs Reference
 
 Below are the raw TFLOPs of the different GPUs available from cloud providers.
