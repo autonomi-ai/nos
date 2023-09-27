@@ -17,6 +17,7 @@ from .openmmlab.mmdetection import MMDetection  # noqa: F401
 from .sam import SAM
 from .stable_diffusion import StableDiffusion  # noqa: F401
 from .super_resolution import SuperResolution  # noqa: F401
+from .tts import TextToSpeech  # noqa: F401
 from .whisper import Whisper  # noqa: F401
 from .whisperx import WhisperX  # noqa: F401
 from .yolox import YOLOX  # noqa: F401
