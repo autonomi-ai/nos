@@ -3,7 +3,8 @@ from enum import Enum
 from pathlib import Path
 
 import pytest
-import torch
+
+from nos.common.system import has_gpu
 
 
 NOS_TEST_DATA_DIR = Path(__file__).parent / "test_data"
@@ -12,7 +13,8 @@ NOS_TEST_VIDEO = NOS_TEST_DATA_DIR / "test.mp4"
 NOS_TEST_AUDIO = NOS_TEST_DATA_DIR / "test_speech.flac"
 
 AVAILABLE_RUNTIMES = ["auto", "cpu"]
-if torch.cuda.is_available():
+
+if has_gpu():
     AVAILABLE_RUNTIMES += ["gpu"]
 
 

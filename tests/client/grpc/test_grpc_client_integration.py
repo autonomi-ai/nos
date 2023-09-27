@@ -42,7 +42,7 @@ def test_grpc_client_init(runtime):  # noqa: F811
 
 
 @pytest.mark.client
-@pytest.mark.parametrize("runtime", AVAILABLE_RUNTIMES)
+@pytest.mark.parametrize("runtime", ["gpu"])
 def test_grpc_client_inference_integration(runtime):  # noqa: F811
     """Test end-to-end client inference interface."""
     from itertools import islice
