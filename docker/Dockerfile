@@ -8,9 +8,14 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE} as base
 
-ARG TARGET
-ENV PROJECT nos
-ENV PYENV=${PROJECT}_${TARGET}
+# TARGET options: cpu, gpu, etc
+ARG TARGET=gpu
+ARG CUDA_VERSION=11.8
+
+ENV PROJECT=nos
+ENV PYENV=${PROJECT}-${TARGET}
+ENV CUDA_VERSION=${CUDA_VERSION}
+
 ENV DEBIAN_FRONTEND="noninteractive"
 ENV PYTHON_VERSION 3.8.10
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -48,9 +53,11 @@ ADD requirements requirements
 # Install torch (cpu/gpu) based on target
 RUN --mount=type=cache,target=/opt/conda/pkgs/ \
   if [ "${TARGET}" = "cpu" ]; then \
+    echo "Building CPU version of torch"; \
     mamba install -yv pytorch torchvision cpuonly -c pytorch; \
   else \
-    mamba install -yv pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia; \
+    echo "Building GPU version of torch"; \
+    mamba install -yv pytorch torchvision torchaudio pytorch-cuda=${CUDA_VERSION} -c pytorch -c nvidia; \
   fi
 
 # Install client/server dependencies

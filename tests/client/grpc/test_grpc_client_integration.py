@@ -5,14 +5,14 @@ import pytest
 import nos
 from nos.client import InferenceClient
 from nos.server import InferenceServiceRuntime
-from nos.test.utils import PyTestGroup, get_benchmark_video
+from nos.test.utils import AVAILABLE_RUNTIMES, PyTestGroup, get_benchmark_video
 
 
 GRPC_PORT = 50055
 
 
 @pytest.mark.client
-@pytest.mark.parametrize("runtime", ["cpu", "gpu", "auto"])
+@pytest.mark.parametrize("runtime", AVAILABLE_RUNTIMES)
 def test_grpc_client_init(runtime):  # noqa: F811
     """Test the NOS server daemon initialization."""
 
@@ -42,7 +42,7 @@ def test_grpc_client_init(runtime):  # noqa: F811
 
 
 @pytest.mark.client
-@pytest.mark.parametrize("runtime", ["gpu"])
+@pytest.mark.parametrize("runtime", AVAILABLE_RUNTIMES)
 def test_grpc_client_inference_integration(runtime):  # noqa: F811
     """Test end-to-end client inference interface."""
     from itertools import islice

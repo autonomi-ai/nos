@@ -55,16 +55,17 @@ Cut your inference costs by 10x.
 
 ## Getting Started
 
-Get started with NOS in a few lines of code:
+Get started with the full NOS server by installing via pip:
 
 ```shell
-pip install torch-nos[torch]
+conda env create -n nos-py38 python=3.8
+conda activate nos-py38
+conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+pip install torch-nos[server]
 ```
 
 - [API Documentation](https://autonomi-ai.github.io/nos/)
 - [Quickstart](https://autonomi-ai.github.io/nos/docs/quickstart/)
-- [Supported Models](https://autonomi-ai.github.io/nos/docs/ROADMAP/#model-hub)
-- [Roadmap](https://autonomi-ai.github.io/nos/docs/ROADMAP/)
 
 
 ## Contribute

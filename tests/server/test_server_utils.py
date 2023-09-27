@@ -6,21 +6,15 @@ import pytest
 import nos
 from nos.common.system import has_docker
 from nos.server import InferenceServiceRuntime
+from nos.test.utils import AVAILABLE_RUNTIMES
 
 
 # Skip this entire test if docker is not installed
-num_cpus = psutil.cpu_count(logical=False)
-pytestmark = pytest.mark.skipif(not has_docker() or num_cpus < 4, reason="docker is not installed")
+NUM_CPUS = psutil.cpu_count(logical=False)
+pytestmark = pytest.mark.skipif(not has_docker() or NUM_CPUS < 4, reason="docker is not installed")
 
 
-@pytest.mark.parametrize(
-    "runtime",
-    [
-        "auto",
-        "cpu",
-        "gpu",
-    ],
-)
+@pytest.mark.parametrize("runtime", AVAILABLE_RUNTIMES)
 def test_nos_init(runtime):
     """Test the NOS server daemon initialization.
 
