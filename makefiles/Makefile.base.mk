@@ -28,8 +28,9 @@ help-base:
 		--target ${DOCKER_TARGET} \
 		-t ${DOCKER_IMAGE_NAME}:latest-${TARGET} \
 		-t ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET} \
-		--build-arg BASE_IMAGE=${BASE_IMAGE} \
 		--build-arg TARGET=${TARGET} \
+		--build-arg BASE_IMAGE=${BASE_IMAGE} \
+		--build-arg CUDA_VERSION=${CUDA_VERSION} \
 		.
 
 .docker-build-and-push-multiplatform:
@@ -44,8 +45,8 @@ help-base:
 		--target ${DOCKER_TARGET} \
 		-t ${DOCKER_IMAGE_NAME}:latest-${TARGET} \
 		-t ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET} \
-		--build-arg BASE_IMAGE=${BASE_IMAGE} \
 		--build-arg TARGET=${TARGET} \
+		--build-arg BASE_IMAGE=${BASE_IMAGE} \
 		--push \
 		.
 
@@ -68,6 +69,7 @@ docker-build-gpu:
 	make .docker-build \
 	TARGET=gpu \
 	DOCKER_TARGET=${DOCKER_TARGET} \
+	CUDA_VERSION=11.8 \
 	BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
 
 docker-build-and-push-multiplatform-cpu:

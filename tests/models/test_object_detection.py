@@ -25,7 +25,6 @@ Benchmark results (2080 Ti):
 [yolox/nano]: 24.67 ms / step
 """
 
-import os
 from typing import List
 
 import numpy as np
@@ -52,11 +51,6 @@ def package_installed(package_name: str) -> bool:
         return True
     except ImportError:
         return False
-
-
-# Only enable models in environments with specific import dependencies
-env = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", "base_gpu"))
-logger.info(f"Using env: {env}")
 
 
 if package_installed("torch_tensorrt"):

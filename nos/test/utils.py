@@ -4,11 +4,18 @@ from pathlib import Path
 
 import pytest
 
+from nos.common.system import has_gpu
+
 
 NOS_TEST_DATA_DIR = Path(__file__).parent / "test_data"
 NOS_TEST_IMAGE = NOS_TEST_DATA_DIR / "test.jpg"
 NOS_TEST_VIDEO = NOS_TEST_DATA_DIR / "test.mp4"
 NOS_TEST_AUDIO = NOS_TEST_DATA_DIR / "test_speech.flac"
+
+AVAILABLE_RUNTIMES = ["auto", "cpu"]
+
+if has_gpu():
+    AVAILABLE_RUNTIMES += ["gpu"]
 
 
 class PyTestGroup(Enum):
@@ -49,24 +56,6 @@ def skip_all_if_no_torch_cuda():
     import torch
 
     return pytest.mark.skipif(not torch.cuda.is_available(), reason="Requires CUDA")
-
-
-def skip_all_unless_nos_env(nos_env: str = None):
-    """Decorator sugar to mark all tests in a file that requires a specific nos env.
-
-    Usage:
-
-        To mark all tests in a file that requires a specific nos env,
-        add the following:
-
-        ```python
-        pytestmark = skip_all_unless_nos_env("my-nos-env")
-        ```
-    """
-    import os
-
-    env = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", "base_gpu"))
-    return pytest.mark.skipif(env != nos_env, reason=f"Requires nos env {nos_env}, but using {env}")
 
 
 def get_benchmark_video() -> str:
