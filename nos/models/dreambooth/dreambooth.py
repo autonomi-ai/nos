@@ -6,8 +6,6 @@ from typing import Dict, List, Union
 import torch
 from PIL import Image
 
-from nos import hub
-from nos.common import Batch, ImageSpec, ImageT, TaskType
 from nos.hub.config import NOS_MODELS_DIR
 from nos.logging import logger
 
@@ -212,6 +210,7 @@ class StableDiffusionLoRA:
         ).images
 
 
+"""
 for model_name in StableDiffusionLoRA.configs.keys():
     logger.debug(f"Registering model: {model_name}")
     hub.register(
@@ -224,3 +223,4 @@ for model_name in StableDiffusionLoRA.configs.keys():
         inputs={"prompts": Batch[str, 1], "num_images": int, "height": int, "width": int},
         outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )
+"""

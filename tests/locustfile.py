@@ -3,7 +3,9 @@ from PIL import Image
 
 from nos.server.http._utils import encode_dict
 
+
 NOS_TEST_IMAGE = "/home/scott/dev/nos/tests/test_data/test.jpg"
+
 
 class NosRestUser(HttpUser):
     @task
@@ -23,4 +25,4 @@ class NosRestUser(HttpUser):
             json=encode_dict(data),
         )
 
-        print('Status code:', response.status_code)
+        print("Status code:", response.status_code)

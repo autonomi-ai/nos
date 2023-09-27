@@ -127,6 +127,6 @@ update-conda: ## Export conda environment
 	conda env export --file conda/envs/$(CONDA_DEFAULT_ENV)/env.yml;
 
 # TODO (Scott): This still requires that the GPU container be started in the background
-test-locust: 
+test-locust:
 	python tests/client/http/start_http_server.py &
 	locust -f tests/locustfile.py --headless --host=http://localhost:8000 &
