@@ -2,10 +2,9 @@ from locust import HttpUser, task
 from PIL import Image
 
 from nos.server.http._utils import encode_dict
-
+from nos.test.utils import NOS_TEST_IMAGE
 
 NOS_TEST_IMAGE = "/home/scott/dev/nos/tests/test_data/test.jpg"
-
 
 class NosRestUser(HttpUser):
     @task
@@ -24,5 +23,3 @@ class NosRestUser(HttpUser):
             headers={"Content-Type": "application/json"},
             json=encode_dict(data),
         )
-
-        print("Status code:", response.status_code)
