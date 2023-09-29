@@ -1,11 +1,12 @@
 # Create a test app to run load testing against:
 import uvicorn
-from nos.server.http._service import app
+
 import nos
-from nos.constants import DEFAULT_GRPC_PORT
+from nos.server.http._service import app
+
 
 # Init a nos backend for REST API:
-nos.init(runtime='gpu', logging_level='DEBUG')
+nos.init(runtime="gpu", logging_level="DEBUG")
 
 client = nos.InferenceClient()
 
