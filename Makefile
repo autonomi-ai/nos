@@ -125,3 +125,6 @@ update-conda: ## Export conda environment
 		touch conda/envs/$(CONDA_DEFAULT_ENV)/env.yml; \
 	fi
 	conda env export --file conda/envs/$(CONDA_DEFAULT_ENV)/env.yml;
+
+test-locust:
+	locust -f tests/locustfile.py --config=tests/locust.conf
