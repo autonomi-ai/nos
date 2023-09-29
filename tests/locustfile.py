@@ -5,8 +5,6 @@ from nos.server.http._utils import encode_dict
 from nos.test.utils import NOS_TEST_IMAGE
 
 
-NOS_TEST_IMAGE = "/home/scott/dev/nos/tests/test_data/test.jpg"
-
 data = {
     "task": "custom",
     "model_name": "noop/process-images",
