@@ -18,7 +18,7 @@ from nos.common.exceptions import (
     NosServerReadyException,
 )
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
-from nos.constants import DEFAULT_GRPC_PORT, NOS_PROFILING_ENABLED
+from nos.constants import DEFAULT_GRPC_PORT, GRPC_MAX_MESSAGE_LENGTH, NOS_PROFILING_ENABLED
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -116,7 +116,12 @@ class Client:
             NosClientException: If the server fails to respond to the connection request.
         """
         if not self._stub:
-            self._channel = grpc.insecure_channel(self.address)
+            options = [
+                ("grpc.max_message_length", GRPC_MAX_MESSAGE_LENGTH),
+                ("grpc.max_send_message_length", GRPC_MAX_MESSAGE_LENGTH),
+                ("grpc.max_receive_message_length", GRPC_MAX_MESSAGE_LENGTH),
+            ]
+            self._channel = grpc.insecure_channel(self.address, options)
             try:
                 self._stub = nos_service_pb2_grpc.InferenceServiceStub(self._channel)
             except Exception as e:

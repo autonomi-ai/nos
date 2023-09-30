@@ -13,6 +13,7 @@ from nos.common import FunctionSignature, ModelSpec, TaskType, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTransportManager
 from nos.constants import (  # noqa F401
     DEFAULT_GRPC_PORT,  # noqa F401
+    GRPC_MAX_MESSAGE_LENGTH,
     NOS_PROFILING_ENABLED,
 )
 from nos.exceptions import ModelNotFoundError
@@ -297,9 +298,9 @@ def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 4) -> N
     from concurrent import futures
 
     options = [
-        ("grpc.max_message_length", 512 * 1024 * 1024),
-        ("grpc.max_send_message_length", 512 * 1024 * 1024),
-        ("grpc.max_receive_message_length", 512 * 1024 * 1024),
+        ("grpc.max_message_length", GRPC_MAX_MESSAGE_LENGTH),
+        ("grpc.max_send_message_length", GRPC_MAX_MESSAGE_LENGTH),
+        ("grpc.max_receive_message_length", GRPC_MAX_MESSAGE_LENGTH),
     ]
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers), options=options)
     nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)

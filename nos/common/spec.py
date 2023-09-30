@@ -154,7 +154,7 @@ class FunctionSignature:
     @staticmethod
     def validate(inputs: Dict[str, Any], sig: Dict[str, FunctionSignatureType]) -> Dict[str, Any]:
         """Validate the input dict against the defined signature (input or output)."""
-        if len(set(sig.keys()).symmetric_difference(set(inputs.keys()))) > 0:
+        if set(sig.keys()).issubset(set(inputs.keys())):
             raise NosInputValidationException(
                 f"Invalid inputs, provided={set(inputs.keys())}, expected={set(sig.keys())}."
             )
@@ -338,10 +338,10 @@ class ModelSpec:
 
     def __post_init__(self):
         """Post initialization."""
-        regex = re.compile(r"^[a-zA-Z0-9\/._-]+$")  # model-identifier can only have alphanumerics, /, - and .
+        regex = re.compile(r"^[a-zA-Z0-9\/._-]+$")  # allow alphanumerics, `/`, `.`, `_`, and `-`
         if not regex.match(self.name):
             raise ValueError(
-                f"Invalid model name, name={self.name} can only contain alphanumerics characters, `/` and '-'."
+                f"Invalid model name, name={self.name} can only contain alphanumerics characters, `/`, `.`, `_`, and `-`"
             )
 
     def __repr__(self):
