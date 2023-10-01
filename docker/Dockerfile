@@ -112,8 +112,10 @@ RUN pip install . --no-deps && \
 WORKDIR /app/$PROJECT
 ENV NOS_ENV=${PYENV}
 
-ADD scripts/entrypoint.sh .
-CMD ["./entrypoint.sh"]
+# See nos/server/_runtime.py for entrypoint
+# NOS_INFERENCE_SERVICE_CMD defaults to /app/entrypoint.sh
+ADD scripts/entrypoint.sh /app/entrypoint.sh
+CMD ["/app/entrypoint.sh"]
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # Install NOS test environment

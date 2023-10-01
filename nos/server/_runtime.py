@@ -30,7 +30,7 @@ NOS_DOCKER_IMAGE_CPU = f"autonomi/nos:{__version__}-cpu"
 NOS_DOCKER_IMAGE_GPU = f"autonomi/nos:{__version__}-gpu"
 
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
-NOS_INFERENCE_SERVICE_CMD = ["./entrypoint.sh"]
+NOS_INFERENCE_SERVICE_CMD = ["/app/entrypoint.sh"]  # this needs to be consistent with the Dockerfile
 
 NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
