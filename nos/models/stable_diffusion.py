@@ -10,22 +10,18 @@ from nos.common.types import Batch, ImageSpec, ImageT
 from nos.hub import HuggingFaceHubConfig
 
 
-def get_model_id(name: str, shape: torch.Size, dtype: torch.dtype) -> str:
-    """Get model id from model name, shape and dtype."""
-    replacements = {"/": "-", " ": "-"}
-    for k, v in replacements.items():
-        name = name.replace(k, v)
-    shape = list(map(int, shape))
-    shape_str = "x".join([str(s) for s in shape])
-    precision_str = str(dtype).split(".")[-1]
-    return f"{name}_{shape_str}_{precision_str}"
+@dataclass(frozen=True)
+class StableDiffusionConfig(HuggingFaceHubConfig):
+    pass
 
 
 @dataclass(frozen=True)
-class StableDiffusionConfig(HuggingFaceHubConfig):
-    """Configuration for StableDiffusion model."""
+class StableDiffusionNeuronConfig(HuggingFaceHubConfig):
+    neuron_model_name: str = None
+    """Name of the neuron / neuronx model."""
 
-    pass
+    neuron_type: str = "neuronx"
+    """Type of neuron model, one of ['neuron', 'neuronx']."""
 
 
 class StableDiffusion:
@@ -46,6 +42,11 @@ class StableDiffusion:
         ),
         "stabilityai/stable-diffusion-xl-base-1-0": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-xl-base-1.0",
+        ),
+        "autonomi-ai/stable-diffusion-xl-base-1-0-neuronx": StableDiffusionNeuronConfig(
+            model_name="stabilityai/stable-diffusion-xl-base-1.0",
+            neuron_model_name="autonomi-ai/stable-diffusion-xl-base-1.0-neuronx",
+            neuron_type="neuronx",
         ),
     }
 
