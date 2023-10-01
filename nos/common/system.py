@@ -77,6 +77,16 @@ def is_apple_silicon() -> bool:
     return "apple m1" in brand.lower() or "apple m2" in brand.lower()
 
 
+def is_aws_inf1() -> bool:
+    """Check if instance is AWS Inf1."""
+    return sh("lspci | grep -i Inferentia1") is not None
+
+
+def is_aws_inf2() -> bool:
+    """Check if instance is AWS Inf2."""
+    return sh("lspci | grep -i Inferentia2") is not None
+
+
 def has_nvidia_docker() -> bool:
     """Check if NVIDIA Docker is available."""
     return sh("nvidia-docker") is not None

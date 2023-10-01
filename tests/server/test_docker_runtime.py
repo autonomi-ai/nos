@@ -35,7 +35,6 @@ def docker_runtime_cpu_container():
         name=container_name,
         command=r"""bash -c 'echo CPU test && sleep 5'""",
         detach=True,
-        gpu=False,
     )
     logger.debug(f"Starting test CPU container: name={container_name}")
 
@@ -90,7 +89,7 @@ def docker_runtime_gpu_container():
         name=container_name,
         command=r"""bash -c 'echo GPU test && nvidia-smi && sleep 5'""",
         detach=True,
-        gpu=True,
+        device="gpu",
     )
     logger.debug(f"Starting test GPU container: name={container_name}")
 
