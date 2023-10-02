@@ -2,7 +2,7 @@
 (compile/infer) in detached mode.
 """
 from dataclasses import dataclass
-from typing import Any, Iterable, List, Optional, Union
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 import docker
 import docker.errors
@@ -15,31 +15,35 @@ from nos.logging import logger
 
 
 @dataclass
-class DockerDeviceRequest:
-    """Docker device request."""
-
-    device_ids: List[List[str]]
-    capabilities: List[List[str]]
-
-
-@dataclass
 class DeviceRequest:
-    """Device request."""
+    """Device request mappings for docker-py.
+
+    For the given key, we map to the corresponding
+    `docker.types.DeviceRequest` or `docker.types.Device` object.
+    This makes it easy to add new devices in the future.
+    """
 
     configs = {
-        "gpu": docker.types.DeviceRequest(
-            device_ids=["all"],
-            capabilities=[["gpu"]],
-        ),
+        "gpu": {
+            "device_requests": [
+                docker.types.DeviceRequest(
+                    device_ids=["all"],
+                    capabilities=[["gpu"]],
+                )
+            ],
+        },
+        "inf2": {
+            "devices": ["/dev/neuron0:/dev/neuron0:rwm"],
+        },
     }
 
     @classmethod
-    def get(cls, device: str) -> "DockerDeviceRequest":
+    def get(cls, device: str) -> Dict[str, Any]:
         """Get device request."""
         try:
             return cls.configs[device]
         except KeyError:
-            raise ValueError(f"Invalid DockerDeviceRequest: {device}")
+            raise ValueError(f"Invalid DeviceRequest: {device}")
 
 
 @dataclass
@@ -72,6 +76,7 @@ class DockerRuntime:
         image: str,
         command: Optional[Union[str, List[str]]] = None,
         name: str = None,
+        device: Optional[str] = None,
         **kwargs: Any,
     ) -> docker.models.containers.Container:
         """Start docker container.
@@ -84,7 +89,7 @@ class DockerRuntime:
             shm_size (Optional[int], optional): Shared memory size. Defaults to None.
             detach (bool, optional): Whether to run the container in detached mode. Defaults to True.
             remove (bool, optional): Whether to remove the container when it exits. Defaults to True.
-            gpu (bool, optional): Whether to start the container with GPU support. Defaults to False.
+            device (bool, optional): Device to request (i.e. gpu, inf2). Defaults to None (i.e. cpu).
 
         Note (Non-standard arguments):
             gpu (bool): Whether to start the container with GPU support.
@@ -100,20 +105,23 @@ class DockerRuntime:
                 self.stop(name)
 
         # Validate kwargs before passing to `containers.run(...)`
+        if "devices" in kwargs:
+            raise ValueError("Use `device='inf2'` instead of `devices`.")
         if "device_requests" in kwargs:
-            raise ValueError("Use `gpu=True` instead of `device_requests`.")
+            raise ValueError("Use `device='gpu'` instead of `device_requests`.")
 
-        # Handle device requests (gpu=True)
-        device_requests = []
-        if kwargs.pop("gpu", False):
-            device_requests = [DeviceRequest.get("gpu")]
+        # Handle device requests (gpu=True, or inf2=True)
+        if device is not None:
+            assert device in DeviceRequest.configs, f"Invalid device: {device}, available: {DeviceRequest.configs}"
+            device_kwargs = DeviceRequest.get(device)
+            logger.debug(f"Adding device [device={device}, {device_kwargs}]")
+            kwargs.update(device_kwargs)
 
         # Try starting the container, if it fails, remove it and try again
         logger.debug(f"Starting container: {name}")
         logger.debug(f"\timage: {image}")
         logger.debug(f"\tcommand: {command}")
         logger.debug(f"\tname: {name}")
-        logger.debug(f"\tdevice: {device_requests}")
         for k, v in kwargs.items():
             logger.debug(f"\t{k}: {v}")
 
@@ -123,7 +131,6 @@ class DockerRuntime:
                 image,
                 command=command,
                 name=name,
-                device_requests=device_requests,
                 **kwargs,
             )
             logger.debug(f"Started container [name={name}, image={container.image}, id={container.id[:12]}]")

@@ -12,7 +12,6 @@ import docker
 import docker.errors
 import docker.models.containers
 from nos.common.shm import NOS_SHM_ENABLED
-from nos.common.system import has_gpu
 from nos.constants import DEFAULT_GRPC_PORT
 from nos.logging import logger
 from nos.version import __version__
@@ -116,8 +115,8 @@ def init(
 
     # Determine runtime from system
     if runtime == "auto":
-        runtime = "gpu" if has_gpu() else "cpu"
-        logger.debug(f"Detected system runtime: {runtime}")
+        runtime = InferenceServiceRuntime.detect()
+        logger.debug(f"Auto-detected system runtime: {runtime}")
     else:
         if runtime not in InferenceServiceRuntime.configs:
             raise ValueError(

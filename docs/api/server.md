@@ -2,8 +2,6 @@
 
 ## Docker Runtime
 
-::: nos.server._docker.DockerDeviceRequest
-
 ::: nos.server._docker.DeviceRequest
 
 ::: nos.server._docker.DockerRuntime

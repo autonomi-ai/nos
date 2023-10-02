@@ -28,10 +28,9 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 NOS_DOCKER_IMAGE_CPU = f"autonomi/nos:{__version__}-cpu"
 NOS_DOCKER_IMAGE_GPU = f"autonomi/nos:{__version__}-gpu"
-NOS_DOCKER_IMAGE_TRT_RUNTIME = f"autonomi/nos:{__version__}-trt-runtime"
 
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
-NOS_INFERENCE_SERVICE_CMD = ["./entrypoint.sh"]
+NOS_INFERENCE_SERVICE_CMD = ["/app/entrypoint.sh"]  # this needs to be consistent with the Dockerfile
 
 NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
@@ -81,8 +80,8 @@ class InferenceServiceRuntimeConfig:
     detach: bool = True
     """Whether to run the container in detached mode."""
 
-    gpu: bool = False
-    """Whether to start the container with GPU support."""
+    device: str = None
+    """Device to request (i.e. gpu, inf2). Defaults to None (i.e. cpu)."""
 
     kwargs: Dict[str, Any] = field(
         default_factory=lambda: {
@@ -108,7 +107,6 @@ class InferenceServiceRuntime:
         "cpu": InferenceServiceRuntimeConfig(
             image=NOS_DOCKER_IMAGE_CPU,
             name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-cpu",
-            gpu=False,
             kwargs={
                 "nano_cpus": int(6e9),
                 "mem_limit": "6g",
@@ -118,17 +116,30 @@ class InferenceServiceRuntime:
         "gpu": InferenceServiceRuntimeConfig(
             image=NOS_DOCKER_IMAGE_GPU,
             name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-gpu",
-            gpu=True,
+            device="gpu",
             kwargs={
                 "nano_cpus": int(8e9),
                 "mem_limit": "12g",
                 "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
             },
         ),
-        "trt-runtime": InferenceServiceRuntimeConfig(
-            image="autonomi/nos:latest-trt-runtime",
-            name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-trt-runtime",
-            gpu=True,
+        "trt": InferenceServiceRuntimeConfig(
+            image="autonomi/nos:latest-trt",
+            name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-trt",
+            device="gpu",
+            environment={
+                "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
+            },
+            kwargs={
+                "nano_cpus": int(8e9),
+                "mem_limit": "12g",
+                "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
+            },
+        ),
+        "inf2": InferenceServiceRuntimeConfig(
+            image="autonomi/nos:latest-inf2",
+            name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-inf2",
+            device="inf2",
             environment={
                 "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
             },
@@ -156,10 +167,22 @@ class InferenceServiceRuntime:
         self._runtime = DockerRuntime.get()
 
     def __repr__(self) -> str:
-        return f"InferenceServiceRuntime(image={self.cfg.image}, name={self.cfg.name}, gpu={self.cfg.gpu})"
+        return f"InferenceServiceRuntime(image={self.cfg.image}, name={self.cfg.name}, device={self.cfg.device})"
 
-    @classmethod
-    def list(self, **kwargs) -> List[docker.models.containers.Container]:
+    @staticmethod
+    def detect() -> str:
+        """Auto-detect inference runtime."""
+        from nos.common.system import has_gpu, is_aws_inf2
+
+        if is_aws_inf2():
+            return "inf2"
+        elif has_gpu():
+            return "gpu"
+        else:
+            return "cpu"
+
+    @staticmethod
+    def list(**kwargs) -> List[docker.models.containers.Container]:
         """List running docker containers."""
         containers = DockerRuntime.get().list(**kwargs)
         return [
@@ -198,7 +221,7 @@ class InferenceServiceRuntime:
             environment=self.cfg.environment,
             volumes=self.cfg.volumes,
             detach=self.cfg.detach,
-            gpu=self.cfg.gpu,
+            device=self.cfg.device,
             ipc_mode=self.cfg.ipc_mode,
             **self.cfg.kwargs,
         )
