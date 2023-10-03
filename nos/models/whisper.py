@@ -40,7 +40,6 @@ class Whisper:
         ),
     }
 
-
     def __init__(self, model_name: str = "openai/whisper-tiny.en"):
 
         logger.info("Init whisper large")
@@ -76,10 +75,12 @@ class Whisper:
 
         # decode the base64 encoded audio
         import base64
+
         decoded = base64.b64decode(audio)
 
         # convert fileobject to bytesio
         import io
+
         fileobject = io.BytesIO(decoded)
 
         # write into a virtual file
@@ -89,7 +90,7 @@ class Whisper:
 
         return self.transcribe_file(filename)
 
-        
+
 for model_name in Whisper.configs:
     cfg = Whisper.configs[model_name]
     hub.register(
@@ -98,6 +99,6 @@ for model_name in Whisper.configs:
         Whisper,
         init_args=(model_name,),
         method_name="transcribe_file_blob",
-        inputs={"audio": str}, # a numpy array of arbitrary length
+        inputs={"audio": str},  # a numpy array of arbitrary length
         outputs={"text": Batch[str]},
     )
