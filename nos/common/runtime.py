@@ -1,25 +1,18 @@
-def is_torch_tensorrt_available():
-    try:
-        import torch_tensorrt  # noqa: F401
+import importlib
 
-        return True
-    except ImportError:
-        return False
+
+def is_package_available(name: str) -> bool:
+    """Check if a package is available."""
+    return importlib.util.find_spec(name) is not None
+
+
+def is_torch_tensorrt_available():
+    return is_package_available("torch_tensorrt")
 
 
 def is_torch_neuron_available():
-    try:
-        import torch_neuron  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
+    return is_package_available("torch_neuron")
 
 
 def is_torch_neuronx_available():
-    try:
-        import torch_neuronx  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
+    return is_package_available("torch_neuronx")
