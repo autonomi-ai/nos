@@ -138,11 +138,6 @@ class StableDiffusion:
 
 
 # Register the model with the hub
-# TODO (spillai): Ideally, we should do this via a decorator
-# @hub.register("stabilityai/stable-diffusion-2")
-# def stable_diffusion_2_ddim_fp16():
-#     return StableDiffusion2("stabilityai/stable-diffusion-2", scheduler="ddim", dtype=torch.float16)
-#
 for model_name in StableDiffusion.configs.keys():
     hub.register(
         model_name,

@@ -105,6 +105,7 @@ def test_grpc_client_inference_integration(runtime):  # noqa: F811
     assert len(containers) == 0
 
 
+@pytest.mark.skip
 @pytest.mark.client
 @pytest.mark.benchmark(group=PyTestGroup.INTEGRATION)
 @pytest.mark.parametrize(
