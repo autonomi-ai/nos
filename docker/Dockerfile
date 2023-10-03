@@ -78,7 +78,7 @@ RUN /opt/conda/bin/mamba clean -ya \
 # NOS environment
 ENV NOS_HOME=/app/.nos
 ENV NOS_LOGGING_LEVEL=WARNING
-ENV NOS_DASHBOARD_ENABLED=1
+ENV NOS_DASHBOARD_ENABLED=0
 ENV NOS_MEMRAY_ENABLED=0
 
 # Torch, HF, Transformers cache
