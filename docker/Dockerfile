@@ -60,6 +60,8 @@ RUN --mount=type=cache,target=/opt/conda/pkgs/ \
     mamba install -yv pytorch torchvision torchaudio pytorch-cuda=${CUDA_VERSION} -c pytorch -c nvidia; \
   fi
 
+RUN conda update ffmpeg
+
 # Install client/server dependencies
 RUN --mount=type=cache,target=~/.cache/pip \
   pip install \
@@ -76,7 +78,7 @@ RUN /opt/conda/bin/mamba clean -ya \
 # NOS environment
 ENV NOS_HOME=/app/.nos
 ENV NOS_LOGGING_LEVEL=WARNING
-ENV NOS_DASHBOARD_ENABLED=0
+ENV NOS_DASHBOARD_ENABLED=1
 ENV NOS_MEMRAY_ENABLED=0
 
 # Torch, HF, Transformers cache
