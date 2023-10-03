@@ -11,7 +11,7 @@ from docker.types import LogConfig
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.constants import (  # noqa F401
     DEFAULT_GRPC_PORT,
-    NOS_DASHBOARD_ENABLED,
+    NOS_RAY_DASHBOARD_ENABLED,
     NOS_MEMRAY_ENABLED,
     NOS_PROFILING_ENABLED,
 )
@@ -56,9 +56,9 @@ class InferenceServiceRuntimeConfig:
             "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
             "NOS_PROFILING_ENABLED": int(NOS_PROFILING_ENABLED),
             "NOS_SHM_ENABLED": int(NOS_SHM_ENABLED),
-            "NOS_DASHBOARD_ENABLED": int(NOS_DASHBOARD_ENABLED),
             "NOS_MEMRAY_ENABLED": int(NOS_MEMRAY_ENABLED),
             "OMP_NUM_THREADS": psutil.cpu_count(logical=False),
+            "NOS_RAY_DASHBOARD_ENABLED": int(NOS_RAY_DASHBOARD_ENABLED),
         }
     )
     """Environment variables."""
@@ -145,7 +145,7 @@ class InferenceServiceRuntime:
             },
             kwargs={
                 "nano_cpus": int(8e9),
-                "mem_limit": "12g",
+                "mem_limit": "16g",
                 "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
             },
         ),
@@ -188,6 +188,11 @@ class InferenceServiceRuntime:
         return [
             container for container in containers if container.name.startswith(NOS_INFERENCE_SERVICE_CONTAINER_NAME)
         ]
+
+    @classmethod
+    def supported_runtimes(cls) -> List[str]:
+        """Get supported runtimes."""
+        return list(cls.configs.keys())
 
     def start(self, **kwargs: Any) -> docker.models.containers.Container:
         """Start the inference runtime.

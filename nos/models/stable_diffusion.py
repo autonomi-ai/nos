@@ -15,15 +15,6 @@ class StableDiffusionConfig(HuggingFaceHubConfig):
     pass
 
 
-@dataclass(frozen=True)
-class StableDiffusionNeuronConfig(HuggingFaceHubConfig):
-    neuron_model_name: str = None
-    """Name of the neuron / neuronx model."""
-
-    neuron_type: str = "neuronx"
-    """Type of neuron model, one of ['neuron', 'neuronx']."""
-
-
 class StableDiffusion:
     """StableDiffusion model for text to image generation."""
 
@@ -42,11 +33,6 @@ class StableDiffusion:
         ),
         "stabilityai/stable-diffusion-xl-base-1-0": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-xl-base-1.0",
-        ),
-        "autonomi-ai/stable-diffusion-xl-base-1-0-neuronx": StableDiffusionNeuronConfig(
-            model_name="stabilityai/stable-diffusion-xl-base-1.0",
-            neuron_model_name="autonomi-ai/stable-diffusion-xl-base-1.0-neuronx",
-            neuron_type="neuronx",
         ),
     }
 
