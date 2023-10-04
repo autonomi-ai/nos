@@ -15,6 +15,7 @@ nav:
 - 📚 Docs:
   - Overview:
     - NOS Architecture: docs/architecture-overview.md
+    - Supported Runtimes: docs/supported-runtimes.md
   - Guides:
     - Starting the NOS Server: docs/starting-the-server.md
     - Running Inference: docs/running-inference.md
