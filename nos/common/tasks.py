@@ -23,7 +23,5 @@ class TaskType(str, Enum):
     TEXT_EMBEDDING = "text_embedding"
     """Text embedding."""
 
-    AUDIO_TRANSCRIPTION = "audio_transcription"
-
     CUSTOM = "custom"
     """Custom task type."""
