@@ -1,3 +1,7 @@
+import base64
+import io
+import os
+import uuid
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
@@ -73,22 +77,18 @@ class Whisper:
 
     def transcribe_file_blob(self, audio: str) -> List[Dict[str, Any]]:
 
-        # decode the base64 encoded audio
-        import base64
-
+        # Decode and write into a virtual file
         decoded = base64.b64decode(audio)
-
-        # convert fileobject to bytesio
-        import io
-
         fileobject = io.BytesIO(decoded)
-
-        # write into a virtual file
-        filename = "virtual_file.wav"
+        filename = str(uuid.uuid4())
         with open(filename, "wb") as f:
             f.write(fileobject.read())
 
-        return self.transcribe_file(filename)
+        transcription = self.transcribe_file(filename)
+
+        os.remove(filename)
+
+        return transcription
 
 
 for model_name in Whisper.configs:
