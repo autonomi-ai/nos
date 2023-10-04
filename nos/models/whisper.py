@@ -93,6 +93,6 @@ for model_name in Whisper.configs:
         Whisper,
         init_args=(model_name,),
         method_name="transcribe_file_blob",
-        inputs={"audio": str},  # a numpy array of arbitrary length
+        inputs={"audio": str},
         outputs={"text": Batch[str]},
     )

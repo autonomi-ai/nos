@@ -60,7 +60,6 @@ def test_whisper_transcribe_audio_file(whisper_model):
 def test_whisper_transcribe_audio_blob(whisper_model):
     audio_file = Path(NOS_TEST_AUDIO)
     assert audio_file.exists()
-
     with open(audio_file, "rb") as f:
         audio_data = f.read()
 
