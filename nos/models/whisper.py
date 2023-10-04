@@ -10,7 +10,6 @@ from nos import hub
 from nos.common import TaskType
 from nos.common.types import Batch
 from nos.hub import HuggingFaceHubConfig
-from nos.logging import logger
 
 
 @dataclass(frozen=True)
@@ -45,7 +44,6 @@ class Whisper:
 
     def __init__(self, model_name: str = "openai/whisper-tiny.en"):
 
-        logger.info("Init whisper large")
         from transformers import pipeline
 
         try:
