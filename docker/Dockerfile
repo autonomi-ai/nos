@@ -60,6 +60,7 @@ RUN --mount=type=cache,target=/opt/conda/pkgs/ \
     mamba install -yv pytorch torchvision torchaudio pytorch-cuda=${CUDA_VERSION} -c pytorch -c nvidia; \
   fi
 
+# TODO(Scott): this is due to a bug requiring ffmpeg to be updated from conda after all other dependencies.
 RUN conda update ffmpeg
 
 # Install client/server dependencies

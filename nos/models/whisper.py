@@ -1,7 +1,6 @@
 import base64
 import io
-import os
-import uuid
+import tempfile
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
@@ -76,17 +75,14 @@ class Whisper:
             return self.pipe(filename, return_timestamps=True)["chunks"]
 
     def transcribe_file_blob(self, audio: str) -> List[Dict[str, Any]]:
-
         # Decode and write into a virtual file
         decoded = base64.b64decode(audio)
         fileobject = io.BytesIO(decoded)
-        filename = str(uuid.uuid4())
-        with open(filename, "wb") as f:
-            f.write(fileobject.read())
 
-        transcription = self.transcribe_file(filename)
-
-        os.remove(filename)
+        with tempfile.NamedTemporaryFile(suffix=".mp3") as tmp_audio:
+            with open(tmp_audio.name, "wb") as f:
+                f.write(fileobject.read())
+            transcription = self.transcribe_file(tmp_audio.name)
 
         return transcription
 
