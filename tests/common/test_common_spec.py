@@ -134,7 +134,7 @@ def test_common_model_spec(img2vec_signature):
         assert spec is not None
 
     # Test if ModelSpec initialization fails if the model id contains underscores or special characters
-    for name in ["openai_clip", "openai/clip-1.0", "openai\\clip"]:
+    for name in ["openai_clip", "openai\\clip"]:
         with pytest.raises(ValueError):
             ModelSpec(
                 name=name,

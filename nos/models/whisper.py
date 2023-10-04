@@ -1,8 +1,14 @@
+import base64
+import io
+import tempfile
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
 import torch
 
+from nos import hub
+from nos.common import TaskType
+from nos.common.types import Batch
 from nos.hub import HuggingFaceHubConfig
 
 
@@ -36,7 +42,8 @@ class Whisper:
         ),
     }
 
-    def __init__(self, model_name: str = "openai/whisper-base.en"):
+    def __init__(self, model_name: str = "openai/whisper-tiny.en"):
+
         from transformers import pipeline
 
         try:
@@ -64,3 +71,28 @@ class Whisper:
             # Run the prediction
             # prediction = [{'text': ' ...', 'timestamp': (0.0, 5.44)}]
             return self.pipe(filename, return_timestamps=True)["chunks"]
+
+    def transcribe_file_blob(self, audio: str) -> List[Dict[str, Any]]:
+        # Decode and write into a virtual file
+        decoded = base64.b64decode(audio)
+        fileobject = io.BytesIO(decoded)
+
+        with tempfile.NamedTemporaryFile(suffix=".mp3") as tmp_audio:
+            with open(tmp_audio.name, "wb") as f:
+                f.write(fileobject.read())
+            transcription = self.transcribe_file(tmp_audio.name)
+
+        return transcription
+
+
+for model_name in Whisper.configs:
+    cfg = Whisper.configs[model_name]
+    hub.register(
+        model_name,
+        TaskType.AUDIO_TRANSCRIPTION,
+        Whisper,
+        init_args=(model_name,),
+        method_name="transcribe_file_blob",
+        inputs={"audio": str},
+        outputs={"text": Batch[str]},
+    )
