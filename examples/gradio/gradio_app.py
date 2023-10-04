@@ -1,7 +1,8 @@
 import gradio as gr
 
-from nos.client import InferenceClient, TaskType
+from nos.client import InferenceClient
 from nos.logging import logger
+
 
 # Init NOS server, wait for it to spin up then confirm its healthy.
 client = InferenceClient()
@@ -15,21 +16,26 @@ if not client.IsHealthy():
 # Setup to load youtube videos from url, extract audio and record text.
 import youtube_dl
 from moviepy.editor import AudioFileClip
+
+
 def download_youtube_audio(url):
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'wav',
-            'preferredquality': '192',
-        }],
+        "format": "bestaudio/best",
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "wav",
+                "preferredquality": "192",
+            }
+        ],
     }
     with youtube_dl.YoutubeDL(ydl_opts) as ydl:
         info_dict = ydl.extract_info(url, download=False)
         video_url = info_dict.get("url", None)
         audio = AudioFileClip(video_url)
         return audio
-    
+
+
 # Transcribe audio using WhisperNet
 def transcribe_audio(audio):
     # Convert audio to mono and resample to 16000 Hz (required for WhisperNet)
@@ -37,7 +43,7 @@ def transcribe_audio(audio):
     audio = audio.set_frame_rate(16000)
 
     # Load the pre-trained WhisperNet model
-    model = torch.hub.load('snakers4/silero-models', 'silero-whisper-large')
+    model = torch.hub.load("snakers4/silero-models", "silero-whisper-large")
 
     # Perform ASR (Automatic Speech Recognition)
     waveform, sample_rate = audio.to_soundarray(), 16000
@@ -46,12 +52,13 @@ def transcribe_audio(audio):
 
     return transcript
 
+
 # Create the Gradio interface
 iface = gr.Interface(
     fn=transcribe_audio,
     inputs=gr.inputs.Textbox(label="YouTube URL"),
     outputs=gr.outputs.Textbox(label="Transcription"),
-    live=True
+    live=True,
 ).launch()
 
 """
@@ -67,7 +74,7 @@ def run_stable_diffusion(prompt):
     )
     (image,) = response["images"]
 
-    return image 
+    return image
 
 # Create a Gradio interface
 iface = gr.Interface(
