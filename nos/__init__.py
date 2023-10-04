@@ -13,6 +13,7 @@ __all__ = [
     "init",  # noqa: F405
     "shutdown",  # noqa: F405
     "__version__",  # noqa: F405
+    "internal_libs_available",  # noqa: F405
 ]
 
 
@@ -24,11 +25,13 @@ def internal_libs_available():
 
 
 # Check if the internal module is available
-if internal_libs_available():
-    from autonomi.nos._internal import compile  # noqa: F401, F403
-    from autonomi.nos._internal.version import __version__ as _internal_version  # noqa: F401, F403
+try:
+    if internal_libs_available():
+        from autonomi.nos._internal.version import __version__ as _internal_version  # noqa: F401, F403
 
-    sys.modules["nos._internal"] = importlib.import_module("autonomi.nos._internal")
-    logger.debug(f"`nos._internal` module [version={_internal_version}].")
-else:
-    compile = None
+        sys.modules["nos._internal"] = importlib.import_module("autonomi.nos._internal")
+        logger.debug(f"`nos._internal` module [version={_internal_version}].")
+except ModuleNotFoundError:
+    logger.debug("Failed to load `nos._internal` module: ModuleNotFoundError")
+except Exception as e:
+    logger.debug(f"Failed to load `nos._internal` module: {e}")

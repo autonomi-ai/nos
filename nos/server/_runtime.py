@@ -1,5 +1,6 @@
 """gRPC server runtime using docker executor."""
 import copy
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
@@ -11,9 +12,9 @@ from docker.types import LogConfig
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.constants import (  # noqa F401
     DEFAULT_GRPC_PORT,
-    NOS_RAY_DASHBOARD_ENABLED,
     NOS_MEMRAY_ENABLED,
     NOS_PROFILING_ENABLED,
+    NOS_RAY_DASHBOARD_ENABLED,
 )
 from nos.logging import LOGGING_LEVEL, logger
 from nos.protoc import import_module
@@ -35,6 +36,23 @@ NOS_INFERENCE_SERVICE_CMD = ["/app/entrypoint.sh"]  # this needs to be consisten
 NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
 
 
+def _default_environment(kwargs: Dict[str, str] = None) -> Dict[str, str]:
+    """Default environment variables that can be overriden for the
+    `InferenceServiceRuntimeConfig` default_factory."""
+    environment = {
+        "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
+        "NOS_PROFILING_ENABLED": int(NOS_PROFILING_ENABLED),
+        "NOS_SHM_ENABLED": int(NOS_SHM_ENABLED),
+        "NOS_MEMRAY_ENABLED": int(NOS_MEMRAY_ENABLED),
+        "OMP_NUM_THREADS": psutil.cpu_count(logical=False),
+        "NOS_RAY_DASHBOARD_ENABLED": int(NOS_RAY_DASHBOARD_ENABLED),
+        "HUGGINGFACE_HUB_TOKEN": os.environ.get("HUGGINGFACE_HUB_TOKEN", ""),
+    }
+    if kwargs is not None:
+        environment.update(kwargs)
+    return environment
+
+
 @dataclass
 class InferenceServiceRuntimeConfig:
     """Inference service configuration."""
@@ -51,16 +69,7 @@ class InferenceServiceRuntimeConfig:
     ports: Dict[int, int] = field(default_factory=lambda: {DEFAULT_GRPC_PORT: DEFAULT_GRPC_PORT})
     """Ports to expose."""
 
-    environment: Dict[str, str] = field(
-        default_factory=lambda: {
-            "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
-            "NOS_PROFILING_ENABLED": int(NOS_PROFILING_ENABLED),
-            "NOS_SHM_ENABLED": int(NOS_SHM_ENABLED),
-            "NOS_MEMRAY_ENABLED": int(NOS_MEMRAY_ENABLED),
-            "OMP_NUM_THREADS": psutil.cpu_count(logical=False),
-            "NOS_RAY_DASHBOARD_ENABLED": int(NOS_RAY_DASHBOARD_ENABLED),
-        }
-    )
+    environment: Dict[str, str] = field(default_factory=lambda: _default_environment())
     """Environment variables."""
 
     volumes: Dict[str, Dict[str, str]] = field(
@@ -119,7 +128,7 @@ class InferenceServiceRuntime:
             device="gpu",
             kwargs={
                 "nano_cpus": int(8e9),
-                "mem_limit": "12g",
+                "mem_limit": "32g",
                 "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
             },
         ),
@@ -127,9 +136,6 @@ class InferenceServiceRuntime:
             image="autonomi/nos:latest-trt",
             name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-trt",
             device="gpu",
-            environment={
-                "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
-            },
             kwargs={
                 "nano_cpus": int(8e9),
                 "mem_limit": "12g",
@@ -140,12 +146,9 @@ class InferenceServiceRuntime:
             image="autonomi/nos:latest-inf2",
             name=f"{NOS_INFERENCE_SERVICE_CONTAINER_NAME}-inf2",
             device="inf2",
-            environment={
-                "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
-            },
+            environment=_default_environment({"NEURON_RT_VISIBLE_CORES": 2}),
             kwargs={
                 "nano_cpus": int(8e9),
-                "mem_limit": "16g",
                 "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
             },
         ),

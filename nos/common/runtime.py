@@ -3,7 +3,10 @@ import importlib
 
 def is_package_available(name: str) -> bool:
     """Check if a package is available."""
-    return importlib.util.find_spec(name) is not None
+    try:
+        return importlib.util.find_spec(name) is not None
+    except ModuleNotFoundError:
+        return False
 
 
 def is_torch_tensorrt_available():

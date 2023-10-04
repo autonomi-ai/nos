@@ -19,8 +19,14 @@ import rich.panel
 import rich.status
 from ray.job_submission import JobSubmissionClient
 
-from nos.constants import NOS_RAY_NS, NOS_RAY_ENV, NOS_RAY_DASHBOARD_ENABLED, NOS_RAY_OBJECT_STORE_MEMORY, NOS_RAY_JOB_CLIENT_ADDRESS
 from nos.common.metaclass import SingletonMetaclass
+from nos.constants import (
+    NOS_RAY_DASHBOARD_ENABLED,
+    NOS_RAY_ENV,
+    NOS_RAY_JOB_CLIENT_ADDRESS,
+    NOS_RAY_NS,
+    NOS_RAY_OBJECT_STORE_MEMORY,
+)
 from nos.logging import LOGGING_LEVEL
 
 
