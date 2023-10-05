@@ -7,10 +7,19 @@ site_dir: site
 nav:
 - 🏠 Home: README.md
 - 🚀 Getting Started:
-  - 📦 Installation: docs/quickstart.md
   - 🔥 Quickstart: docs/quickstart.md
+  - 📦 Installation: docs/quickstart.md
+    - Apple CPU: docs/installation/apple.md
+    - NVIDIA GPU: docs/installation/nvidia-gpu.md
+- Models:
+  - Stable Diffusion: docs/models/stable-diffusion.md
+  - YOLOX: docs/models/yolox.md
+  - Whisper: docs/
 - 🤖 Demos:
-  - Discord Bot: docs/demos/discord-bot.md
+  - Gradio UI: docs/demo/gradio-ui.md
+  - Building a Midjourney clone: docs/demos/discord-bot.md
+  - Building a video search engine: docs/demos/building-video-search-engine.md
+  - Real-time object detection: docs/demos/real-time-object-detection.md
 # - 🏃‍♂️ Benchmarks: docs/benchmarks/index.md
 - 📚 Docs:
   - Overview:
@@ -19,7 +28,9 @@ nav:
   - Guides:
     - Starting the NOS Server: docs/starting-the-server.md
     - Running Inference: docs/running-inference.md
-    - Accelerating Models: docs/accelerating-models.md
+    - Running Custom Models: docs/running-custom-models.md
+    # - Accelerating Models: docs/accelerating-models.md
+    - Self-hosting on SkyPilot: docs/self-serve/self-host-on-skypilot.md
     # - Fine-tuning Models: docs/fine-tuning-models.md
   - API Reference:
     - nos.common:
