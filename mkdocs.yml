@@ -1,38 +1,42 @@
-site_name: NOS Docs
-site_url: https://nos.autonomi.ai
+site_name: NOS
+site_url: https://docs.nos.run
 site_author: Sudeep Pillai
+
 repo_url: https://github.com/autonomi-ai/nos
+repo_name: autonomi-ai/nos
+
+copyright: >
+  Copyright &copy; 2022 - 2023 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
+
 docs_dir: .
 site_dir: site
+
 nav:
-- 🏠 Home: README.md
-- 🚀 Getting Started:
+  - 🏠 Home: README.md
   - 🔥 Quickstart: docs/quickstart.md
   - 📦 Installation: docs/quickstart.md
-    - Apple CPU: docs/installation/apple.md
-    - NVIDIA GPU: docs/installation/nvidia-gpu.md
-- Models:
-  - Stable Diffusion: docs/models/stable-diffusion.md
-  - YOLOX: docs/models/yolox.md
-  - Whisper: docs/
-- 🤖 Demos:
-  - Gradio UI: docs/demo/gradio-ui.md
-  - Building a Midjourney clone: docs/demos/discord-bot.md
-  - Building a video search engine: docs/demos/building-video-search-engine.md
-  - Real-time object detection: docs/demos/real-time-object-detection.md
-# - 🏃‍♂️ Benchmarks: docs/benchmarks/index.md
-- 📚 Docs:
-  - Overview:
-    - NOS Architecture: docs/architecture-overview.md
-    - Supported Runtimes: docs/supported-runtimes.md
-  - Guides:
-    - Starting the NOS Server: docs/starting-the-server.md
-    - Running Inference: docs/running-inference.md
-    - Running Custom Models: docs/running-custom-models.md
-    # - Accelerating Models: docs/accelerating-models.md
-    - Self-hosting on SkyPilot: docs/self-serve/self-host-on-skypilot.md
-    # - Fine-tuning Models: docs/fine-tuning-models.md
-  - API Reference:
+  - 🧠 Models:
+    - Stable Diffusion 2: docs/models/stable-diffusion.md
+    - Stable Diffusion XL: docs/models/stable-diffusion.md
+    - CLIP: docs/models/clip.md
+    - YOLOX: docs/models/yolox.md
+    - Whisper: docs/models/whisper.md
+  - ⚡️ Concepts:
+    - What is NOS?: docs/concepts/what-is-nos.md
+    - Architecture: docs/concepts/architecture-overview.md
+    - Model-Definition with ModelSpec: docs/concepts/model-spec.md
+    - Resource-Aware Execution with ModelManager: docs/concepts/model-manager.md
+    - Accelerated Runtime with InferenceServiceRuntime: docs/concepts/inference-service-runtime.md
+  - 🤖 Demos:
+    - Gradio UI: docs/demos/gradio-ui.md
+    - Discord Bot: docs/demos/discord-bot.md
+  - 📚 Guides:
+    - Starting the NOS Server: docs/guides/starting-the-server.md
+    - Running Inference: docs/guides/running-inference.md
+    - Running Custom Models: docs/guides/running-custom-models.md
+    - Build a Midjourney Clone: docs/guides/build-a-midjourney-clone.md
+    - Build a Video Search Engine: docs/guides/build-a-video-search-engine.md
+  - 👩‍💻 API Reference:
     - nos.common:
       - nos.common.spec: docs/api/common/spec.md
       - nos.common.types: docs/api/common/types.md
@@ -42,15 +46,13 @@ nav:
     - nos.hub: docs/api/hub.md
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
-  - FAQ: docs/faq.md
-# - ✍️ Blog:
-#   - docs/blog/index.md
-#   - 2023:
-#     - docs/blog/posts/01-hello-world.md
-# - 🏁 Roadmap: docs/roadmap.md
-# - 🧑‍💻 Contributing: docs/CONTRIBUTING.md
-- ❓ Support: docs/support.md
-
+  - 💻 CLI Reference :
+    - nos system: docs/cli/system.md
+    - nos hub: docs/cli/hub.md
+    - nos predict: docs/cli/predict.md
+    - nos benchmark: docs/cli/benchmark.md
+    - nos docker: docs/cli/docker.md
+  - ❓ Support / FAQ: docs/support.md
 
 plugins:
 - include-markdown
@@ -67,6 +69,7 @@ plugins:
       python:
         paths: [.]
         options:
+          annotations_path: brief
           members_order: source
           line_length: 80
           docstring_options:
@@ -109,6 +112,7 @@ markdown_extensions:
     emoji_generator: !!python/name:materialx.emoji.to_svg
 - pymdownx.extra
 - pymdownx.highlight
+- pymdownx.snippets
 - pymdownx.superfences
 - pymdownx.tabbed:
     alternate_style: true
@@ -124,12 +128,10 @@ theme:
   name: material
   custom_dir: docs/overrides
   features:
-    - navigation.path
-    - navigation.expand
-    - navigation.indexes
-    - navigation.sections
-    - navigation.tabs
-    - navigation.tabs.sticky
+    - navigation.instant
+    - navigation.tracking
+    - content.code.annotate
+    - toc.follow
 
 extra:
   analytics:
@@ -146,6 +148,3 @@ extra:
       link: https://twitter.com/autonomi_ai
     - icon: fontawesome/brands/discord
       link: https://discord.gg/QAGgvTuvgg
-
-copyright: >
-  Copyright &copy; 2022 - 2023 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
