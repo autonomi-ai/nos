@@ -68,9 +68,9 @@ docker-build-cpu:
 docker-build-gpu:
 	make .docker-build \
 	TARGET=gpu \
-	CUDA_VERSION=11.7 \
+	CUDA_VERSION=11.8 \
 	DOCKER_TARGET=${DOCKER_TARGET} \
-	BASE_IMAGE=nvidia/cuda:11.7.1-base-ubuntu22.04
+	BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
 
 docker-build-and-push-multiplatform-cpu:
 	make .docker-build-and-push-multiplatform \

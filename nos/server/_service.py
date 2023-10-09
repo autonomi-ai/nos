@@ -229,6 +229,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             TaskType.IMAGE_EMBEDDING.value,
             TaskType.TEXT_EMBEDDING.value,
             TaskType.OBJECT_DETECTION_2D.value,
+            TaskType.DEPTH_ESTIMATION_2D.value,
             TaskType.IMAGE_SEGMENTATION_2D.value,
             TaskType.AUDIO_TRANSCRIPTION.value,
             TaskType.CUSTOM.value,
