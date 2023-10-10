@@ -16,7 +16,7 @@ import rich.status
 import rich.table
 import typer
 
-from nos.client import InferenceClient
+from nos.client import Client
 from nos.common import TaskType
 from nos.common.exceptions import NosClientException
 
@@ -30,7 +30,7 @@ class gRPCConfig:
     """Common gRPC options"""
 
     address: str
-    client: InferenceClient
+    client: Client
 
 
 @predict_cli.callback()
@@ -39,7 +39,7 @@ def grpc_config(
     address: str = typer.Option("[::]:50051", "-a", "--address", help="Address of the gRPC server."),
 ):
     """Common gRPC options"""
-    client = InferenceClient(address)
+    client = Client(address)
     ctx.obj = gRPCConfig(address, client)
     # TODO (spillai): Deploy the gRPC server here in the background (as a docker daemon)
     # TOOD (spillai): Ping the gRPC server otherwise raise an error

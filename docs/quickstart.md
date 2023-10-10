@@ -89,9 +89,9 @@ Try out an inference request via the CLI or [Python SDK](https://pypi.org/projec
 === "Via [Python SDK](https://pypi.org/project/torch-nos)"
 
     ```python
-    from nos.client import InferenceClient, TaskType
+    from nos.client import Client, TaskType
 
-    client = InferenceClient()
+    client = Client()
     response = client.Run(
         task=TaskType.IMAGE_GENERATION
         model_name="stabilityai/stable-diffusion-2",

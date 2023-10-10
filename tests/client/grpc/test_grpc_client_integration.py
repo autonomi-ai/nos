@@ -3,7 +3,7 @@ import time
 import pytest
 
 import nos
-from nos.client import InferenceClient
+from nos.client import Client
 from nos.server import InferenceServiceRuntime
 from nos.test.utils import AVAILABLE_RUNTIMES, PyTestGroup, get_benchmark_video
 
@@ -25,7 +25,7 @@ def test_grpc_client_init(runtime):  # noqa: F811
 
     # Test waiting for server to start
     # This call should be instantaneous as the server is already ready for the test
-    client = InferenceClient(f"[::]:{GRPC_PORT}")
+    client = Client(f"[::]:{GRPC_PORT}")
     assert client.WaitForServer(timeout=180, retry_interval=5)
     assert client.IsHealthy()
 
@@ -63,7 +63,7 @@ def test_grpc_client_inference_integration(runtime):  # noqa: F811
 
     # Test waiting for server to start
     # This call should be instantaneous as the server is already ready for the test
-    client = InferenceClient(f"[::]:{GRPC_PORT}")
+    client = Client(f"[::]:{GRPC_PORT}")
     assert client.WaitForServer(timeout=180, retry_interval=5)
     assert client.IsHealthy()
 

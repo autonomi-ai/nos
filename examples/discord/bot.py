@@ -12,7 +12,7 @@ import requests
 from discord.ext import commands
 from diskcache import Cache
 
-from nos.client import InferenceClient, TaskType
+from nos.client import Client, TaskType
 from nos.constants import NOS_TMP_DIR
 from nos.logging import logger
 from nos.models.dreambooth.dreambooth import StableDiffusionLoRA
@@ -45,7 +45,7 @@ NOS_PLAYGROUND_CHANNEL = "nos-playground"
 BASE_MODEL = "runwayml/stable-diffusion-v1-5"
 
 # Init NOS server, wait for it to spin up then confirm its healthy.
-client = InferenceClient()
+client = Client()
 
 logger.debug("Waiting for server to start...")
 client.WaitForServer()
