@@ -8,15 +8,6 @@ from .logging import logger  # noqa: F401
 from .server import init, shutdown  # noqa: F401
 
 
-__all__ = [
-    "Client",  # noqa: F405
-    "init",  # noqa: F405
-    "shutdown",  # noqa: F405
-    "__version__",  # noqa: F405
-    "internal_libs_available",  # noqa: F405
-]
-
-
 def internal_libs_available():
     """Check if the internal module is available."""
     from .common.runtime import is_package_available  # noqa: F401

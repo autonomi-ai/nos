@@ -40,13 +40,13 @@ def _default_environment(kwargs: Dict[str, str] = None) -> Dict[str, str]:
     """Default environment variables that can be overriden for the
     `InferenceServiceRuntimeConfig` default_factory."""
     environment = {
+        "OMP_NUM_THREADS": psutil.cpu_count(logical=False),
+        "HUGGINGFACE_HUB_TOKEN": os.environ.get("HUGGINGFACE_HUB_TOKEN", ""),
         "NOS_LOGGING_LEVEL": LOGGING_LEVEL,
         "NOS_PROFILING_ENABLED": int(NOS_PROFILING_ENABLED),
         "NOS_SHM_ENABLED": int(NOS_SHM_ENABLED),
         "NOS_MEMRAY_ENABLED": int(NOS_MEMRAY_ENABLED),
-        "OMP_NUM_THREADS": psutil.cpu_count(logical=False),
         "NOS_RAY_DASHBOARD_ENABLED": int(NOS_RAY_DASHBOARD_ENABLED),
-        "HUGGINGFACE_HUB_TOKEN": os.environ.get("HUGGINGFACE_HUB_TOKEN", ""),
     }
     if kwargs is not None:
         environment.update(kwargs)

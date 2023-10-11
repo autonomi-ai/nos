@@ -273,7 +273,7 @@ class Client:
         self,
         task: TaskType,
         model_name: str,
-        **inputs: Dict[str, Any],
+        inputs: Dict[str, Any],
     ) -> nos_service_pb2.InferenceResponse:
         """Run module.
 
@@ -285,7 +285,7 @@ class Client:
                     TaskType.IMAGE_EMBEDDING, TaskType.TEXT_EMBEDDING)
             model_name (str):
                 Model identifier (e.g. openai/clip-vit-base-patch32).
-            **inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
+            inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.inputs.
         Returns:
             nos_service_pb2.InferenceResponse: Inference response.
@@ -293,7 +293,7 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         module: Module = self.Module(task, model_name)
-        return module(**inputs)
+        return module(inputs)
 
     def Train(
         self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None
@@ -385,7 +385,7 @@ class Module:
             self._shm_objects = None  # disables shm, and avoids registering/unregistering
 
     @property
-    def stub(self):
+    def stub(self) -> nos_service_pb2_grpc.InferenceServiceStub:
         return self._client.stub
 
     @property
@@ -552,11 +552,11 @@ class Module:
                 logger.error(f"Failed to unregister shm [{self._shm_objects}], error: {e.details()}")
                 raise NosClientException(f"Failed to unregister shm [{self._shm_objects}]", e)
 
-    def __call__(self, **inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def __call__(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Call the instantiated module/model.
 
         Args:
-            **inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
+            inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.inputs.
         Returns:
             Dict[str, Any]: Inference response.

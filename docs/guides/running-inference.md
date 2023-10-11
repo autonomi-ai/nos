@@ -4,7 +4,7 @@
 ```python
 import nos
 
-nos.init(runtime="auto", utilization=1.0)
+nos.init(runtime="auto")
 ```
 
 ### Connecting to the NOS Server
@@ -39,7 +39,7 @@ img = Image.open("sample.jpg")
 predictions = detect2d(images=[img])
 ```
 
-!!!note In essense, the `client.Module` is an [`InferenceModule`](./api/client.md#nosclientgrpcinferencemodule)  that provides a *logical* handle for the model on the remote server. The model handle could contain multiple replicas, or live in a specialized runtime (GPU, ASICs), however, the user does not need to be aware of these abstractions. Instead, you can simply call the model as a regular Python function where the task gets dispatched to the associated set of remote workers.
+!!!note In essense, the `client.Module` is an inference [`Module`](../api/client.md#nosclientgrpcclient)  that provides a *logical* handle for the model on the remote server. The model handle could contain multiple replicas, or live in a specialized runtime (GPU, ASICs), however, the user does not need to be aware of these abstractions. Instead, you can simply call the model as a regular Python function where the task gets dispatched to the associated set of remote workers.
 
 ## More examples
 
@@ -48,7 +48,9 @@ predictions = detect2d(images=[img])
 ```python
 prompts = ["fox jumped over the moon", "fox jumped over the sun"]
 sdv2 = client.Module(TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2")
-images = sdv2(prompts=prompts, width=512, height=512, num_images=1)
+images = sdv2(inputs={
+    "prompts": prompts, "width": 512, "height": 512, "num_images": 1
+})
 images[0]
 ```
 
@@ -56,13 +58,15 @@ images[0]
 
 ```python
 clip_img2vec = client.Module(TaskType.IMAGE_EMBEDDING, "openai/clip")
-predictions = clip_img2vec(images=[img])
+predictions = clip_img2vec(inputs={"images": [img]})
 predictions["embedding"].shape
 ```
 
 ### Text-embedding with [OpenAI CLIP](https://huggingface.co/openai/clip-vit-base-patch32)
 ```python
 clip_txt2vec = client.Run(TaskType.TEXT_EMBEDDING, "openai/clip")
-predictions = clip_txt2vec(texts=["fox jumped over the mooon", "fox jumped over the sun"])
+predictions = clip_txt2vec(inputs={
+    "texts": ["fox jumped over the mooon", "fox jumped over the sun"]
+})
 predictions["embedding"].shape
 ```

@@ -161,8 +161,5 @@ def test_grpc_client_training(client_with_server, request):  # noqa: F811
     response = client.Run(
         task=TaskType.IMAGE_GENERATION,
         model_name=f"custom/{model_id}",
-        prompts=["a photo of a bench on the moon"],
-        width=512,
-        height=512,
-        num_images=1,
+        inputs={"prompts": ["a photo of a bench on the moon"], "width": 512, "height": 512, "num_images": 1},
     )

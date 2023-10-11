@@ -71,7 +71,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-        response = model(texts=["a cat dancing on the grass."])
+        response = model(inputs={"texts": ["a cat dancing on the grass."]})
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -81,7 +81,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-        response = model(images=img)
+        response = model(inputs={"images": img})
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -91,7 +91,7 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-        response = model(images=[img])
+        response = model(inputs={"images": [img]})
         assert isinstance(response, dict)
 
         assert "bboxes" in response
@@ -102,7 +102,9 @@ def test_e2e_grpc_client_and_gpu_server(grpc_client_with_gpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-        response = model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)
+        response = model(
+            inputs={"prompts": ["a cat dancing on the grass."], "width": 512, "height": 512, "num_images": 1}
+        )
         assert isinstance(response, dict)
         assert "images" in response
 
@@ -156,7 +158,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-        response = model(texts=["a cat dancing on the grass."])
+        response = model(inputs={"texts": ["a cat dancing on the grass."]})
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -166,7 +168,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-        response = model(images=[img])
+        response = model(inputs={"images": [img]})
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -176,7 +178,7 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-        response = model(images=[img])
+        response = model(inputs={"images": [img]})
         assert isinstance(response, dict)
         assert "bboxes" in response
         assert "labels" in response
@@ -189,4 +191,6 @@ def test_e2e_grpc_client_and_cpu_server(grpc_client_with_cpu_backend):  # noqa: 
         assert model is not None
         assert model.GetModelInfo() is not None
         for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-            response = model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)
+            response = model(
+                inputs={"prompts": ["a cat dancing on the grass."], "width": 512, "height": 512, "num_images": 1}
+            )
