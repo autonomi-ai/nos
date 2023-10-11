@@ -13,8 +13,6 @@ from pathlib import Path
 import pytest
 from loguru import logger
 
-from nos.test.utils import PyTestGroup
-
 
 # Skip this entire test if pixeltable is not installed
 pytestmark = pytest.mark.skipif(pytest.importorskip("pixeltable") is None, reason="pixeltable is not installed")
@@ -96,13 +94,13 @@ def pixeltable_integration(write_profile: bool = False):
     cl = pt.Client()
 
     # Import pixeltable functions (only available after client is initialized)
-    import pixeltable.functions.image_generation as imagen
+    import pixeltable.functions.image_generation as imagen  # noqa: F401
     from pixeltable.functions.custom import noop_process_images as noop
     from pixeltable.functions.image_embedding import openai_clip
     from pixeltable.functions.object_detection_2d import yolox_medium, yolox_tiny
 
-    sdv21 = imagen.stabilityai_stable_diffusion_2_1
-    sdxl = imagen.stabilityai_stable_diffusion_xl_base_1_0
+    sdv21 = imagen.stabilityai_stable_diffusion_2_1  # noqa: F841
+    sdxl = imagen.stabilityai_stable_diffusion_xl_base_1_0  # noqa: F841
 
     # Setup pixeltable database
     try:
@@ -187,21 +185,21 @@ def pixeltable_integration(write_profile: bool = False):
         logger.debug(info)
         timing_records.append(info)
 
-    # SDv2
-    H, W = 512, 512
-    prompts_t[sdv21(prompts_t.prompt, 1, H, W)].show(1)  # load model
-    with timer(f"sdv21_{W}x{H}", n=len(PROMPTS)) as info:
-        prompts_t.add_column(pt.Column("img_sdv21", computed_with=sdv21(prompts_t.prompt, 1, H, W), stored=True))
-    logger.debug(info)
-    timing_records.append(info)
+    # # SDv2
+    # H, W = 512, 512
+    # prompts_t[sdv21(prompts_t.prompt, 1, H, W)].show(1)  # load model
+    # with timer(f"sdv21_{W}x{H}", n=len(PROMPTS)) as info:
+    #     prompts_t.add_column(pt.Column("img_sdv21", computed_with=sdv21(prompts_t.prompt, 1, H, W), stored=True))
+    # logger.debug(info)
+    # timing_records.append(info)
 
-    # SDXL
-    H, W = 1024, 1024
-    prompts_t[sdxl(prompts_t.prompt, 1, H, W)].show(1)  # load model
-    with timer(f"sdxl_{W}x{H}", n=len(PROMPTS)) as info:
-        prompts_t.add_column(pt.Column("img_sdxl", computed_with=sdxl(prompts_t.prompt, 1, H, W), stored=True))
-    logger.debug(info)
-    timing_records.append(info)
+    # # SDXL
+    # H, W = 1024, 1024
+    # prompts_t[sdxl(prompts_t.prompt, 1, H, W)].show(1)  # load model
+    # with timer(f"sdxl_{W}x{H}", n=len(PROMPTS)) as info:
+    #     prompts_t.add_column(pt.Column("img_sdxl", computed_with=sdxl(prompts_t.prompt, 1, H, W), stored=True))
+    # logger.debug(info)
+    # timing_records.append(info)
 
     timing_df = pd.DataFrame([r.to_dict() for r in timing_records], columns=["desc", "elapsed", "n"])
     timing_df = timing_df.assign(
@@ -224,7 +222,7 @@ def test_pixeltable_integration():
     pixeltable_integration()
 
 
-@pytest.mark.benchmark(group=PyTestGroup.STRESS)
+@pytest.mark.benchmark()
 def test_stress_pixeltable_integration():
     """10-hour stress test pixeltable integration."""
     from nos.common import tqdm

@@ -41,8 +41,16 @@
 
     @bot.command()
     async def generate(ctx, *, prompt):
-        response = nos_client.Run(TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2",
-                            prompts=[prompt], width=512, height=512, num_images=1)
+        response = nos_client.Run(
+            TaskType.IMAGE_GENERATION,
+            "stabilityai/stable-diffusion-2",
+            inputs={
+                "prompts": [prompt],
+                "width": 512,
+                "height": 512,
+                "num_images": 1
+            }
+        )
         image, = response["images"]
 
         tmp_file_path = "image.png"
@@ -84,8 +92,16 @@
 
     @bot.command()
     async def generate(ctx, *, prompt):
-        response = nos_client.Run(TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2",
-                                prompts=[prompt], width=512, height=512, num_images=1)
+        response = nos_client.Run(
+            TaskType.IMAGE_GENERATION,
+            "stabilityai/stable-diffusion-2",
+            inputs={
+                "prompts": [prompt],
+                "width": 512,
+                "height": 512,
+                "num_images": 1
+            }
+        )
         image, = response["images"]
 
         tmp_file_path = "image.png"

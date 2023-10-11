@@ -73,7 +73,9 @@ def _predict_img2vec(
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
         try:
             st = time.perf_counter()
-            response = ctx.obj.client.Run(task=TaskType.IMAGE_EMBEDDING, model_name=model_name, images=[img])
+            response = ctx.obj.client.Run(
+                task=TaskType.IMAGE_EMBEDDING, model_name=model_name, inputs={"images": [img]}
+            )
             end = time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
@@ -99,7 +101,9 @@ def _predict_txt2vec(
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
         try:
             st = time.perf_counter()
-            response = ctx.obj.client.Run(task=TaskType.TEXT_EMBEDDING, model_name=model_name, texts=[prompt])
+            response = ctx.obj.client.Run(
+                task=TaskType.TEXT_EMBEDDING, model_name=model_name, inputs={"texts": [prompt]}
+            )
             end = time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
@@ -130,10 +134,12 @@ def _predict_txt2img(
             response = ctx.obj.client.Run(
                 task=TaskType.IMAGE_GENERATION,
                 model_name=model_name,
-                prompts=[prompt],
-                height=img_size,
-                width=img_size,
-                num_images=num_images,
+                inputs={
+                    "prompts": [prompt],
+                    "height": img_size,
+                    "width": img_size,
+                    "num_images": num_images,
+                },
             )
             end = time.perf_counter()
         except NosClientException as exc:
@@ -161,7 +167,9 @@ def _predict_img2bbox(
     with rich.status.Status("[bold green] Predict bounding boxes ...[/bold green]"):
         try:
             st = time.perf_counter()
-            response = ctx.obj.client.Run(task=TaskType.OBJECT_DETECTION_2D, model_name=model_name, images=[img])
+            response = ctx.obj.client.Run(
+                task=TaskType.OBJECT_DETECTION_2D, model_name=model_name, inputs={"images": [img]}
+            )
             scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
             end = time.perf_counter()
             console.print(
@@ -189,7 +197,9 @@ def _predict_segmentation(
     with rich.status.Status("[bold green] Predict segmentations ...[/bold green]"):
         try:
             st = time.perf_counter()
-            response = ctx.obj.client.Run(task=TaskType.IMAGE_SEGMENTATION_2D, model_name=model_name, images=[img])
+            response = ctx.obj.client.Run(
+                task=TaskType.IMAGE_SEGMENTATION_2D, model_name=model_name, inputs={"images": [img]}
+            )
             time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to predict segmentations. [/red]\n[bold red]{exc}[/bold red]")

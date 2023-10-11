@@ -169,10 +169,12 @@ async def generate(ctx, *, prompt):
         response = client.Run(
             task=TaskType.IMAGE_GENERATION,
             model_name=BASE_MODEL,
-            prompts=[prompt],
-            width=512,
-            height=512,
-            num_images=1,
+            inputs={
+                "prompts": [prompt],
+                "width": 512,
+                "height": 512,
+                "num_images": 1,
+            },
         )
         logger.debug(f"/generate request completed [id={ctx.message.id}, elapsed={time.perf_counter() - st:.2f}s]")
         (image,) = response["images"]
@@ -206,10 +208,12 @@ async def generate(ctx, *, prompt):
         response = client.Run(
             task=TaskType.IMAGE_GENERATION,
             model_name=model.model_id,
-            prompts=[prompt],
-            width=512,
-            height=512,
-            num_images=1,
+            inputs={
+                "prompts": [prompt],
+                "width": 512,
+                "height": 512,
+                "num_images": 1,
+            },
         )
         logger.debug(
             f"/generate request completed [id={ctx.message.id}, model={model}, elapsed={time.perf_counter() - st:.2f}s]"
@@ -318,10 +322,12 @@ async def train(ctx, *, prompt):
         response = client.Run(
             task=TaskType.IMAGE_GENERATION,
             model_name=f"custom/{job_id}",
-            prompts=[prompt],
-            width=512,
-            height=512,
-            num_images=1,
+            inputs={
+                "prompts": [prompt],
+                "width": 512,
+                "height": 512,
+                "num_images": 1,
+            },
         )
         logger.debug(f"/generate request completed [model={job_id}, elapsed={time.perf_counter() - st:.2f}s]")
         (image,) = response["images"]
