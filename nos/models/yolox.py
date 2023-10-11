@@ -160,7 +160,7 @@ for model_name in YOLOX.configs:
         TaskType.OBJECT_DETECTION_2D,
         YOLOX,
         init_args=(model_name,),
-        method_name="__call__",
+        method="__call__",
         inputs={
             "images": Union[
                 Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 16],

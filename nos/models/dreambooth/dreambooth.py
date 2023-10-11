@@ -220,7 +220,7 @@ for model_name in StableDiffusionLoRA.configs.keys():
         StableDiffusionLoRA,
         init_args=(model_name,),
         init_kwargs={"dtype": torch.float16},
-        method_name="__call__",
+        method="__call__",
         inputs={"prompts": Batch[str, 1], "num_images": int, "height": int, "width": int},
         outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )

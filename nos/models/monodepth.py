@@ -70,7 +70,7 @@ for model_name in MonoDepth.configs:
         TaskType.DEPTH_ESTIMATION_2D,
         MonoDepth,
         init_args=(model_name,),
-        method_name="__call__",
+        method="__call__",
         inputs={
             "images": Union[
                 Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 16],

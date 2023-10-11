@@ -131,7 +131,7 @@ for model_name in StableDiffusion.configs.keys():
         StableDiffusion,
         init_args=(model_name,),
         init_kwargs={"scheduler": "ddim", "dtype": torch.float16},
-        method_name="__call__",
+        method="__call__",
         inputs={
             "prompts": Batch[str, 1],
             "negative_prompts": Batch[str, 1],

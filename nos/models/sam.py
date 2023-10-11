@@ -70,7 +70,7 @@ for model_name in SAM.configs:
         TaskType.IMAGE_SEGMENTATION_2D,
         SAM,
         init_args=(model_name,),
-        method_name="__call__",
+        method="__call__",
         inputs={"images": Batch[ImageT[Image.Image], 1], "grid_size": int},
         outputs={"masks": Batch[ImageT[Image.Image]]},
     )

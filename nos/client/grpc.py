@@ -276,6 +276,7 @@ class Client:
         task: TaskType,
         model_name: str,
         inputs: Dict[str, Any],
+        method: str = None,
         shm: bool = False,
     ) -> nos_service_pb2.InferenceResponse:
         """Run module.
@@ -290,6 +291,7 @@ class Client:
                 Model identifier (e.g. openai/clip-vit-base-patch32).
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.inputs.
+            method (str, optional): Method to call on the model. Defaults to None.
             shm (bool, optional): Enable shared memory transport. Defaults to False.
         Returns:
             nos_service_pb2.InferenceResponse: Inference response.
@@ -297,7 +299,7 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         module: Module = self.Module(task, model_name, shm=shm)
-        return module(inputs)
+        return module(inputs, method=method)
 
     def Train(
         self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None
@@ -558,12 +560,13 @@ class Module:
                 logger.error(f"Failed to unregister shm [{self._shm_objects}], error: {e.details()}")
                 raise NosClientException(f"Failed to unregister shm [{self._shm_objects}]", e)
 
-    def __call__(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def __call__(self, inputs: Dict[str, Any], method: str = None) -> Dict[str, Any]:
         """Call the instantiated module/model.
 
         Args:
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.inputs.
+            method (str, optional): Method to call on the model. Defaults to None.
         Returns:
             Dict[str, Any]: Inference response.
         Raises:
@@ -594,6 +597,7 @@ class Module:
                     name=self.model_name,
                 ),
                 inputs=inputs,
+                method=method,
             )
             # Execute the request
             st = time.perf_counter()

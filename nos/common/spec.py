@@ -4,7 +4,7 @@ import json
 import re
 from dataclasses import asdict, field
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin, ClassVar
 
 from pydantic import validator
 from pydantic.dataclasses import dataclass
@@ -123,19 +123,19 @@ class FunctionSignature:
     including `inputs`, `outputs`, `func_or_cls` to be executed,
     initialization `args`/`kwargs`."""
 
+    func_or_cls: Optional[Callable]
+    """Class instance."""
     inputs: Dict[str, FunctionSignatureType]
     """Mapping of input names to dtypes."""
     outputs: Dict[str, FunctionSignatureType]
     """Mapping of output names to dtypes."""
 
     """The remaining private fields are used to instantiate a model and execute it."""
-    func_or_cls: Optional[Callable] = None
-    """Class instance."""
     init_args: Tuple[Any, ...] = field(default_factory=tuple)
     """Arguments to initialize the model instance."""
     init_kwargs: Dict[str, Any] = field(default_factory=dict)
     """Keyword arguments to initialize the model instance."""
-    method_name: str = None
+    method: str = None
     """Class method name. (e.g. forward, __call__ etc)"""
 
     def __repr__(self) -> str:
@@ -146,7 +146,7 @@ class FunctionSignature:
             f"""FunctionSignature\n"""
             f"""\tfunc_or_cls={self.func_or_cls}\n"""
             f"""\tinit_args={self.init_args}, init_kwargs={self.init_kwargs}\n"""
-            f"""\tmethod_name={self.method_name}\n"""
+            f"""\method={self.method}\n"""
             f"""\tinputs={inputs_str}\n"""
             f"""\toutputs={outputs_str}\n"""
         )
@@ -279,6 +279,42 @@ class ModelResources:
         return memory
 
 
+class ModelSpecMetadataRegistry:
+    """Model specification registry."""
+
+    _instance: Optional["ModelSpecMetadataRegistry"] = None
+    """Singleton instance."""
+    
+    _registry: Dict[str, "ModelSpecMetadata"] = {}
+    """Model specification metadata registry."""
+
+    @classmethod
+    def get(cls) -> "ModelSpecMetadataRegistry":
+        """Get the singleton instance."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def __contains__(self, model_id: str) -> bool:
+        """Check if the model spec metadata is available."""
+        return model_id in self._registry
+
+    def __getitem__(self, model_id: str) -> "ModelSpecMetadata":
+        """Load the model spec metadata."""
+        try:
+            return self._registry[model_id]
+        except KeyError:
+            raise KeyError(f"Unavailable model (id={model_id}).")
+
+    def __setitem__(self, model_id: str, metadata: "ModelSpecMetadata"):
+        """Add the model spec metadata."""
+        self._registry[model_id] = metadata
+
+    def load(self, model_id: str) -> "ModelSpec":
+        """Load the model spec metadata (identical to __getitem__)."""
+        return self[model_id]
+
+
 @dataclass
 class ModelSpecMetadata:
     """Model specification metadata.
@@ -286,7 +322,7 @@ class ModelSpecMetadata:
     The metadata contains the model profiles, metrics, etc.
     """
 
-    name: str
+    id: str
     """Model identifier."""
     task: TaskType
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
@@ -295,80 +331,66 @@ class ModelSpecMetadata:
     """Key is the runtime type (cpu, gpu, trt-runtime, etc)."""
 
     def __repr__(self) -> str:
-        return f"""ModelSpecMetadata(name={self.name}, task={self.task}, """ f"""resources={self.resources})"""
-
-    def to_json(self, filename: str) -> Dict[str, Any]:
-        """Convert the model spec to json."""
-        specd = asdict(self)
-        with open(filename, "w") as f:
-            json.dump(specd, f, indent=4)
-        return specd
-
-    @classmethod
-    def from_json(cls, filename: str) -> "ModelSpecMetadata":
-        """Convert the model spec from json."""
-        with open(filename, "r") as f:
-            specd = json.load(f)
-            return cls(**specd)
-
-
-def _metadata_path(spec: "ModelSpec") -> str:
-    """Return the metadata path for a model."""
-    return NOS_MODELS_DIR / f"metadata/{spec.id}/metadata.json"
+        return f"""ModelSpecMetadata(id={self.id}, task={self.task}, """ f"""resources={self.resources})"""
 
 
 @dataclass
 class ModelSpec:
     """Model specification for the registry.
 
-    The ModelSpec defines all the relevant information for
-    the compilation, deployment, and serving of a model.
+    ModelSpec captures all the relevant information for
+    the instantiation, runtime and execution of a model.
     """
 
-    name: str
+    id: str
     """Model identifier."""
-    task: TaskType
-    """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
     signature: FunctionSignature = None
     """Model function signature."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
-    metadata_: ModelSpecMetadata = field(init=False, default=None)
-    """Model specification metadata. The contents of the metadata (profiles, metrics, etc)
-    are specified in a separate file."""
 
     def __post_init__(self):
-        """Post initialization."""
+        self._metadata = None
+
+    @validator("id", pre=True)
+    def validate_id(cls, id: str) -> str:
+        """Validate the model identifier."""
         regex = re.compile(r"^[a-zA-Z0-9\/._-]+$")  # allow alphanumerics, `/`, `.`, `_`, and `-`
-        if not regex.match(self.name):
+        if not regex.match(id):
             raise ValueError(
-                f"Invalid model name, name={self.name} can only contain alphanumerics characters, `/`, `.`, `_`, and `-`"
+                f"Invalid model id, id={id} can only contain alphanumerics characters, `/`, `.`, `_`, and `-`"
             )
+        return id
 
     def __repr__(self):
-        return f"""ModelSpec(name={self.name}, task={self.task})""" f"""\n    {self.signature}"""
-
-    @cached_property
-    def metadata(self) -> ModelSpecMetadata:
-        try:
-            path = _metadata_path(self)
-            if not path.exists():
-                raise FileNotFoundError(f"Model metadata not found. [path={path}]")
-            metadata = ModelSpecMetadata.from_json(str(path))
-            logger.info(f"Loaded model metadata [name={self.name}, path={path}, metadata={metadata}]")
-        except Exception:
-            metadata = None
-        return metadata
-
-    @staticmethod
-    def get_id(model_name: str, task: TaskType = None) -> str:
-        if task is None:
-            return model_name
-        return f"{task.value}/{model_name}"
+        return f"""ModelSpec(id={self.id}, task={self.task})""" f"""\n    {self.signature}"""
 
     @property
-    def id(self) -> str:
-        return self.get_id(self.name, self.task)
+    def name(self) -> str:
+        return self.id
+
+    @property
+    def task(self) -> TaskType:
+        try:
+            md = self.metadata
+            return md.task
+        except Exception:
+            logger.warning(f"Model metadata not found, id={self.id}.")
+            return None
+
+    @property
+    def metadata(self) -> ModelSpecMetadata:
+        """Return the cached model spec metadata."""
+        if self._metadata is None:                
+            # Note (spillai): We avoid using cached properties as we need
+            # to make sure that the metadata is not None before caching it. 
+            # Otherwise, we would cache a None valued metadata.
+            try:
+                self._metadata = ModelSpecMetadataRegistry.get()[self.id]
+            except KeyError:
+                logger.warning(f"Model metadata not found, id={self.id}.")
+                return None
+        return self._metadata
 
     @validator("signature")
     def _validate_signature(cls, sig: FunctionSignature, **kwargs: Dict[str, Any]) -> FunctionSignature:
@@ -385,8 +407,8 @@ class ModelSpec:
         """
         if sig and sig.func_or_cls:
             model_cls = sig.func_or_cls
-            if sig.method_name and not hasattr(model_cls, sig.method_name):
-                raise ValueError(f"Model class {model_cls} does not have function {sig.method_name}.")
+            if sig.method and not hasattr(model_cls, sig.method):
+                raise ValueError(f"Model class {model_cls} does not have function {sig.method}.")
         return sig
 
     def create(self, *args, **kwargs) -> Any:
@@ -400,7 +422,7 @@ class ModelSpec:
             spec.signature.func_or_cls = None
             spec.signature.init_args = ()
             spec.signature.init_kwargs = {}
-            spec.signature.method_name = None
+            spec.signature.method = None
         else:
             spec = self
         return nos_service_pb2.ModelInfoResponse(
@@ -414,13 +436,13 @@ class ModelSpec:
 
     @classmethod
     def from_cls(
-        cls, func_or_cls: Callable, method_name: str = "__call__", runtime_env: RuntimeEnv = None, **kwargs: Any
+        cls, func_or_cls: Callable, method: str = "__call__", runtime_env: RuntimeEnv = None, **kwargs: Any
     ) -> "ModelSpec":
         """Wrap custom models/classes into a nos-compatible model spec.
 
         Args:
             func_or_cls (Callable): Model function or class. For now, only classes are supported.
-            method_name (str): Method name to be executed.
+            method (str): Method name to be executed.
             runtime_env (RuntimeEnv): Runtime environment specification.
             **kwargs: Additional keyword arguments.
                 These include `init_args` and `init_kwargs` to initialize the model instance.
@@ -433,11 +455,11 @@ class ModelSpec:
             raise ValueError(f"Invalid class `{func_or_cls}` provided, needs to be a class object.")
 
         # Check if the cls has the method_name
-        if not hasattr(func_or_cls, method_name):
-            raise ValueError(f"Invalid method name `{method_name}` provided.")
+        if not hasattr(func_or_cls, method):
+            raise ValueError(f"Invalid method name `{method}` provided.")
 
         # Get the function signature
-        sig = inspect.signature(getattr(func_or_cls, method_name))
+        sig = inspect.signature(getattr(func_or_cls, method))
 
         # Get the positional arguments and their types
         # Note: We skip the `self` argument
@@ -455,13 +477,13 @@ class ModelSpec:
         if runtime_env:
             logger.debug(f"Using custom runtime_env [env={runtime_env}]")
         spec = cls(
-            name=func_or_cls.__name__,
+            func_or_cls.__name__,
             task=TaskType.CUSTOM,
             signature=FunctionSignature(
                 func_or_cls=func_or_cls,
                 init_args=kwargs.pop("init_args", ()),
                 init_kwargs=kwargs.pop("init_kwargs", {}),
-                method_name=method_name,
+                method=method,
                 inputs=call_inputs,
                 outputs=call_outputs,
             ),

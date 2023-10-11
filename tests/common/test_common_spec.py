@@ -1,3 +1,4 @@
+from collections import namedtuple
 from itertools import product
 
 import numpy as np
@@ -66,9 +67,11 @@ def test_common_embedding_spec_valid_shapes():
         assert spec is not None
 
 
+SigIO = namedtuple("SignatureInputOuput", ["inputs", "outputs"])
+
 @pytest.fixture
 def img2vec_signature():
-    yield FunctionSignature(
+    yield SigIO(
         inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
@@ -90,15 +93,14 @@ def test_common_model_spec(img2vec_signature):
             return embedding
 
     spec = ModelSpec(
-        name="openai/clip",
-        task=TaskType.IMAGE_EMBEDDING,
+        "openai/clip",
         signature=FunctionSignature(
+            func_or_cls=TestImg2VecModel,
             inputs=img2vec_signature.inputs,
             outputs=img2vec_signature.outputs,
-            func_or_cls=TestImg2VecModel,
             init_args=("openai/clip",),
             init_kwargs={},
-            method_name="__call__",
+            method="__call__",
         ),
     )
     assert spec is not None
@@ -120,15 +122,14 @@ def test_common_model_spec(img2vec_signature):
     # Create a model spec with a wrong method name
     with pytest.raises(ValidationError):
         spec = ModelSpec(
-            name="openai/clip",
-            task=TaskType.IMAGE_EMBEDDING,
+            "openai/clip",
             signature=FunctionSignature(
+                TestImg2VecModel,
                 inputs=img2vec_signature.inputs,
                 outputs=img2vec_signature.outputs,
-                func_or_cls=TestImg2VecModel,
                 init_args=("openai/clip",),
                 init_kwargs={},
-                method_name="predict",
+                method="predict",
             ),
         )
         assert spec is not None
@@ -137,25 +138,29 @@ def test_common_model_spec(img2vec_signature):
     for name in ["openai&clip", "openai\\clip", "openai:clip"]:
         with pytest.raises(ValueError):
             ModelSpec(
-                name=name,
-                task=TaskType.IMAGE_EMBEDDING,
+                name,
                 signature=FunctionSignature(
+                    TestImg2VecModel,
                     inputs=img2vec_signature.inputs,
                     outputs=img2vec_signature.outputs,
-                    func_or_cls=TestImg2VecModel,
                     init_args=("openai/clip",),
                     init_kwargs={},
-                    method_name="__call__",
+                    method="__call__",
                 ),
             )
 
 
 def test_common_model_spec_variations():
-    # Create signatures for all tasks (without func_or_cls, init_args, init_kwargs, method_name)
+    # Create signatures for all tasks (without func_or_cls, init_args, init_kwargs, method)
     ImageSpec(shape=(None, None, 3), dtype="uint8")
+
+    # Create custom class to test function signatures with different input/outputs
+    class Custom:
+        ...
 
     # Image embedding (img2vec)
     img2vec_signature = FunctionSignature(
+        Custom,
         inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
@@ -163,6 +168,7 @@ def test_common_model_spec_variations():
 
     # Text embedding (txt2vec)
     txt2vec_signature = FunctionSignature(
+        Custom,
         inputs={"texts": str},
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
@@ -170,6 +176,7 @@ def test_common_model_spec_variations():
 
     # Object detection (img2bbox)
     img2bbox_signature = FunctionSignature(
+        Custom,
         inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
         outputs={
             "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
@@ -181,6 +188,7 @@ def test_common_model_spec_variations():
 
     # Image generation (txt2img)
     txt2img_signature = FunctionSignature(
+        Custom,
         inputs={"texts": Batch[str]},
         outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )
@@ -207,11 +215,12 @@ def test_common_spec_signature():
     """Test function signature."""
     from loguru import logger
 
-    for spec in hub.list():
+    for model_id in hub.list():
+        spec: ModelSpec = hub.load_spec(model_id)
         logger.debug(f"{spec.name}, {spec.task}")
         assert spec is not None
-        assert spec.name == spec.name
-        assert spec.task == spec.task
+        assert spec.name
+        assert spec.task
         assert spec.signature.inputs is not None
         assert spec.signature.outputs is not None
 

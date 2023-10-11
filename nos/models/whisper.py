@@ -92,7 +92,7 @@ for model_name in Whisper.configs:
         TaskType.AUDIO_TRANSCRIPTION,
         Whisper,
         init_args=(model_name,),
-        method_name="transcribe_file_blob",
+        method="transcribe_file_blob",
         inputs={"audio": str},
         outputs={"text": Batch[str]},
     )

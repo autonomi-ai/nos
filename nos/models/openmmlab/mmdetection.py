@@ -120,7 +120,7 @@ if mmdet_available is not None:
             TaskType.OBJECT_DETECTION_2D,
             MMDetection,
             init_args=(model_name,),
-            method_name="__call__",
+            method="__call__",
             inputs={
                 "images": Union[
                     Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 16],
