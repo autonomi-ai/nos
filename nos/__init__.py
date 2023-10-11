@@ -9,7 +9,7 @@ from .server import init, shutdown  # noqa: F401
 
 
 __all__ = [
-    "InferenceClient",  # noqa: F405
+    "Client",  # noqa: F405
     "init",  # noqa: F405
     "shutdown",  # noqa: F405
     "__version__",  # noqa: F405

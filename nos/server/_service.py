@@ -14,6 +14,7 @@ from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTr
 from nos.constants import (  # noqa F401
     DEFAULT_GRPC_PORT,  # noqa F401
     GRPC_MAX_MESSAGE_LENGTH,
+    NOS_GRPC_MAX_WORKER_THREADS,
     NOS_PROFILING_ENABLED,
 )
 from nos.exceptions import ModelNotFoundError
@@ -294,7 +295,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
 
-def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 1) -> None:
+def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = NOS_GRPC_MAX_WORKER_THREADS) -> None:
     """Start the gRPC server."""
     from concurrent import futures
 

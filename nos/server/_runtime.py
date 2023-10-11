@@ -53,6 +53,18 @@ def _default_environment(kwargs: Dict[str, str] = None) -> Dict[str, str]:
     return environment
 
 
+def _default_volume(mounts: Dict[str, Dict[str, str]] = None) -> Dict[str, Dict[str, str]]:
+    """Default volumes that can be overriden for the
+    `InferenceServiceRuntimeConfig` default_factory."""
+    environment = {
+        str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},  # nos cache
+        "/dev/shm": {"bind": "/dev/shm", "mode": "rw"},  # shared-memory transport
+    }
+    if mounts is not None:
+        environment.update(mounts)
+    return environment
+
+
 @dataclass
 class InferenceServiceRuntimeConfig:
     """Inference service configuration."""
@@ -72,12 +84,7 @@ class InferenceServiceRuntimeConfig:
     environment: Dict[str, str] = field(default_factory=lambda: _default_environment())
     """Environment variables."""
 
-    volumes: Dict[str, Dict[str, str]] = field(
-        default_factory=lambda: {
-            str(Path.home() / ".nosd"): {"bind": "/app/.nos", "mode": "rw"},  # nos cache
-            "/dev/shm": {"bind": "/dev/shm", "mode": "rw"},  # shared-memory transport
-        }
-    )
+    volumes: Dict[str, Dict[str, str]] = field(default_factory=lambda: _default_volume())
     """Volumes to mount."""
 
     shm_size: str = "4g"
@@ -128,7 +135,7 @@ class InferenceServiceRuntime:
             device="gpu",
             kwargs={
                 "nano_cpus": int(8e9),
-                "mem_limit": "32g",
+                "mem_limit": "12g",
                 "log_config": {"type": LogConfig.types.JSON, "config": {"max-size": "100m", "max-file": "10"}},
             },
         ),
