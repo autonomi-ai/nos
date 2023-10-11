@@ -1,6 +1,6 @@
 <h1 align="center" style="font-size:54px;font-weight: bold;font-color:black;">🔥 <i>NOS</i></h1>
 <h4 align="center">
-Nitrous Oxide System for AI. <br> 
+Nitrous Oxide System for AI. <br>
 Optimize, serve and auto-scale Pytorch models on any hardware. <br>
 Cut your inference costs by 10x.
 </h4>
