@@ -1,4 +1,4 @@
-# ❓ Support
+# ❓ FAQ / Support
 
 > 🧪 **NOS** is currently in **beta**. This means that the API is subject to change and may not be available at all times. We will do our best to keep this documentation up to date, but if you notice any errors or inconsistencies, please [let us know](mailto:support@autonomi.ai).
 

@@ -25,7 +25,7 @@ The NOS server can be started in three ways:
     Navigate to [`examples/quickstart`](https://github.com/autonomi-ai/nos/nos/examples/quickstart) to see an example of the YAML specification.
 
     ```yaml
-    {% include '../examples/quickstart/docker-compose.quickstart.yml' %}
+    {% include '../../examples/quickstart/docker-compose.quickstart.yml' %}
     ```
 
 ## API Reference
