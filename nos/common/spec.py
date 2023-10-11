@@ -338,7 +338,7 @@ class ModelSpec:
 
     def __post_init__(self):
         """Post initialization."""
-        regex = re.compile(r"^[a-zA-Z0-9\/.-]+$")  # model-identifier can only have alphanumerics, /, - and .
+        regex = re.compile(r"^[a-zA-Z0-9\/._-]+$")  # model-identifier can only have alphanumerics, /, - and .
         if not regex.match(self.name):
             raise ValueError(
                 f"Invalid model name, name={self.name} can only contain alphanumerics characters, `/` and '-'."
