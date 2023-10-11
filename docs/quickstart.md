@@ -50,7 +50,7 @@ conda create -n nos python=3.8
     pip install torch-nos[torch,server]"
     ```
 
-    **Note:** For running the NOS server, Python 3.8 is currently required to run the server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
+    **Note:** Python 3.8 is currently required to run the server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
 
 ## ⚡️ Start the NOS backend server
 
