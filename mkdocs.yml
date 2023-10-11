@@ -52,6 +52,10 @@ nav:
     - nos predict: docs/cli/predict.md
     - nos benchmark: docs/cli/benchmark.md
     - nos docker: docs/cli/docker.md
+  - 🔌 Integrations:
+    - PixelTable: docs/integrations/pixeltable.md
+    - SkyPilot: docs/integrations/skypilot.md
+    - AWS Inferentia: docs/integrations/aws-inferentia.md
   - ❓ Support / FAQ: docs/support.md
 
 plugins:
