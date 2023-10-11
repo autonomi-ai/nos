@@ -244,29 +244,31 @@ class Client:
             raise NosClientException(f"Failed to get model info (details={(e.details())})", e)
 
     @lru_cache(maxsize=8)  # noqa: B019
-    def Module(self, task: TaskType, model_name: str) -> "Module":
+    def Module(self, task: TaskType, model_name: str, shm: bool = False) -> "Module":
         """Instantiate a model module.
 
         Args:
             task (TaskType): Task used for prediction.
             model_name (str): Name of the model to init.
+            shm (bool, optional): Enable shared memory transport. Defaults to False.
         Returns:
             Module: Inference module.
         """
-        return Module(task, model_name, self)
+        return Module(task, model_name, self, shm=shm)
 
     @lru_cache(maxsize=8)  # noqa: B019
-    def ModuleFromSpec(self, spec: ModelSpec) -> "Module":
+    def ModuleFromSpec(self, spec: ModelSpec, shm: bool = False) -> "Module":
         """Instantiate a model module from a model spec.
 
         Args:
             spec (ModelSpec): Model specification.
+            shm (bool, optional): Enable shared memory transport. Defaults to False.
         Returns:
             Module: Inference module.
         """
-        return Module(spec.task, spec.name, self)
+        return Module(spec.task, spec.name, self, shm=shm)
 
-    def ModuleFromCls(self, cls: Callable) -> "Module":
+    def ModuleFromCls(self, cls: Callable, shm: bool = False) -> "Module":
         raise NotImplementedError("ModuleFromCls not implemented yet.")
 
     def Run(
@@ -274,6 +276,7 @@ class Client:
         task: TaskType,
         model_name: str,
         inputs: Dict[str, Any],
+        shm: bool = False,
     ) -> nos_service_pb2.InferenceResponse:
         """Run module.
 
@@ -287,12 +290,13 @@ class Client:
                 Model identifier (e.g. openai/clip-vit-base-patch32).
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.inputs.
+            shm (bool, optional): Enable shared memory transport. Defaults to False.
         Returns:
             nos_service_pb2.InferenceResponse: Inference response.
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
-        module: Module = self.Module(task, model_name)
+        module: Module = self.Module(task, model_name, shm=shm)
         return module(inputs)
 
     def Train(
@@ -372,6 +376,8 @@ class Module:
     """Model identifier (e.g. openai/clip-vit-base-patch32)."""
     _client: Client
     """gRPC client."""
+    shm: bool = False
+    """Enable shared memory transport."""
     _spec: ModelSpec = field(init=False)
     """Model specification for this module."""
     _shm_objects: Dict[str, Any] = field(init=False, default_factory=dict)
@@ -380,7 +386,7 @@ class Module:
     def __post_init__(self):
         """Initialize the spec."""
         self._spec = self._client.GetModelInfo(ModelSpec(name=self.model_name, task=self.task))
-        if not NOS_SHM_ENABLED:
+        if not NOS_SHM_ENABLED or not self.shm:
             logger.debug("Shared memory disabled.")
             self._shm_objects = None  # disables shm, and avoids registering/unregistering
 

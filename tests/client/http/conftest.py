@@ -1,5 +1,4 @@
-import pytest
-
+# import pytest
 # from nos.test.conftest import (  # noqa: F401, E402  # noqa: F401, E402
 #     GRPC_TEST_PORT,
 #     http_client,

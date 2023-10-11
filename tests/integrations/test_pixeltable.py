@@ -94,13 +94,13 @@ def pixeltable_integration(write_profile: bool = False):
     cl = pt.Client()
 
     # Import pixeltable functions (only available after client is initialized)
-    import pixeltable.functions.image_generation as imagen
+    import pixeltable.functions.image_generation as imagen  # noqa: F401
     from pixeltable.functions.custom import noop_process_images as noop
     from pixeltable.functions.image_embedding import openai_clip
     from pixeltable.functions.object_detection_2d import yolox_medium, yolox_tiny
 
-    sdv21 = imagen.stabilityai_stable_diffusion_2_1
-    sdxl = imagen.stabilityai_stable_diffusion_xl_base_1_0
+    sdv21 = imagen.stabilityai_stable_diffusion_2_1  # noqa: F841
+    sdxl = imagen.stabilityai_stable_diffusion_xl_base_1_0  # noqa: F841
 
     # Setup pixeltable database
     try:
