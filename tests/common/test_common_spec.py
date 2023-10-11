@@ -8,7 +8,6 @@ from pydantic import ValidationError
 
 from nos import hub
 from nos.common.spec import FunctionSignature, ModelSpec
-from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT
 
 
@@ -68,6 +67,7 @@ def test_common_embedding_spec_valid_shapes():
 
 
 SigIO = namedtuple("SignatureInputOuput", ["inputs", "outputs"])
+
 
 @pytest.fixture
 def img2vec_signature():

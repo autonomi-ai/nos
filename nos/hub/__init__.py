@@ -1,7 +1,13 @@
 from typing import Any, Callable, Dict, List, Optional, Type
 
-from nos.common.spec import FunctionSignature, ModelSpec, ModelSpecMetadata, ModelSpecMetadataRegistry, TaskType  # noqa: F401
 from nos.common.metaclass import SingletonMetaclass  # noqa: F401
+from nos.common.spec import (  # noqa: F401
+    FunctionSignature,
+    ModelSpec,
+    ModelSpecMetadata,
+    ModelSpecMetadataRegistry,
+    TaskType,
+)
 from nos.hub.config import HuggingFaceHubConfig, MMLabConfig, MMLabHub, NosHubConfig, TorchHubConfig  # noqa: F401
 from nos.hub.hf import hf_login  # noqa: F401
 from nos.logging import logger
@@ -97,7 +103,7 @@ class Hub:
                 method=kwargs.pop("method", None),
             ),
         )
-        
+
         hub = cls.get()
         if model_id not in hub._metadata_registry:
             hub._metadata_registry[model_id] = ModelSpecMetadata(model_id, task)

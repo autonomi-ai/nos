@@ -9,6 +9,7 @@ from nos.common import ImageSpec, TaskType
 from nos.common.types import Batch, ImageT
 
 from ._noop import NoOp  # noqa: F401
+
 # from .clip import CLIP  # noqa: F401
 # from .dreambooth.dreambooth import StableDiffusionLoRA  # noqa: F401
 # from .faster_rcnn import FasterRCNN  # noqa: F401

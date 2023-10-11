@@ -1,5 +1,6 @@
-import pytest
 from typing import List
+
+import pytest
 
 from nos import hub
 from nos.hub import ModelSpec
@@ -10,12 +11,12 @@ def test_hub_singleton_instance():
     from nos.hub import Hub
 
     hub = Hub.get()
-    assert hub is Hub.get()
-    
+    assert hub is Hub.get(), "Hub instance should be a singleton."
+
 
 def test_hub_list():
     model_names: List[str] = hub.list()
-    assert len(model_names) > 0
+    assert len(model_names) > 0, "No models found in the registry."
 
 
 def test_hub_load_spec_all():

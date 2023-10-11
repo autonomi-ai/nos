@@ -88,7 +88,7 @@ class ModelHandle:
 
     def __post_init__(self):
         """Initialize the actor handles."""
-        self._actors = [self.get_actor(self.spec) for _ in range(self.num_replicas)]
+        self._actors = [self._get_actor(self.spec) for _ in range(self.num_replicas)]
         self._actor_pool = ray.util.ActorPool(self._actors)
         self._results_queue.resize(self.num_replicas * 2)
 
@@ -97,6 +97,74 @@ class ModelHandle:
         opts = self._actor_options(self.spec)
         opts_str = ", ".join([f"{k}={v}" for k, v in opts.items()])
         return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, qsize={self.results._size}, opts=({opts_str}))"
+
+    @classmethod
+    def _actor_options(cls, spec: ModelSpec) -> Dict[str, Any]:
+        """Get actor options from model specification."""
+        # TOFIX (spillai): When considering CPU-only models with num_cpus specified,
+        # OMP_NUM_THREADS will be set to the number of CPUs requested. Otherwise,
+        # if num_cpus is not specified, OMP_NUM_THREADS will default to 1.
+        # Instead, for now, we manually set the environment variable in `InferenceServiceRuntime`
+        # to the number of CPUs threads available.
+        actor_opts = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
+        if spec.runtime_env is not None:
+            logger.debug("Using custom runtime environment, this may take a while to build.")
+            actor_opts["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
+        return actor_opts
+
+    @classmethod
+    def _get_actor(cls, spec: ModelSpec) -> Union[ray.remote, ray.actor.ActorHandle]:
+        """Get an actor handle from model specification.
+
+        Args:
+            spec (ModelSpec): Model specification.
+        Returns:
+            Union[ray.remote, ray.actor.ActorHandle]: Ray actor handle.
+        """
+        # TODO (spillai): Use the auto-tuned model spec to instantiate an
+        # actor the desired memory requirements. Fractional GPU amounts
+        # will need to be calculated from the target HW and model spec
+        # (i.e. 0.5 on A100 vs. T4 are different).
+        model_cls = spec.signature.func_or_cls
+
+        # Get the actor options from the model spec
+        actor_options = cls._actor_options(spec)
+        actor_cls = ray.remote(**actor_options)(model_cls)
+
+        # Check if the model class has the required method
+        actor = actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
+        if not hasattr(actor, spec.signature.method):
+            raise NotImplementedError(f"Model class {model_cls} does not have {spec.signature.method} implemented.")
+        logger.debug(f"Creating actor [actor={actor}, opts={actor_options}, cls={model_cls}]")
+
+        # Add some memory logs to this actor
+        if NOS_MEMRAY_ENABLED:
+            # Replace all non-alphanumeric characters with underscores
+            actor_name = re.sub(r"\W+", "_", str(actor))
+            log_name = Path(NOS_RAY_LOGS_DIR) / f"{actor_name}_mem_profile.bin"
+            if log_name.exists():
+                log_name.unlink()
+            try:
+                memray.Tracker(log_name).__enter__()
+            except Exception:
+                logger.error("Failed to iniitialize memray tracker.")
+        return actor
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        """Call the task immediately.
+
+        Args:
+            *args: Model arguments.
+            **kwargs: Model keyword arguments.
+        Returns:
+            Model response.
+        """
+        assert len(self._actors) >= 1, "Model should have atleast one replica."
+        if self.num_replicas > 1:
+            logger.warning("Model has >1 replicas, use `.submit()` instead to fully utilize them.")
+        actor_method_func = getattr(self._actors[0], self.spec.signature.method)
+        response_ref: ray.ObjectRef = actor_method_func.remote(**kwargs)
+        return ray.get(response_ref)
 
     def scale(self, replicas: Union[int, str] = 1) -> "ModelHandle":
         """Scale the model handle to a new number of replicas.
@@ -124,7 +192,7 @@ class ModelHandle:
             logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={replicas}].")
             return self
         elif replicas > len(self._actors):
-            self._actors += [self.get_actor(self.spec) for _ in range(replicas - len(self._actors))]
+            self._actors += [self._get_actor(self.spec) for _ in range(replicas - len(self._actors))]
             logger.debug(f"Scaling up model [name={self.spec.name}, replicas={replicas}].")
         else:
             actors_to_remove = self._actors[replicas:]
@@ -150,83 +218,6 @@ class ModelHandle:
         gc.collect()
         return self
 
-    @classmethod
-    def _actor_options(cls, spec: ModelSpec) -> Dict[str, Any]:
-        """Get actor options from model specification."""
-        # TOFIX (spillai): When considering CPU-only models with num_cpus specified,
-        # OMP_NUM_THREADS will be set to the number of CPUs requested. Otherwise,
-        # if num_cpus is not specified, OMP_NUM_THREADS will default to 1.
-        # Instead, for now, we manually set the environment variable in `InferenceServiceRuntime`
-        # to the number of CPUs threads available.
-        actor_opts = {"num_gpus": 0.1 if torch.cuda.is_available() else 0}
-        if spec.runtime_env is not None:
-            logger.debug("Using custom runtime environment, this may take a while to build.")
-            actor_opts["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
-        return actor_opts
-
-    @classmethod
-    def get_actor(cls, spec: ModelSpec) -> Union[ray.remote, ray.actor.ActorHandle]:
-        """Get an actor handle from model specification.
-
-        Args:
-            spec (ModelSpec): Model specification.
-        Returns:
-            Union[ray.remote, ray.actor.ActorHandle]: Ray actor handle.
-        """
-        # TODO (spillai): Use the auto-tuned model spec to instantiate an
-        # actor the desired memory requirements. Fractional GPU amounts
-        # will need to be calculated from the target HW and model spec
-        # (i.e. 0.5 on A100 vs. T4 are different).
-        model_cls = spec.signature.func_or_cls
-
-        # Get the actor options from the model spec
-        actor_options = cls._actor_options(spec)
-        actor_cls = ray.remote(**actor_options)(model_cls)
-
-        # Check if the model class has the required method
-        actor = actor_cls.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
-        if not hasattr(actor, spec.signature.method_name):
-            raise NotImplementedError(
-                f"Model class {model_cls} does not have {spec.signature.method_name} implemented."
-            )
-        logger.debug(f"Creating actor [actor={actor}, opts={actor_options}, cls={model_cls}]")
-
-        # Add some memory logs to this actor
-        if NOS_MEMRAY_ENABLED:
-            # Replace all non-alphanumeric characters with underscores
-            actor_name = re.sub(r"\W+", "_", str(actor))
-            log_name = Path(NOS_RAY_LOGS_DIR) / f"{actor_name}_mem_profile.bin"
-            if log_name.exists():
-                log_name.unlink()
-            try:
-                memray.Tracker(log_name).__enter__()
-            except Exception:
-                logger.error("Failed to iniitialize memray tracker.")
-        return actor
-
-    def cleanup(self) -> None:
-        """Kill all the actor handles and garbage collect."""
-        for actor_handle in self._actors:
-            ray.kill(actor_handle)
-        self._actors = []
-        gc.collect()
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        """Call the task immediately.
-
-        Args:
-            *args: Model arguments.
-            **kwargs: Model keyword arguments.
-        Returns:
-            Model response.
-        """
-        assert len(self._actors) >= 1, "Model should have atleast one replica."
-        if self.num_replicas > 1:
-            logger.warning("Model has >1 replicas, use `.submit()` instead to fully utilize them.")
-        actor_method_func = getattr(self._actors[0], self.spec.signature.method_name)
-        response_ref: ray.ObjectRef = actor_method_func.remote(**kwargs)
-        return ray.get(response_ref)
-
     def submit(self, *args: Any, **kwargs: Any) -> str:
         """Submit a task to the actor pool.
 
@@ -240,7 +231,7 @@ class ModelHandle:
         assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
 
         # Submit the task to the actor pool, leveraging all replicas
-        self._actor_pool.submit(lambda a, v: getattr(a, self.spec.signature.method_name).remote(**v), kwargs)
+        self._actor_pool.submit(lambda a, v: getattr(a, self.spec.signature.method).remote(**v), kwargs)
 
         # If there are pending submissions due to the actor pool being fully utilized,
         # fetch the next result from the actor pool and put it in the queue.
@@ -251,6 +242,13 @@ class ModelHandle:
         # Get the future object reference for the last task submitted
         future_ref: ray.ObjectRef = self._actor_pool._index_to_future[self._actor_pool._next_task_index - 1]
         return future_ref.hex()
+
+    def cleanup(self) -> None:
+        """Kill all the actor handles and garbage collect."""
+        for actor_handle in self._actors:
+            ray.kill(actor_handle)
+        self._actors = []
+        gc.collect()
 
     def get(self, future_ref: str = None) -> Any:
         """Get the result future."""
@@ -315,12 +313,16 @@ class ModelManager:
     """Maximum number of concurrent models."""
 
     handlers: Dict[str, ModelHandle] = field(default_factory=OrderedDict)
-    """Model handles."""
+    """Model handles mapped (key=model-identifier, value=ModelHandle)."""
 
     def __post_init__(self):
         """Initialize the model manager."""
         if self.policy not in (self.EvictionPolicy.FIFO,):
             raise NotImplementedError(f"Eviction policy not implemented: {self.policy}")
+        if self.max_concurrent_models > 8:
+            raise Exception(
+                f"Large number of concurrent models requested, keep it <= 8 [concurrency={self.max_concurrent_models}]"
+            )
 
     def __repr__(self) -> str:
         """String representation of the model manager (memory consumption, models, in tabular format etc)."""
@@ -328,6 +330,10 @@ class ModelManager:
         for idx, (model_id, model_handle) in enumerate(self.handlers.items()):
             repr_str += f"\n  {idx}: [id={model_id}, model={model_handle}]"
         return repr_str
+
+    def __len__(self) -> int:
+        """Get the number of models in the manager."""
+        return len(self.handlers)
 
     def __contains__(self, spec: ModelSpec) -> bool:
         """Check if a model exists in the manager.

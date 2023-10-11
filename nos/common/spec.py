@@ -1,10 +1,8 @@
 import copy
 import inspect
-import json
 import re
-from dataclasses import asdict, field
-from functools import cached_property
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin, ClassVar
+from dataclasses import field
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin
 
 from pydantic import validator
 from pydantic.dataclasses import dataclass
@@ -13,7 +11,6 @@ from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import NosInputValidationException
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
-from nos.constants import NOS_MODELS_DIR
 from nos.logging import logger
 from nos.protoc import import_module
 
@@ -146,7 +143,7 @@ class FunctionSignature:
             f"""FunctionSignature\n"""
             f"""\tfunc_or_cls={self.func_or_cls}\n"""
             f"""\tinit_args={self.init_args}, init_kwargs={self.init_kwargs}\n"""
-            f"""\method={self.method}\n"""
+            f"""\\method={self.method}\n"""
             f"""\tinputs={inputs_str}\n"""
             f"""\toutputs={outputs_str}\n"""
         )
@@ -284,7 +281,7 @@ class ModelSpecMetadataRegistry:
 
     _instance: Optional["ModelSpecMetadataRegistry"] = None
     """Singleton instance."""
-    
+
     _registry: Dict[str, "ModelSpecMetadata"] = {}
     """Model specification metadata registry."""
 
@@ -381,9 +378,9 @@ class ModelSpec:
     @property
     def metadata(self) -> ModelSpecMetadata:
         """Return the cached model spec metadata."""
-        if self._metadata is None:                
+        if self._metadata is None:
             # Note (spillai): We avoid using cached properties as we need
-            # to make sure that the metadata is not None before caching it. 
+            # to make sure that the metadata is not None before caching it.
             # Otherwise, we would cache a None valued metadata.
             try:
                 self._metadata = ModelSpecMetadataRegistry.get()[self.id]
