@@ -12,6 +12,14 @@ from nos.test.utils import skip_if_no_torch_cuda
 pytestmark = pytest.mark.server
 
 
+def test_supported_inference_service_runtime():
+    available_runtimes = InferenceServiceRuntime.supported_runtimes()
+    assert available_runtimes is not None
+    assert "cpu" in available_runtimes
+    assert "gpu" in available_runtimes
+    assert "inf2" in available_runtimes
+
+
 @pytest.fixture
 def inference_service_runtime_cpu():
     runtime = InferenceServiceRuntime(runtime="cpu", name="nos-inference-service-runtime-cpu-test")

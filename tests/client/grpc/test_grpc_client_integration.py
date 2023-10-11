@@ -75,8 +75,7 @@ def test_grpc_client_inference_integration(runtime):  # noqa: F811
 
     # SDv1.4, SDv1.5, SDv2.0, SDv2.1, and SDXL
     task = TaskType.IMAGE_GENERATION
-    for _, config in StableDiffusion.configs.items():
-        model_name = config.model_name
+    for model_name, _config in StableDiffusion.configs.items():
         model = client.Module(task=task, model_name=model_name)
         assert model is not None
         assert model.GetModelInfo() is not None
@@ -106,6 +105,7 @@ def test_grpc_client_inference_integration(runtime):  # noqa: F811
     assert len(containers) == 0
 
 
+@pytest.mark.skip(reason="Fine-tuning is not supported yet.")
 @pytest.mark.client
 @pytest.mark.benchmark(group=PyTestGroup.INTEGRATION)
 @pytest.mark.parametrize(

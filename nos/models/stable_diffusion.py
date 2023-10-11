@@ -15,15 +15,6 @@ class StableDiffusionConfig(HuggingFaceHubConfig):
     pass
 
 
-@dataclass(frozen=True)
-class StableDiffusionNeuronConfig(HuggingFaceHubConfig):
-    neuron_model_name: str = None
-    """Name of the neuron / neuronx model."""
-
-    neuron_type: str = "neuronx"
-    """Type of neuron model, one of ['neuron', 'neuronx']."""
-
-
 class StableDiffusion:
     """StableDiffusion model for text to image generation."""
 
@@ -42,11 +33,6 @@ class StableDiffusion:
         ),
         "stabilityai/stable-diffusion-xl-base-1-0": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-xl-base-1.0",
-        ),
-        "autonomi-ai/stable-diffusion-xl-base-1-0-neuronx": StableDiffusionNeuronConfig(
-            model_name="stabilityai/stable-diffusion-xl-base-1.0",
-            neuron_model_name="autonomi-ai/stable-diffusion-xl-base-1.0-neuronx",
-            neuron_type="neuronx",
         ),
     }
 
@@ -101,30 +87,43 @@ class StableDiffusion:
     def __call__(
         self,
         prompts: Union[str, List[str]],
+        negative_prompts: Union[str, List[str]] = None,
         num_images: int = 1,
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
         height: int = None,
         width: int = None,
+        seed: int = -1,
     ) -> List[Image.Image]:
         """Generate images from text prompt."""
+        # Input validation and defaults
         if isinstance(prompts, str):
             prompts = [prompts]
+        if isinstance(negative_prompts, str):
+            negative_prompts = [negative_prompts]
+        if isinstance(negative_prompts, list):
+            negative_prompts *= num_images
+
+        # Generate images with the appropriate seed
+        g = torch.Generator(device=self.device)
+        if seed != -1:
+            g.manual_seed(seed)
+        else:
+            g.seed()
+
+        # TODO (spillai): Pending xformers integration
         return self.pipe(
             prompts * num_images,
+            negative_prompt=negative_prompts,
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             height=height,
             width=width,
+            generator=g,
         ).images
 
 
 # Register the model with the hub
-# TODO (spillai): Ideally, we should do this via a decorator
-# @hub.register("stabilityai/stable-diffusion-2")
-# def stable_diffusion_2_ddim_fp16():
-#     return StableDiffusion2("stabilityai/stable-diffusion-2", scheduler="ddim", dtype=torch.float16)
-#
 for model_name in StableDiffusion.configs.keys():
     hub.register(
         model_name,
@@ -133,6 +132,15 @@ for model_name in StableDiffusion.configs.keys():
         init_args=(model_name,),
         init_kwargs={"scheduler": "ddim", "dtype": torch.float16},
         method_name="__call__",
-        inputs={"prompts": Batch[str, 1], "num_images": int, "height": int, "width": int},
+        inputs={
+            "prompts": Batch[str, 1],
+            "negative_prompts": Batch[str, 1],
+            "num_images": int,
+            "num_inference_steps": int,
+            "guidance_scale": float,
+            "height": int,
+            "width": int,
+            "seed": int,
+        },
         outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )

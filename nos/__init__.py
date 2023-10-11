@@ -1,7 +1,6 @@
 import importlib
 import sys
 
-import docker
 from nos.version import __version__  # noqa: F401
 
 from .client import Client  # noqa: F401
@@ -9,21 +8,30 @@ from .logging import logger  # noqa: F401
 from .server import init, shutdown  # noqa: F401
 
 
-# Check if the internal module is available
-_internal_libs_available = False
-try:
-    from autonomi.nos._internal import compile  # noqa: F401, F403
-    from autonomi.nos._internal.version import __version__ as internal_version  # noqa: F401, F403
-
-    sys.modules["nos._internal"] = importlib.import_module("autonomi.nos._internal")
-    logger.debug(f"`nos._internal` module [version={internal_version}].")
-
-    _internal_libs_available = True
-except ImportError as e:
-    logger.debug(f"Failed to import internal module [e={e}]")
-    compile = None
+__all__ = [
+    "Client",  # noqa: F405
+    "init",  # noqa: F405
+    "shutdown",  # noqa: F405
+    "__version__",  # noqa: F405
+    "internal_libs_available",  # noqa: F405
+]
 
 
 def internal_libs_available():
     """Check if the internal module is available."""
-    return _internal_libs_available
+    from .common.runtime import is_package_available  # noqa: F401
+
+    return is_package_available("autonomi.nos._internal")
+
+
+# Check if the internal module is available
+try:
+    if internal_libs_available():
+        from autonomi.nos._internal.version import __version__ as _internal_version  # noqa: F401, F403
+
+        sys.modules["nos._internal"] = importlib.import_module("autonomi.nos._internal")
+        logger.debug(f"`nos._internal` module [version={_internal_version}].")
+except ModuleNotFoundError:
+    logger.debug("Failed to load `nos._internal` module: ModuleNotFoundError")
+except Exception as e:
+    logger.debug(f"Failed to load `nos._internal` module: {e}")

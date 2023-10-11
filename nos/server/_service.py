@@ -13,6 +13,8 @@ from nos.common import FunctionSignature, ModelSpec, TaskType, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTransportManager
 from nos.constants import (  # noqa F401
     DEFAULT_GRPC_PORT,  # noqa F401
+    GRPC_MAX_MESSAGE_LENGTH,
+    NOS_GRPC_MAX_WORKER_THREADS,
     NOS_PROFILING_ENABLED,
 )
 from nos.exceptions import ModelNotFoundError
@@ -228,6 +230,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             TaskType.IMAGE_EMBEDDING.value,
             TaskType.TEXT_EMBEDDING.value,
             TaskType.OBJECT_DETECTION_2D.value,
+            TaskType.DEPTH_ESTIMATION_2D.value,
             TaskType.IMAGE_SEGMENTATION_2D.value,
             TaskType.AUDIO_TRANSCRIPTION.value,
             TaskType.CUSTOM.value,
@@ -292,21 +295,21 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
 
-def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = 4) -> None:
+def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = NOS_GRPC_MAX_WORKER_THREADS) -> None:
     """Start the gRPC server."""
     from concurrent import futures
 
     options = [
-        ("grpc.max_message_length", 512 * 1024 * 1024),
-        ("grpc.max_send_message_length", 512 * 1024 * 1024),
-        ("grpc.max_receive_message_length", 512 * 1024 * 1024),
+        ("grpc.max_message_length", GRPC_MAX_MESSAGE_LENGTH),
+        ("grpc.max_send_message_length", GRPC_MAX_MESSAGE_LENGTH),
+        ("grpc.max_receive_message_length", GRPC_MAX_MESSAGE_LENGTH),
     ]
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers), options=options)
     nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)
     server.add_insecure_port(address)
 
     console = rich.console.Console()
-    console.print(f"[bold green] Starting server on {address}[/bold green]")
+    console.print(f"[bold green] ✓ Starting server on {address}[/bold green]")
     start_t = time.time()
     server.start()
     console.print(

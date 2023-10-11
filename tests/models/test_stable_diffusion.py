@@ -23,14 +23,15 @@ def test_stable_diffusion_predict(model):
 
     model = StableDiffusion(model_name=model, scheduler="ddim")
     images: List[Image.Image] = model.__call__(
-        "astronaut on a horse on the moon",
+        ["astronaut on a horse on the moon"] * 2,
+        negative_prompts=["negative"] * 2,
         num_images=1,
         num_inference_steps=100,
         guidance_scale=7.5,
         width=512,
         height=512,
     )
-    (image,) = images
+    image = images[0]
     assert image is not None
     assert image.size == (512, 512)
 

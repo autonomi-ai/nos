@@ -20,16 +20,17 @@ import rich.status
 from ray.job_submission import JobSubmissionClient
 
 from nos.common.metaclass import SingletonMetaclass
+from nos.constants import (
+    NOS_RAY_DASHBOARD_ENABLED,
+    NOS_RAY_ENV,
+    NOS_RAY_JOB_CLIENT_ADDRESS,
+    NOS_RAY_NS,
+    NOS_RAY_OBJECT_STORE_MEMORY,
+)
 from nos.logging import LOGGING_LEVEL
 
 
 logger = logging.getLogger(__name__)
-
-NOS_RAY_NS = os.getenv("NOS_RAY_NS", "nos-dev")
-NOS_RAY_ENV = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", None))
-NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
-NOS_DASHBOARD_ENABLED = os.getenv("NOS_DASHBOARD_ENABLED", True)
-RAY_JOB_CLIENT_ADDRESS = "http://127.0.0.1:8265"
 
 
 @dataclass
@@ -135,11 +136,11 @@ class RayExecutor(metaclass=SingletonMetaclass):
                 namespace=self.spec.namespace,
                 object_store_memory=NOS_RAY_OBJECT_STORE_MEMORY,
                 ignore_reinit_error=False,
-                include_dashboard=NOS_DASHBOARD_ENABLED,
+                include_dashboard=NOS_RAY_DASHBOARD_ENABLED,
                 configure_logging=True,
                 logging_level=logging.ERROR,
                 log_to_driver=level <= logging.ERROR,
-                dashboard_host="0.0.0.0" if NOS_DASHBOARD_ENABLED else None,
+                dashboard_host="0.0.0.0" if NOS_RAY_DASHBOARD_ENABLED else None,
             )
             logger.debug(f"Started executor: namespace={self.spec.namespace} (time={time.time() - start_t:.2f}s)")
         except ConnectionError as exc:
@@ -188,7 +189,7 @@ class RayJobExecutor(metaclass=SingletonMetaclass):
         """Post-initialization."""
         if not ray.is_initialized():
             raise RuntimeError("Ray executor is not initialized.")
-        self.client = JobSubmissionClient(RAY_JOB_CLIENT_ADDRESS)
+        self.client = JobSubmissionClient(NOS_RAY_JOB_CLIENT_ADDRESS)
 
     def submit(self, *args, **kwargs) -> str:
         """Submit a job to Ray."""
