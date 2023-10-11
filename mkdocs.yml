@@ -14,7 +14,6 @@ site_dir: site
 nav:
   - 🏠 Home: README.md
   - 🔥 Quickstart: docs/quickstart.md
-  - 📦 Installation: docs/quickstart.md
   - 🧠 Models:
     - Stable Diffusion 2: docs/models/stable-diffusion.md
     - Stable Diffusion XL: docs/models/stable-diffusion.md
