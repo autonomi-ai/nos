@@ -10,13 +10,13 @@ nos.init(runtime="auto", utilization=1.0)
 ### Connecting to the NOS Server
 
 You can now send inference requests using the NOS client.
-Let's start by importing the NOS client and creating an `InferenceClient` instance. The client instance is used to send inference requests to the NOS server via gRPC.
+Let's start by importing the NOS client and creating an `Client` instance. The client instance is used to send inference requests to the NOS server via gRPC.
 
 ```python
-from nos.client import InferenceClient, TaskType
+from nos.client import Client, TaskType
 
 # Create a client that connects to the server via gRPC (over 50051)
-client = InferenceClient("[::]:50051")
+client = Client("[::]:50051")
 
 # We provide helper functions to wait for the server to be ready
 # if the server is simultaneously spun up in a separate process.

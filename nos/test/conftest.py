@@ -69,25 +69,25 @@ def grpc_server(ray_executor):
 @pytest.fixture(scope="session")
 def grpc_client():
     """Test gRPC client (Port: 50052)."""
-    from nos.client import InferenceClient
+    from nos.client import Client
 
-    yield InferenceClient(f"[::]:{GRPC_TEST_PORT}")
+    yield Client(f"[::]:{GRPC_TEST_PORT}")
 
 
 @pytest.fixture(scope="session")
 def grpc_client_cpu():
     """Test gRPC client to be used with CPU docker runtime (Port: 50053)."""
-    from nos.client import InferenceClient
+    from nos.client import Client
 
-    yield InferenceClient(f"[::]:{GRPC_TEST_PORT_CPU}")
+    yield Client(f"[::]:{GRPC_TEST_PORT_CPU}")
 
 
 @pytest.fixture(scope="session")
 def grpc_client_gpu():
     """Test gRPC client to be used with GPU docker runtime (Port: 50054)."""
-    from nos.client import InferenceClient
+    from nos.client import Client
 
-    yield InferenceClient(f"[::]:{GRPC_TEST_PORT_GPU}")
+    yield Client(f"[::]:{GRPC_TEST_PORT_GPU}")
 
 
 @pytest.fixture(scope="session")

@@ -6,7 +6,7 @@ from nos.server.http._service import app
 
 # Init a nos backend for REST API:
 nos.init(runtime="gpu", logging_level="DEBUG")
-client = nos.InferenceClient()
+client = nos.Client()
 client.WaitForServer()
 assert client.IsHealthy()
 

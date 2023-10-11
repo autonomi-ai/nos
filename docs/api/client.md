@@ -2,7 +2,7 @@
 
 In this section, we expect that you have already installed NOS and have already [started the server](../starting-the-server.md).
 
-## ::: nos.client.grpc.InferenceClient
+## ::: nos.client.grpc.Client
     handler: python
     options:
       members:
@@ -17,7 +17,7 @@ In this section, we expect that you have already installed NOS and have already 
         - ModuleFromSpec
         - Run
 
-## ::: nos.client.grpc.InferenceModule
+## ::: nos.client.grpc.Module
     handler: python
     options:
       members:

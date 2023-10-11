@@ -16,12 +16,12 @@
     connect to it from the client:
     ```python
     import nos
-    from nos.client import InferenceClient, TaskType
+    from nos.client import Client, TaskType
     import os
 
     # Init nos server
     nos.init(runtime='gpu')
-    nos_client = InferenceClient()
+    nos_client = Client()
     nos_client.WaitForServer()
     assert nos_client.IsHealthy()
     ```
@@ -68,12 +68,12 @@
     from discord.ext import commands
 
     import nos
-    from nos.client import InferenceClient, TaskType
+    from nos.client import Client, TaskType
     import os
 
     # Init nos server
     nos.init(runtime='gpu')
-    nos_client = InferenceClient()
+    nos_client = Client()
     nos_client.WaitForServer()
     assert nos_client.IsHealthy()
 

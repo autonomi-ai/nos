@@ -29,14 +29,14 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
 @dataclass
-class InferenceClientState:
+class ClientState:
     """State of the client for serialization purposes."""
 
     address: str
     """Address for the gRPC server."""
 
 
-class InferenceClient:
+class Client:
     """Main gRPC client for NOS inference service.
 
     Parameters:
@@ -45,7 +45,7 @@ class InferenceClient:
     Usage:
         ```py
 
-        >>> client = InferenceClient(address="localhost:50051")  # create client
+        >>> client = Client(address="localhost:50051")  # create client
         >>> client.WaitForServer()  # wait for server to start
         >>> client.CheckCompatibility()  # check compatibility with server
 
@@ -80,21 +80,21 @@ class InferenceClient:
         Returns:
             str: String representation of the client.
         """
-        return f"InferenceClient(address={self.address})"
+        return f"Client(address={self.address})"
 
-    def __getstate__(self) -> InferenceClientState:
+    def __getstate__(self) -> ClientState:
         """Returns the state of the client for serialization purposes.
 
         Returns:
-            InferenceClientState: State of the client.
+            ClientState: State of the client.
         """
-        return InferenceClientState(address=self.address)
+        return ClientState(address=self.address)
 
-    def __setstate__(self, state: InferenceClientState) -> None:
+    def __setstate__(self, state: ClientState) -> None:
         """Sets the state of the client for de-serialization purposes.
 
         Args:
-            state (InferenceClientState): State of the client.
+            state (ClientState): State of the client.
         Returns:
             None (NoneType): Nothing.
         """
@@ -239,29 +239,29 @@ class InferenceClient:
             raise NosClientException(f"Failed to get model info (details={(e.details())})", e)
 
     @lru_cache(maxsize=8)  # noqa: B019
-    def Module(self, task: TaskType, model_name: str) -> "InferenceModule":
+    def Module(self, task: TaskType, model_name: str) -> "Module":
         """Instantiate a model module.
 
         Args:
             task (TaskType): Task used for prediction.
             model_name (str): Name of the model to init.
         Returns:
-            InferenceModule: Inference module.
+            Module: Inference module.
         """
-        return InferenceModule(task, model_name, self)
+        return Module(task, model_name, self)
 
     @lru_cache(maxsize=8)  # noqa: B019
-    def ModuleFromSpec(self, spec: ModelSpec) -> "InferenceModule":
+    def ModuleFromSpec(self, spec: ModelSpec) -> "Module":
         """Instantiate a model module from a model spec.
 
         Args:
             spec (ModelSpec): Model specification.
         Returns:
-            InferenceModule: Inference module.
+            Module: Inference module.
         """
-        return InferenceModule(spec.task, spec.name, self)
+        return Module(spec.task, spec.name, self)
 
-    def ModuleFromCls(self, cls: Callable) -> "InferenceModule":
+    def ModuleFromCls(self, cls: Callable) -> "Module":
         raise NotImplementedError("ModuleFromCls not implemented yet.")
 
     def Run(
@@ -287,7 +287,7 @@ class InferenceClient:
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
-        module: InferenceModule = self.Module(task, model_name)
+        module: Module = self.Module(task, model_name)
         return module(**inputs)
 
     def Train(
@@ -343,13 +343,13 @@ class InferenceClient:
 
 
 @dataclass
-class InferenceModule:
+class Module:
     """Inference module for remote model execution.
 
     Usage:
         ```python
         # Create client
-        >>> client = InferenceClient()
+        >>> client = Client()
         # Instantiate new task module with specific model name
         >>> model = client.Module(TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32")
         # Predict with model using `__call__`
@@ -365,7 +365,7 @@ class InferenceModule:
     """
     model_name: str
     """Model identifier (e.g. openai/clip-vit-base-patch32)."""
-    _client: InferenceClient
+    _client: Client
     """gRPC client."""
     _spec: ModelSpec = field(init=False)
     """Model specification for this module."""

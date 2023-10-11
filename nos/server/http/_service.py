@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from fastapi import Depends, FastAPI, status
 from fastapi.responses import JSONResponse
 
-from nos.client import DEFAULT_GRPC_PORT, InferenceClient
+from nos.client import DEFAULT_GRPC_PORT, Client
 from nos.common import TaskType
 from nos.logging import logger
 from nos.protoc import import_module
@@ -33,7 +33,7 @@ class NosAPI:
     app: FastAPI = field(init=False, default=None)
     """FastAPI app."""
 
-    client: InferenceClient = field(init=False, default=None)
+    client: Client = field(init=False, default=None)
     """Inference client."""
 
     def __post_init__(self):
@@ -46,7 +46,7 @@ class NosAPI:
         )
         logger.debug(f"Starting NOS REST API (version={__version__})")
 
-        self.client = InferenceClient(f"[::]:{self.grpc_port}")
+        self.client = Client(f"[::]:{self.grpc_port}")
         logger.debug(f"Connecting to gRPC server (address={self.client.address})")
 
         self.client.WaitForServer(timeout=60)
@@ -59,19 +59,19 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
     nos_app = NosAPI(version=version, grpc_port=grpc_port, debug=debug)
     app = nos_app.app
 
-    def get_client() -> InferenceClient:
+    def get_client() -> Client:
         """Get the inference client."""
         return nos_app.client
 
     @app.get("/health", status_code=status.HTTP_200_OK)
-    def health(client: InferenceClient = Depends(get_client)) -> JSONResponse:
+    def health(client: Client = Depends(get_client)) -> JSONResponse:
         """Check if the server is alive."""
         return JSONResponse(
             content={"status": "ok" if client.IsHealthy() else "not_ok"}, status_code=status.HTTP_200_OK
         )
 
     @app.post("/infer", status_code=status.HTTP_201_CREATED)
-    def infer(request: InferenceRequest, client: InferenceClient = Depends(get_client)) -> JSONResponse:
+    def infer(request: InferenceRequest, client: Client = Depends(get_client)) -> JSONResponse:
         """Perform inference on the given input data.
 
         $ curl -X "POST" \
