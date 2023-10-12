@@ -329,9 +329,9 @@ def test_model_manager_inference(manager):  # noqa: F811
     timing_records = []
 
     # Benchmark: for each model, and set of image-shapes
-    for task, model_name, image_shapes in BENCHMARK_MODELS:
+    for _task, model_id, image_shapes in BENCHMARK_MODELS:
         # Load a model spec
-        spec = hub.load_spec(model_name, task=task)
+        spec = hub.load_spec(model_id)
 
         # Add the model to the manager (or via `manager.add()`)
         model: ModelHandle = manager.load(spec)
@@ -358,7 +358,7 @@ def test_model_manager_inference(manager):  # noqa: F811
                 model = model.scale(1)
                 for _ in tqdm(
                     duration=BENCHMARK_WARMUP_SEC,
-                    desc=f"Warmup SYNC [model={model_name}, B={B}, shape={shape}]",
+                    desc=f"Warmup SYNC [model={model_id}, B={B}, shape={shape}]",
                     total=0,
                 ):
                     result = model(**inputs)
@@ -372,10 +372,10 @@ def test_model_manager_inference(manager):  # noqa: F811
                         assert len(result) == B
 
                 # Benchmark (30s, sync)
-                with timer(f"{model_name}_{B}x{W}x{H}", replicas=1, B=B, shape=shape) as info:
+                with timer(f"{model_id}_{B}x{W}x{H}", replicas=1, B=B, shape=shape) as info:
                     for n in tqdm(  # noqa: B007
                         duration=BENCHMARK_DURATION_SEC,
-                        desc=f"Benchmark SYNC [model={model_name}, B={B}, shape={shape}]",
+                        desc=f"Benchmark SYNC [model={model_id}, B={B}, shape={shape}]",
                         unit="images",
                         unit_scale=B,
                         total=0,
@@ -409,7 +409,7 @@ def test_model_manager_inference(manager):  # noqa: F811
                     pbar = tqdm(
                         duration=BENCHMARK_WARMUP_SEC,
                         unit_scale=B,
-                        desc=f"Warmup ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+                        desc=f"Warmup ASYNC [model={model_id}, B={B}, shape={shape}, replicas={model.num_replicas}]",
                         total=0,
                     )
                     for result in handle_gen(model, inputs, pbar):
@@ -426,10 +426,10 @@ def test_model_manager_inference(manager):  # noqa: F811
                     pbar = tqdm(
                         duration=BENCHMARK_DURATION_SEC,
                         unit_scale=B,
-                        desc=f"Benchmark ASYNC [model={model_name}, B={B}, shape={shape}, replicas={model.num_replicas}]",
+                        desc=f"Benchmark ASYNC [model={model_id}, B={B}, shape={shape}, replicas={model.num_replicas}]",
                         total=0,
                     )
-                    with timer(f"{model_name}_{B}x{W}x{H}_async", replicas=replicas, B=B, shape=shape) as info:
+                    with timer(f"{model_id}_{B}x{W}x{H}_async", replicas=replicas, B=B, shape=shape) as info:
                         for n, result in enumerate(handle_gen(model, inputs, pbar)):  # noqa: B007
                             assert result is not None
                     info.niters = n + 1
@@ -437,7 +437,7 @@ def test_model_manager_inference(manager):  # noqa: F811
                     logger.info(info)
                     timing_records.append(info)
             except Exception as e:
-                logger.error(f"Failed to run model [model={model_name}, B={B}, shape={shape}]: {e}]")
+                logger.error(f"Failed to run model [model={model_id}, B={B}, shape={shape}]: {e}]")
                 continue
 
     timing_df = pd.DataFrame(

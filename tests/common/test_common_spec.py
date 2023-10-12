@@ -84,6 +84,10 @@ def test_common_model_spec(img2vec_signature):
     import numpy as np
     from PIL import Image
 
+    from nos.protoc import import_module
+
+    nos_service_pb2 = import_module("nos_service_pb2")
+
     class TestImg2VecModel:
         def __init__(self, model_name: str = "openai/clip"):
             self.model = hub.load(model_name)
@@ -107,6 +111,9 @@ def test_common_model_spec(img2vec_signature):
 
     # Test serialization
     minfo = spec._to_proto()
+    assert minfo is not None
+    assert isinstance(minfo, nos_service_pb2.GenericResponse)
+
     spec_ = ModelSpec._from_proto(minfo)
     assert spec_.signature.inputs is not None
     assert spec_.signature.outputs is not None
@@ -114,6 +121,9 @@ def test_common_model_spec(img2vec_signature):
 
     # Test serialization (public)
     minfo = spec._to_proto(public=True)
+    assert minfo is not None
+    assert isinstance(minfo, nos_service_pb2.GenericResponse)
+
     spec_ = ModelSpec._from_proto(minfo)
     assert spec_.signature.inputs is not None
     assert spec_.signature.outputs is not None

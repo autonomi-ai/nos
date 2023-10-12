@@ -7,10 +7,10 @@ from typing import Any, Callable, Dict, List
 
 import grpc
 import numpy as np
-from google.protobuf import empty_pb2
+from google.protobuf import empty_pb2, wrappers_pb2
 from PIL import Image
 
-from nos.common import FunctionSignature, ModelSpec, TaskType, TensorSpec, dumps, loads
+from nos.common import FunctionSignature, ModelSpec, TensorSpec, dumps, loads
 from nos.common.exceptions import (
     NosClientException,
     NosInferenceException,
@@ -218,12 +218,13 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         try:
-            response: nos_service_pb2.ModelListResponse = self.stub.ListModels(empty_pb2.Empty())
-            return [ModelSpec(name=minfo.name, task=TaskType(minfo.task)) for minfo in response.models]
+            response: nos_service_pb2.GenericResponse = self.stub.ListModels(empty_pb2.Empty())
+            models: List[str] = loads(response.response_bytes)
+            return list(models)
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to list models (details={e.details()})", e)
 
-    def GetModelInfo(self, spec: ModelSpec) -> ModelSpec:
+    def GetModelInfo(self, model_id: str) -> ModelSpec:
         """Get the relevant model information from the model name.
 
         Note: This may be possible only after initialization, as we need to inspect the
@@ -233,10 +234,8 @@ class Client:
             spec (ModelSpec): Model information.
         """
         try:
-            response: nos_service_pb2.ModelInfoResponse = self.stub.GetModelInfo(
-                nos_service_pb2.ModelInfoRequest(
-                    request=nos_service_pb2.ModelInfo(task=spec.task.value, name=spec.name)
-                )
+            response: nos_service_pb2.GenericResponse = self.stub.GetModelInfo(
+                wrappers_pb2.StringValue(value=model_id)
             )
             model_spec: ModelSpec = loads(response.response_bytes)
             return model_spec
@@ -244,17 +243,16 @@ class Client:
             raise NosClientException(f"Failed to get model info (details={(e.details())})", e)
 
     @lru_cache(maxsize=8)  # noqa: B019
-    def Module(self, task: TaskType, model_name: str, shm: bool = False) -> "Module":
+    def Module(self, model_id: str, shm: bool = False) -> "Module":
         """Instantiate a model module.
 
         Args:
-            task (TaskType): Task used for prediction.
-            model_name (str): Name of the model to init.
+            model_id (str): Name of the model to init.
             shm (bool, optional): Enable shared memory transport. Defaults to False.
         Returns:
             Module: Inference module.
         """
-        return Module(task, model_name, self, shm=shm)
+        return Module(model_id, self, shm=shm)
 
     @lru_cache(maxsize=8)  # noqa: B019
     def ModuleFromSpec(self, spec: ModelSpec, shm: bool = False) -> "Module":
@@ -273,12 +271,11 @@ class Client:
 
     def Run(
         self,
-        task: TaskType,
-        model_name: str,
+        model_id: str,
         inputs: Dict[str, Any],
         method: str = None,
         shm: bool = False,
-    ) -> nos_service_pb2.InferenceResponse:
+    ) -> nos_service_pb2.GenericResponse:
         """Run module.
 
         Args:
@@ -287,18 +284,18 @@ class Client:
                     (TaskType.OBJECT_DETECTION_2D, TaskType.IMAGE_SEGMENTATION_2D,
                     TaskType.IMAGE_CLASSIFICATION, TaskType.IMAGE_GENERATION,
                     TaskType.IMAGE_EMBEDDING, TaskType.TEXT_EMBEDDING)
-            model_name (str):
+            model_id (str):
                 Model identifier (e.g. openai/clip-vit-base-patch32).
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.inputs.
             method (str, optional): Method to call on the model. Defaults to None.
             shm (bool, optional): Enable shared memory transport. Defaults to False.
         Returns:
-            nos_service_pb2.InferenceResponse: Inference response.
+            nos_service_pb2.GenericResponse: Inference response.
         Raises:
             NosClientException: If the server fails to respond to the request.
         """
-        module: Module = self.Module(task, model_name, shm=shm)
+        module: Module = self.Module(model_id, shm=shm)
         return module(inputs, method=method)
 
     def Train(
@@ -368,13 +365,7 @@ class Module:
         ```
     """
 
-    task: TaskType
-    """Task used for prediction.
-       (TaskType.OBJECT_DETECTION_2D, TaskType.IMAGE_SEGMENTATION_2D,
-        TaskType.IMAGE_CLASSIFICATION, TaskType.IMAGE_GENERATION,
-        TaskType.IMAGE_EMBEDDING, TaskType.TEXT_EMBEDDING)
-    """
-    model_name: str
+    id: str
     """Model identifier (e.g. openai/clip-vit-base-patch32)."""
     _client: Client
     """gRPC client."""
@@ -387,7 +378,8 @@ class Module:
 
     def __post_init__(self):
         """Initialize the spec."""
-        self._spec = self._client.GetModelInfo(ModelSpec(name=self.model_name, task=self.task))
+        self._spec = self._client.GetModelInfo(self.id)
+        assert self._spec.id == self.id
         if not NOS_SHM_ENABLED or not self.shm:
             logger.debug("Shared memory disabled.")
             self._shm_objects = None  # disables shm, and avoids registering/unregistering
@@ -560,13 +552,13 @@ class Module:
                 logger.error(f"Failed to unregister shm [{self._shm_objects}], error: {e.details()}")
                 raise NosClientException(f"Failed to unregister shm [{self._shm_objects}]", e)
 
-    def __call__(self, inputs: Dict[str, Any], method: str = None) -> Dict[str, Any]:
+    def __call__(self, _method: str = None, **inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Call the instantiated module/model.
 
         Args:
-            inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
+            **inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.inputs.
-            method (str, optional): Method to call on the model. Defaults to None.
+            _method (str, optional): Method to call on the model. Defaults to None.
         Returns:
             Dict[str, Any]: Inference response.
         Raises:
@@ -582,34 +574,31 @@ class Module:
         try:
             inputs = self._encode(inputs)
         except Exception as e:
-            logger.error(f"Failed to encode inputs [model={self.model_name}, inputs={inputs}, e={e}]")
-            raise NosInputValidationException(
-                f"Failed to encode inputs [model={self.model_name}, inputs={inputs}, e={e}]", e
-            )
+            logger.error(f"Failed to encode inputs [model={self.id}, inputs={inputs}, e={e}]")
+            raise NosInputValidationException(f"Failed to encode inputs [model={self.id}, inputs={inputs}, e={e}]", e)
         if NOS_PROFILING_ENABLED:
-            logger.debug(f"Encoded inputs [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
+            logger.debug(f"Encoded inputs [model={self.id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         try:
             # Prepare the request
-            request = nos_service_pb2.InferenceRequest(
-                model=nos_service_pb2.ModelInfo(
-                    task=self.task.value,
-                    name=self.model_name,
-                ),
-                inputs=inputs,
-                method=method,
+            request = nos_service_pb2.GenericRequest(
+                request_bytes=dumps(
+                    {
+                        "id": self._spec.id,
+                        "method": _method,
+                        "inputs": inputs,
+                    }
+                )
             )
             # Execute the request
             st = time.perf_counter()
-            logger.debug(f"Executing request [model={self._spec.name}]")
-            response = self.stub.Run(request)
+            logger.debug(f"Executing request [model={self.id}]")
+            response: nos_service_pb2.GenericResponse = self.stub.Run(request)
             if NOS_PROFILING_ENABLED:
-                logger.debug(
-                    f"Executed request [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
-                )
+                logger.debug(f"Executed request [model={self.id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         except grpc.RpcError as e:
             logger.error(f"Run() failed [details={e.details()}, request={request}, inputs={inputs.keys()}]")
-            raise NosInferenceException(f"Run() failed [model={self.model_name}, details={e.details()}]", e)
+            raise NosInferenceException(f"Run() failed [model={self.id}, details={e.details()}]", e)
 
         # Decode the response
         st = time.perf_counter()
@@ -617,10 +606,8 @@ class Module:
             response = self._decode(response.response_bytes)
             response = {k: loads(v) for k, v in response.items()}
         except Exception as e:
-            logger.error(f"Failed to decode response [model={self.model_name}, e={e}]")
-            raise NosClientException(f"Failed to decode response [model={self.model_name}, e={e}]", e)
+            logger.error(f"Failed to decode response [model={self.id}, e={e}]")
+            raise NosClientException(f"Failed to decode response [model={self.id}, e={e}]", e)
         if NOS_PROFILING_ENABLED:
-            logger.debug(
-                f"Decoded response [model={self._spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
-            )
+            logger.debug(f"Decoded response [model={self.id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         return response

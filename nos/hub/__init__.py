@@ -100,7 +100,7 @@ class Hub:
                 outputs=kwargs.pop("outputs", {}),
                 init_args=kwargs.pop("init_args", ()),
                 init_kwargs=kwargs.pop("init_kwargs", {}),
-                method=kwargs.pop("method", None),
+                method=kwargs.pop("method", "__call__"),
             ),
         )
 

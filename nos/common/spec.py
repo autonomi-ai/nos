@@ -364,6 +364,7 @@ class ModelSpec:
 
     @property
     def name(self) -> str:
+        """Return the model name (for backwards compatibility)."""
         return self.id
 
     @property
@@ -412,7 +413,7 @@ class ModelSpec:
         """Create a model instance."""
         return self.cls(*args, **kwargs)
 
-    def _to_proto(self, public: bool = False) -> nos_service_pb2.ModelInfoResponse:
+    def _to_proto(self, public: bool = False) -> nos_service_pb2.GenericResponse:
         """Convert the model spec to proto."""
         if public:
             spec = copy.deepcopy(self)
@@ -422,13 +423,13 @@ class ModelSpec:
             spec.signature.method = None
         else:
             spec = self
-        return nos_service_pb2.ModelInfoResponse(
+        return nos_service_pb2.GenericResponse(
             response_bytes=dumps(spec),
         )
 
     @staticmethod
-    def _from_proto(minfo: nos_service_pb2.ModelInfoResponse) -> "ModelSpec":
-        """Convert the model info response back to the spec."""
+    def _from_proto(minfo: nos_service_pb2.GenericResponse) -> "ModelSpec":
+        """Convert the generic response back to the spec."""
         return loads(minfo.response_bytes)
 
     @classmethod

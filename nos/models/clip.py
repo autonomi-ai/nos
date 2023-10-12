@@ -93,21 +93,21 @@ class CLIP:
 # Register all CLIP models (for both tasks img2vec and txt2vec)
 for model_name in CLIP.configs:
     cfg = CLIP.configs[model_name]
-    hub.register(
-        model_name,
-        TaskType.TEXT_EMBEDDING,
-        CLIP,
-        init_args=(model_name,),
-        method_name="encode_text",
-        inputs={"texts": Batch[str, 16]},
-        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
-    )
+    # hub.register(
+    #     model_name,
+    #     TaskType.TEXT_EMBEDDING,
+    #     CLIP,
+    #     init_args=(model_name,),
+    #     method="encode_text",
+    #     inputs={"texts": Batch[str, 16]},
+    #     outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
+    # )
     hub.register(
         model_name,
         TaskType.IMAGE_EMBEDDING,
         CLIP,
         init_args=(model_name,),
-        method_name="encode_image",
+        method="encode_image",
         inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(cfg.height, cfg.width, 3), dtype="uint8")], 16]},
         outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(cfg.D,), dtype="float32")]]},
     )
