@@ -341,13 +341,13 @@ class ModelSpec:
 
     id: str
     """Model identifier."""
-    signature: FunctionSignature = None
+    signatures: Dict[str, FunctionSignature] = field(default_factory=dict)
     """Model function signature."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
 
     def __post_init__(self):
-        self._metadata = None
+        self._metadata: ModelSpecMetadata = None
 
     @validator("id", pre=True)
     def validate_id(cls, id: str) -> str:
@@ -359,8 +359,8 @@ class ModelSpec:
             )
         return id
 
-    def __repr__(self):
-        return f"""ModelSpec(id={self.id}, task={self.task})""" f"""\n    {self.signature}"""
+    # def __repr__(self):
+    #     return f"""ModelSpec(id={self.id}, task={self.task})""" f"""\n    {self.signature}"""
 
     @property
     def name(self) -> str:
@@ -390,28 +390,61 @@ class ModelSpec:
                 return None
         return self._metadata
 
-    @validator("signature")
-    def _validate_signature(cls, sig: FunctionSignature, **kwargs: Dict[str, Any]) -> FunctionSignature:
-        """Validate the model signature.
+    # @validator("signature")
+    # def _validate_signature(cls, sig: FunctionSignature, **kwargs: Dict[str, Any]) -> FunctionSignature:
+    #     """Validate the model signature.
 
-        Checks that the model class `cls` has the function name attribute
-        as defined in the signature `function_name`.
+    #     Checks that the model class `cls` has the function name attribute
+    #     as defined in the signature `function_name`.
+
+    #     Args:
+    #         sig (ModelSignature): Model signature.
+    #         **kwargs: Keyword arguments.
+    #     Returns:
+    #         FunctionSignature: Function signature.
+    #     """
+    #     if sig and sig.func_or_cls:
+    #         model_cls = sig.func_or_cls
+    #         if sig.method and not hasattr(model_cls, sig.method):
+    #             raise ValueError(f"Model class {model_cls} does not have function {sig.method}.")
+    #     return sig
+
+    @property
+    def default_signature(self) -> FunctionSignature:
+        """Return the default function signature.
+
+        Returns:
+            FunctionSignature: Default function signature.
+        """
+        # Note (spillai): For now, we assume that the first
+        # signature is the default signature. In the `.from_cls()`
+        # method, we add the __call__ method as the first method
+        # for this exact reason.
+        assert len(self.signatures) > 0, f"No default signature found, signatures={self.signatures}."
+        return list(self.signatures.values())[0]
+
+    def __call__(self, *args, **kwargs) -> Any:
+        """Create a model instance.
+
+        This method allows us to create a model instance directly
+        from the model spec. Let's consider the example below
+
+            ```
+            class CustomModel:
+                ...
+
+            CustomModel = ModelSpec.from_cls(CustomModel)
+            model = CustomModel()
+            ```
 
         Args:
-            sig (ModelSignature): Model signature.
+            *args: Positional arguments.
             **kwargs: Keyword arguments.
         Returns:
-            FunctionSignature: Function signature.
+            Any: Model instance.
         """
-        if sig and sig.func_or_cls:
-            model_cls = sig.func_or_cls
-            if sig.method and not hasattr(model_cls, sig.method):
-                raise ValueError(f"Model class {model_cls} does not have function {sig.method}.")
-        return sig
-
-    def create(self, *args, **kwargs) -> Any:
-        """Create a model instance."""
-        return self.cls(*args, **kwargs)
+        sig: FunctionSignature = self.default_signature
+        return sig.func_or_cls(*args, **kwargs)
 
     def _to_proto(self, public: bool = False) -> nos_service_pb2.GenericResponse:
         """Convert the model spec to proto."""
@@ -456,35 +489,51 @@ class ModelSpec:
         if not hasattr(func_or_cls, method):
             raise ValueError(f"Invalid method name `{method}` provided.")
 
-        # Get the function signature
-        sig = inspect.signature(getattr(func_or_cls, method))
-
-        # Get the positional arguments and their types
-        # Note: We skip the `self` argument
-        call_inputs = {
-            k: v.annotation for k, v in sig.parameters.items() if v.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
-        }
-        call_inputs.pop("self", None)
-
-        # Get the return type
-        call_outputs = {"result": sig.return_annotation}
-
-        # Build the model spec from the function signature
         # TODO (spillai): Provide additional RayRuntimeEnvConfig as `config`
         # config = dict(setup_timeout_seconds=10 * 60, eager_install=True)
         if runtime_env:
             logger.debug(f"Using custom runtime_env [env={runtime_env}]")
-        spec = cls(
-            func_or_cls.__name__,
-            task=TaskType.CUSTOM,
-            signature=FunctionSignature(
-                func_or_cls=func_or_cls,
-                init_args=kwargs.pop("init_args", ()),
-                init_kwargs=kwargs.pop("init_kwargs", {}),
+
+        # Inspect all the public methods of the class
+        # and expose them as model methods
+        ignore_methods = ["__init__", method]
+        methods = inspect.getmembers(func_or_cls, predicate=inspect.isfunction)
+        methods = [m for m, _ in methods if m not in ignore_methods]
+        # Note (spillai): See .default_signature property for why we add
+        #  the __call__ method as the first method.
+        methods.insert(0, method)  # first method is the default method
+        logger.debug(f"Registering methods [methods={methods}].")
+
+        # Add function signature for each method
+        signatures: Dict[str, FunctionSignature] = {}
+        for method in methods:
+            # Get the function signature
+            sig = inspect.signature(getattr(func_or_cls, method))
+
+            # Get the positional arguments and their types
+            # Note: We skip the `self` argument
+            call_inputs = {
+                k: v.annotation for k, v in sig.parameters.items() if v.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
+            }
+            call_inputs.pop("self", None)
+
+            # Get the return type
+            call_outputs = {"result": sig.return_annotation}
+
+            # Add the function signature
+            signatures[method] = FunctionSignature(
+                func_or_cls,
                 method=method,
                 inputs=call_inputs,
                 outputs=call_outputs,
-            ),
+            )
+            logger.debug(f"Added function signature [method={method}, signature={signatures[method]}].")
+
+        # Build the model spec from the function signature
+        spec = cls(
+            func_or_cls.__name__,
+            task=TaskType.CUSTOM,
+            signatures=signatures,
             runtime_env=runtime_env,
         )
         return spec

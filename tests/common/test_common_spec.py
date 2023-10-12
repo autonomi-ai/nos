@@ -255,7 +255,18 @@ def test_common_spec_from_custom_model():
 
         def __init__(self, model_name: str = "custom/model"):
             """Initialize the model."""
+            from nos.logging import logger
+
             self.model_name = model_name
+            logger.debug(f"Model {model_name} initialized.")
+
+        def forward1(self):  # noqa: ANN001
+            """Forward pass."""
+            return True
+
+        def forward2(self, images: Union[Image.Image, np.ndarray]) -> int:
+            """Forward pass."""
+            return images
 
         def __call__(
             self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]], n: int = 1
@@ -265,13 +276,16 @@ def test_common_spec_from_custom_model():
             return list(range(n * len(images)))
 
     # Get the model spec for remote execution
-    spec = ModelSpec.from_cls(CustomModel, init_args=(), init_kwargs={"model_name": "custom/model"})
-    assert spec is not None
-    assert isinstance(spec, ModelSpec)
+    CustomModel = ModelSpec.from_cls(CustomModel)
+    assert CustomModel is not None
+    assert isinstance(CustomModel, ModelSpec)
+
+    # Get the function signature
+    sig: FunctionSignature = CustomModel.default_signature
+    assert sig is not None
 
     # Check if the wrapped model can be loaded (directly in the same process)
-    sig: FunctionSignature = spec.signature
-    model = sig.func_or_cls(*sig.init_args, **sig.init_kwargs)
+    model = CustomModel(model_name="custom/model")
     assert model is not None
 
     # Check if the model can be called
@@ -286,3 +300,10 @@ def test_common_spec_from_custom_model():
     # Check if the model can be called with positional arguments
     result = model(images, 2)
     assert result == [0, 1]
+
+    # Check if the model methods can be called
+    result = model.forward1()
+    assert result is True
+
+    result = model.forward2(images)
+    assert result is images
