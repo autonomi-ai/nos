@@ -16,8 +16,7 @@ nav:
   - 🏠 Home: README.md
   - 🔥 Quickstart: docs/quickstart.md
   - 🧠 Models:
-    - Stable Diffusion 2: docs/models/stable-diffusion.md
-    - Stable Diffusion XL: docs/models/stable-diffusion.md
+    - Stable Diffusion: docs/models/stable-diffusion.md
     - CLIP: docs/models/clip.md
     - YOLOX: docs/models/yolox.md
     - Whisper: docs/models/whisper.md

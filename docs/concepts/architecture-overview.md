@@ -5,7 +5,7 @@
 
 ## Architecture Overview
 
-![Unified NOS Inference Server](./assets/nos-3-in-1.png)
+![Unified NOS Inference Server](../assets/nos-3-in-1.png)
 
 
 ## Core Features
@@ -17,7 +17,7 @@
 
 ## Core Components
 
-![NOS Architecture](./assets/nos-arch-8-16.png)
+![NOS Architecture](../assets/nos-arch-8-16.png)
 
  NOS is built to be modular and extensible. The core components of NOS are:
 
