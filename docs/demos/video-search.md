@@ -84,13 +84,17 @@ Now let's try out a few queries:
 ```python
 search_video("bakery with bread on the shelves", video_features, topk=1)
 ```
-
+![bakery](../assets/bakery_with_bread_on_the_shelves.png)
 
 ```python
 search_video("red car on a street", video_features, topk=1)
 ```
 
+![red car](../assets/red_car_on_a_street.png)
+
 
 ```python
 search_video("bridge over river", video_features, topk=1)
 ```
+
+![bridge](../assets/bridge_over_river.png)
