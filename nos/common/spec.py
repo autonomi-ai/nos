@@ -317,12 +317,17 @@ class ModelSpecMetadata:
     """Model identifier."""
     task: TaskType
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
+    method: str = None
+    """Model method name."""
+
     resources: Dict[str, ModelResources] = field(default_factory=dict)
     """Model resource limits (device/host memory, etc)."""
     """Key is the runtime type (cpu, gpu, trt-runtime, etc)."""
 
     def __repr__(self) -> str:
-        return f"""ModelSpecMetadata(id={self.id}, task={self.task}, """ f"""resources={self.resources})"""
+        return (
+            f"""ModelSpecMetadata(id={self.id}, task={self.task}, method={self.method}, resources={self.resources})"""
+        )
 
 
 @dataclass
@@ -354,7 +359,7 @@ class ModelSpec:
         return id
 
     def __repr__(self):
-        return f"""ModelSpec(id={self.id}, task={self.task}, signature={' ,'.join(list(self.signature))})"""
+        return f"""ModelSpec(id={self.id}, task={self.task}, methods=[{', '.join(list(self.signature))}]"""
 
     @validator("signature")
     def _validate_signature(cls, sigs: ModelSignature, **kwargs: Dict[str, Any]) -> ModelSignature:
@@ -484,11 +489,13 @@ class ModelSpec:
         # Inspect all the public methods of the class
         # and expose them as model methods
         ignore_methods = ["__init__", method]
-        methods = inspect.getmembers(func_or_cls, predicate=inspect.isfunction)
-        methods = [m for m, _ in methods if m not in ignore_methods]
+        all_methods = inspect.getmembers(func_or_cls, predicate=inspect.isfunction)
+        methods = [m for m, _ in all_methods if m not in ignore_methods]
+
         # Note (spillai): See .default_signature property for why we add
         #  the __call__ method as the first method.
-        methods.insert(0, method)  # first method is the default method
+        if method in all_methods:
+            methods.insert(0, method)  # first method is the default method
         logger.debug(f"Registering methods [methods={methods}].")
 
         # Add function signature for each method

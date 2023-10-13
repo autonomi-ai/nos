@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from nos.common.metaclass import SingletonMetaclass  # noqa: F401
 from nos.common.spec import (  # noqa: F401
@@ -93,22 +93,31 @@ class Hub:
         Returns:
             ModelSpec: Model specification.
         """
-        logger.debug(f"Registering model: {model_id}")
+        inputs: Dict[str, Any] = kwargs.pop("inputs", {})
+        outputs: Dict[str, Any] = kwargs.pop("outputs", {})
+        init_args: Tuple[Any] = kwargs.pop("init_args", ())
+        init_kwargs: Dict[str, Any] = kwargs.pop("init_kwargs", {})
+        method: str = kwargs.pop("method", "__call__")
+        logger.debug(
+            f"""Registering model [model={model_id}, task={task}, func_or_cls={func_or_cls}, """
+            f"""inputs={inputs}, outputs={outputs}, """
+            f"""init_args={init_args}, init_kwargs={init_kwargs}, method={method}]"""
+        )
         spec = ModelSpec(
             model_id,
             signature=FunctionSignature(
                 func_or_cls,
-                inputs=kwargs.pop("inputs", {}),
-                outputs=kwargs.pop("outputs", {}),
-                init_args=kwargs.pop("init_args", ()),
-                init_kwargs=kwargs.pop("init_kwargs", {}),
-                method=kwargs.pop("method", "__call__"),
+                inputs=inputs,
+                outputs=outputs,
+                init_args=init_args,
+                init_kwargs=init_kwargs,
+                method=method,
             ),
         )
 
         hub = cls.get()
         if model_id not in hub._metadata_registry:
-            hub._metadata_registry[model_id] = ModelSpecMetadata(model_id, task)
+            hub._metadata_registry[model_id] = ModelSpecMetadata(model_id, task, method)
         if model_id not in hub._registry:
             hub._registry[model_id] = spec
         logger.debug(f"Registered model [id={model_id}, spec={spec}]")
