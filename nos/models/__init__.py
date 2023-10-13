@@ -22,6 +22,6 @@ from .whisper import Whisper  # noqa: F401
 from .yolox import YOLOX  # noqa: F401
 
 
-# if internal_libs_available():
-#     # Register internal models with hub
-#     from autonomi.nos._internal import models  # noqa: F401, F403
+if internal_libs_available():
+    # Register internal models with hub
+    from autonomi.nos._internal import models  # noqa: F401, F403

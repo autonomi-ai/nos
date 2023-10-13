@@ -378,7 +378,6 @@ class Module:
         self._spec = self._client.GetModelInfo(self.id)
         assert self._spec.id == self.id
         if not NOS_SHM_ENABLED or not self.shm:
-            logger.debug("Shared memory disabled.")
             # Note (spillai): Shared memory caveats.
             # - only supported for numpy arrays
             # - registered once per module
@@ -394,6 +393,7 @@ class Module:
             assert self._spec.signature[method].method == method
             setattr(self, method, partial(self.__call__, _method=method))
             logger.debug(f"Module ({id}) patched [method={method}].")
+        logger.debug(f"Module ({id}) initialized [spec={self._spec}, shm={self._shm_objects}].")
 
     @property
     def stub(self) -> nos_service_pb2_grpc.InferenceServiceStub:
