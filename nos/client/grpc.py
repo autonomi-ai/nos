@@ -389,7 +389,7 @@ class Module:
         # Patch the module with methods from model spec signature
         for method in self._spec.signature.keys():
             if hasattr(self, method):
-                logger.warning(f"Module ({id}) already has method ({method}), skipping ...")
+                logger.debug(f"Module ({id}) already has method ({method}), skipping ...")
                 continue
             assert self._spec.signature[method].method == method
             setattr(self, method, partial(self.__call__, _method=method))

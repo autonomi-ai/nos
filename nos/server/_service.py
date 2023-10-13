@@ -34,7 +34,7 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 def load_spec(model_id: str) -> ModelSpec:
     """Get the model spec cache."""
     model_spec: ModelSpec = hub.load_spec(model_id)
-    logger.info(f"Loaded model spec [task={model_spec.task.value}, name={model_spec.name}]")
+    logger.info(f"Loaded model spec [name={model_spec.name}]")
     return model_spec
 
 
@@ -102,7 +102,7 @@ class InferenceService:
 
         # Get the model handle and call it remotely (with model spec, actor handle)
         st = time.perf_counter()
-        response: Dict[str, Any] = model_handle(**model_inputs)
+        response: Dict[str, Any] = model_handle(**model_inputs, _method=method)
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 

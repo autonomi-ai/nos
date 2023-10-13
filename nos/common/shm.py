@@ -15,6 +15,8 @@ from nos.logging import logger
 
 
 NOS_SHM_ENABLED = bool(int(os.environ.get("NOS_SHM_ENABLED", "1")))
+if not NOS_SHM_ENABLED:
+    logger.warning("Shared memory transport is disabled.")
 
 
 @dataclass

@@ -115,11 +115,37 @@ class Hub:
             ),
         )
 
+        # Get hub instance
         hub = cls.get()
-        if model_id not in hub._metadata_registry:
-            hub._metadata_registry[model_id] = ModelSpecMetadata(model_id, task, method)
+
+        # Register model id to metadata registry
+        metadata_id: Tuple[Any] = (model_id, method)
+        if metadata_id not in hub._metadata_registry:
+            hub._metadata_registry[metadata_id] = ModelSpecMetadata(model_id, method, task)
+            logger.debug(f"Registered model to metadata registry [id={model_id}, task={task}, method={method}]")
+        else:
+            logger.debug(
+                f"Model already registered to metadata registry [id={model_id}, task={task}, method={method}]"
+            )
+
+        # Register model id to model spec registry
         if model_id not in hub._registry:
             hub._registry[model_id] = spec
+            logger.debug(f"Registered model to hub registry [id={model_id}, spec={spec}]")
+
+        # Add another signature if the model is already registered
+        else:
+            _spec = hub._registry[model_id]
+            if method not in _spec.signature:
+                logger.debug(
+                    f"Adding task signature [model={model_id}, task={task}, method={method}, sig={spec.signature}]"
+                )
+                _spec.signature[method] = spec.signature[method]
+            else:
+                logger.debug(
+                    f"Task signature already registered [model={model_id}, task={task}, method={method}, sig={spec.signature}]"
+                )
+
         logger.debug(f"Registered model [id={model_id}, spec={spec}]")
         return spec
 

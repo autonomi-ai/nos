@@ -20,6 +20,7 @@ class NoOp:
         return list(range(len(texts)))
 
 
+# Register noop model separately for each method
 hub.register(
     "noop/process-images",
     TaskType.CUSTOM,
@@ -35,6 +36,31 @@ hub.register(
 )
 hub.register(
     "noop/process-texts",
+    TaskType.CUSTOM,
+    NoOp,
+    inputs={
+        "texts": Batch[str, 1],
+    },
+    outputs={"result": List[int]},
+    method="process_texts",
+)
+
+# Register model with two methods under the same name
+hub.register(
+    "noop/process",
+    TaskType.CUSTOM,
+    NoOp,
+    inputs={
+        "images": Union[
+            Batch[ImageT[Image.Image, ImageSpec(shape=(480, 640, 3), dtype="uint8")], 8],
+            Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 1],
+        ]
+    },
+    outputs={"result": List[int]},
+    method="process_images",
+)
+hub.register(
+    "noop/process",
     TaskType.CUSTOM,
     NoOp,
     inputs={

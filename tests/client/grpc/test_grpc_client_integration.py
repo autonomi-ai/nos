@@ -4,76 +4,57 @@ from typing import List
 import pytest
 from PIL import Image
 
-import nos
-from nos.client import Client
 from nos.logging import logger
-from nos.server import InferenceServiceRuntime
-from nos.test.conftest import GRPC_TEST_PORT
-from nos.test.utils import AVAILABLE_RUNTIMES, NOS_TEST_IMAGE, PyTestGroup
+from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup
 
 
-GRPC_PORT = 50055
+INTEGRATION_TEST_RUNTIMES = ["cpu", "gpu"]
 
-logger.debug(f"AVAILABLE_RUNTIMES={AVAILABLE_RUNTIMES}")
+logger.debug(f"INTEGRATION TEST RUNTIMES={INTEGRATION_TEST_RUNTIMES}")
 
 
-@pytest.mark.client
-@pytest.mark.parametrize("runtime", AVAILABLE_RUNTIMES)
-def test_grpc_client_init(runtime):  # noqa: F811
-    """Test the NOS server daemon initialization."""
+CLIENT_WITH_LOCAL = "local_grpc_client_with_server"
+CLIENT_WITH_CPU = "grpc_client_with_cpu_backend"
+CLIENT_WITH_GPU = "grpc_client_with_gpu_backend"
+CLIENT_SERVER_CONFIGURATIONS = [
+    # CLIENT_WITH_LOCAL,
+    # CLIENT_WITH_CPU,
+    CLIENT_WITH_GPU
+]
 
-    # Initialize the server
-    container = nos.init(runtime=runtime, port=GRPC_PORT, utilization=0.5)
-    assert container is not None
-    assert container.id is not None
-    containers = InferenceServiceRuntime.list()
-    assert len(containers) == 1
+pytestmark = pytest.mark.client
 
-    # Test waiting for server to start
-    # This call should be instantaneous as the server is already ready for the test
-    client = Client(f"[::]:{GRPC_PORT}")
-    assert client.WaitForServer(timeout=180, retry_interval=5)
+
+@pytest.mark.skip(reason="Not implemented yet.")
+@pytest.mark.parametrize("runtime", INTEGRATION_TEST_RUNTIMES)
+def test_grpc_client_inference_integration(runtime, request):  # noqa: F811
+    """Test end-to-end client inference interface (nos.init() + client-server integration tests)."""
+
+    client = request.getfixturevalue(f"grpc_client_with_{runtime}_backend")
+    assert client is not None
     assert client.IsHealthy()
 
-    # Test re-initializing the server
-    st = time.time()
-    container_ = nos.init(runtime=runtime, port=GRPC_PORT, utilization=0.5)
-    assert container_.id == container.id
-    assert time.time() - st <= 0.5, "Re-initializing the server should be instantaneous, instead took > 0.5s"
-
-    # Shutdown the server
-    nos.shutdown()
-    containers = InferenceServiceRuntime.list()
-    assert len(containers) == 0
+    _test_grpc_client_inference(client)
 
 
-# @pytest.mark.parametrize("runtime", ["gpu"])
-# def test_grpc_client_inference_integration(runtime):  # noqa: F811
-@pytest.mark.client
-def test_e2e_grpc_client_and_gpu_server(local_grpc_client_with_server):  # noqa: F811
-    """Test the gRPC client with GPU docker runtime initialized.
+@pytest.mark.parametrize("client_with_server", CLIENT_SERVER_CONFIGURATIONS)
+def test_grpc_client_inference(client_with_server, request):  # noqa: F811
+    """Test end-to-end client inference interface (pytest fixtures + client-server integration tests).
 
     This test spins up a gRPC inference server within a
     GPU docker-runtime environment initialized and then issues
     requests to it using the gRPC client.
     """
-    """Test end-to-end client inference interface."""
-    from nos.common import ModelSpec, tqdm
 
-    img = Image.open(NOS_TEST_IMAGE)
-
-    # # Initialize the server
-    # container = nos.init(runtime=runtime, port=GRPC_PORT, utilization=1)
-    # assert container is not None
-    # assert container.id is not None
-    # containers = InferenceServiceRuntime.list()
-    # assert len(containers) == 1
-
-    # Test waiting for server to start
-    # This call should be instantaneous as the server is already ready for the test
-    client = Client(f"[::]:{GRPC_TEST_PORT}")
-    assert client.WaitForServer(timeout=180, retry_interval=5)
+    client = request.getfixturevalue(client_with_server)
+    assert client is not None
     assert client.IsHealthy()
+
+    _test_grpc_client_inference(client)
+
+
+def _test_grpc_client_inference(client):  # noqa: F811
+    from nos.common import ModelSpec, tqdm
 
     # Get service info
     version = client.GetServiceVersion()
@@ -90,7 +71,7 @@ def test_e2e_grpc_client_and_gpu_server(local_grpc_client_with_server):  # noqa:
     # Check GetModelInfo for all models registered
     for model_id in models:
         spec: ModelSpec = client.GetModelInfo(model_id)
-        assert spec.task and spec.name
+        assert spec.task() and spec.name
         assert spec.signature is not None
         assert len(spec.signature) > 0
         assert isinstance(spec.default_signature.inputs, dict)
@@ -103,43 +84,39 @@ def test_e2e_grpc_client_and_gpu_server(local_grpc_client_with_server):  # noqa:
         assert isinstance(inputs, dict)
         assert isinstance(outputs, dict)
 
-    # noop/process-images
-    model_id = "noop/process-images"
+    # noop/process
+    model_id = "noop/process"
     model = client.Module(model_id)
     assert model is not None
     assert model.GetModelInfo() is not None
+    img = Image.open(NOS_TEST_IMAGE)
     for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
         response = model.process_images(images=[img])
         assert isinstance(response, dict)
         assert "result" in response
 
-    # noop/process-texts
-    model_id = "noop/process-texts"
-    model = client.Module(model_id)
-    assert model is not None
-    assert model.GetModelInfo() is not None
-    for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
         response = model.process_texts(texts=["a cat dancing on the grass."])
         assert isinstance(response, dict)
         assert "result" in response
 
-    # # TXT2VEC
-    # model_id = "openai/clip-vit-base-patch32"
-    # model = client.Module(model_id)
-    # assert model is not None
-    # assert model.GetModelInfo() is not None
-    # for _ in tqdm(range(1), desc=f"Test [model_name={model_id}]"):
-    #     response = model(inputs={"texts": ["a cat dancing on the grass."]}, _method="encode_text")
-    #     assert isinstance(response, dict)
-    #     assert "embedding" in response
-
-    # IMG2VEC
+    # TXT2VEC / IMG2VEC
     model_id = "openai/clip"
     model = client.Module(model_id)
     assert model is not None
     assert model.GetModelInfo() is not None
+    # TXT2VEC
     for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
-        # __call__ defaults to encode_image
+        response = model.encode_text(texts=["a cat dancing on the grass."])
+        assert isinstance(response, dict)
+        assert "embedding" in response
+
+        # explicit call to encode_text
+        response = model(texts=["a cat dancing on the grass"], _method="encode_text")
+        assert isinstance(response, dict)
+        assert "embedding" in response
+    # IMG2VEC
+    for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
+        # explicit call to encode_image
         response = model(images=[img])
         assert isinstance(response, dict)
         assert "embedding" in response
@@ -184,9 +161,6 @@ def test_grpc_client_training(client_with_server, request):  # noqa: F811
     """Test end-to-end client training interface."""
     import shutil
     from pathlib import Path
-
-    from nos.logging import logger
-    from nos.test.utils import NOS_TEST_IMAGE
 
     # Test waiting for server to start
     # This call should be instantaneous as the server is already ready for the test

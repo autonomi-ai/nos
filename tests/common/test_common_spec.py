@@ -1,4 +1,5 @@
 from collections import namedtuple
+from contextlib import contextmanager
 from itertools import product
 
 import numpy as np
@@ -9,6 +10,14 @@ from pydantic import ValidationError
 from nos import hub
 from nos.common.spec import FunctionSignature, ModelSpec
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT
+from nos.logging import logger
+
+
+@contextmanager
+def suppress_logger(name: str = __name__):
+    logger.disable(name)
+    yield
+    logger.enable(name)
 
 
 EMBEDDING_SHAPES = [
@@ -213,7 +222,6 @@ def check_object_type(v):
 
 def test_common_spec_signature():
     """Test function signature."""
-    from loguru import logger
 
     for model_id in hub.list():
         spec: ModelSpec = hub.load_spec(model_id)
@@ -278,6 +286,18 @@ def test_common_spec_from_custom_model():
     # Get the function signature
     sig: FunctionSignature = CustomModel.default_signature
     assert sig is not None
+
+    # Get model task
+    # Note (spillai): This should raise a warning and we want to suppress it
+    with suppress_logger("nos.common.spec"):
+        task = CustomModel.task()
+        assert task is None, "Custom models should not have a task unless explicitly added"
+
+    # Get model spec metadata
+    # Note (spillai): This should raise a warning and we want to suppress it
+    with suppress_logger("nos.common.spec"):
+        metadata = CustomModel.metadata()
+        assert metadata is None, "Custom models should not have metadata unless explicitly added"
 
     # Check if the wrapped model can be loaded (directly in the same process)
     model = CustomModel(model_name="custom/model")

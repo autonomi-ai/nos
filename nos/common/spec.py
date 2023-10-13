@@ -283,27 +283,24 @@ class ModelSpecMetadataRegistry:
             cls._instance = cls()
         return cls._instance
 
-    def __contains__(self, model_id: str) -> bool:
+    def __contains__(self, model_id: Any) -> bool:
         """Check if the model spec metadata is available."""
         return model_id in self._registry
 
-    def __getitem__(self, model_id: str) -> "ModelSpecMetadata":
+    def __getitem__(self, model_id: Any) -> "ModelSpecMetadata":
         """Load the model spec metadata."""
         try:
             return self._registry[model_id]
         except KeyError:
             raise KeyError(f"Unavailable model (id={model_id}).")
 
-    def __setitem__(self, model_id: str, metadata: "ModelSpecMetadata"):
+    def __setitem__(self, model_id: Any, metadata: "ModelSpecMetadata"):
         """Add the model spec metadata."""
         self._registry[model_id] = metadata
 
-    def load(self, model_id: str) -> "ModelSpec":
+    def load(self, model_id: Any) -> "ModelSpec":
         """Load the model spec metadata (identical to __getitem__)."""
         return self[model_id]
-
-
-ModelSignature = Union[FunctionSignature, List[FunctionSignature], Dict[str, FunctionSignature]]
 
 
 @dataclass
@@ -315,11 +312,10 @@ class ModelSpecMetadata:
 
     id: str
     """Model identifier."""
-    task: TaskType
-    """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
-    method: str = None
+    method: str
     """Model method name."""
-
+    task: TaskType = None
+    """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
     resources: Dict[str, ModelResources] = field(default_factory=dict)
     """Model resource limits (device/host memory, etc)."""
     """Key is the runtime type (cpu, gpu, trt-runtime, etc)."""
@@ -340,13 +336,14 @@ class ModelSpec:
 
     id: str
     """Model identifier."""
-    signature: ModelSignature = field(default_factory=dict)
-    """Model function signatures to export."""
+    signature: Dict[str, FunctionSignature] = field(default_factory=dict)
+    """Model function signatures to export (method -> FunctionSignature)."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
 
     def __post_init__(self):
-        self._metadata: ModelSpecMetadata = None
+        # Model metadata (method -> ModelSpecMetadata)
+        self._metadata: Dict[str, ModelSpecMetadata] = None
 
     @validator("id", pre=True)
     def _validate_id(cls, id: str) -> str:
@@ -359,20 +356,22 @@ class ModelSpec:
         return id
 
     def __repr__(self):
-        return f"""ModelSpec(id={self.id}, task={self.task}, methods=[{', '.join(list(self.signature))}]"""
+        return f"""ModelSpec(id={self.id}, methods=[{', '.join(list(self.signature))}]"""
 
-    @validator("signature")
-    def _validate_signature(cls, sigs: ModelSignature, **kwargs: Dict[str, Any]) -> ModelSignature:
+    @validator("signature", pre=True)
+    def _validate_signature(
+        cls, sigs: List[FunctionSignature], **kwargs: Dict[str, Any]
+    ) -> Dict[str, FunctionSignature]:
         """Validate the model signature / signatures.
 
         Checks that the model class `cls` has the function name attribute
         as defined in the signature `function_name`.
 
         Args:
-            sigs (ModelSignature): Model signature.
+            sigs (Dict[str, FunctionSignature]): Model signature.
             **kwargs: Keyword arguments.
         Returns:
-            ModelSignature: Model signature.
+            Dict[str, FunctionSignature]: Model signature.
         """
         if isinstance(sigs, FunctionSignature):
             sigs = [sigs]
@@ -392,28 +391,26 @@ class ModelSpec:
         """Return the model name (for backwards compatibility)."""
         return self.id
 
-    @property
-    def task(self) -> TaskType:
+    def task(self, method: str = None) -> TaskType:
+        """Return the task type for a given method (or defaults to default method)."""
+        if method is None:
+            method = self.default_method
         try:
-            md = self.metadata
+            md = self.metadata(method)
             return md.task
         except Exception:
             logger.warning(f"Model metadata not found, id={self.id}.")
             return None
 
-    @property
-    def metadata(self) -> ModelSpecMetadata:
-        """Return the cached model spec metadata."""
-        if self._metadata is None:
-            # Note (spillai): We avoid using cached properties as we need
-            # to make sure that the metadata is not None before caching it.
-            # Otherwise, we would cache a None valued metadata.
-            try:
-                self._metadata = ModelSpecMetadataRegistry.get()[self.id]
-            except KeyError:
-                logger.warning(f"Model metadata not found, id={self.id}.")
-                return None
-        return self._metadata
+    def metadata(self, method: str = None) -> ModelSpecMetadata:
+        """Return the model spec metadata for a given method (or defaults to default method)."""
+        if method is None:
+            method = self.default_method
+        try:
+            return ModelSpecMetadataRegistry.get()[(self.id, method)]
+        except KeyError:
+            logger.warning(f"Model metadata not found, id={self.id}.")
+            return None
 
     @cached_property
     def default_method(self) -> str:
@@ -489,8 +486,8 @@ class ModelSpec:
         # Inspect all the public methods of the class
         # and expose them as model methods
         ignore_methods = ["__init__", method]
-        all_methods = inspect.getmembers(func_or_cls, predicate=inspect.isfunction)
-        methods = [m for m, _ in all_methods if m not in ignore_methods]
+        all_methods = [m for m, _ in inspect.getmembers(func_or_cls, predicate=inspect.isfunction)]
+        methods = [m for m in all_methods if m not in ignore_methods]
 
         # Note (spillai): See .default_signature property for why we add
         #  the __call__ method as the first method.
@@ -527,7 +524,6 @@ class ModelSpec:
         # Build the model spec from the function signature
         spec = cls(
             func_or_cls.__name__,
-            task=TaskType.CUSTOM,
             signature=signatures,
             runtime_env=runtime_env,
         )
