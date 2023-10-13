@@ -76,7 +76,9 @@ class Hub:
             Any: Instantiated model.
         """
         spec: ModelSpec = cls.load_spec(model_id)
-        sig: FunctionSignature = spec.signature
+        # Note (spillai): Loading the default signature here is OK
+        # since all the signatures have the same `func_or_cls`.
+        sig: FunctionSignature = spec.default_signature
         return sig.func_or_cls(*sig.init_args, **sig.init_kwargs)
 
     @classmethod

@@ -47,7 +47,7 @@ def test_hub_batched_image_inference():
 
         # Run inference for each model (image-based models only)
         model = hub.load(spec.id)
-        predict = getattr(model, spec.signature.method)
+        predict = getattr(model, spec.default_signature.method)
 
         # Check if the model supports batched inference
         for input_type, images in image_batch_types:
