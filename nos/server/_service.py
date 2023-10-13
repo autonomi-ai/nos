@@ -107,8 +107,8 @@ class InferenceService:
             logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         # If the response is a single value, wrap it in a dict with the appropriate key
-        if len(model_spec.signature.outputs) == 1:
-            response = {k: response for k in model_spec.signature.outputs}
+        if len(sig.outputs) == 1:
+            response = {k: response for k in sig.outputs}
 
         # Encode the response
         st = time.perf_counter()

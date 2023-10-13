@@ -54,8 +54,8 @@ def test_ray_load_spec_compatibility(ray_executor: RayExecutor):  # noqa: F811
         assert isinstance(spec, ModelSpec)
 
         # Create actor class
-        actor_class = ray.remote(spec.signature.func_or_cls)
+        actor_class = ray.remote(spec.default_signature.func_or_cls)
         # Create actor handle from actor class
-        actor_handle = actor_class.remote(*spec.signature.init_args, **spec.signature.init_kwargs)
+        actor_handle = actor_class.remote(*spec.default_signature.init_args, **spec.default_signature.init_kwargs)
         assert actor_handle is not None
         del actor_handle

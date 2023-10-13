@@ -163,9 +163,9 @@ class BenchmarkProfiler:
             try:
                 # Initialize (profile memory)
                 with record.profile_memory("init"):
-                    spec = hub.load_spec(bmodel.name, bmodel.task)
-                    model = hub.load(spec.name, spec.task)
-                    predict = getattr(model, spec.signature.method_name)
+                    spec = hub.load_spec(bmodel.name)
+                    model = hub.load(bmodel.name)
+                    predict = getattr(model, spec.default_method)
 
                 # Inference (profile memory)
                 batched_inputs = bmodel.get_inputs(bmodel.image, bmodel.shape, bmodel.batch_size)
@@ -265,7 +265,8 @@ def _benchmark_profile(
     BATCH_SIZES = [2**b for b in range(11)]
 
     benchmark = BenchmarkProfiler(device_id=device_id)
-    for spec in hub.list():
+    for model_id in hub.list():
+        spec = hub.load_spec(model_id)
         if spec.task == TaskType.IMAGE_EMBEDDING:
             SHAPES = [(224, 224), (640, 480)]
             for (batch_size, shape) in product(BATCH_SIZES, SHAPES):

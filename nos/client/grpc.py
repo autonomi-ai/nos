@@ -2,7 +2,7 @@
 import secrets
 import time
 from dataclasses import dataclass, field
-from functools import cached_property, lru_cache
+from functools import cached_property, lru_cache, partial
 from typing import Any, Callable, Dict, List
 
 import grpc
@@ -284,7 +284,7 @@ class Client:
             model_id (str):
                 Model identifier (e.g. openai/clip-vit-base-patch32).
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
-                defined in the ModelSpec.signature.inputs.
+                defined in the ModelSpec.signature.
             method (str, optional): Method to call on the model. Defaults to None.
             shm (bool, optional): Enable shared memory transport. Defaults to False.
         Returns:
@@ -356,7 +356,7 @@ class Module:
         # Create client
         >>> client = Client()
         # Instantiate new task module with specific model name
-        >>> model = client.Module(TaskType.IMAGE_EMBEDDING, "openai/clip-vit-base-patch32")
+        >>> model = client.Module("openai/clip-vit-base-patch32")
         # Predict with model using `__call__`
         >>> predictions = model({"images": img})
         ```
@@ -379,7 +379,21 @@ class Module:
         assert self._spec.id == self.id
         if not NOS_SHM_ENABLED or not self.shm:
             logger.debug("Shared memory disabled.")
+            # Note (spillai): Shared memory caveats.
+            # - only supported for numpy arrays
+            # - registered once per module
+            # - can not handle shm objects while calling multiple methods cleanly
+            #   (i.e. expects the same method to be called for a module)
             self._shm_objects = None  # disables shm, and avoids registering/unregistering
+
+        # Patch the module with methods from model spec signature
+        for method in self._spec.signature.keys():
+            if hasattr(self, method):
+                logger.warning(f"Module ({id}) already has method ({method}), skipping ...")
+                continue
+            assert self._spec.signature[method].method == method
+            setattr(self, method, partial(self.__call__, _method=method))
+            logger.debug(f"Module ({id}) patched [method={method}].")
 
     @property
     def stub(self) -> nos_service_pb2_grpc.InferenceServiceStub:
@@ -400,7 +414,7 @@ class Module:
         """Unique namespace for this module."""
         return f"{self.client_id}/{self.object_id}"
 
-    def _encode(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def _encode(self, inputs: Dict[str, Any], method: str = None) -> Dict[str, Any]:
         """Encode the inputs dictionary for transmission.
         TODO (spillai)
             - Support middlewares for encoding/decoding.
@@ -409,12 +423,17 @@ class Module:
             - SerDe before/after transmission.
         Args:
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
-                defined in the ModelSpec.signature.inputs.
+                defined in the ModelSpec.signature.
         Returns:
             Dict[str, Any]: Encoded inputs.
         """
         # Validate data with spec signature
-        inputs = FunctionSignature.validate(inputs, self._spec.signature.inputs)
+        if method is None:
+            method = self._spec.default_method
+        if method not in self._spec.signature:
+            raise NosInferenceException(f"Method {method} not found in spec signature.")
+        sig: FunctionSignature = self._spec.signature[method]
+        inputs = FunctionSignature.validate(inputs, sig.inputs)
 
         # Encode List[np.ndarray] as stacked np.ndarray (B, H, W, C)
         for k, v in inputs.items():
@@ -482,9 +501,8 @@ class Module:
 
         Args:
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
-                defined in the ModelSpec.signature.inputs. For example, {"images": np.ndarray}.
+                defined in the ModelSpec.signature. For example, {"images": np.ndarray}.
         """
-
         # Create shared memory request
         # We convert the numpy arrays to TensorSpec(s) to let the
         # server know the shape and dtype of the underlying shm data.
@@ -554,7 +572,7 @@ class Module:
 
         Args:
             **inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
-                defined in the ModelSpec.signature.inputs.
+                defined in ModelSpec.signature.
             _method (str, optional): Method to call on the model. Defaults to None.
         Returns:
             Dict[str, Any]: Inference response.
@@ -569,10 +587,12 @@ class Module:
         # Encode the inputs
         st = time.perf_counter()
         try:
-            inputs = self._encode(inputs)
+            inputs = self._encode(inputs, method=_method)
         except Exception as e:
-            logger.error(f"Failed to encode inputs [model={self.id}, inputs={inputs}, e={e}]")
-            raise NosInputValidationException(f"Failed to encode inputs [model={self.id}, inputs={inputs}, e={e}]", e)
+            logger.error(f"Failed to encode inputs [model={self.id}, method={_method}, inputs={inputs}, e={e}]")
+            raise NosInputValidationException(
+                f"Failed to encode inputs [model={self.id}, method={_method}, inputs={inputs}, e={e}]", e
+            )
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Encoded inputs [model={self.id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 

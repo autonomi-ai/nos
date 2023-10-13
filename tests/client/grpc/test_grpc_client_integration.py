@@ -8,6 +8,7 @@ import nos
 from nos.client import Client
 from nos.logging import logger
 from nos.server import InferenceServiceRuntime
+from nos.test.conftest import GRPC_TEST_PORT
 from nos.test.utils import AVAILABLE_RUNTIMES, NOS_TEST_IMAGE, PyTestGroup
 
 
@@ -46,25 +47,31 @@ def test_grpc_client_init(runtime):  # noqa: F811
     assert len(containers) == 0
 
 
+# @pytest.mark.parametrize("runtime", ["gpu"])
+# def test_grpc_client_inference_integration(runtime):  # noqa: F811
 @pytest.mark.client
-@pytest.mark.parametrize("runtime", ["gpu"])
-def test_grpc_client_inference_integration(runtime):  # noqa: F811
+def test_e2e_grpc_client_and_gpu_server(local_grpc_client_with_server):  # noqa: F811
+    """Test the gRPC client with GPU docker runtime initialized.
+
+    This test spins up a gRPC inference server within a
+    GPU docker-runtime environment initialized and then issues
+    requests to it using the gRPC client.
+    """
     """Test end-to-end client inference interface."""
     from nos.common import ModelSpec, tqdm
-    from nos.models import StableDiffusion
 
     img = Image.open(NOS_TEST_IMAGE)
 
-    # Initialize the server
-    container = nos.init(runtime=runtime, port=GRPC_PORT, utilization=1)
-    assert container is not None
-    assert container.id is not None
-    containers = InferenceServiceRuntime.list()
-    assert len(containers) == 1
+    # # Initialize the server
+    # container = nos.init(runtime=runtime, port=GRPC_PORT, utilization=1)
+    # assert container is not None
+    # assert container.id is not None
+    # containers = InferenceServiceRuntime.list()
+    # assert len(containers) == 1
 
     # Test waiting for server to start
     # This call should be instantaneous as the server is already ready for the test
-    client = Client(f"[::]:{GRPC_PORT}")
+    client = Client(f"[::]:{GRPC_TEST_PORT}")
     assert client.WaitForServer(timeout=180, retry_interval=5)
     assert client.IsHealthy()
 
@@ -84,23 +91,45 @@ def test_grpc_client_inference_integration(runtime):  # noqa: F811
     for model_id in models:
         spec: ModelSpec = client.GetModelInfo(model_id)
         assert spec.task and spec.name
-        assert isinstance(spec.signature.inputs, dict)
-        assert isinstance(spec.signature.outputs, dict)
-        assert len(spec.signature.inputs) >= 1
-        assert len(spec.signature.outputs) >= 1
+        assert spec.signature is not None
+        assert len(spec.signature) > 0
+        assert isinstance(spec.default_signature.inputs, dict)
+        assert isinstance(spec.default_signature.outputs, dict)
+        assert len(spec.default_signature.inputs) >= 1
+        assert len(spec.default_signature.outputs) >= 1
 
-        inputs = spec.signature.get_inputs_spec()
-        outputs = spec.signature.get_outputs_spec()
+        inputs = spec.default_signature.get_inputs_spec()
+        outputs = spec.default_signature.get_outputs_spec()
         assert isinstance(inputs, dict)
         assert isinstance(outputs, dict)
 
+    # noop/process-images
+    model_id = "noop/process-images"
+    model = client.Module(model_id)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+    for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
+        response = model.process_images(images=[img])
+        assert isinstance(response, dict)
+        assert "result" in response
+
+    # noop/process-texts
+    model_id = "noop/process-texts"
+    model = client.Module(model_id)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+    for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
+        response = model.process_texts(texts=["a cat dancing on the grass."])
+        assert isinstance(response, dict)
+        assert "result" in response
+
     # # TXT2VEC
-    # model_id =  "openai/clip-vit-base-patch32"
-    # model = client.Module(task=task, model_name=model_name)
+    # model_id = "openai/clip-vit-base-patch32"
+    # model = client.Module(model_id)
     # assert model is not None
     # assert model.GetModelInfo() is not None
-    # for _ in tqdm(range(1), desc=f"Test [task={task}, model_name={model_name}]"):
-    #     response = model(inputs={"texts": ["a cat dancing on the grass."]})
+    # for _ in tqdm(range(1), desc=f"Test [model_name={model_id}]"):
+    #     response = model(inputs={"texts": ["a cat dancing on the grass."]}, _method="encode_text")
     #     assert isinstance(response, dict)
     #     assert "embedding" in response
 
@@ -110,7 +139,13 @@ def test_grpc_client_inference_integration(runtime):  # noqa: F811
     assert model is not None
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
+        # __call__ defaults to encode_image
         response = model(images=[img])
+        assert isinstance(response, dict)
+        assert "embedding" in response
+
+        # explicit call to encode_image
+        response = model(images=[img], _method="encode_image")
         assert isinstance(response, dict)
         assert "embedding" in response
 
@@ -122,18 +157,18 @@ def test_grpc_client_inference_integration(runtime):  # noqa: F811
     for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
         response = model(images=[img])
         assert isinstance(response, dict)
-
         assert "bboxes" in response
 
     # TXT2IMG
     # SDv1.4, SDv1.5, SDv2.0, SDv2.1, and SDXL
+    from nos.models import StableDiffusion
+
     for model_id, _config in StableDiffusion.configs.items():
         model = client.Module(model_id)
         assert model is not None
         spec: ModelSpec = model.GetModelInfo()
         assert spec is not None
         assert isinstance(spec, ModelSpec)
-
         for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
             model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)
 
