@@ -1,7 +1,7 @@
-import copy
 import inspect
 import re
-from dataclasses import field
+from dataclasses import asdict, field
+from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin
 
 from pydantic import validator
@@ -137,16 +137,7 @@ class FunctionSignature:
 
     def __repr__(self) -> str:
         """Return the function signature representation."""
-        inputs_str = "\n".join([f"{k}={v}" for k, v in self.inputs.items()])
-        outputs_str = "\n".join([f"{k}={v}" for k, v in self.outputs.items()])
-        return (
-            f"""FunctionSignature\n"""
-            f"""\tfunc_or_cls={self.func_or_cls}\n"""
-            f"""\tinit_args={self.init_args}, init_kwargs={self.init_kwargs}\n"""
-            f"""\\method={self.method}\n"""
-            f"""\tinputs={inputs_str}\n"""
-            f"""\toutputs={outputs_str}\n"""
-        )
+        return f"FunctionSignature({asdict(self)})"
 
     @staticmethod
     def validate(inputs: Dict[str, Any], sig: Dict[str, FunctionSignatureType]) -> Dict[str, Any]:
@@ -312,6 +303,9 @@ class ModelSpecMetadataRegistry:
         return self[model_id]
 
 
+ModelSignature = Union[FunctionSignature, List[FunctionSignature], Dict[str, FunctionSignature]]
+
+
 @dataclass
 class ModelSpecMetadata:
     """Model specification metadata.
@@ -341,8 +335,8 @@ class ModelSpec:
 
     id: str
     """Model identifier."""
-    signatures: Dict[str, FunctionSignature] = field(default_factory=dict)
-    """Model function signature."""
+    signature: ModelSignature = field(default_factory=dict)
+    """Model function signatures to export."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
 
@@ -359,8 +353,8 @@ class ModelSpec:
             )
         return id
 
-    # def __repr__(self):
-    #     return f"""ModelSpec(id={self.id}, task={self.task})""" f"""\n    {self.signature}"""
+    def __repr__(self):
+        return f"""ModelSpec(id={self.id}, task={self.task}, signature={' ,'.join(list(self.signature))})"""
 
     @property
     def name(self) -> str:
@@ -390,26 +384,39 @@ class ModelSpec:
                 return None
         return self._metadata
 
-    # @validator("signature")
-    # def _validate_signature(cls, sig: FunctionSignature, **kwargs: Dict[str, Any]) -> FunctionSignature:
-    #     """Validate the model signature.
+    @validator("signature")
+    def _validate_signature(cls, sigs: ModelSignature, **kwargs: Dict[str, Any]) -> ModelSignature:
+        """Validate the model signature / signatures.
 
-    #     Checks that the model class `cls` has the function name attribute
-    #     as defined in the signature `function_name`.
+        Checks that the model class `cls` has the function name attribute
+        as defined in the signature `function_name`.
 
-    #     Args:
-    #         sig (ModelSignature): Model signature.
-    #         **kwargs: Keyword arguments.
-    #     Returns:
-    #         FunctionSignature: Function signature.
-    #     """
-    #     if sig and sig.func_or_cls:
-    #         model_cls = sig.func_or_cls
-    #         if sig.method and not hasattr(model_cls, sig.method):
-    #             raise ValueError(f"Model class {model_cls} does not have function {sig.method}.")
-    #     return sig
+        Args:
+            sigs (ModelSignature): Model signature.
+            **kwargs: Keyword arguments.
+        Returns:
+            ModelSignature: Model signature.
+        """
+        if isinstance(sigs, FunctionSignature):
+            sigs = [sigs]
+        assert isinstance(sigs, (list, tuple)), f"Invalid signature provided, signature={sigs}."
 
-    @property
+        signatures: Dict[str, FunctionSignature] = {}
+        for sig in sigs:
+            if sig and sig.func_or_cls:
+                model_cls = sig.func_or_cls
+                if sig.method and not hasattr(model_cls, sig.method):
+                    raise ValueError(f"Model class {model_cls} does not have function {sig.method}.")
+                signatures[sig.method] = sig
+        return signatures
+
+    @cached_property
+    def default_method(self) -> str:
+        """Return the default method name."""
+        assert len(self.signature) > 0, f"No default signature found, signature={self.signature}."
+        return list(self.signature.keys())[0]
+
+    @cached_property
     def default_signature(self) -> FunctionSignature:
         """Return the default function signature.
 
@@ -420,8 +427,7 @@ class ModelSpec:
         # signature is the default signature. In the `.from_cls()`
         # method, we add the __call__ method as the first method
         # for this exact reason.
-        assert len(self.signatures) > 0, f"No default signature found, signatures={self.signatures}."
-        return list(self.signatures.values())[0]
+        return self.signature[self.default_method]
 
     def __call__(self, *args, **kwargs) -> Any:
         """Create a model instance.
@@ -446,18 +452,10 @@ class ModelSpec:
         sig: FunctionSignature = self.default_signature
         return sig.func_or_cls(*args, **kwargs)
 
-    def _to_proto(self, public: bool = False) -> nos_service_pb2.GenericResponse:
+    def _to_proto(self) -> nos_service_pb2.GenericResponse:
         """Convert the model spec to proto."""
-        if public:
-            spec = copy.deepcopy(self)
-            spec.signature.func_or_cls = None
-            spec.signature.init_args = ()
-            spec.signature.init_kwargs = {}
-            spec.signature.method = None
-        else:
-            spec = self
         return nos_service_pb2.GenericResponse(
-            response_bytes=dumps(spec),
+            response_bytes=dumps(self),
         )
 
     @staticmethod
@@ -505,7 +503,7 @@ class ModelSpec:
         logger.debug(f"Registering methods [methods={methods}].")
 
         # Add function signature for each method
-        signatures: Dict[str, FunctionSignature] = {}
+        signatures: List[FunctionSignature] = []
         for method in methods:
             # Get the function signature
             sig = inspect.signature(getattr(func_or_cls, method))
@@ -521,19 +519,20 @@ class ModelSpec:
             call_outputs = {"result": sig.return_annotation}
 
             # Add the function signature
-            signatures[method] = FunctionSignature(
+            sig = FunctionSignature(
                 func_or_cls,
                 method=method,
                 inputs=call_inputs,
                 outputs=call_outputs,
             )
-            logger.debug(f"Added function signature [method={method}, signature={signatures[method]}].")
+            signatures.append(sig)
+            logger.debug(f"Added function signature [method={method}, signature={sig}].")
 
         # Build the model spec from the function signature
         spec = cls(
             func_or_cls.__name__,
             task=TaskType.CUSTOM,
-            signatures=signatures,
+            signature=signatures,
             runtime_env=runtime_env,
         )
         return spec

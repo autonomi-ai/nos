@@ -115,19 +115,9 @@ def test_common_model_spec(img2vec_signature):
     assert isinstance(minfo, nos_service_pb2.GenericResponse)
 
     spec_ = ModelSpec._from_proto(minfo)
-    assert spec_.signature.inputs is not None
-    assert spec_.signature.outputs is not None
-    assert spec_.signature.func_or_cls is not None
-
-    # Test serialization (public)
-    minfo = spec._to_proto(public=True)
-    assert minfo is not None
-    assert isinstance(minfo, nos_service_pb2.GenericResponse)
-
-    spec_ = ModelSpec._from_proto(minfo)
-    assert spec_.signature.inputs is not None
-    assert spec_.signature.outputs is not None
-    assert spec_.signature.func_or_cls is None
+    assert spec_.default_signature.inputs is not None
+    assert spec_.default_signature.outputs is not None
+    assert spec_.default_signature.func_or_cls is not None
 
     # Create a model spec with a wrong method name
     with pytest.raises(ValidationError):
@@ -231,17 +221,17 @@ def test_common_spec_signature():
         assert spec is not None
         assert spec.name
         assert spec.task
-        assert spec.signature.inputs is not None
-        assert spec.signature.outputs is not None
+        assert spec.default_signature.inputs is not None
+        assert spec.default_signature.outputs is not None
 
-        assert isinstance(spec.signature.inputs, dict)
-        assert isinstance(spec.signature.outputs, dict)
+        assert isinstance(spec.default_signature.inputs, dict)
+        assert isinstance(spec.default_signature.outputs, dict)
         logger.debug(f"{spec.name}, {spec.task}")
 
-        for k, v in spec.signature.get_inputs_spec().items():
+        for k, v in spec.default_signature.get_inputs_spec().items():
             logger.debug(f"input: {k}, {v}")
             check_object_type(v)
-        for k, v in spec.signature.get_outputs_spec().items():
+        for k, v in spec.default_signature.get_outputs_spec().items():
             logger.debug(f"output: {k}, {v}")
             check_object_type(v)
 
@@ -279,6 +269,11 @@ def test_common_spec_from_custom_model():
     CustomModel = ModelSpec.from_cls(CustomModel)
     assert CustomModel is not None
     assert isinstance(CustomModel, ModelSpec)
+
+    # Get the default method
+    method: str = CustomModel.default_method
+    assert method is not None
+    assert method == "__call__", "Default method must be __call__"
 
     # Get the function signature
     sig: FunctionSignature = CustomModel.default_signature
