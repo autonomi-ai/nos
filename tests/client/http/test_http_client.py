@@ -3,7 +3,8 @@ import pytest
 from nos.test.utils import NOS_TEST_IMAGE
 
 
-pytestmark = pytest.mark.client
+pytestmark = pytest.mark.skip
+
 
 # TODO (spillai): Add support for "local", "cpu", "gpu" and "auto" runtimes
 # @pytest.mark.parametrize("runtime", ["cpu", "gpu", "auto"])

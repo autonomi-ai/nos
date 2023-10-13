@@ -5,22 +5,15 @@ import pytest
 from PIL import Image
 
 from nos.logging import logger
+from nos.test.conftest import (
+    CLIENT_SERVER_CONFIGURATIONS,
+)
 from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup
 
 
 INTEGRATION_TEST_RUNTIMES = ["cpu", "gpu"]
-
 logger.debug(f"INTEGRATION TEST RUNTIMES={INTEGRATION_TEST_RUNTIMES}")
 
-
-CLIENT_WITH_LOCAL = "local_grpc_client_with_server"
-CLIENT_WITH_CPU = "grpc_client_with_cpu_backend"
-CLIENT_WITH_GPU = "grpc_client_with_gpu_backend"
-CLIENT_SERVER_CONFIGURATIONS = [
-    # CLIENT_WITH_LOCAL,
-    # CLIENT_WITH_CPU,
-    CLIENT_WITH_GPU
-]
 
 pytestmark = pytest.mark.client
 

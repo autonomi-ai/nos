@@ -162,6 +162,11 @@ def grpc_server_docker_runtime_gpu():
         logger.info(f"Failed to stop existing container with name: {GPU_CONTAINER_NAME}")
 
 
+# Note: These fixtures need to be named the same as the following variables
+# so that we reference them by value in the test functions.
+CLIENT_WITH_LOCAL = "local_grpc_client_with_server"
+
+
 @pytest.fixture(scope="session")
 def local_grpc_client_with_server(grpc_server, grpc_client):  # noqa: F811
     """Test local gRPC client with local runtime (Port: 50052)."""
@@ -171,6 +176,11 @@ def local_grpc_client_with_server(grpc_server, grpc_client):  # noqa: F811
 
     # Yield the gRPC client once the server is up and initialized
     yield grpc_client
+
+
+# Note: These fixtures need to be named the same as the following variables
+# so that we reference them by value in the test functions.
+CLIENT_WITH_CPU = "grpc_client_with_cpu_backend"
 
 
 @pytest.fixture(scope="session")
@@ -184,6 +194,11 @@ def grpc_client_with_cpu_backend(grpc_server_docker_runtime_cpu, grpc_client_cpu
     yield grpc_client_cpu
 
 
+# Note: These fixtures need to be named the same as the following variables
+# so that we reference them by value in the test functions.
+CLIENT_WITH_GPU = "grpc_client_with_gpu_backend"
+
+
 @pytest.fixture(scope="session")
 def grpc_client_with_gpu_backend(grpc_server_docker_runtime_gpu, grpc_client_gpu):  # noqa: F811
     """Test gRPC client with initialized CPU docker runtime (Port: 50054)."""
@@ -193,3 +208,11 @@ def grpc_client_with_gpu_backend(grpc_server_docker_runtime_gpu, grpc_client_gpu
 
     # Yield the gRPC client once the server is up and initialized
     yield grpc_client_gpu
+
+
+# Needed for referencing relevant pytest fixtures
+CLIENT_SERVER_CONFIGURATIONS = [
+    # CLIENT_WITH_LOCAL,
+    # CLIENT_WITH_CPU,
+    CLIENT_WITH_GPU
+]
