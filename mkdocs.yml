@@ -26,15 +26,14 @@ nav:
     - Model-Definition with ModelSpec: docs/concepts/model-spec.md
     - Resource-Aware Execution with ModelManager: docs/concepts/model-manager.md
     - Accelerated Runtime with InferenceServiceRuntime: docs/concepts/inference-service-runtime.md
-  - 🤖 Demos:
+  - 🤖 Demos/Tutorials:
     - Gradio UI: docs/demos/gradio-ui.md
-    - Discord Bot: docs/demos/discord-bot.md
-  - 📚 Guides:
+    - Build a Discord Image Generation Bot: docs/demos/discord-bot.md
+    - Build a Video Search Engine: docs/demos/video-search.md
+  - 📚 Usage Guide:
     - Starting the NOS Server: docs/guides/starting-the-server.md
     - Running Inference: docs/guides/running-inference.md
     - Running Custom Models: docs/guides/running-custom-models.md
-    - Build a Midjourney Clone: docs/guides/build-a-midjourney-clone.md
-    - Build a Video Search Engine: docs/guides/build-a-video-search-engine.md
   - 👩‍💻 API Reference:
     - nos.common:
       - nos.common.spec: docs/api/common/spec.md

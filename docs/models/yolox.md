@@ -1,4 +1,11 @@
-NOS Supports a variety of YOLOX variants for object detection:
+NOS Supports a variety of YOLOX variants for object detection including (in rough order of speed vs detection quality):
+
+- nano
+- tiny
+- small
+- medium
+- large
+- xlarge
 
 ```python
 import nos

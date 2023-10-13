@@ -1,4 +1,4 @@
-Whispernet audio transcription with serialized Audio Files
+Whispernet audio transcription with serialized Audio Files. The current interface requires that a `.wav` be serialized into base64 and passed in as a string. The following snippet demonstrates a simple youtube->text transcription flow with `ytd`.
 
 ```python
 from nos.client import Client
