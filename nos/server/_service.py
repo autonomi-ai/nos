@@ -79,8 +79,13 @@ class InferenceService:
 
         # TODO (spillai): Validate/Decode the inputs
         st = time.perf_counter()
-        model_inputs = FunctionSignature.validate(inputs, model_spec.signature.inputs)
-        model_inputs = SharedMemoryDataDict.decode(model_inputs)
+        if method is None:
+            method = model_spec.default_method
+        if method not in model_spec.signature:
+            raise ValueError(f"Invalid method [method={method}, model_spec={model_spec}]")
+        sig: FunctionSignature = model_spec.signature[method]
+        model_inputs: Dict[str, Any] = FunctionSignature.validate(inputs, sig.inputs)
+        model_inputs: Dict[str, Any] = SharedMemoryDataDict.decode(model_inputs)
         if NOS_PROFILING_ENABLED:
             model_inputs_types = [
                 f"{k}: List[type={type(v[0])}, len={len(v)}]" if isinstance(v, list) else str(type(v))
@@ -165,7 +170,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         except KeyError as e:
             logger.error(f"Failed to load spec [request={request}, e={e}]")
             context.abort(grpc.StatusCode.NOT_FOUND, str(e))
-        return spec._to_proto(public=True)
+        return spec._to_proto()
 
     def RegisterSystemSharedMemory(
         self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext

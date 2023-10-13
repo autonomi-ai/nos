@@ -52,8 +52,8 @@ def test_model_manager(manager):  # noqa: F811
         assert isinstance(spec, ModelSpec)
 
         # Test only one model variant per model class
-        if spec.signature.func_or_cls not in func_or_cls:
-            func_or_cls.add(spec.signature.func_or_cls)
+        if spec.default_signature.func_or_cls not in func_or_cls:
+            func_or_cls.add(spec.default_signature.func_or_cls)
         else:
             continue
 
@@ -187,10 +187,14 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
 
             pass
 
+        def forward(self):
+            """Forward pass."""
+            return True
+
         def __call__(self, images: Union[np.ndarray, List[np.ndarray]], n: int = 1) -> np.ndarray:
             if isinstance(images, np.ndarray) and images.ndim == 3:
                 images = [images]
-            return images
+            return images * n
 
     # Get the model spec for remote execution
     spec = ModelSpec.from_cls(
@@ -212,12 +216,34 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
     images = [np.random.rand(224, 224, 3).astype(np.uint8)]
     result = model_handle(images=images)
     assert len(result) == 1
-    assert isinstance(result, np.ndarray)
+    assert isinstance(result, list)
+    assert isinstance(result[0], np.ndarray)
 
     # Check if the model can be called with keyword arguments
     result = model_handle(images=images, n=2)
     assert len(result) == 2
-    assert isinstance(result, np.ndarray)
+    assert isinstance(result, list)
+    assert isinstance(result[0], np.ndarray)
+
+    # Call forward
+    result = model_handle.forward()
+    assert result is True
+
+    # Test `.submit()` on the `__call__` method + `get_next()`
+    for _ in range(2):
+        model_handle.submit(images=images)
+    while model_handle.has_next():
+        result = model_handle.get_next()
+        assert len(result) == 1
+        assert isinstance(result, list)
+        assert isinstance(result[0], np.ndarray)
+
+    # Test `.submit()` on the `forward` method + `get_next()`
+    for _ in range(2):
+        model_handle.forward.submit()
+    while model_handle.has_next():
+        result = model_handle.get_next()
+        assert result is True
 
     # Check if the model can NOT be called with positional arguments
     # We expect this to raise an exception, as the model only accepts keyword arguments.
