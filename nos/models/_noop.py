@@ -16,6 +16,9 @@ class NoOp:
             images = [images]
         return list(range(len(images)))
 
+    def process_texts(self, texts: List[str]) -> List[int]:
+        return list(range(len(texts)))
+
 
 hub.register(
     "noop/process-images",
@@ -29,4 +32,14 @@ hub.register(
     },
     outputs={"result": List[int]},
     method="process_images",
+)
+hub.register(
+    "noop/process-texts",
+    TaskType.CUSTOM,
+    NoOp,
+    inputs={
+        "texts": Batch[str, 1],
+    },
+    outputs={"result": List[int]},
+    method="process_texts",
 )
