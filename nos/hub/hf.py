@@ -1,12 +1,12 @@
 import os
 
-from huggingface_hub import login
-
 from nos.logging import logger
 
 
 def hf_login(write_permission: bool = False):
     """Login to huggingface hub."""
+    from huggingface_hub import login
+
     token = os.getenv("HUGGINGFACE_HUB_TOKEN", None)
     if token is None:
         raise ValueError("HUGGINGFACE_HUB_TOKEN is not set")

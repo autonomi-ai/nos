@@ -20,8 +20,6 @@ class Hub:
     """Singleton instance."""
     _registry: Dict[str, ModelSpec] = {}
     """Model specifications lookup for all models registered."""
-    _metadata_registry: ModelSpecMetadataRegistry = ModelSpecMetadataRegistry.get()
-    """Model specification metadata registry."""
 
     @classmethod
     def get(cls: "Hub") -> "Hub":
@@ -103,9 +101,10 @@ class Hub:
             f"""inputs={inputs}, outputs={outputs}, """
             f"""init_args={init_args}, init_kwargs={init_kwargs}, method={method}]"""
         )
-        spec = ModelSpec(
-            model_id,
-            signature=FunctionSignature(
+
+        # Create signature
+        signature: Dict[str, FunctionSignature] = {
+            method: FunctionSignature(
                 func_or_cls,
                 inputs=inputs,
                 outputs=outputs,
@@ -113,20 +112,16 @@ class Hub:
                 init_kwargs=init_kwargs,
                 method=method,
             ),
-        )
+        }
+        # Add metadata for the model
+        metadata: Dict[str, ModelSpecMetadata] = {
+            method: ModelSpecMetadata(model_id, method, task),
+        }
+        spec = ModelSpec(model_id, signature=signature, _metadata=metadata)
+        logger.debug(f"Created model spec [id={model_id}, spec={spec}, metadata={metadata}]")
 
         # Get hub instance
         hub = cls.get()
-
-        # Register model id to metadata registry
-        metadata_id: Tuple[Any] = (model_id, method)
-        if metadata_id not in hub._metadata_registry:
-            hub._metadata_registry[metadata_id] = ModelSpecMetadata(model_id, method, task)
-            logger.debug(f"Registered model to metadata registry [id={model_id}, task={task}, method={method}]")
-        else:
-            logger.debug(
-                f"Model already registered to metadata registry [id={model_id}, task={task}, method={method}]"
-            )
 
         # Register model id to model spec registry
         if model_id not in hub._registry:
@@ -141,6 +136,7 @@ class Hub:
                     f"Adding task signature [model={model_id}, task={task}, method={method}, sig={spec.signature}]"
                 )
                 _spec.signature[method] = spec.signature[method]
+                _spec._metadata[method] = spec._metadata[method]
             else:
                 logger.debug(
                     f"Task signature already registered [model={model_id}, task={task}, method={method}, sig={spec.signature}]"

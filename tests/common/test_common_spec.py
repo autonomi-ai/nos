@@ -126,7 +126,9 @@ def test_common_model_spec(img2vec_signature):
     spec_ = ModelSpec._from_proto(minfo)
     assert spec_.default_signature.inputs is not None
     assert spec_.default_signature.outputs is not None
-    assert spec_.default_signature.func_or_cls is not None
+    assert (
+        spec_.default_signature.func_or_cls is None
+    ), "func_or_cls must be None since we do not allow serialization of custom models that have server-side dependencies"
 
     # Create a model spec with a wrong method name
     with pytest.raises(ValidationError):
@@ -286,6 +288,13 @@ def test_common_spec_from_custom_model():
     # Get the function signature
     sig: FunctionSignature = CustomModel.default_signature
     assert sig is not None
+
+    # Set the default method to be forward1
+    CustomModel.set_default_method("forward1")
+    # Check if the default method is set correctly
+    # and that the cached_properties are re-computed
+    assert CustomModel.default_method == "forward1"
+    assert CustomModel.default_signature.method == "forward1"
 
     # Get model task
     # Note (spillai): This should raise a warning and we want to suppress it

@@ -26,6 +26,7 @@ def test_hub_list():
 
 def test_hub_load_spec_all():
     """Load all model specs from the hub."""
+
     models: List[str] = hub.list()
     assert len(models) > 0
 
@@ -39,7 +40,7 @@ def test_hub_load_spec_all():
         # Check if all hub registered models have valid metadata / tasks
         for method in spec.signature:
             md: ModelSpecMetadata = spec.metadata(method)
-            assert md is not None
+            assert md is not None, f"Model spec (id={model_id}) should have metadata for method={method}."
             assert isinstance(md, ModelSpecMetadata)
 
             task: TaskType = spec.task(method)

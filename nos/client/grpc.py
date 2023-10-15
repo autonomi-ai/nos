@@ -293,7 +293,7 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         module: Module = self.Module(model_id, shm=shm)
-        return module(inputs, method=method)
+        return module(_method=method, **inputs)
 
     def Train(
         self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None
@@ -388,12 +388,12 @@ class Module:
         # Patch the module with methods from model spec signature
         for method in self._spec.signature.keys():
             if hasattr(self, method):
-                logger.debug(f"Module ({id}) already has method ({method}), skipping ...")
+                logger.debug(f"Module ({self.id}) already has method ({method}), skipping ...")
                 continue
             assert self._spec.signature[method].method == method
             setattr(self, method, partial(self.__call__, _method=method))
-            logger.debug(f"Module ({id}) patched [method={method}].")
-        logger.debug(f"Module ({id}) initialized [spec={self._spec}, shm={self._shm_objects}].")
+            logger.debug(f"Module ({self.id}) patched [method={method}].")
+        logger.debug(f"Module ({self.id}) initialized [spec={self._spec}, shm={self._shm_objects}].")
 
     @property
     def stub(self) -> nos_service_pb2_grpc.InferenceServiceStub:

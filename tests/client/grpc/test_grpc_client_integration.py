@@ -47,7 +47,7 @@ def test_grpc_client_inference(client_with_server, request):  # noqa: F811
 
 
 def _test_grpc_client_inference(client):  # noqa: F811
-    from nos.common import ModelSpec, tqdm
+    from nos.common import ImageSpec, ModelSpec, ObjectTypeInfo, TaskType, TensorSpec, tqdm
 
     # Get service info
     version = client.GetServiceVersion()
@@ -77,13 +77,47 @@ def _test_grpc_client_inference(client):  # noqa: F811
         assert isinstance(inputs, dict)
         assert isinstance(outputs, dict)
 
+        for method in spec.signature:
+            task: TaskType = spec.task(method)
+            assert isinstance(task, TaskType)
+            assert task.value is not None
+            logger.debug(f"Testing model [id={model_id}, spec={spec}, method={method}, task={spec.task(method)}]")
+            inputs = spec.signature[method].get_inputs_spec()
+            outputs = spec.signature[method].get_outputs_spec()
+            assert isinstance(inputs, dict)
+            assert isinstance(outputs, dict)
+
+            for _, type_info in inputs.items():
+                assert isinstance(type_info, (list, ObjectTypeInfo))
+                if isinstance(type_info, ObjectTypeInfo):
+                    assert type_info.base_spec() is None or isinstance(type_info.base_spec(), (ImageSpec, TensorSpec))
+                    assert type_info.base_type() is not None
+
+    # noop/process-images with default method
+    img = Image.open(NOS_TEST_IMAGE)
+    response = client.Run("noop/process-images", inputs={"images": [img]})
+    assert isinstance(response, dict)
+    assert "result" in response
+
+    # noop/process-texts with default method
+    response = client.Run("noop/process-texts", inputs={"texts": ["a cat dancing on the grass"]})
+    assert isinstance(response, dict)
+    assert "result" in response
+
     # noop/process
     model_id = "noop/process"
     model = client.Module(model_id)
     assert model is not None
     assert model.GetModelInfo() is not None
-    img = Image.open(NOS_TEST_IMAGE)
     for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
+        response = client.Run(model_id, inputs={"images": [img]}, method="process_images")
+        assert isinstance(response, dict)
+        assert "result" in response
+
+        response = client.Run(model_id, inputs={"texts": ["a cat dancing on the grass"]}, method="process_texts")
+        assert isinstance(response, dict)
+        assert "result" in response
+
         response = model.process_images(images=[img])
         assert isinstance(response, dict)
         assert "result" in response
