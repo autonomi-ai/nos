@@ -75,7 +75,7 @@ def init(
         runtime (str, optional): The runtime to use (i.e. "auto", "local", "cpu", "gpu"). Defaults to "auto".
             In "auto" mode, the runtime will be automatically detected.
         port (int, optional): The port to use for the inference server. Defaults to DEFAULT_GRPC_PORT.
-        utilization (float, optional): The target cpu/memory utilization of inference server. Defaults to 0.8.
+        utilization (float, optional): The target cpu/memory utilization of inference server. Defaults to 1.
         pull (bool, optional): Pull the docker image before starting the inference server. Defaults to True.
         logging_level (Union[int, str], optional): The logging level to use. Defaults to logging.INFO.
             Optionally, a string can be passed (i.e. "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL").

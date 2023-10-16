@@ -179,7 +179,7 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
     import numpy as np
 
     class CustomModel:
-        """Custom inference model with onnx-runtime."""
+        """Custom inference model with scikit-learn."""
 
         def __init__(self, model_name: str = "fake_model"):
             """Initialize the model."""
