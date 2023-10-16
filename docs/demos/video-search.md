@@ -69,7 +69,7 @@ def search_video(query: str, video_features: np.ndarray, topk: int = 3):
     # Compute the similarity between the search query and each video frame
     similarities = (video_features @ text_features.T)
     _, best_photo_idx = similarities.topk(topk, dim=0)
-    
+
     # Display the top k frames
     results = np.hstack([video[int(frame_id)] for frame_id in best_photo_idx])
     display(Image.fromarray(results).resize((600, 400)))

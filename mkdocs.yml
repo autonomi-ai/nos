@@ -21,7 +21,7 @@ nav:
     - YOLOX: docs/models/yolox.md
     - Whisper: docs/models/whisper.md
   - ⚡️ Concepts:
-    - What is NOS?: docs/concepts/what-is-nos.md
+    - Why NOS?: docs/concepts/what-is-nos.md
     - Architecture: docs/concepts/architecture-overview.md
     - Model-Definition with ModelSpec: docs/concepts/model-spec.md
     - Resource-Aware Execution with ModelManager: docs/concepts/model-manager.md
