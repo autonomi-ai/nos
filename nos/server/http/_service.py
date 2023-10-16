@@ -1,14 +1,18 @@
-from dataclasses import dataclass, field
+import dataclasses
+import time
+from dataclasses import field
+from typing import Any, Dict
 
 from fastapi import Depends, FastAPI, status
 from fastapi.responses import JSONResponse
+from pydantic import ConfigDict
+from pydantic.dataclasses import dataclass
 
 from nos.client import DEFAULT_GRPC_PORT, Client
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
 
-from ._types import InferenceRequest
 from ._utils import decode_dict, encode_dict
 
 
@@ -17,16 +21,26 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
 @dataclass
+class InferenceRequest:
+    model_id: str
+    """Model identifier"""
+    inputs: Dict[str, Any]
+    """Input data for inference"""
+    method: str = field(default=None)
+    """Inference method"""
+
+
+@dataclasses.dataclass
 class InferenceService:
     """HTTP server application for NOS API."""
 
-    version: str = "v1"
+    version: str = field(default="v1")
     """NOS version."""
 
-    grpc_port: int = DEFAULT_GRPC_PORT
+    grpc_port: int = field(default=DEFAULT_GRPC_PORT)
     """gRPC port number."""
 
-    debug: bool = False
+    debug: bool = field(default=False)
     """Debug mode."""
 
     app: FastAPI = field(init=False, default=None)
@@ -34,6 +48,9 @@ class InferenceService:
 
     client: Client = field(init=False, default=None)
     """Inference client."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    """Model configuration."""
 
     def __post_init__(self):
         """Post initialization."""
@@ -74,14 +91,25 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
         """Perform inference on the given input data.
 
         $ curl -X "POST" \
-        "http://localhost:8000/v1/infer" \
-        -H "Content-Type: appication/json" \
-        -d '{
-            "model_id": "yolox/small",
-            "inputs": {
-                "images": ["data:image/jpeg;base64,..."],
-            }
-        }'
+            "http://localhost:8000/infer" \
+            -H "Content-Type: appication/json" \
+            -d '{
+                "model_id": "yolox/small",
+                "inputs": {
+                    "images": ["data:image/jpeg;base64,..."],
+                }
+            }'
+
+        $ curl -X "POST" \
+            "http://localhost:8000/infer" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "model_id": "openai/clip",
+                "method": "encode_text",
+                "inputs": {
+                    "texts": ["fox jumped over the moon"]
+                }
+            }' | jq
 
         Args:
             request: Inference request.
@@ -91,6 +119,9 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
         Returns:
             Inference response.
         """
+        st = time.perf_counter()
+
+        logger.debug(f"Initializing module for inference [model={request.model_id}, method={request.method}]")
         try:
             model = client.Module(request.model_id)
         except Exception:
@@ -99,29 +130,60 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
                 content={"error": f"Model '{request.model_id}' not supported"},
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
+        logger.debug(f"Initialized module for inference [model={request.model_id}, method={request.method}]")
 
+        logger.debug(f"Decoding input dictionary [model={request.model_id}, method={request.method}]")
         inputs = decode_dict(request.inputs)
-        logger.debug(f"Decoded json dictionary [inputs={inputs}]")
+        logger.debug(f"Decoded input dictionary [model={request.model_id}, method={request.method}]")
         logger.debug(f"Inference [model={request.model_id}, keys={inputs.keys()}]")
-        response = model(**inputs)
-        logger.debug(f"Inference [model={request.model_id}, response={response}]")
+        response = model(**inputs, _method=request.method)
+        logger.debug(
+            f"Inference [model={request.model_id}, , method={request.method}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+        )
         return JSONResponse(content=encode_dict(response), status_code=status.HTTP_201_CREATED)
 
     return app
 
 
 def main():
+    """Main entrypoint for the NOS REST API service.
+
+    We start the NOS gRPC server as part of this entrypoint to ensure that the gRPC client proxy
+    is able to connect to the gRPC server before starting the REST API service.
+    """
     import argparse
+    import os
 
     import uvicorn
 
-    parser = argparse.ArgumentParser(description="NOS REST API Service")
-    parser.add_argument("--host", type=str, default="localhost", help="Host address")
-    parser.add_argument("--port", type=int, default=8000, help="Port number")
-    parser.add_argument("--workers", type=int, default=4, help="Number of workers")
-    args = parser.parse_args()
+    import nos
+    from nos.client import Client
+    from nos.constants import DEFAULT_GRPC_PORT, DEFAULT_HTTP_PORT, NOS_HTTP_MAX_WORKER_THREADS
+    from nos.logging import logger
 
-    uvicorn.run(app(), host=args.host, port=args.port, workers=args.workers, log_level="info")
+    parser = argparse.ArgumentParser(description="NOS REST API Service")
+    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host address")
+    parser.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT, help="Port number")
+    parser.add_argument("--workers", type=int, default=NOS_HTTP_MAX_WORKER_THREADS, help="Number of workers")
+    args = parser.parse_args()
+    logger.debug(f"args={args}")
+
+    # Start the NOS gRPC Server
+    logger.debug(f"Starting NOS gRPC server (port={DEFAULT_GRPC_PORT})")
+    nos.init(runtime="auto", logging_level=os.environ.get("NOS_LOGGING_LEVEL", "INFO"))
+
+    # Wait for the gRPC server to be ready
+    logger.debug(f"Initializing gRPC client (port={DEFAULT_GRPC_PORT})")
+    client = Client(f"[::]:{DEFAULT_GRPC_PORT}")
+    logger.debug(f"Initialized gRPC client, connecting to gRPC server (address={client.address})")
+    if not client.WaitForServer(timeout=180, retry_interval=5):
+        raise RuntimeError("Failed to connect to gRPC server")
+    if not client.IsHealthy():
+        raise RuntimeError("gRPC server is not healthy")
+
+    # Start the NOS REST API service
+    logger.debug(f"Starting NOS REST API service (host={args.host}, port={args.port}, workers={args.workers})")
+    uvicorn.run("nos.server.http._service:app", host=args.host, port=args.port, workers=args.workers, log_level="info")
 
 
 if __name__ == "__main__":
