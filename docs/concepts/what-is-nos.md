@@ -1,6 +1,40 @@
-## From hand-rolled Pytorch to Inference APIs
-Writing and maintaining model deployments is hard. So hard, in fact, that many/most developers have 
-switched to using Inference APIs from OpenAI, Huggingface, Replicate and the like. While their underlying approaches differ the end result is the same: developers want to be able to hit a REST endpoint and forget about it.
+## Who is NOS for?
+If you've dug this far into the NOS docs (welcome!) you're probably interested in running/serving Pytorch models.
+Maybe you have experience with one of the following:
+- Running Pytorch models on AWS/GCP/Azure/on-prem with your own containers/depdency management, model versioning etc.
+- Using a deployment flow like Sagemaker
+- Hitting an Inference API from OpenAI, Huggingface, Replicate etc.
+Each of the above trades off cost, iteration speed and flexibility. Inference APIs in particular have taken off as
+the preferred backend for hobbyist developers and enterprises alike that aren't interested in building out their own
+infra (even on railed flows like Sagemaker) to run Image Generation, ASR, Object Detection etc. Black-box inference
+APIs come with drawbacks, however:
+- Compute spending for each and every request even during prototyping, or falling back to a different execution
+flow with substantial gaps betwen dev and prod environments.
+- Limited flexibility with regards to model selection/performance optimization. Inference APIs are a fixed quantity.
+- Privacy concerns as user data must neccessarily go outside the wire for inferencing on vendor servers
+- Stability issues when using poorly maintained third party APIs
+We built NOS because we wanted an Inference Server combinging best practices in model compilation, scaling,
+dependency management, containerization and cross-platform HW support to make local and on-prem development as easy
+as running a few lines of Python. NOS provides performance (particularly on multiple GPUs) well beyond eager mode
+Pytorch execuction.
 ## Model Containers
+Deep Learning Containers have been around for quite a while, and generally come in the form of a Docker Image
+pre-rolled with Pytorch/Nvidia dependencies alongside a variety of ML frameworks. More recently, toolchains like Cog
+have made wrapping individual models into containers quick and easy via a DSL, and we expect this trend to continue.
+That said, We believe a full-featured Inference Server should be able to do much more, including:
+- Serving multiple models dynamically from a single host, eliminating the need for cold starts as workloads change
+- scaling up and down according to inference traffic
+- taking full advantage of HW acceleration and memory optimization to eliminate memory traffic for larger input types
+ (images/videos)
+- Providing a superior developer experience with more error verbosity than 404s from a REST endpoint.
+The NOS server/client provide these out of the box with a minimum of installation headache.
 ## Model Compilation and Optimization
-## Putting it all together
+Naive/unoptimized inference is fast becoming a non-starter due to rising workload costs. NOS aims to use platform
+specific toolchains like TensorRT alongside more agnostic frameworks like TorchFX across models to ensure fast inference
+across all platforms. Working a model through any compilation or optimization framework is notoriously difficult,
+often prohibitively so for smaller teams. NOS provides opinionated optimization defaults for a variety of popular models,
+while being extensible to newer models/toolchains/HW backends.
+## Give it a try and share your feedback!
+NOS is meant to simplify iteration and deployment of popular Generative and Robotics AI workflows. We encourage the
+community to give feedback and suggest improvements, and welcome contributions from folks eager to help democratize fast,
+efficient inference!
