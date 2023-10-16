@@ -1,7 +1,7 @@
 import time
 import traceback
 from functools import lru_cache
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 import grpc
 import rich.console
@@ -84,7 +84,7 @@ class InferenceService:
         if method not in model_spec.signature:
             raise ValueError(f"Invalid method [method={method}, model_spec={model_spec}]")
         sig: FunctionSignature = model_spec.signature[method]
-        model_inputs: Dict[str, Any] = FunctionSignature.validate(inputs, sig.inputs)
+        model_inputs: Dict[str, Any] = FunctionSignature.validate(inputs, sig.parameters)
         model_inputs: Dict[str, Any] = SharedMemoryDataDict.decode(model_inputs)
         if NOS_PROFILING_ENABLED:
             model_inputs_types = [
@@ -102,13 +102,13 @@ class InferenceService:
 
         # Get the model handle and call it remotely (with model spec, actor handle)
         st = time.perf_counter()
-        response: Dict[str, Any] = model_handle(**model_inputs, _method=method)
+        response: Union[Any, Dict[str, Any]] = model_handle(**model_inputs, _method=method)
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         # If the response is a single value, wrap it in a dict with the appropriate key
-        if len(sig.outputs) == 1:
-            response = {k: response for k in sig.outputs}
+        if len(sig.output_annotations) == 1:
+            response = {k: response for k in sig.output_annotations}
 
         # Encode the response
         st = time.perf_counter()

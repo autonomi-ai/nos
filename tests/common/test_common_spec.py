@@ -1,4 +1,3 @@
-import inspect
 from collections import namedtuple
 from contextlib import contextmanager
 from itertools import product
@@ -263,9 +262,9 @@ def check_object_type(v):
         assert hasattr(spec, "shape")
         assert hasattr(spec, "dtype")
 
-    assert v.parameter_name() is not None
-    assert v.parameter_annotation() is not None
-    assert v.parameter_default() is inspect.Parameter.empty or v.parameter_default() is not None
+    if v.parameter is not None:
+        assert v.parameter_name() is not None
+        assert v.parameter_annotation() is not None
 
 
 def test_common_spec_signature():

@@ -276,11 +276,6 @@ class Client:
         """Run module.
 
         Args:
-            task (TaskType): Task used for prediction.
-                Tasks supported:
-                    (TaskType.OBJECT_DETECTION_2D, TaskType.IMAGE_SEGMENTATION_2D,
-                    TaskType.IMAGE_CLASSIFICATION, TaskType.IMAGE_GENERATION,
-                    TaskType.IMAGE_EMBEDDING, TaskType.TEXT_EMBEDDING)
             model_id (str):
                 Model identifier (e.g. openai/clip-vit-base-patch32).
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
@@ -293,7 +288,7 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         module: Module = self.Module(model_id, shm=shm)
-        return module(_method=method, **inputs)
+        return module(**inputs, _method=method)
 
     def Train(
         self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None
@@ -393,7 +388,7 @@ class Module:
             assert self._spec.signature[method].method == method
             setattr(self, method, partial(self.__call__, _method=method))
             logger.debug(f"Module ({self.id}) patched [method={method}].")
-        logger.debug(f"Module ({self.id}) initialized [spec={self._spec}, shm={self._shm_objects}].")
+        logger.debug(f"Module ({self.id}) initialized [spec={self._spec}, shm={self.shm}].")
 
     @property
     def stub(self) -> nos_service_pb2_grpc.InferenceServiceStub:
@@ -433,7 +428,7 @@ class Module:
         if method not in self._spec.signature:
             raise NosInferenceException(f"Method {method} not found in spec signature.")
         sig: FunctionSignature = self._spec.signature[method]
-        inputs = FunctionSignature.validate(inputs, sig.inputs)
+        inputs = FunctionSignature.validate(inputs, sig.parameters)
 
         # Encode List[np.ndarray] as stacked np.ndarray (B, H, W, C)
         for k, v in inputs.items():
@@ -614,7 +609,7 @@ class Module:
             if NOS_PROFILING_ENABLED:
                 logger.debug(f"Executed request [model={self.id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         except grpc.RpcError as e:
-            logger.error(f"Run() failed [details={e.details()}, request={request}, inputs={inputs.keys()}]")
+            logger.error(f"Run() failed [details={e.details()}, inputs={inputs.keys()}]")
             raise NosInferenceException(f"Run() failed [model={self.id}, details={e.details()}]", e)
 
         # Decode the response

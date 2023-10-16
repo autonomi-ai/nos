@@ -1,8 +1,27 @@
-### GPU benchmarks
+## GPU benchmarks
 
+### Timing records (0.1.0 - 2023-10-15)
 ```bash
+                      desc  elapsed    n  latency_ms     fps
+0             noop_294x240     1.09  168        6.49  154.13
+1             noop_640x480     1.17  168        6.96  143.59
+2            noop_1280x720     4.79  168       28.51   35.07
+3           noop_2880x1620    17.23  168      102.56    9.75
+4     yolox_medium_294x240     2.33  168       13.87   72.10
+5     yolox_medium_640x480     2.18  168       12.98   77.06
+6    yolox_medium_1280x720     8.11  168       48.27   20.72
+7   yolox_medium_2880x1620    21.10  168      125.60    7.96
+8       yolox_tiny_294x240     1.97  168       11.73   85.28
+9       yolox_tiny_640x480     1.73  168       10.30   97.11
+10     yolox_tiny_1280x720     7.43  168       44.23   22.61
+11    yolox_tiny_2880x1620    19.98  168      118.93    8.41
+12          openai_224x224     2.62  168       15.60   64.12
+13           sdv21_512x512     2.87    2     1435.00    0.70
+14          sdxl_1024x1024    13.66    2     6830.00    0.15
+```
 
-Timing records (0.0.11 - 2023-09-25)
+### Timing records (0.0.11 - 2023-09-25)
+```bash
                       desc  elapsed    n  latency_ms     fps
 0             noop_294x240     1.14  168        6.79  147.37
 1             noop_640x480     1.19  168        7.08  141.18
@@ -19,8 +38,10 @@ Timing records (0.0.11 - 2023-09-25)
 12          openai_224x224     2.71  168       16.13   61.99
 13           sdv21_512x512     7.21    2     3605.00    0.28
 14          sdxl_1024x1024    22.02    2    11010.00    0.09
+```
 
-Timing records (0.0.10 - 2023-09-13)
+### Timing records (0.0.10 - 2023-09-13)
+```bash
                      desc  elapsed    n  latency_ms     fps
 0            noop_294x240     1.10  168        6.55  152.73
 1            noop_640x480     1.16  168        6.90  144.83
@@ -32,8 +53,10 @@ Timing records (0.0.10 - 2023-09-13)
 7  yolox_medium_2880x1620    21.80  168      129.76    7.71
 8          openai_224x224     1.31  168        7.80  128.24
 9           sdv21_512x512     7.20    2           -       -
+```
 
-Timing records (0.0.8 - 2023-08-01) w/ SHM
+### Timing records (0.0.8 - 2023-08-01) w/ SHM
+```bash
                       desc  elapsed    n  latency_ms     fps
 0             noop_294x240     1.11  168        6.61  151.35
 1             noop_640x480     1.08  168        6.43  155.56
@@ -47,9 +70,10 @@ Timing records (0.0.8 - 2023-08-01) w/ SHM
 9           openai_640x480     2.51  168       14.94   66.93
 10         openai_1280x720     4.94  168       29.40   34.01
 11        openai_2880x1620    18.49  168      110.06    9.09
+```
 
-
-Timing records (0.0.7 - 2023-07-14) w/ SHM
+### Timing records (0.0.7 - 2023-07-14) w/ SHM
+```bash
                       desc  elapsed    n  latency_ms     fps
 0             noop_294x240     1.15  168        6.85  146.09
 1             noop_640x480     1.11  168        6.61  151.35
@@ -63,9 +87,10 @@ Timing records (0.0.7 - 2023-07-14) w/ SHM
 9           openai_640x480     2.50  168       14.88   67.20
 10         openai_1280x720     5.05  168       30.06   33.27
 11        openai_2880x1620    18.72  168      111.43    8.97
+```
 
-
-Timing records (0.0.7 - 2023-07-14) w/o SHM
+### Timing records (0.0.7 - 2023-07-14) w/o SHM
+```bash
                       desc  elapsed    n  latency_ms    fps
 0             noop_294x240     1.87  168       11.13  89.84
 1             noop_640x480     1.88  168       11.19  89.36
@@ -81,7 +106,7 @@ Timing records (0.0.7 - 2023-07-14) w/o SHM
 11        openai_2880x1620    37.06  168      220.60   4.53
 ```
 
-### CPU benchmarks
+## CPU benchmarks
 
 ```bash
 Timing records (0.0.9 - 2023-08-15) - OMP_NUM_THREADS=32 - CPU (0h:04m:32s)

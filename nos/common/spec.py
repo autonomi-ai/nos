@@ -192,12 +192,12 @@ class FunctionSignature:
 
     def _encode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Encode inputs based on defined signature."""
-        inputs = FunctionSignature.validate(inputs, self.inputs)
+        inputs = FunctionSignature.validate(inputs, self.parameters)
         return {k: dumps(v) for k, v in inputs.items()}
 
     def _decode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Decode inputs based on defined signature."""
-        inputs = FunctionSignature.validate(inputs, self.inputs)
+        inputs = FunctionSignature.validate(inputs, self.parameters)
         return {k: loads(v) for k, v in inputs.items()}
 
     def get_inputs_spec(self) -> Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]:

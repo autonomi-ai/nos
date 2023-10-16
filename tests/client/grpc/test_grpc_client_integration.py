@@ -67,10 +67,9 @@ def _test_grpc_client_inference(client):  # noqa: F811
         assert spec.task() and spec.name
         assert spec.signature is not None
         assert len(spec.signature) > 0
-        assert isinstance(spec.default_signature.inputs, dict)
-        assert isinstance(spec.default_signature.outputs, dict)
-        assert len(spec.default_signature.inputs) >= 1
-        assert len(spec.default_signature.outputs) >= 1
+        assert isinstance(spec.default_signature.parameters, dict)
+        assert len(spec.default_signature.parameters) >= 1
+        assert spec.default_signature.return_annotation is not None
 
         inputs = spec.default_signature.get_inputs_spec()
         outputs = spec.default_signature.get_outputs_spec()
@@ -94,7 +93,7 @@ def _test_grpc_client_inference(client):  # noqa: F811
                     assert type_info.base_type() is not None
 
     # noop/process-images with default method
-    img = Image.open(NOS_TEST_IMAGE)
+    img = Image.open(NOS_TEST_IMAGE).resize((224, 224))
     response = client.Run("noop/process-images", inputs={"images": [img]})
     assert isinstance(response, dict)
     assert "result" in response
@@ -174,7 +173,7 @@ def _test_grpc_client_inference(client):  # noqa: F811
         assert spec is not None
         assert isinstance(spec, ModelSpec)
         for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
-            model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1)
+            model(prompts=["a cat dancing on the grass."], width=512, height=512, num_images=1, num_inference_steps=10)
 
 
 @pytest.mark.skip(reason="Fine-tuning is not supported yet.")

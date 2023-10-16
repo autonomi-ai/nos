@@ -6,16 +6,6 @@ import "google/protobuf/wrappers.proto";
 package nos.inference;
 
 
-// Model information
-message ModelInfo {
-  // Task identifier (e.g. "image_generation", "image_embedding", "object_detection" etc)
-  string task = 1;
-  // Model identifier (e.g. "openai/clip-vit-large-patch14")
-  string name = 2;
-  // Model method (e.g. "generate", "embed_text", "__call__" etc)
-  string method = 3;
-}
-
 // Ping / healthcheck response
 message PingResponse {
     string status = 1;  // (e.g. "ok" or "not_ok")
@@ -66,11 +56,4 @@ service InferenceService {
   // Unregister shared memory
   rpc UnregisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
 
-  // Load model from Hugging Face Hub
-  // TODO (spillai): To be implemented later (for power-users)
-  // rpc InitModel(InitModelRequest) returns (InitModelResponse) {}
-
-  // Delete model from deployment
-  // TODO (spillai): To be implemented later (for power-users)
-  // rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {}
 }
