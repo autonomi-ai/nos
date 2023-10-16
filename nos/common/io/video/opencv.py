@@ -1,3 +1,4 @@
+import datetime
 from pathlib import Path
 from typing import Callable, Iterator, List, Optional, Union
 
@@ -35,6 +36,14 @@ class VideoReader(BaseVideoReader):
             raise NotImplementedError(f"Unknown bridge type {bridge}")
         self.bridge = bridge
         self._video = self.open()
+
+    def __repr__(self) -> str:
+        """Return a string representation of the video reader.
+
+        Returns:
+            str: A string representation of the video reader.
+        """
+        return f"{self.__class__.__name__}(filename={self.filename}, frames={len(self)}, duration={datetime.timedelta(seconds=int(len(self) / 30))}]"
 
     def __len__(self) -> int:
         """Return the number of frames in the video.

@@ -16,26 +16,24 @@ nav:
   - 🏠 Home: README.md
   - 🔥 Quickstart: docs/quickstart.md
   - 🧠 Models:
-    - Stable Diffusion 2: docs/models/stable-diffusion.md
-    - Stable Diffusion XL: docs/models/stable-diffusion.md
+    - Stable Diffusion: docs/models/stable-diffusion.md
     - CLIP: docs/models/clip.md
     - YOLOX: docs/models/yolox.md
     - Whisper: docs/models/whisper.md
   - ⚡️ Concepts:
-    - What is NOS?: docs/concepts/what-is-nos.md
+    - Why NOS?: docs/concepts/what-is-nos.md
     - Architecture: docs/concepts/architecture-overview.md
     - Model Specification: docs/concepts/model-spec.md
     - HW-aware Execution: docs/concepts/model-manager.md
     - Runtime Environments: docs/concepts/runtime-environments.md
   - 🤖 Demos:
     - Gradio UI: docs/demos/gradio-ui.md
-    - Discord Bot: docs/demos/discord-bot.md
-  - 📚 Guides:
+    - Build a Discord Image Generation Bot: docs/demos/discord-bot.md
+    - Build a Video Search Engine: docs/demos/video-search.md
+  - 📚 Usage Guide:
     - Starting the NOS Server: docs/guides/starting-the-server.md
     - Running Inference: docs/guides/running-inference.md
     - Running Custom Models: docs/guides/running-custom-models.md
-    - Build a Midjourney Clone: docs/guides/build-a-midjourney-clone.md
-    - Build a Video Search Engine: docs/guides/build-a-video-search-engine.md
   - 👩‍💻 API Reference:
     - nos.common:
       - nos.common.spec: docs/api/common/spec.md

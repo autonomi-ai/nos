@@ -1,10 +1,12 @@
-## Architecture Overview
-
-On a high-level, NOS is a PyTorch library for optimizing and running lightning-fast inference of popular computer vision models. NOS is built to be modular and extensible.
+## Core Features
+ - **Batteries-included:** Server-side inference with all the necessary batteries (model hub, batching/parallelization, fast I/O, model-caching, model resource management via ModelManager, model optimization via ModelSpec)
+ - **Server-side inference without client-side bloat:** Multiple lightweight clients can leverage complex server-side inference workers without the bloat of GPU libraries, runtimes or 3rd-party libraries.
+ - **High device-utilization:** With better model management, client’s won’t have to wait on model inference and instead can take advantage of the full GPU resources available. Model multiplexing, and efficient bin-packing of models will allow us to leverage the resources optimally (without the user’s knowledge).
+ - **Custom model support:** We use Ray to configure different worker configurations (custom conda environment, with resource naming) to run workers on different runtime environments. For example, if you want to run a model on a custom runtime environment, you can provide custom `pip` requirements (see [example](./custom-models.md)).
 
 ![Unified NOS Inference Server](./assets/arch-how-nos-works.png)
 
-## ⚡️ Core Components
+## Core Components
 
  NOS is built to be modular and extensible. The core components of NOS are:
 
