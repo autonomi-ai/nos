@@ -3,7 +3,7 @@ import pytest
 from nos.test.utils import NOS_TEST_IMAGE
 
 
-pytestmark = pytest.mark.skip
+pytestmark = pytest.mark.client
 
 
 # TODO (spillai): Add support for "local", "cpu", "gpu" and "auto" runtimes
@@ -54,7 +54,7 @@ def test_http_client_inference_object_detection_2d(local_http_client_with_server
     assert np.array(predictions["bboxes"]).shape[-2:] == (N, 4)
 
 
-def test_http_client_inference_image_embedding(local_http_client_with_server):
+def test_http_client_inference_clip_embedding(local_http_client_with_server):
     http_client = local_http_client_with_server
     assert http_client is not None
 
@@ -64,10 +64,33 @@ def test_http_client_inference_image_embedding(local_http_client_with_server):
     from nos.server.http._utils import encode_dict
 
     # Test inference with JSON encoding
+    model_id = "openai/clip"
     data = {
-        "model_id": "openai/clip",
+        "model_id": model_id,
+        "method": "encode_image",
         "inputs": {
             "images": Image.open(NOS_TEST_IMAGE),
+        },
+    }
+    response = http_client.post(
+        "/infer",
+        headers={"Content-Type": "application/json"},
+        json=encode_dict(data),
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert isinstance(result, dict)
+
+    assert "embedding" in result
+    (B, N) = np.array(result["embedding"]).shape
+    assert B == 1 and N == 512
+
+    # Test inference with JSON encoding
+    data = {
+        "model_id": model_id,
+        "method": "encode_text",
+        "inputs": {
+            "texts": ["A photo of a cat"],
         },
     }
     response = http_client.post(
