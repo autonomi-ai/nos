@@ -1,4 +1,4 @@
-<h1 align="center" style="font-size:54px;font-weight: bold;font-color:black;">🔥 <i>NOS</i></h1>
+<h1 align="center" style="font-size:54px;font-weight: bold;font-color:black;">🔥 NOS</h1>
 <h4 align="center">
 Nitrous Oxide System for AI. <br>
 Optimize, serve and auto-scale Pytorch models on any hardware. <br>
@@ -7,7 +7,7 @@ Cut your inference costs by 10x.
 
 
 <p align="center">
-<a href="https://www.autonomi.ai/"><b>Website</b></a> | <a href="https://autonomi-ai.github.io/nos/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
+<a href="https://nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
 </p>
 
 <p align="center">

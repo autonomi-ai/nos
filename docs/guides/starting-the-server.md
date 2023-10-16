@@ -1,8 +1,7 @@
-The NOS server can be started in three ways:
+The NOS server can be started in two ways:
 
-- Via the NOS SDK **(preferred for development)**
-- Via Docker Compose (recommended for production deployments)
-- Via CLI (mostly for convenience)
+- Via the NOS SDK using `nos.init(...)` **(preferred for development)**
+- Via Docker Compose **(recommended for production deployments)**
 
 === "Via SDK"
 
@@ -12,14 +11,6 @@ The NOS server can be started in three ways:
 
     nos.init(runtime="auto")
     ```
-
-=== "Via CLI"
-
-    Start the nos server with the appropriate backend:
-    ```bash
-    nos docker start --runtime=gpu
-    ```
-    Alternatively, you can run the server with CPU support by replacing `--runtime=gpu` with `--runtime=cpu`.
 
 === "Via Docker Compose"
     Navigate to [`examples/quickstart`](https://github.com/autonomi-ai/nos/nos/examples/quickstart) to see an example of the YAML specification.
