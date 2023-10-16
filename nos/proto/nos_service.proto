@@ -1,60 +1,9 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
 
 package nos.inference;
-
-
-// Base text request
-message TextRequest {
-  string text = 1;
-}
-
-
-// Base image request
-message ImageRequest {
-  bytes image_bytes = 1;
-}
-
-
-// Model information
-message ModelInfo {
-  // Task identifier (e.g. "image_generation", "image_embedding", "object_detection" etc)
-  string task = 1;
-  // Model identifier (e.g. "openai/clip-vit-large-patch14")
-  string name = 2;
-}
-
-// ModelList response
-message ModelListResponse {
-  repeated ModelInfo models = 1;
-}
-
-// Model information request
-message ModelInfoRequest {
-  ModelInfo request = 1;
-}
-
-// Model information response
-// Note (spillai): We cloudpickle `ModelSpec` and return the bytes.
-message ModelInfoResponse {
-  bytes response_bytes = 1;
-}
-
-// Inference request specification
-// Note (spillai): We cloudpickle the input dictionary values (image, etc)
-// and do not support any other serialization methods.
-message InferenceRequest {
-  ModelInfo model = 1;
-  map <string, bytes> inputs = 2;
-}
-
-// Inference response specification
-// Note (spillai): We serialize all the outputs with cloudpickle
-// and do not support any other serialization methods.
-message InferenceResponse {
-  bytes response_bytes = 1;
-}
 
 
 // Ping / healthcheck response
@@ -87,13 +36,13 @@ service InferenceService {
   rpc GetServiceInfo(google.protobuf.Empty) returns (ServiceInfoResponse) {}
 
   // List available models from Hugging Face Hub
-  rpc ListModels(google.protobuf.Empty) returns (ModelListResponse) {};
+  rpc ListModels(google.protobuf.Empty) returns (GenericResponse) {};
 
   // Get model information from the deployment
-  rpc GetModelInfo(ModelInfoRequest) returns (ModelInfoResponse) {};
+  rpc GetModelInfo(google.protobuf.StringValue) returns (GenericResponse) {};
 
   // Run the inference request
-  rpc Run(InferenceRequest) returns (InferenceResponse) {}
+  rpc Run(GenericRequest) returns (GenericResponse) {}
 
   // Dispatch a training request
   rpc Train(GenericRequest) returns (GenericResponse) {}
@@ -107,11 +56,4 @@ service InferenceService {
   // Unregister shared memory
   rpc UnregisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
 
-  // Load model from Hugging Face Hub
-  // TODO (spillai): To be implemented later (for power-users)
-  // rpc InitModel(InitModelRequest) returns (InitModelResponse) {}
-
-  // Delete model from deployment
-  // TODO (spillai): To be implemented later (for power-users)
-  // rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse) {}
 }

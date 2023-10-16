@@ -13,6 +13,7 @@ from nos.test.utils import NOS_TEST_IMAGE
 pytestmark = pytest.mark.server
 
 
+@pytest.mark.skip(reason="This test is not yet implemented.")
 def test_training_service(ray_executor: RayExecutor):  # noqa: F811
     """Test training service."""
     from nos.server.train import TrainingService

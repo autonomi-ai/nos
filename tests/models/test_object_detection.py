@@ -33,7 +33,6 @@ from loguru import logger
 from PIL import Image
 
 from nos import hub
-from nos.common import TaskType
 from nos.models import YOLOX, FasterRCNN
 from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup, skip_if_no_torch_cuda
 
@@ -119,8 +118,8 @@ def _test_predict(_model, img_size):
 @pytest.mark.parametrize("img_size", [(640, 480), (1280, 720), (2880, 1620)])
 def test_object_detection_predict_one(model_name, img_size):
     logger.debug(f"Testing model: {model_name}")
-    spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
-    model = hub.load(spec.name, task=spec.task)
+    spec = hub.load_spec(model_name)
+    model = hub.load(spec.name)
     logger.info("Test prediction with model: {}".format(model))
     _test_predict(model, img_size)
 
@@ -131,8 +130,8 @@ def test_object_detection_predict_one(model_name, img_size):
 def test_object_detection_predict_all(model_name):
     """ "Benchmark load/infer all object detection models."""
     logger.debug(f"Testing model: {model_name}")
-    spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
-    model = hub.load(spec.name, task=spec.task)
+    spec = hub.load_spec(model_name)
+    model = hub.load(spec.name)
     _test_predict(model)
 
 
@@ -149,7 +148,7 @@ def test_object_detection_predict_benchmark(model_name, img_size):
     img = img.resize(img_size)
 
     logger.debug(f"Benchmarking model: {model_name}, img_size: {img_size}")
-    spec = hub.load_spec(model_name, task=TaskType.OBJECT_DETECTION_2D)
-    model = hub.load(spec.name, task=spec.task)
+    spec = hub.load_spec(model_name)
+    model = hub.load(spec.name)
     for _ in tqdm(duration=10, unit="images", desc=f"{model_name}"):
         model(img)

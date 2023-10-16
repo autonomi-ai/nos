@@ -6,17 +6,15 @@ from nos.test.utils import NOS_TEST_IMAGE
 
 
 data = {
-    "task": "custom",
-    "model_name": "noop/process-images",
+    "model_id": "noop/process-images",
     "inputs": {
         "images": Image.open(NOS_TEST_IMAGE),
     },
 }
-
 encoded_data = encode_dict(data)
 
 
-class NosRestUser(HttpUser):
+class InferenceServiceUser(HttpUser):
     @task
     def embed(self):
         self.client.post(

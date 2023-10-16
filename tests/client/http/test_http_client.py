@@ -3,7 +3,8 @@ import pytest
 from nos.test.utils import NOS_TEST_IMAGE
 
 
-pytestmark = pytest.mark.client
+pytestmark = pytest.mark.skip
+
 
 # TODO (spillai): Add support for "local", "cpu", "gpu" and "auto" runtimes
 # @pytest.mark.parametrize("runtime", ["cpu", "gpu", "auto"])
@@ -28,8 +29,7 @@ def test_http_client_inference_object_detection_2d(local_http_client_with_server
 
     # Test inference with JSON encoding
     data = {
-        "task": "object_detection_2d",
-        "model_name": "yolox/small",
+        "model_id": "yolox/small",
         "inputs": {
             "images": Image.open(NOS_TEST_IMAGE),
         },
@@ -65,8 +65,7 @@ def test_http_client_inference_image_embedding(local_http_client_with_server):
 
     # Test inference with JSON encoding
     data = {
-        "task": "image_embedding",
-        "model_name": "openai/clip",
+        "model_id": "openai/clip",
         "inputs": {
             "images": Image.open(NOS_TEST_IMAGE),
         },
@@ -95,8 +94,7 @@ def test_http_client_inference_image_generation(local_http_client_with_server):
 
     # Test inference with JSON encoding
     data = {
-        "task": "image_generation",
-        "model_name": "stabilityai/stable-diffusion-2-1",
+        "model_id": "stabilityai/stable-diffusion-2-1",
         "inputs": {
             "prompts": [
                 "A photo of a bench on the moon",

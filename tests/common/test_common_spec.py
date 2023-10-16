@@ -1,4 +1,7 @@
+from collections import namedtuple
+from contextlib import contextmanager
 from itertools import product
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pytest
@@ -7,8 +10,15 @@ from pydantic import ValidationError
 
 from nos import hub
 from nos.common.spec import FunctionSignature, ModelSpec
-from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT
+from nos.logging import logger
+
+
+@contextmanager
+def suppress_logger(name: str = __name__):
+    logger.disable(name)
+    yield
+    logger.enable(name)
 
 
 EMBEDDING_SHAPES = [
@@ -66,11 +76,14 @@ def test_common_embedding_spec_valid_shapes():
         assert spec is not None
 
 
+SigIO = namedtuple("SignatureInputOuput", ["input_annotations", "output_annotations"])
+
+
 @pytest.fixture
 def img2vec_signature():
-    yield FunctionSignature(
-        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
-        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
+    yield SigIO(
+        input_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        output_annotations={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
 
 
@@ -81,6 +94,10 @@ def test_common_model_spec(img2vec_signature):
     import numpy as np
     from PIL import Image
 
+    from nos.protoc import import_module
+
+    nos_service_pb2 = import_module("nos_service_pb2")
+
     class TestImg2VecModel:
         def __init__(self, model_name: str = "openai/clip"):
             self.model = hub.load(model_name)
@@ -89,46 +106,54 @@ def test_common_model_spec(img2vec_signature):
             embedding = self.model(img)
             return embedding
 
+    # Model spec without any annotations
     spec = ModelSpec(
-        name="openai/clip",
-        task=TaskType.IMAGE_EMBEDDING,
+        "openai/clip",
         signature=FunctionSignature(
-            inputs=img2vec_signature.inputs,
-            outputs=img2vec_signature.outputs,
             func_or_cls=TestImg2VecModel,
-            init_args=("openai/clip",),
-            init_kwargs={},
-            method_name="__call__",
+            method="__call__",
         ),
     )
     assert spec is not None
 
+    # Model spec with input / output annotations
+    spec = ModelSpec(
+        "openai/clip",
+        signature=FunctionSignature(
+            func_or_cls=TestImg2VecModel,
+            method="__call__",
+            input_annotations=img2vec_signature.input_annotations,
+            output_annotations=img2vec_signature.output_annotations,
+        ),
+    )
+    assert spec is not None
+    assert spec.default_signature.func_or_cls is not None
+    assert spec.default_signature.parameters is not None
+    assert spec.default_signature.return_annotation is not None
+
     # Test serialization
     minfo = spec._to_proto()
-    spec_ = ModelSpec._from_proto(minfo)
-    assert spec_.signature.inputs is not None
-    assert spec_.signature.outputs is not None
-    assert spec_.signature.func_or_cls is not None
+    assert minfo is not None
+    assert isinstance(minfo, nos_service_pb2.GenericResponse)
 
-    # Test serialization (public)
-    minfo = spec._to_proto(public=True)
     spec_ = ModelSpec._from_proto(minfo)
-    assert spec_.signature.inputs is not None
-    assert spec_.signature.outputs is not None
-    assert spec_.signature.func_or_cls is None
+    assert spec_ is not None
+    assert isinstance(spec_, ModelSpec)
+    assert spec_.default_signature.parameters is not None
+    assert spec_.default_signature.return_annotation is not None
+    assert (
+        spec_.default_signature.func_or_cls is None
+    ), "func_or_cls must be None since we do not allow serialization of custom models that have server-side dependencies"
 
     # Create a model spec with a wrong method name
-    with pytest.raises(ValidationError):
+    with pytest.raises((ValueError, ValidationError)):
         spec = ModelSpec(
-            name="openai/clip",
-            task=TaskType.IMAGE_EMBEDDING,
+            "openai/clip",
             signature=FunctionSignature(
-                inputs=img2vec_signature.inputs,
-                outputs=img2vec_signature.outputs,
-                func_or_cls=TestImg2VecModel,
-                init_args=("openai/clip",),
-                init_kwargs={},
-                method_name="predict",
+                TestImg2VecModel,
+                method="predict",
+                input_annotations=img2vec_signature.input_annotations,
+                output_annotations=img2vec_signature.output_annotations,
             ),
         )
         assert spec is not None
@@ -137,41 +162,73 @@ def test_common_model_spec(img2vec_signature):
     for name in ["openai&clip", "openai\\clip", "openai:clip"]:
         with pytest.raises(ValueError):
             ModelSpec(
-                name=name,
-                task=TaskType.IMAGE_EMBEDDING,
+                name,
                 signature=FunctionSignature(
-                    inputs=img2vec_signature.inputs,
-                    outputs=img2vec_signature.outputs,
-                    func_or_cls=TestImg2VecModel,
+                    TestImg2VecModel,
+                    method="__call__",
+                    input_annotations=img2vec_signature.input_annotations,
+                    output_annotations=img2vec_signature.output_annotations,
                     init_args=("openai/clip",),
                     init_kwargs={},
-                    method_name="__call__",
                 ),
             )
 
 
 def test_common_model_spec_variations():
-    # Create signatures for all tasks (without func_or_cls, init_args, init_kwargs, method_name)
+    # Create signatures for all tasks (without func_or_cls, init_args, init_kwargs, method)
     ImageSpec(shape=(None, None, 3), dtype="uint8")
+
+    # Create custom class to test function signatures with different input/outputs
+    class Custom:
+        def embed_images(self, images: Image.Image) -> np.ndarray:
+            return np.random.rand(512)
+
+        def embed_images_dict(self, images: List[Image.Image]) -> Dict[str, np.ndarray]:
+            return {"embedding": np.random.rand(512)}
+
+        def embed_texts(self, texts: str) -> np.ndarray:
+            return np.random.rand(512)
+
+        def embed_texts_dict(self, texts: List[str]) -> Dict[str, np.ndarray]:
+            return {"embedding": np.random.rand(512)}
+
+        def img2bbox_tuple(self, images: Image.Image) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+            return np.random.rand(512), np.random.rand(512), np.random.rand(512)
+
+        def img2bbox_dict(self, images: List[Image.Image]) -> Dict[str, np.ndarray]:
+            return {
+                "scores": np.random.rand(512),
+                "labels": np.random.rand(512),
+                "bboxes": np.random.rand(512),
+            }
+
+        def txt2img(self, texts: str) -> Image.Image:
+            return Image.fromarray(np.random.rand(224, 224, 3).astype(np.uint8))
 
     # Image embedding (img2vec)
     img2vec_signature = FunctionSignature(
-        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
-        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
+        Custom,
+        method="embed_images",
+        input_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        output_annotations={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
     assert img2vec_signature is not None
 
     # Text embedding (txt2vec)
     txt2vec_signature = FunctionSignature(
-        inputs={"texts": str},
-        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
+        Custom,
+        method="embed_texts",
+        input_annotations={"texts": str},
+        output_annotations={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
     assert txt2vec_signature is not None
 
     # Object detection (img2bbox)
     img2bbox_signature = FunctionSignature(
-        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
-        outputs={
+        Custom,
+        method="img2bbox_dict",
+        input_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        output_annotations={
             "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
             "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
             "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
@@ -181,13 +238,16 @@ def test_common_model_spec_variations():
 
     # Image generation (txt2img)
     txt2img_signature = FunctionSignature(
-        inputs={"texts": Batch[str]},
-        outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        Custom,
+        method="txt2img",
+        input_annotations={"texts": Batch[str]},
+        output_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )
     assert txt2img_signature is not None
 
 
 def check_object_type(v):
+    """Check if the object is of the correct type."""
     if isinstance(v, list):
         for item in v:
             check_object_type(item)
@@ -202,27 +262,31 @@ def check_object_type(v):
         assert hasattr(spec, "shape")
         assert hasattr(spec, "dtype")
 
+    if v.parameter is not None:
+        assert v.parameter_name() is not None
+        assert v.parameter_annotation() is not None
+
 
 def test_common_spec_signature():
     """Test function signature."""
-    from loguru import logger
 
-    for spec in hub.list():
+    for model_id in hub.list():
+        spec: ModelSpec = hub.load_spec(model_id)
         logger.debug(f"{spec.name}, {spec.task}")
         assert spec is not None
-        assert spec.name == spec.name
-        assert spec.task == spec.task
-        assert spec.signature.inputs is not None
-        assert spec.signature.outputs is not None
+        assert spec.name
+        assert spec.task
+        assert spec.default_signature.input_annotations is not None
+        assert spec.default_signature.output_annotations is not None
 
-        assert isinstance(spec.signature.inputs, dict)
-        assert isinstance(spec.signature.outputs, dict)
+        assert isinstance(spec.default_signature.input_annotations, dict)
+        assert isinstance(spec.default_signature.output_annotations, dict)
         logger.debug(f"{spec.name}, {spec.task}")
 
-        for k, v in spec.signature.get_inputs_spec().items():
+        for k, v in spec.default_signature.get_inputs_spec().items():
             logger.debug(f"input: {k}, {v}")
             check_object_type(v)
-        for k, v in spec.signature.get_outputs_spec().items():
+        for k, v in spec.default_signature.get_outputs_spec().items():
             logger.debug(f"output: {k}, {v}")
             check_object_type(v)
 
@@ -236,7 +300,18 @@ def test_common_spec_from_custom_model():
 
         def __init__(self, model_name: str = "custom/model"):
             """Initialize the model."""
+            from nos.logging import logger
+
             self.model_name = model_name
+            logger.debug(f"Model {model_name} initialized.")
+
+        def forward1(self):  # noqa: ANN001
+            """Forward pass."""
+            return True
+
+        def forward2(self, images: Union[Image.Image, np.ndarray]) -> int:
+            """Forward pass."""
+            return images
 
         def __call__(
             self, images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]], n: int = 1
@@ -246,13 +321,40 @@ def test_common_spec_from_custom_model():
             return list(range(n * len(images)))
 
     # Get the model spec for remote execution
-    spec = ModelSpec.from_cls(CustomModel, init_args=(), init_kwargs={"model_name": "custom/model"})
-    assert spec is not None
-    assert isinstance(spec, ModelSpec)
+    CustomModel = ModelSpec.from_cls(CustomModel)
+    assert CustomModel is not None
+    assert isinstance(CustomModel, ModelSpec)
+
+    # Get the default method
+    method: str = CustomModel.default_method
+    assert method is not None
+    assert method == "__call__", "Default method must be __call__"
+
+    # Get the function signature
+    sig: FunctionSignature = CustomModel.default_signature
+    assert sig is not None
+
+    # Set the default method to be forward1
+    CustomModel.set_default_method("forward1")
+    # Check if the default method is set correctly
+    # and that the cached_properties are re-computed
+    assert CustomModel.default_method == "forward1"
+    assert CustomModel.default_signature.method == "forward1"
+
+    # Get model task
+    # Note (spillai): This should raise a warning and we want to suppress it
+    with suppress_logger("nos.common.spec"):
+        task = CustomModel.task()
+        assert task is None, "Custom models should not have a task unless explicitly added"
+
+    # Get model spec metadata
+    # Note (spillai): This should raise a warning and we want to suppress it
+    with suppress_logger("nos.common.spec"):
+        metadata = CustomModel.metadata()
+        assert metadata is None, "Custom models should not have metadata unless explicitly added"
 
     # Check if the wrapped model can be loaded (directly in the same process)
-    sig: FunctionSignature = spec.signature
-    model = sig.func_or_cls(*sig.init_args, **sig.init_kwargs)
+    model = CustomModel(model_name="custom/model")
     assert model is not None
 
     # Check if the model can be called
@@ -267,3 +369,10 @@ def test_common_spec_from_custom_model():
     # Check if the model can be called with positional arguments
     result = model(images, 2)
     assert result == [0, 1]
+
+    # Check if the model methods can be called
+    result = model.forward1()
+    assert result is True
+
+    result = model.forward2(images)
+    assert result is images

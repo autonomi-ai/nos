@@ -11,8 +11,7 @@ def test_hub_mmlab_hub_config():
     assert len(hub) >= 0
 
     # Test singleton
-    hub_ = MMLabHub(namespace="openmmlab/mmdetection")
-    assert hub is hub_
+    assert hub is MMLabHub(namespace="openmmlab/mmdetection")
 
     for key in hub:
         # Get item by key

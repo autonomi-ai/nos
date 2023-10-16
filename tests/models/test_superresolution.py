@@ -6,7 +6,6 @@ from loguru import logger
 from PIL import Image
 
 from nos import hub
-from nos.common import TaskType
 from nos.models import SuperResolution
 from nos.models.super_resolution import SuperResolutionLDM, SuperResolutionSwin2SR
 from nos.test.benchmark import run_benchmark
@@ -43,8 +42,8 @@ def _test_predict(_model):
 def test_superres_predict_one(model_name):
     """ "Load/infer first depth estimation model."""
     logger.debug(f"Testing model: {model_name}")
-    spec = hub.load_spec(model_name, task=TaskType.IMAGE_SUPER_RESOLUTION)
-    model = hub.load(spec.name, task=spec.task)
+    spec = hub.load_spec(model_name)
+    model = hub.load(spec.name)
     _test_predict(model)
 
 
@@ -54,8 +53,8 @@ def test_superres_predict_one(model_name):
 def test_superres_predict_all(model_name):
     """ "Benchmark load/infer all depth estimation models."""
     logger.debug(f"Testing model: {model_name}")
-    spec = hub.load_spec(model_name, task=TaskType.IMAGE_SUPER_RESOLUTION)
-    model = hub.load(spec.name, task=spec.task)
+    spec = hub.load_spec(model_name)
+    model = hub.load(spec.name)
     _test_predict(model)
 
 
@@ -70,8 +69,8 @@ def test_superres_predict_benchmark(model_name, img_size):
     img = img.resize(img_size)
 
     logger.debug(f"Benchmarking model: {model_name}, img_size: {img_size}")
-    spec = hub.load_spec(model_name, task=TaskType.IMAGE_SUPER_RESOLUTION)
-    model = hub.load(spec.name, task=spec.task)
+    spec = hub.load_spec(model_name)
+    model = hub.load(spec.name)
     time_ms = run_benchmark(
         lambda: model(img),
         num_iters=100,

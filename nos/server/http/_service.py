@@ -4,7 +4,6 @@ from fastapi import Depends, FastAPI, status
 from fastapi.responses import JSONResponse
 
 from nos.client import DEFAULT_GRPC_PORT, Client
-from nos.common import TaskType
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -18,7 +17,7 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
 
 @dataclass
-class NosAPI:
+class InferenceService:
     """HTTP server application for NOS API."""
 
     version: str = "v1"
@@ -56,7 +55,7 @@ class NosAPI:
 
 
 def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = False) -> FastAPI:
-    nos_app = NosAPI(version=version, grpc_port=grpc_port, debug=debug)
+    nos_app = InferenceService(version=version, grpc_port=grpc_port, debug=debug)
     app = nos_app.app
 
     def get_client() -> Client:
@@ -78,8 +77,7 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
         "http://localhost:8000/v1/infer" \
         -H "Content-Type: appication/json" \
         -d '{
-            "task": "object_detection_2d",
-            "model_name": "yolox/small",
+            "model_id": "yolox/small",
             "inputs": {
                 "images": ["data:image/jpeg;base64,..."],
             }
@@ -93,29 +91,20 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
         Returns:
             Inference response.
         """
-        # request = InferenceRequest(**request.dict())
         try:
-            task: TaskType = TaskType(request.task)
-        except KeyError:
-            logger.error(f"Task '{request.task}' not supported")
-            return JSONResponse(
-                content={"error": f"Task '{request.task}' not supported"}, status_code=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            model = client.Module(task=task, model_name=request.model_name)
+            model = client.Module(request.model_id)
         except Exception:
-            logger.error(f"Model '{request.model_name}' not supported")
+            logger.error(f"Model '{request.model_id}' not supported")
             return JSONResponse(
-                content={"error": f"Model '{request.model_name}' not supported"},
+                content={"error": f"Model '{request.model_id}' not supported"},
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         inputs = decode_dict(request.inputs)
         logger.debug(f"Decoded json dictionary [inputs={inputs}]")
-        logger.debug(f"Inference [task={task}, model_name={request.model_name}, keys={inputs.keys()}]")
+        logger.debug(f"Inference [model={request.model_id}, keys={inputs.keys()}]")
         response = model(**inputs)
-        logger.debug(f"Inference [task={task}, model_name={request.model_name}, response={response}]")
+        logger.debug(f"Inference [model={request.model_id}, response={response}]")
         return JSONResponse(content=encode_dict(response), status_code=status.HTTP_201_CREATED)
 
     return app

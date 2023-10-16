@@ -10,7 +10,7 @@ import os
 import time
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Optional
+from typing import List, Optional
 
 import psutil
 import ray
@@ -197,7 +197,7 @@ class RayJobExecutor(metaclass=SingletonMetaclass):
         logger.debug(f"Submitted job with id: {job_id}")
         return job_id
 
-    def list(self) -> str:
+    def list(self) -> List[str]:
         """List all jobs."""
         return self.client.list_jobs()
 

@@ -10,6 +10,7 @@ Usage:
 """
 import time
 from dataclasses import dataclass
+from typing import List
 
 import rich.console
 import rich.status
@@ -17,7 +18,6 @@ import rich.table
 import typer
 
 from nos.client import Client
-from nos.common import TaskType
 from nos.common.exceptions import NosClientException
 
 
@@ -49,7 +49,7 @@ def grpc_config(
 def _list_models(ctx: typer.Context):
     """List all gRPC deployments."""
     try:
-        models = ctx.obj.client.ListModels()
+        models: List[str] = ctx.obj.client.ListModels()
         console.print(models)
     except NosClientException as exc:
         console.print(f"[red] ✗ Failed to list models ({exc}).[/red]")
@@ -58,10 +58,10 @@ def _list_models(ctx: typer.Context):
 @predict_cli.command("img2vec", help="Encode image into an embedding.")
 def _predict_img2vec(
     ctx: typer.Context,
-    model_name: str = typer.Option(
+    model_id: str = typer.Option(
         "openai/clip-vit-base-patch32",
         "-m",
-        "--model-name",
+        "--model-id",
         help="Name of the model to use (e.g. openai/clip-vit-base-patch32).",
     ),
     filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
@@ -73,9 +73,7 @@ def _predict_img2vec(
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
         try:
             st = time.perf_counter()
-            response = ctx.obj.client.Run(
-                task=TaskType.IMAGE_EMBEDDING, model_name=model_name, inputs={"images": [img]}
-            )
+            response = ctx.obj.client.Run(model_id, inputs={"images": [img]})
             end = time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
@@ -88,10 +86,10 @@ def _predict_img2vec(
 @predict_cli.command("txt2vec", help="Generate an embedding from a text prompt.")
 def _predict_txt2vec(
     ctx: typer.Context,
-    model_name: str = typer.Option(
+    model_id: str = typer.Option(
         "openai/clip-vit-base-patch32",
         "-m",
-        "--model-name",
+        "--model-id",
         help="Name of the model to use (e.g. openai/clip-vit-base-patch32).",
     ),
     prompt: str = typer.Option(
@@ -101,9 +99,7 @@ def _predict_txt2vec(
     with rich.status.Status("[bold green] Generating embedding ...[/bold green]"):
         try:
             st = time.perf_counter()
-            response = ctx.obj.client.Run(
-                task=TaskType.TEXT_EMBEDDING, model_name=model_name, inputs={"texts": [prompt]}
-            )
+            response = ctx.obj.client.Run(model_id, inputs={"texts": [prompt]})
             end = time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
@@ -116,10 +112,10 @@ def _predict_txt2vec(
 @predict_cli.command("txt2img", help="Generate an image from a text prompt.")
 def _predict_txt2img(
     ctx: typer.Context,
-    model_name: str = typer.Option(
+    model_id: str = typer.Option(
         "stabilityai/stable-diffusion-2",
         "-m",
-        "--model-name",
+        "--model-id",
         help="Name of the model to use (e.g. stabilityai/stable-diffusion-2).",
     ),
     prompt: str = typer.Option(
@@ -132,8 +128,7 @@ def _predict_txt2img(
         try:
             st = time.perf_counter()
             response = ctx.obj.client.Run(
-                task=TaskType.IMAGE_GENERATION,
-                model_name=model_name,
+                model_id,
                 inputs={
                     "prompts": [prompt],
                     "height": img_size,
@@ -153,10 +148,10 @@ def _predict_txt2img(
 @predict_cli.command("img2bbox", help="Predict bounding boxes from image.")
 def _predict_img2bbox(
     ctx: typer.Context,
-    model_name: str = typer.Option(
+    model_id: str = typer.Option(
         "torchvision/fasterrcnn-mobilenet-v3-large-320-fpn",
         "-m",
-        "--model-name",
+        "--model-id",
         help="Name of the model to use (e.g. torchvision/fasterrcnn-mobilenet-v3-large-320-fpn).",
     ),
     filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
@@ -167,9 +162,7 @@ def _predict_img2bbox(
     with rich.status.Status("[bold green] Predict bounding boxes ...[/bold green]"):
         try:
             st = time.perf_counter()
-            response = ctx.obj.client.Run(
-                task=TaskType.OBJECT_DETECTION_2D, model_name=model_name, inputs={"images": [img]}
-            )
+            response = ctx.obj.client.Run(model_id, inputs={"images": [img]})
             scores, labels, bboxes = response["bboxes"], response["scores"], response["labels"]
             end = time.perf_counter()
             console.print(
@@ -183,10 +176,10 @@ def _predict_img2bbox(
 @predict_cli.command("segmentation", help="Propose a zero-shot segmentation for this image.")
 def _predict_segmentation(
     ctx: typer.Context,
-    model_name: str = typer.Option(
+    model_id: str = typer.Option(
         "facebook/sam-vit-large",
         "-m",
-        "--model-name",
+        "--model-id",
         help="Name of the model to use (e.g. facebook/sam-vit-large).",
     ),
     filename: str = typer.Option(..., "-i", "--input", help="Input image filename."),
@@ -197,9 +190,7 @@ def _predict_segmentation(
     with rich.status.Status("[bold green] Predict segmentations ...[/bold green]"):
         try:
             st = time.perf_counter()
-            response = ctx.obj.client.Run(
-                task=TaskType.IMAGE_SEGMENTATION_2D, model_name=model_name, inputs={"images": [img]}
-            )
+            response = ctx.obj.client.Run(model_id, inputs={"images": [img]})
             time.perf_counter()
         except NosClientException as exc:
             console.print(f"[red] ✗ Failed to predict segmentations. [/red]\n[bold red]{exc}[/bold red]")

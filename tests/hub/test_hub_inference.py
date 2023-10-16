@@ -1,3 +1,5 @@
+from typing import List
+
 from loguru import logger
 
 from nos import hub
@@ -6,19 +8,16 @@ from nos.test.utils import skip_if_no_torch_cuda
 
 
 def hub_image_models():
-    models = hub.list()
+    models: List[str] = hub.list()
     assert len(models) > 0
-    return [
-        spec
-        for spec in models
-        if spec.task
-        in (
+    for model_id in models:
+        spec = hub.load_spec(model_id)
+        if spec.task in (
             TaskType.IMAGE_EMBEDDING,
             TaskType.OBJECT_DETECTION_2D,
             TaskType.DEPTH_ESTIMATION_2D,
-        )
-        and not spec.name.endswith("-trt")
-    ]
+        ):
+            yield spec
 
 
 @skip_if_no_torch_cuda
@@ -44,11 +43,11 @@ def test_hub_batched_image_inference():
     ]
 
     for spec in hub_image_models():
-        logger.debug(f"Testing model [name={spec.name}, task={spec.task}]")
+        logger.debug(f"Testing model [id={spec.id}, task={spec.task}]")
 
         # Run inference for each model (image-based models only)
-        model = hub.load(spec.name, spec.task)
-        predict = getattr(model, spec.signature.method_name)
+        model = hub.load(spec.id)
+        predict = getattr(model, spec.default_signature.method)
 
         # Check if the model supports batched inference
         for input_type, images in image_batch_types:
@@ -60,7 +59,7 @@ def test_hub_batched_image_inference():
 
                 traceback.print_exc()
                 raise RuntimeError(
-                    f"Model [name={spec.name}, task={spec.task}] does not support batched inference for input type '{input_type}'"
+                    f"Model [id={spec.id}, task={spec.task}] does not support batched inference for input type '{input_type}'"
                 )
 
         del model

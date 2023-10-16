@@ -1,10 +1,9 @@
 import copy
 import inspect
-import json
 import re
-from dataclasses import asdict, field
+from dataclasses import InitVar, asdict, field
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union, get_args, get_origin
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union, get_args, get_origin
 
 from pydantic import validator
 from pydantic.dataclasses import dataclass
@@ -13,13 +12,9 @@ from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import NosInputValidationException
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
-from nos.constants import NOS_MODELS_DIR
 from nos.logging import logger
 from nos.protoc import import_module
 
-
-# TOFIX (spillai): Remove Any type, and explicitly define input/output types.
-FunctionSignatureType = Union[Type[int], Type[str], Type[float], Any]
 
 nos_service_pb2 = import_module("nos_service_pb2")
 
@@ -28,7 +23,8 @@ class ObjectTypeInfo:
     """Function signature information.
 
     Parameters:
-        annotated_type (Any): Annotated type.
+        annotation (Any): Annotation for an input/output.
+        parameter (inspect.Parameter): Parameter information (optional).
 
     Attributes:
         _is_batched (bool): Batched flag.
@@ -37,42 +33,61 @@ class ObjectTypeInfo:
         _base_spec (Any): Base type specification (None, ImageSpec, TensorSpec etc).
     """
 
-    def __init__(self, annotated_type: Any):
+    def __init__(self, annotation: Any, parameter: inspect.Parameter = None):
         """Initialize the function signature information."""
-        self._annotated_type = annotated_type
+        self.annotation = annotation
+        self.parameter = parameter
         try:
-            (annotated_cls,) = annotated_type.__args__
+            (annotated_cls,) = annotation.__args__
         except AttributeError:
-            annotated_cls = annotated_type
+            annotated_cls = annotation
 
         # Parse Batch annotation
         self._is_batched, self._batch_size = False, None
         if annotated_cls == Batch:
-            annotated_type, batch_size = annotated_type.__metadata__
+            annotation, batch_size = annotation.__metadata__
             self._is_batched, self._batch_size = True, batch_size
             try:
-                (annotated_cls,) = annotated_type.__args__
+                (annotated_cls,) = annotation.__args__
             except AttributeError:
-                annotated_cls = annotated_type
+                annotated_cls = annotation
 
         # Parse Tensor/type annotation
         if annotated_cls in (TensorT, ImageT):
-            object_type, object_spec = annotated_type.__metadata__
+            object_type, object_spec = annotation.__metadata__
         else:
             try:
-                (object_type,) = annotated_type.__metadata__
+                (object_type,) = annotation.__metadata__
             except AttributeError:
                 object_type = annotated_cls
             object_spec = None
 
+        # Parse the base type and spec
         self._base_type = object_type
         self._base_spec = object_spec
 
     def __repr__(self) -> str:
-        return (
+        """Return the function signature information representation."""
+        repr = (
             f"""{self.__class__.__name__}(is_batched={self._is_batched}, batch_size={self._batch_size}, """
             f"""base_type={self._base_type}, base_spec={self._base_spec})"""
         )
+        if self.parameter:
+            p_repr = f"pname={self.parameter}, ptype={self.parameter.annotation}, pdefault={self.parameter.default}"
+            repr = f"{repr}, {p_repr}"
+        return repr
+
+    def parameter_name(self) -> str:
+        """Return the parameter name."""
+        return self.parameter.name
+
+    def parameter_annotation(self) -> Any:
+        """Return the parameter annotation."""
+        return self.parameter.annotation
+
+    def parameter_default(self) -> Any:
+        """Return the parameter default."""
+        return self.parameter.default
 
     def is_batched(self) -> bool:
         """Return the `is_batched` flag.
@@ -109,12 +124,14 @@ class ObjectTypeInfo:
         return self._base_spec
 
 
-def parse_annotated_type(annotated_type: Any) -> Union[ObjectTypeInfo, List[ObjectTypeInfo]]:
-    """Parse annotated type."""
+def AnnotatedParameter(
+    annotation: Any, parameter: inspect.Parameter = None
+) -> Union[ObjectTypeInfo, List[ObjectTypeInfo]]:
+    """Annotate the parameter for inferring additional metdata."""
     # Union of annotated types are converted into set of annotated types.
-    if get_origin(annotated_type) == Union:
-        return [parse_annotated_type(t) for t in get_args(annotated_type)]
-    return ObjectTypeInfo(annotated_type)
+    if get_origin(annotation) == Union:
+        return [AnnotatedParameter(ann, parameter) for ann in get_args(annotation)]
+    return ObjectTypeInfo(annotation, parameter)
 
 
 @dataclass
@@ -123,36 +140,47 @@ class FunctionSignature:
     including `inputs`, `outputs`, `func_or_cls` to be executed,
     initialization `args`/`kwargs`."""
 
-    inputs: Dict[str, FunctionSignatureType]
-    """Mapping of input names to dtypes."""
-    outputs: Dict[str, FunctionSignatureType]
-    """Mapping of output names to dtypes."""
-
-    """The remaining private fields are used to instantiate a model and execute it."""
-    func_or_cls: Optional[Callable] = None
+    func_or_cls: Callable
     """Class instance."""
+    method: str
+    """Class method name. (e.g. forward, __call__ etc)"""
+
     init_args: Tuple[Any, ...] = field(default_factory=tuple)
     """Arguments to initialize the model instance."""
     init_kwargs: Dict[str, Any] = field(default_factory=dict)
     """Keyword arguments to initialize the model instance."""
-    method_name: str = None
-    """Class method name. (e.g. forward, __call__ etc)"""
+
+    parameters: Dict[str, Any] = field(default_factory=dict, init=False)
+    """Input function signature (as returned by inspect.signature)."""
+    return_annotation: Any = field(default_factory=inspect.Signature.empty, init=False)
+    """Output / return function signature (as returned by inspect.signature)."""
+
+    input_annotations: Dict[str, Any] = field(default_factory=dict)
+    """Mapping of input names to dtypes."""
+    output_annotations: Dict[str, Any] = field(default_factory=dict)
+    """Mapping of output names to dtypes."""
+
+    def __post_init__(self):
+        if not callable(self.func_or_cls):
+            raise ValueError(f"Invalid function/class provided, func_or_cls={self.func_or_cls}.")
+
+        if not self.method or not hasattr(self.func_or_cls, self.method):
+            raise ValueError(f"Invalid method name provided, method={self.method}.")
+
+        # Get the function signature
+        sig: Dict[str, inspect.Parameter] = inspect.signature(getattr(self.func_or_cls, self.method))
+
+        # Get the input/output annotations
+        self.parameters = sig.parameters
+        self.return_annotation = sig.return_annotation
+        logger.debug(f"Function signature [method={self.method}, sig={sig}].")
 
     def __repr__(self) -> str:
         """Return the function signature representation."""
-        inputs_str = "\n".join([f"{k}={v}" for k, v in self.inputs.items()])
-        outputs_str = "\n".join([f"{k}={v}" for k, v in self.outputs.items()])
-        return (
-            f"""FunctionSignature\n"""
-            f"""\tfunc_or_cls={self.func_or_cls}\n"""
-            f"""\tinit_args={self.init_args}, init_kwargs={self.init_kwargs}\n"""
-            f"""\tmethod_name={self.method_name}\n"""
-            f"""\tinputs={inputs_str}\n"""
-            f"""\toutputs={outputs_str}\n"""
-        )
+        return f"FunctionSignature({asdict(self)})"
 
     @staticmethod
-    def validate(inputs: Dict[str, Any], sig: Dict[str, FunctionSignatureType]) -> Dict[str, Any]:
+    def validate(inputs: Dict[str, Any], sig: Dict[str, Any]) -> Dict[str, Any]:
         """Validate the input dict against the defined signature (input or output)."""
         # TOFIX (spillai): This needs to be able to validate using args/kwargs instead
         if not set(inputs.keys()).issubset(set(sig.keys())):  # noqa: W503
@@ -164,12 +192,12 @@ class FunctionSignature:
 
     def _encode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Encode inputs based on defined signature."""
-        inputs = FunctionSignature.validate(inputs, self.inputs)
+        inputs = FunctionSignature.validate(inputs, self.parameters)
         return {k: dumps(v) for k, v in inputs.items()}
 
     def _decode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Decode inputs based on defined signature."""
-        inputs = FunctionSignature.validate(inputs, self.inputs)
+        inputs = FunctionSignature.validate(inputs, self.parameters)
         return {k: loads(v) for k, v in inputs.items()}
 
     def get_inputs_spec(self) -> Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]:
@@ -183,7 +211,9 @@ class FunctionSignature:
         Returns:
             Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]: Inputs spec.
         """
-        return {k: parse_annotated_type(v) for k, v in self.inputs.items()}
+        parameters = self.parameters.copy()
+        parameters.pop("self", None)
+        return {k: AnnotatedParameter(self.input_annotations.get(k, p.annotation), p) for k, p in parameters.items()}
 
     def get_outputs_spec(self) -> Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]:
         """Return the full output function signature specification.
@@ -191,7 +221,7 @@ class FunctionSignature:
         Returns:
             Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]: Outputs spec.
         """
-        return {k: parse_annotated_type(v) for k, v in self.outputs.items()}
+        return {k: AnnotatedParameter(ann) for k, ann in self.output_annotations.items()}
 
 
 @dataclass
@@ -279,6 +309,42 @@ class ModelResources:
         return memory
 
 
+class ModelSpecMetadataRegistry:
+    """Model specification registry."""
+
+    _instance: Optional["ModelSpecMetadataRegistry"] = None
+    """Singleton instance."""
+
+    _registry: Dict[str, "ModelSpecMetadata"] = {}
+    """Model specification metadata registry."""
+
+    @classmethod
+    def get(cls) -> "ModelSpecMetadataRegistry":
+        """Get the singleton instance."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def __contains__(self, model_id: Any) -> bool:
+        """Check if the model spec metadata is available."""
+        return model_id in self._registry
+
+    def __getitem__(self, model_id: Any) -> "ModelSpecMetadata":
+        """Load the model spec metadata."""
+        try:
+            return self._registry[model_id]
+        except KeyError:
+            raise KeyError(f"Unavailable model (id={model_id}).")
+
+    def __setitem__(self, model_id: Any, metadata: "ModelSpecMetadata"):
+        """Add the model spec metadata."""
+        self._registry[model_id] = metadata
+
+    def load(self, model_id: Any) -> "ModelSpec":
+        """Load the model spec metadata (identical to __getitem__)."""
+        return self[model_id]
+
+
 @dataclass
 class ModelSpecMetadata:
     """Model specification metadata.
@@ -286,141 +352,181 @@ class ModelSpecMetadata:
     The metadata contains the model profiles, metrics, etc.
     """
 
-    name: str
+    id: str
     """Model identifier."""
-    task: TaskType
+    method: str
+    """Model method name."""
+    task: TaskType = None
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
     resources: Dict[str, ModelResources] = field(default_factory=dict)
     """Model resource limits (device/host memory, etc)."""
     """Key is the runtime type (cpu, gpu, trt-runtime, etc)."""
 
     def __repr__(self) -> str:
-        return f"""ModelSpecMetadata(name={self.name}, task={self.task}, """ f"""resources={self.resources})"""
-
-    def to_json(self, filename: str) -> Dict[str, Any]:
-        """Convert the model spec to json."""
-        specd = asdict(self)
-        with open(filename, "w") as f:
-            json.dump(specd, f, indent=4)
-        return specd
-
-    @classmethod
-    def from_json(cls, filename: str) -> "ModelSpecMetadata":
-        """Convert the model spec from json."""
-        with open(filename, "r") as f:
-            specd = json.load(f)
-            return cls(**specd)
-
-
-def _metadata_path(spec: "ModelSpec") -> str:
-    """Return the metadata path for a model."""
-    return NOS_MODELS_DIR / f"metadata/{spec.id}/metadata.json"
+        return (
+            f"""ModelSpecMetadata(id={self.id}, task={self.task}, method={self.method}, resources={self.resources})"""
+        )
 
 
 @dataclass
 class ModelSpec:
     """Model specification for the registry.
 
-    The ModelSpec defines all the relevant information for
-    the compilation, deployment, and serving of a model.
+    ModelSpec captures all the relevant information for
+    the instantiation, runtime and execution of a model.
     """
 
-    name: str
+    id: str
     """Model identifier."""
-    task: TaskType
-    """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
-    signature: FunctionSignature = None
-    """Model function signature."""
+    signature: Dict[str, FunctionSignature] = field(default_factory=dict)
+    """Model function signatures to export (method -> FunctionSignature)."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
-    metadata_: ModelSpecMetadata = field(init=False, default=None)
-    """Model specification metadata. The contents of the metadata (profiles, metrics, etc)
-    are specified in a separate file."""
+    _metadata: InitVar[Dict[str, ModelSpecMetadata]] = None
+    """Model metadata (method -> ModelSpecMetadata)."""
 
-    def __post_init__(self):
-        """Post initialization."""
-        regex = re.compile(r"^[a-zA-Z0-9\/._-]+$")  # allow alphanumerics, `/`, `.`, `_`, and `-`
-        if not regex.match(self.name):
-            raise ValueError(
-                f"Invalid model name, name={self.name} can only contain alphanumerics characters, `/`, `.`, `_`, and `-`"
-            )
+    def __post_init__(self, _metadata: Dict[str, ModelSpecMetadata] = None):
+        self._metadata: Dict[str, ModelSpecMetadata] = _metadata
 
     def __repr__(self):
-        return f"""ModelSpec(name={self.name}, task={self.task})""" f"""\n    {self.signature}"""
+        return f"""ModelSpec(id={self.id}, methods=[{', '.join(list(self.signature))}], tasks=[{', '.join([str(self.task(m)) for m in self.signature])}])"""
 
-    @cached_property
-    def metadata(self) -> ModelSpecMetadata:
-        try:
-            path = _metadata_path(self)
-            if not path.exists():
-                raise FileNotFoundError(f"Model metadata not found. [path={path}]")
-            metadata = ModelSpecMetadata.from_json(str(path))
-            logger.info(f"Loaded model metadata [name={self.name}, path={path}, metadata={metadata}]")
-        except Exception:
-            metadata = None
-        return metadata
+    @validator("id", pre=True)
+    def _validate_id(cls, id: str) -> str:
+        """Validate the model identifier."""
+        regex = re.compile(r"^[a-zA-Z0-9\/._-]+$")  # allow alphanumerics, `/`, `.`, `_`, and `-`
+        if not regex.match(id):
+            raise ValueError(
+                f"Invalid model id, id={id} can only contain alphanumerics characters, `/`, `.`, `_`, and `-`"
+            )
+        return id
 
-    @staticmethod
-    def get_id(model_name: str, task: TaskType = None) -> str:
-        if task is None:
-            return model_name
-        return f"{task.value}/{model_name}"
-
-    @property
-    def id(self) -> str:
-        return self.get_id(self.name, self.task)
-
-    @validator("signature")
-    def _validate_signature(cls, sig: FunctionSignature, **kwargs: Dict[str, Any]) -> FunctionSignature:
-        """Validate the model signature.
+    @validator("signature", pre=True)
+    def _validate_signature(
+        cls, signature: Union[FunctionSignature, Dict[str, FunctionSignature]], **kwargs: Dict[str, Any]
+    ) -> Dict[str, FunctionSignature]:
+        """Validate the model signature / signatures.
 
         Checks that the model class `cls` has the function name attribute
         as defined in the signature `function_name`.
 
         Args:
-            sig (ModelSignature): Model signature.
+            signature (Union[FunctionSignature, Dict[str, FunctionSignature]]): Model signature.
             **kwargs: Keyword arguments.
         Returns:
-            FunctionSignature: Function signature.
+            Dict[str, FunctionSignature]: Model signature.
         """
-        if sig and sig.func_or_cls:
-            model_cls = sig.func_or_cls
-            if sig.method_name and not hasattr(model_cls, sig.method_name):
-                raise ValueError(f"Model class {model_cls} does not have function {sig.method_name}.")
-        return sig
+        if isinstance(signature, (list, tuple)):
+            raise TypeError(f"Invalid signature provided, signature={signature}.")
+        if isinstance(signature, FunctionSignature):
+            signature = {signature.method: signature}
+        for method, sig in signature.items():
+            if method != sig.method:
+                raise ValueError(f"Invalid method name provided, method={method}, sig.method={sig.method}.")
+            if sig and sig.func_or_cls:
+                model_cls = sig.func_or_cls
+                if sig.method and not hasattr(model_cls, sig.method):
+                    raise ValueError(f"Model class {model_cls} does not have function {sig.method}.")
+        return signature
 
-    def create(self, *args, **kwargs) -> Any:
-        """Create a model instance."""
-        return self.cls(*args, **kwargs)
+    @property
+    def name(self) -> str:
+        """Return the model name (for backwards compatibility)."""
+        return self.id
 
-    def _to_proto(self, public: bool = False) -> nos_service_pb2.ModelInfoResponse:
-        """Convert the model spec to proto."""
-        if public:
-            spec = copy.deepcopy(self)
-            spec.signature.func_or_cls = None
-            spec.signature.init_args = ()
-            spec.signature.init_kwargs = {}
-            spec.signature.method_name = None
-        else:
-            spec = self
-        return nos_service_pb2.ModelInfoResponse(
-            response_bytes=dumps(spec),
-        )
+    def task(self, method: str = None) -> TaskType:
+        """Return the task type for a given method (or defaults to default method)."""
+        if method is None:
+            method = self.default_method
+        try:
+            md = self.metadata(method)
+            return md.task
+        except Exception:
+            logger.debug(f"Model metadata not found, id={self.id}.")
+            return None
 
-    @staticmethod
-    def _from_proto(minfo: nos_service_pb2.ModelInfoResponse) -> "ModelSpec":
-        """Convert the model info response back to the spec."""
-        return loads(minfo.response_bytes)
+    def metadata(self, method: str = None) -> ModelSpecMetadata:
+        """Return the model spec metadata for a given method (or defaults to default method)."""
+        if method is None:
+            method = self.default_method
+        if self._metadata is None:
+            return None
+        try:
+            return self._metadata[method]
+        except KeyError:
+            logger.debug(f"Model metadata not found, id={self.id}.")
+            return None
+
+    @cached_property
+    def default_method(self) -> str:
+        """Return the default method name."""
+        assert len(self.signature) > 0, f"No default signature found, signature={self.signature}."
+        return list(self.signature.keys())[0]
+
+    @cached_property
+    def default_signature(self) -> FunctionSignature:
+        """Return the default function signature.
+
+        Returns:
+            FunctionSignature: Default function signature.
+        """
+        # Note (spillai): For now, we assume that the first
+        # signature is the default signature. In the `.from_cls()`
+        # method, we add the __call__ method as the first method
+        # for this exact reason.
+        return self.signature[self.default_method]
+
+    def set_default_method(self, method: str) -> None:
+        """Set the default method name."""
+        if method not in self.signature:
+            raise ValueError(f"Invalid method name provided, method={method}.")
+
+        signature = {}
+        signature[method] = self.signature.pop(method)
+        signature.update(self.signature)
+        # Update the signature
+        self.signature = signature
+        if self._metadata is not None:
+            metadata = {}
+            metadata[method] = self._metadata.pop(method)
+            metadata.update(self._metadata)
+            self._metadata = metadata
+        # Clear the cached properties to force re-computation
+        self.__dict__.pop("default_method", None)
+        self.__dict__.pop("default_signature", None)
+
+    def __call__(self, *init_args, **init_kwargs) -> Any:
+        """Create a model instance.
+
+        This method allows us to create a model instance directly
+        from the model spec. Let's consider the example below
+
+            ```
+            class CustomModel:
+                ...
+
+            CustomModel = ModelSpec.from_cls(CustomModel)
+            model = CustomModel(*init_args, **init_kwargs)
+            ```
+
+        Args:
+            *args: Positional arguments.
+            **kwargs: Keyword arguments.
+        Returns:
+            Any: Model instance.
+        """
+        sig: FunctionSignature = self.default_signature
+        return sig.func_or_cls(*init_args, **init_kwargs)
 
     @classmethod
     def from_cls(
-        cls, func_or_cls: Callable, method_name: str = "__call__", runtime_env: RuntimeEnv = None, **kwargs: Any
+        cls, func_or_cls: Callable, method: str = "__call__", runtime_env: RuntimeEnv = None, **kwargs: Any
     ) -> "ModelSpec":
         """Wrap custom models/classes into a nos-compatible model spec.
 
         Args:
             func_or_cls (Callable): Model function or class. For now, only classes are supported.
-            method_name (str): Method name to be executed.
+            method (str): Method name to be executed.
             runtime_env (RuntimeEnv): Runtime environment specification.
             **kwargs: Additional keyword arguments.
                 These include `init_args` and `init_kwargs` to initialize the model instance.
@@ -433,38 +539,65 @@ class ModelSpec:
             raise ValueError(f"Invalid class `{func_or_cls}` provided, needs to be a class object.")
 
         # Check if the cls has the method_name
-        if not hasattr(func_or_cls, method_name):
-            raise ValueError(f"Invalid method name `{method_name}` provided.")
+        if not hasattr(func_or_cls, method):
+            raise ValueError(f"Invalid method name `{method}` provided.")
 
-        # Get the function signature
-        sig = inspect.signature(getattr(func_or_cls, method_name))
-
-        # Get the positional arguments and their types
-        # Note: We skip the `self` argument
-        call_inputs = {
-            k: v.annotation for k, v in sig.parameters.items() if v.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD
-        }
-        call_inputs.pop("self", None)
-
-        # Get the return type
-        call_outputs = {"result": sig.return_annotation}
-
-        # Build the model spec from the function signature
         # TODO (spillai): Provide additional RayRuntimeEnvConfig as `config`
         # config = dict(setup_timeout_seconds=10 * 60, eager_install=True)
         if runtime_env:
             logger.debug(f"Using custom runtime_env [env={runtime_env}]")
+
+        # Inspect all the public methods of the class
+        # and expose them as model methods
+        ignore_methods = ["__init__", method]
+        all_methods = [m for m, _ in inspect.getmembers(func_or_cls, predicate=inspect.isfunction)]
+        methods = [m for m in all_methods if m not in ignore_methods]
+
+        # Note (spillai): See .default_signature property for why we add
+        # the __call__ method as the first method.
+        if method in all_methods:
+            methods.insert(0, method)  # first method is the default method
+        logger.debug(f"Registering methods [methods={methods}].")
+
+        # Add function signature for each method
+        model_id: str = func_or_cls.__name__
+        signature: Dict[str, FunctionSignature] = {}
+        metadata: Dict[str, ModelSpecMetadata] = {}
+        for method in methods:
+            # Add the function signature
+            sig = FunctionSignature(
+                func_or_cls,
+                method=method,
+            )
+            signature[method] = sig
+            metadata[method] = ModelSpecMetadata(model_id, method, task=None)
+            logger.debug(f"Added function signature [method={method}, signature={sig}].")
+
+        # Build the model spec from the function signature
         spec = cls(
-            name=func_or_cls.__name__,
-            task=TaskType.CUSTOM,
-            signature=FunctionSignature(
-                func_or_cls=func_or_cls,
-                init_args=kwargs.pop("init_args", ()),
-                init_kwargs=kwargs.pop("init_kwargs", {}),
-                method_name=method_name,
-                inputs=call_inputs,
-                outputs=call_outputs,
-            ),
+            model_id,
+            signature=signature,
+            metadata=metadata,
             runtime_env=runtime_env,
         )
         return spec
+
+    def _to_proto(self) -> nos_service_pb2.GenericResponse:
+        """Convert the model spec to proto."""
+        spec = copy.deepcopy(self)
+        # Note (spillai): We only serialize the input/output
+        # signatures and method of the spec. Notably, the
+        # `func_or_cls` attribute is not serialized to avoid
+        # the dependency on torch and other server-side dependencies.
+        for method in spec.signature:
+            spec.signature[method].func_or_cls = None
+            spec.signature[method].init_args = ()
+            spec.signature[method].init_kwargs = {}
+        return nos_service_pb2.GenericResponse(
+            response_bytes=dumps(spec),
+        )
+
+    @staticmethod
+    def _from_proto(minfo: nos_service_pb2.GenericResponse) -> "ModelSpec":
+        """Convert the generic response back to the spec."""
+        return loads(minfo.response_bytes)

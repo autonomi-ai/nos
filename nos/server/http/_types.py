@@ -1,12 +1,11 @@
 from typing import Any, Dict
 
-from pydantic import BaseModel
+from pydantic.dataclasses import dataclass
 
 
-class InferenceRequest(BaseModel):
-    task: str
-    """Task used for inference"""
-    model_name: str
+@dataclass
+class InferenceRequest:
+    model_id: str
     """Model identifier"""
     inputs: Dict[str, Any]
     """Input data for inference"""

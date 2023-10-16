@@ -52,13 +52,7 @@ ADD requirements requirements
 
 # Install torch (cpu/gpu) based on target
 RUN --mount=type=cache,target=/opt/conda/pkgs/ \
-  if [ "${TARGET}" = "cpu" ]; then \
-    echo "Building CPU version of torch"; \
-    mamba install -yv pytorch torchvision cpuonly -c pytorch; \
-  else \
-    echo "Building GPU version of torch"; \
-    mamba install -yv pytorch torchvision torchaudio pytorch-cuda=${CUDA_VERSION} -c pytorch -c nvidia; \
-  fi
+  CUDA_VERSION=${CUDA_VERSION} ./requirements/install_torch.${TARGET}.sh
 
 # Install client/server dependencies
 RUN --mount=type=cache,target=~/.cache/pip \

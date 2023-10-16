@@ -119,7 +119,7 @@ def pixeltable_integration(write_profile: bool = False):
     cl.drop_table("test_data", ignore_errors=True)
     cl.drop_table("test_prompts", ignore_errors=True)
 
-    PROMPTS = [["cat on a sofa"], ["astronaut on the moon, 4k, hdr"]]
+    PROMPTS = [["cat on a sofa", "blurry image"], ["astronaut on the moon, 4k, hdr", "low resolution"]]
     try:
         t = cl.get_table("test_data")
         prompts_t = cl.get_table("test_prompts")
@@ -132,7 +132,9 @@ def pixeltable_integration(write_profile: bool = False):
             extracted_frame_idx_col="frame_idx",
             extracted_fps=0,
         )
-        prompts_t = cl.create_table("test_prompts", [pt.Column("prompt", pt.StringType())])
+        prompts_t = cl.create_table(
+            "test_prompts", [pt.Column("prompt", pt.StringType()), pt.Column("neg_prompt", pt.StringType())]
+        )
         prompts_t.insert(PROMPTS)
 
     # Resized columns
@@ -185,21 +187,42 @@ def pixeltable_integration(write_profile: bool = False):
         logger.debug(info)
         timing_records.append(info)
 
-    # # SDv2
-    # H, W = 512, 512
-    # prompts_t[sdv21(prompts_t.prompt, 1, H, W)].show(1)  # load model
-    # with timer(f"sdv21_{W}x{H}", n=len(PROMPTS)) as info:
-    #     prompts_t.add_column(pt.Column("img_sdv21", computed_with=sdv21(prompts_t.prompt, 1, H, W), stored=True))
-    # logger.debug(info)
-    # timing_records.append(info)
+    # SDv2
+    H, W = 512, 512
+    prompts_t[sdv21(prompts_t.prompt, prompts_t.neg_prompt, 1, 50, 7.5, H, W, 1)].show(1)  # load model
+    with timer(f"sdv21_{W}x{H}", n=len(PROMPTS)) as info:
+        prompts_t.add_column(
+            pt.Column(
+                "img_sdv21",
+                computed_with=sdv21(
+                    prompts_t.prompt,
+                    prompts_t.neg_prompt,  # negative_prompts
+                    1,  # num_images
+                    50,  # num_inference_steps
+                    7.5,  # guidance_scale
+                    H,  # height
+                    W,  # width
+                    1,
+                ),  # seed
+                stored=True,
+            )
+        )
+    logger.debug(info)
+    timing_records.append(info)
 
-    # # SDXL
-    # H, W = 1024, 1024
-    # prompts_t[sdxl(prompts_t.prompt, 1, H, W)].show(1)  # load model
-    # with timer(f"sdxl_{W}x{H}", n=len(PROMPTS)) as info:
-    #     prompts_t.add_column(pt.Column("img_sdxl", computed_with=sdxl(prompts_t.prompt, 1, H, W), stored=True))
-    # logger.debug(info)
-    # timing_records.append(info)
+    # SDXL
+    H, W = 1024, 1024
+    prompts_t[sdxl(prompts_t.prompt, prompts_t.neg_prompt, 1, 50, 7.5, H, W, 1)].show(1)  # load model
+    with timer(f"sdxl_{W}x{H}", n=len(PROMPTS)) as info:
+        prompts_t.add_column(
+            pt.Column(
+                "img_sdxl",
+                computed_with=sdxl(prompts_t.prompt, prompts_t.neg_prompt, 1, 50, 7.5, H, W, 1),
+                stored=True,
+            )
+        )
+    logger.debug(info)
+    timing_records.append(info)
 
     timing_df = pd.DataFrame([r.to_dict() for r in timing_records], columns=["desc", "elapsed", "n"])
     timing_df = timing_df.assign(
