@@ -1,33 +1,35 @@
 ## Who is NOS for?
 If you've dug this far into the NOS docs (welcome!) you're probably interested in running/serving Pytorch models.
-Maybe you have experience with one of the following:
-- Running Pytorch models on AWS/GCP/Azure/on-prem with your own containers/depdency management, model versioning etc.
-- Using a deployment flow like Sagemaker
+you might have experience with one of the following:
+- Deploying to AWS/GCP/Azure/on-prem manually with your own Docker Containers, dependency management etc.
+- Using a deployment service like Sagemaker
 - Hitting an Inference API from OpenAI, Huggingface, Replicate etc.
-Each of the above trades off cost, iteration speed and flexibility. Inference APIs in particular have taken off as
-the preferred backend for hobbyist developers and enterprises alike that aren't interested in building out their own
-infra (even on railed flows like Sagemaker) to run Image Generation, ASR, Object Detection etc. Black-box inference
-APIs come with drawbacks, however:
-- Compute spending for each and every request even during prototyping, or falling back to a different execution
-flow with substantial gaps betwen dev and prod environments.
-- Limited flexibility with regards to model selection/performance optimization. Inference APIs are a fixed quantity.
-- Privacy concerns as user data must neccessarily go outside the wire for inferencing on vendor servers
+
+Each of the above trade off between cost, iteration speed and flexibility. Inference APIs in particular have taken 
+off for hobbyist developers and enterprises alike that aren't interested in building out their own infra to run Image 
+Generation, ASR, Object Detection etc. Black-box inference APIs come with drawbacks, however:
+- Developers are forced to choose between paying for each and every request even during prototyping, or falling back 
+to a different execution flow with substantial gaps between dev and prod environments.
+- They offer Limited flexibility with regards to model selection/performance optimization. Inference APIs are a fixed quantity.
+- They may raise privacy concerns as user data must go outside the wire for inferencing on vendor servers
 - Stability issues when using poorly maintained third party APIs
-We built NOS because we wanted an Inference Server combinging best practices in model compilation, scaling,
+
+We built NOS because we wanted an Inference Server combining best practices in model compilation, scaling,
 dependency management, containerization and cross-platform HW support to make local and on-prem development as easy
 as running a few lines of Python. NOS provides performance (particularly on multiple GPUs) well beyond eager mode
-Pytorch execuction.
+Pytorch execution.
 ## Model Containers
 Deep Learning Containers have been around for quite a while, and generally come in the form of a Docker Image
-pre-rolled with Pytorch/Nvidia dependencies alongside a variety of ML frameworks. More recently, toolchains like Cog
-have made wrapping individual models into containers quick and easy via a DSL, and we expect this trend to continue.
-That said, We believe a full-featured Inference Server should be able to do much more, including:
+pre-rolled with Framework/HW dependencies on top of a base linux build. More recently, toolchains like Cog
+have made wrapping individual model prediction interfaces into containers quick and easy via a DSL, and we expect 
+this trend to continue. That said, We believe a full-featured Inference Server should be able to do much more, including:
 - Serving multiple models dynamically from a single host, eliminating the need for cold starts as workloads change
-- scaling up and down according to inference traffic
-- taking full advantage of HW acceleration and memory optimization to eliminate memory traffic for larger input types
+- Scaling up and down according to inference traffic
+- Taking full advantage of HW acceleration and memory optimization to eliminate unnecessary copies for larger input types
  (images/videos)
 - Providing a superior developer experience with more error verbosity than 404s from a REST endpoint.
 The NOS server/client provide these out of the box with a minimum of installation headache.
+
 ## Model Compilation and Optimization
 Naive/unoptimized inference is fast becoming a non-starter due to rising workload costs. NOS aims to use platform
 specific toolchains like TensorRT alongside more agnostic frameworks like TorchFX across models to ensure fast inference
