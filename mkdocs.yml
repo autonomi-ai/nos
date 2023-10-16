@@ -46,8 +46,8 @@ nav:
     - nos.hub: docs/api/hub.md
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
-  # - 💻 CLI Reference :
-  #   - nos system: docs/cli/system.md
+  - 💻 CLI Reference:
+    - nos system: docs/cli/system.md
   #   - nos hub: docs/cli/hub.md
   #   - nos predict: docs/cli/predict.md
   #   - nos benchmark: docs/cli/benchmark.md
