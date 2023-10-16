@@ -1,10 +1,6 @@
 name: Generate / Deploy Docs
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "nos/version.py"
   release:
     types: [released]
 

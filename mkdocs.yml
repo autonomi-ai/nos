@@ -24,9 +24,9 @@ nav:
   - ⚡️ Concepts:
     - What is NOS?: docs/concepts/what-is-nos.md
     - Architecture: docs/concepts/architecture-overview.md
-    - Model-Definition with ModelSpec: docs/concepts/model-spec.md
-    - Resource-Aware Execution with ModelManager: docs/concepts/model-manager.md
-    - Accelerated Runtime with InferenceServiceRuntime: docs/concepts/inference-service-runtime.md
+    - Model Specification: docs/concepts/model-spec.md
+    - HW-aware Execution: docs/concepts/model-manager.md
+    - Runtime Environments: docs/concepts/runtime-environments.md
   - 🤖 Demos:
     - Gradio UI: docs/demos/gradio-ui.md
     - Discord Bot: docs/demos/discord-bot.md
@@ -46,12 +46,12 @@ nav:
     - nos.hub: docs/api/hub.md
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
-  - 💻 CLI Reference :
+  - 💻 CLI Reference:
     - nos system: docs/cli/system.md
-    - nos hub: docs/cli/hub.md
-    - nos predict: docs/cli/predict.md
-    - nos benchmark: docs/cli/benchmark.md
-    - nos docker: docs/cli/docker.md
+  #   - nos hub: docs/cli/hub.md
+  #   - nos predict: docs/cli/predict.md
+  #   - nos benchmark: docs/cli/benchmark.md
+  #   - nos docker: docs/cli/docker.md
   - 🔌 Integrations:
     - PixelTable: docs/integrations/pixeltable.md
     - SkyPilot: docs/integrations/skypilot.md
