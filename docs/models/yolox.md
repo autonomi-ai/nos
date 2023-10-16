@@ -32,8 +32,7 @@ def visualize_det2d(img: np.ndarray, bboxes: np.ndarray, labels: np.ndarray) -> 
 
 # Run YOLOX prediction on the image and get the prediction results as a dictionary.
 # predictions = {"bboxes", "scores", "labels"}.
-predictions = client.Run(TaskType.OBJECT_DETECTION_2D, "yolox/nano",
-                         inputs={"images": [img]})
+predictions = client.Run("yolox/nano", inputs={"images": [img]})
 for idx, (img, bboxes, scores, labels) in enumerate(zip([img], predictions["bboxes"], predictions["scores"], predictions["scores"])):
     display(Image.fromarray(visualize_det2d(img, bboxes, labels)))
 ```

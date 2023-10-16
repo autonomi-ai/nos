@@ -5,10 +5,10 @@ you might have experience with one of the following:
 - Using a deployment service like Sagemaker
 - Hitting an Inference API from OpenAI, Huggingface, Replicate etc.
 
-Each of the above trade off between cost, iteration speed and flexibility. Inference APIs in particular have taken 
-off for hobbyist developers and enterprises alike that aren't interested in building out their own infra to run Image 
+Each of the above trade off between cost, iteration speed and flexibility. Inference APIs in particular have taken
+off for hobbyist developers and enterprises alike that aren't interested in building out their own infra to run Image
 Generation, ASR, Object Detection etc. Black-box inference APIs come with drawbacks, however:
-- Developers are forced to choose between paying for each and every request even during prototyping, or falling back 
+- Developers are forced to choose between paying for each and every request even during prototyping, or falling back
 to a different execution flow with substantial gaps between dev and prod environments.
 - They offer Limited flexibility with regards to model selection/performance optimization. Inference APIs are a fixed quantity.
 - They may raise privacy concerns as user data must go outside the wire for inferencing on vendor servers
@@ -21,7 +21,7 @@ Pytorch execution.
 ## Model Containers
 Deep Learning Containers have been around for quite a while, and generally come in the form of a Docker Image
 pre-rolled with Framework/HW dependencies on top of a base linux build. More recently, toolchains like Cog
-have made wrapping individual model prediction interfaces into containers quick and easy via a DSL, and we expect 
+have made wrapping individual model prediction interfaces into containers quick and easy via a DSL, and we expect
 this trend to continue. That said, We believe a full-featured Inference Server should be able to do much more, including:
 - Serving multiple models dynamically from a single host, eliminating the need for cold starts as workloads change
 - Scaling up and down according to inference traffic

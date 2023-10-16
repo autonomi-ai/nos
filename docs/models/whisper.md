@@ -39,7 +39,7 @@ def download_youtube_url_and_transcribe(url):
     audio_data_base64 = base64.b64encode(audio_data).decode("utf-8")
 
     # run transcription
-    predictions = client.Run(TaskType.AUDIO_TRANSCRIPTION, "openai/whisper-tiny.en", inputs={"audio" : audio_data_base64})
+    predictions = client.Run("openai/whisper-tiny.en", inputs={"audio" : audio_data_base64})
     print(predictions["text"])
 
 youtube_url = "https://www.youtube.com/watch?v=EFfJEB1jkSo"

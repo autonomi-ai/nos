@@ -20,7 +20,7 @@ client.WaitForServer()
 client.IsHealthy()
 
 prompts = ["fox jumped over the moon", "fox jumped over the sun"]
-predictions = client.Run(TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2",
+predictions = client.Run("stabilityai/stable-diffusion-2",
                          inputs={"prompts": prompts, "width": 512, "height": 512, "num_images": 1})
 
 for prompt, image in zip(prompts, predictions["images"]):
