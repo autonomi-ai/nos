@@ -1,7 +1,3 @@
-## Architecture Overview
-
-![Unified NOS Inference Server](../assets/nos-3-in-1.png)
-
 ## Core Features
  - **Batteries-included:** Server-side inference with all the necessary batteries (model hub, batching/parallelization, fast I/O, model-caching, model resource management via ModelManager, model optimization via ModelSpec)
  - **Server-side inference without client-side bloat:** Multiple lightweight clients can leverage complex server-side inference workers without the bloat of GPU libraries, runtimes or 3rd-party libraries.
@@ -11,8 +7,6 @@
 ![Unified NOS Inference Server](./assets/arch-how-nos-works.png)
 
 ## Core Components
-
-![NOS Architecture](../assets/nos-arch-8-16.png)
 
  NOS is built to be modular and extensible. The core components of NOS are:
 
