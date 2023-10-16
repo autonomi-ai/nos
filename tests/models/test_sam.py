@@ -9,7 +9,6 @@ import pytest
 from PIL import Image
 
 from nos import hub
-from nos.common import TaskType
 from nos.logging import logger
 from nos.models import SAM
 from nos.test.utils import NOS_TEST_IMAGE, skip_if_no_torch_cuda
@@ -25,8 +24,8 @@ def test_sam(model_name, img_size):
     # NOTE: This will OOM on 2080 if anything else is running on card.
 
     logger.debug(f"Testing model: {model_name}")
-    spec = hub.load_spec(model_name, task=TaskType.IMAGE_SEGMENTATION_2D)
-    model = hub.load(spec.name, task=spec.task)
+    spec = hub.load_spec(model_name)
+    model = hub.load(spec.name)
     logger.info("Test prediction with model: {}".format(model))
 
     W, H = img_size

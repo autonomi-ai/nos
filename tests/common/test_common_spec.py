@@ -1,6 +1,8 @@
+import inspect
 from collections import namedtuple
 from contextlib import contextmanager
 from itertools import product
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pytest
@@ -75,14 +77,14 @@ def test_common_embedding_spec_valid_shapes():
         assert spec is not None
 
 
-SigIO = namedtuple("SignatureInputOuput", ["inputs", "outputs"])
+SigIO = namedtuple("SignatureInputOuput", ["input_annotations", "output_annotations"])
 
 
 @pytest.fixture
 def img2vec_signature():
     yield SigIO(
-        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
-        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
+        input_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        output_annotations={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
 
 
@@ -105,18 +107,30 @@ def test_common_model_spec(img2vec_signature):
             embedding = self.model(img)
             return embedding
 
+    # Model spec without any annotations
     spec = ModelSpec(
         "openai/clip",
         signature=FunctionSignature(
             func_or_cls=TestImg2VecModel,
-            inputs=img2vec_signature.inputs,
-            outputs=img2vec_signature.outputs,
-            init_args=("openai/clip",),
-            init_kwargs={},
             method="__call__",
         ),
     )
     assert spec is not None
+
+    # Model spec with input / output annotations
+    spec = ModelSpec(
+        "openai/clip",
+        signature=FunctionSignature(
+            func_or_cls=TestImg2VecModel,
+            method="__call__",
+            input_annotations=img2vec_signature.input_annotations,
+            output_annotations=img2vec_signature.output_annotations,
+        ),
+    )
+    assert spec is not None
+    assert spec.default_signature.func_or_cls is not None
+    assert spec.default_signature.parameters is not None
+    assert spec.default_signature.return_annotation is not None
 
     # Test serialization
     minfo = spec._to_proto()
@@ -124,23 +138,23 @@ def test_common_model_spec(img2vec_signature):
     assert isinstance(minfo, nos_service_pb2.GenericResponse)
 
     spec_ = ModelSpec._from_proto(minfo)
-    assert spec_.default_signature.inputs is not None
-    assert spec_.default_signature.outputs is not None
+    assert spec_ is not None
+    assert isinstance(spec_, ModelSpec)
+    assert spec_.default_signature.parameters is not None
+    assert spec_.default_signature.return_annotation is not None
     assert (
         spec_.default_signature.func_or_cls is None
     ), "func_or_cls must be None since we do not allow serialization of custom models that have server-side dependencies"
 
     # Create a model spec with a wrong method name
-    with pytest.raises(ValidationError):
+    with pytest.raises((ValueError, ValidationError)):
         spec = ModelSpec(
             "openai/clip",
             signature=FunctionSignature(
                 TestImg2VecModel,
-                inputs=img2vec_signature.inputs,
-                outputs=img2vec_signature.outputs,
-                init_args=("openai/clip",),
-                init_kwargs={},
                 method="predict",
+                input_annotations=img2vec_signature.input_annotations,
+                output_annotations=img2vec_signature.output_annotations,
             ),
         )
         assert spec is not None
@@ -152,11 +166,11 @@ def test_common_model_spec(img2vec_signature):
                 name,
                 signature=FunctionSignature(
                     TestImg2VecModel,
-                    inputs=img2vec_signature.inputs,
-                    outputs=img2vec_signature.outputs,
+                    method="__call__",
+                    input_annotations=img2vec_signature.input_annotations,
+                    output_annotations=img2vec_signature.output_annotations,
                     init_args=("openai/clip",),
                     init_kwargs={},
-                    method="__call__",
                 ),
             )
 
@@ -167,29 +181,55 @@ def test_common_model_spec_variations():
 
     # Create custom class to test function signatures with different input/outputs
     class Custom:
-        ...
+        def embed_images(self, images: Image.Image) -> np.ndarray:
+            return np.random.rand(512)
+
+        def embed_images_dict(self, images: List[Image.Image]) -> Dict[str, np.ndarray]:
+            return {"embedding": np.random.rand(512)}
+
+        def embed_texts(self, texts: str) -> np.ndarray:
+            return np.random.rand(512)
+
+        def embed_texts_dict(self, texts: List[str]) -> Dict[str, np.ndarray]:
+            return {"embedding": np.random.rand(512)}
+
+        def img2bbox_tuple(self, images: Image.Image) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+            return np.random.rand(512), np.random.rand(512), np.random.rand(512)
+
+        def img2bbox_dict(self, images: List[Image.Image]) -> Dict[str, np.ndarray]:
+            return {
+                "scores": np.random.rand(512),
+                "labels": np.random.rand(512),
+                "bboxes": np.random.rand(512),
+            }
+
+        def txt2img(self, texts: str) -> Image.Image:
+            return Image.fromarray(np.random.rand(224, 224, 3).astype(np.uint8))
 
     # Image embedding (img2vec)
     img2vec_signature = FunctionSignature(
         Custom,
-        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
-        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
+        method="embed_images",
+        input_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        output_annotations={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
     assert img2vec_signature is not None
 
     # Text embedding (txt2vec)
     txt2vec_signature = FunctionSignature(
         Custom,
-        inputs={"texts": str},
-        outputs={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
+        method="embed_texts",
+        input_annotations={"texts": str},
+        output_annotations={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
     )
     assert txt2vec_signature is not None
 
     # Object detection (img2bbox)
     img2bbox_signature = FunctionSignature(
         Custom,
-        inputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
-        outputs={
+        method="img2bbox_dict",
+        input_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        output_annotations={
             "scores": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
             "labels": Batch[TensorT[np.ndarray, TensorSpec(shape=(None), dtype="float32")]],
             "bboxes": Batch[TensorT[np.ndarray, TensorSpec(shape=(None, 4), dtype="float32")]],
@@ -200,13 +240,15 @@ def test_common_model_spec_variations():
     # Image generation (txt2img)
     txt2img_signature = FunctionSignature(
         Custom,
-        inputs={"texts": Batch[str]},
-        outputs={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
+        method="txt2img",
+        input_annotations={"texts": Batch[str]},
+        output_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
     )
     assert txt2img_signature is not None
 
 
 def check_object_type(v):
+    """Check if the object is of the correct type."""
     if isinstance(v, list):
         for item in v:
             check_object_type(item)
@@ -221,6 +263,10 @@ def check_object_type(v):
         assert hasattr(spec, "shape")
         assert hasattr(spec, "dtype")
 
+    assert v.parameter_name() is not None
+    assert v.parameter_annotation() is not None
+    assert v.parameter_default() is inspect.Parameter.empty or v.parameter_default() is not None
+
 
 def test_common_spec_signature():
     """Test function signature."""
@@ -231,11 +277,11 @@ def test_common_spec_signature():
         assert spec is not None
         assert spec.name
         assert spec.task
-        assert spec.default_signature.inputs is not None
-        assert spec.default_signature.outputs is not None
+        assert spec.default_signature.input_annotations is not None
+        assert spec.default_signature.output_annotations is not None
 
-        assert isinstance(spec.default_signature.inputs, dict)
-        assert isinstance(spec.default_signature.outputs, dict)
+        assert isinstance(spec.default_signature.input_annotations, dict)
+        assert isinstance(spec.default_signature.output_annotations, dict)
         logger.debug(f"{spec.name}, {spec.task}")
 
         for k, v in spec.default_signature.get_inputs_spec().items():

@@ -80,7 +80,18 @@ class Hub:
         return sig.func_or_cls(*sig.init_args, **sig.init_kwargs)
 
     @classmethod
-    def register(cls, model_id: str, task: TaskType, func_or_cls: Callable, **kwargs) -> ModelSpec:
+    def register(
+        cls,
+        model_id: str,
+        task: TaskType,
+        func_or_cls: Callable,
+        method: str = "__call__",
+        init_args: Tuple[Any] = (),
+        init_kwargs: Dict[str, Any] = {},  # noqa: B006
+        inputs: Dict[str, Any] = {},  # noqa: B006
+        outputs: Dict[str, Any] = {},  # noqa: B006
+        **kwargs,
+    ) -> ModelSpec:
         """Model registry decorator.
 
         Args:
@@ -91,11 +102,6 @@ class Hub:
         Returns:
             ModelSpec: Model specification.
         """
-        inputs: Dict[str, Any] = kwargs.pop("inputs", {})
-        outputs: Dict[str, Any] = kwargs.pop("outputs", {})
-        init_args: Tuple[Any] = kwargs.pop("init_args", ())
-        init_kwargs: Dict[str, Any] = kwargs.pop("init_kwargs", {})
-        method: str = kwargs.pop("method", "__call__")
         logger.debug(
             f"""Registering model [model={model_id}, task={task}, func_or_cls={func_or_cls}, """
             f"""inputs={inputs}, outputs={outputs}, """
@@ -106,11 +112,11 @@ class Hub:
         signature: Dict[str, FunctionSignature] = {
             method: FunctionSignature(
                 func_or_cls,
-                inputs=inputs,
-                outputs=outputs,
+                method=method,
                 init_args=init_args,
                 init_kwargs=init_kwargs,
-                method=method,
+                input_annotations=inputs,
+                output_annotations=outputs,
             ),
         }
         # Add metadata for the model

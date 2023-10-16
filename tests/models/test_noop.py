@@ -3,10 +3,9 @@ def test_noop():
     from PIL import Image
 
     from nos import hub
-    from nos.common import TaskType
     from nos.test.utils import NOS_TEST_IMAGE
 
-    noop = hub.load("noop/process-images", task=TaskType.CUSTOM)
+    noop = hub.load("noop/process-images")
     assert noop is not None
 
     img = Image.open(NOS_TEST_IMAGE)
