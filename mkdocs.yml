@@ -27,7 +27,6 @@ nav:
     - HW-aware Execution: docs/concepts/model-manager.md
     - Runtime Environments: docs/concepts/runtime-environments.md
   - 🤖 Demos:
-    - Gradio UI: docs/demos/gradio-ui.md
     - Build a Discord Image Generation Bot: docs/demos/discord-bot.md
     - Build a Video Search Engine: docs/demos/video-search.md
   - 📚 Usage Guide:
