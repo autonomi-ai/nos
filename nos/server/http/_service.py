@@ -165,12 +165,16 @@ def main():
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host address")
     parser.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT, help="Port number")
     parser.add_argument("--workers", type=int, default=NOS_HTTP_MAX_WORKER_THREADS, help="Number of workers")
+    parser.add_argument(
+        "--server", type=bool, default=False, help="Initialize the gRPC server with the REST API service"
+    )
     args = parser.parse_args()
     logger.debug(f"args={args}")
 
-    # Start the NOS gRPC Server
-    logger.debug(f"Starting NOS gRPC server (port={DEFAULT_GRPC_PORT})")
-    nos.init(runtime="auto", logging_level=os.environ.get("NOS_LOGGING_LEVEL", "INFO"))
+    if args.server:
+        # Start the NOS gRPC Server
+        logger.debug(f"Starting NOS gRPC server (port={DEFAULT_GRPC_PORT})")
+        nos.init(runtime="auto", logging_level=os.environ.get("NOS_LOGGING_LEVEL", "INFO"))
 
     # Wait for the gRPC server to be ready
     logger.debug(f"Initializing gRPC client (port={DEFAULT_GRPC_PORT})")
@@ -183,7 +187,14 @@ def main():
 
     # Start the NOS REST API service
     logger.debug(f"Starting NOS REST API service (host={args.host}, port={args.port}, workers={args.workers})")
-    uvicorn.run("nos.server.http._service:app", host=args.host, port=args.port, workers=args.workers, log_level="info")
+    uvicorn.run(
+        "nos.server.http._service:app",
+        host=args.host,
+        port=args.port,
+        workers=args.workers,
+        log_level="info",
+        factory=True,
+    )
 
 
 if __name__ == "__main__":

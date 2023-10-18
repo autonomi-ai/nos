@@ -44,12 +44,6 @@ service InferenceService {
   // Run the inference request
   rpc Run(GenericRequest) returns (GenericResponse) {}
 
-  // Dispatch a training request
-  rpc Train(GenericRequest) returns (GenericResponse) {}
-
-  // Job status
-  rpc GetJobStatus(GenericRequest) returns (GenericResponse) {}
-
   // Register shared memory
   rpc RegisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
 

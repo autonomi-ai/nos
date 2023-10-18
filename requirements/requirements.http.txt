@@ -1,2 +1,2 @@
-fastapi[all]
+fastapi
 uvicorn[standard]
