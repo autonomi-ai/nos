@@ -54,55 +54,30 @@ conda create -n nos python=3.8
 
 ## ⚡️ Start the NOS backend server
 
-There are three ways to launch the NOS server:
+You can start the nos server programmatically via the NOS SDK:
 
-=== "Via SDK"
+```python
+import nos
 
-    You can start the nos server programmatically via the NOS SDK:
-    ```python
-    import nos
-
-    nos.init(runtime="auto")
-    ```
-
-=== "Via CLI"
-
-    Start the nos server with the appropriate backend:
-    ```bash
-    nos docker start --runtime=gpu
-    ```
-    Alternatively, you can run the server with CPU support by replacing `--runtime=gpu` with `--runtime=cpu`.
-
-=== "Via Docker Compose"
-
-    Navigate to the `examples/quickstart` folder and run:
-    ```bash
-    docker compose -f docker-compose.quickstart.yml up
-    ```
+nos.init(runtime="auto")
+```
 
 We're now ready to issue our first inference request with NOS!
 
-
 ## 🚀 Run Inference
-Try out an inference request via the CLI or [Python SDK](https://pypi.org/project/torch-nos):
 
-=== "Via [Python SDK](https://pypi.org/project/torch-nos)"
+Try out an inference request via the [Python SDK](https://pypi.org/project/torch-nos):
 
-    ```python
-    from nos.client import Client, TaskType
+```python
+from nos.client import Client, TaskType
 
-    client = Client()
-    response = client.Run(
-        task=TaskType.IMAGE_GENERATION
-        model_name="stabilityai/stable-diffusion-2",
-        texts=["astronaut on the moon"],
-        num_images=1, width=512, height=512)
-    img = response["images"][0]
-    ```
-
-=== "Via CLI"
-    ```bash
-    nos predict txt2img -i "dog riding horse"
-    ```
+client = Client()
+response = client.Run(
+    task=TaskType.IMAGE_GENERATION
+    model_name="stabilityai/stable-diffusion-2",
+    texts=["astronaut on the moon"],
+    num_images=1, width=512, height=512)
+img = response["images"][0]
+```
 
 If you run into issues after following this guide, feel free to ping us on [#nos-support](https://discord.gg/qEvfUcgS5m).

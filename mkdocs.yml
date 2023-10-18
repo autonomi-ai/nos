@@ -15,11 +15,7 @@ site_dir: site
 nav:
   - 🏠 Home: README.md
   - 🔥 Quickstart: docs/quickstart.md
-  - 🧠 Models:
-    - Stable Diffusion: docs/models/stable-diffusion.md
-    - CLIP: docs/models/clip.md
-    - YOLOX: docs/models/yolox.md
-    - Whisper: docs/models/whisper.md
+  - 🧠 Models: docs/models.md
   - ⚡️ Concepts:
     - Why NOS?: docs/concepts/what-is-nos.md
     - Architecture: docs/concepts/architecture-overview.md
