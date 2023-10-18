@@ -11,7 +11,8 @@ from nos.hub import HuggingFaceHubConfig
 
 @dataclass(frozen=True)
 class BLIPConfig(HuggingFaceHubConfig):
-    pass
+    model_type: str = "blip2"
+    """Type of the model (blip / blip2)."""
 
 
 class BLIP:
@@ -20,16 +21,31 @@ class BLIP:
     configs = {
         "Salesforce/blip2-opt-2.7b": BLIPConfig(
             model_name="Salesforce/blip2-opt-2.7b",
+            model_type="blip2",
+        ),
+        "Salesforce/blip-image-captioning-large": BLIPConfig(
+            model_name="Salesforce/blip-image-captioning-large",
+            model_type="blip",
+        ),
+        "Salesforce/blip-image-captioning-base": BLIPConfig(
+            model_name="Salesforce/blip-image-captioning-base",
+            model_type="blip",
         ),
     }
 
-    def __init__(self, model_name: str = "Salesforce/blip2-opt-2.7b", dtype: torch.dtype = torch.float32):
-        from transformers import Blip2ForConditionalGeneration, Blip2Processor
-
+    def __init__(self, model_name: str = "Salesforce/blip-image-captioning-large", dtype: torch.dtype = torch.float32):
         try:
             self.cfg = BLIP.configs[model_name]
         except KeyError:
             raise ValueError(f"Invalid model_name: {model_name}, available models: {BLIP.configs.keys()}")
+
+        if self.cfg.model_type == "blip2":
+            from transformers import Blip2ForConditionalGeneration as Blip2ForConditionalGeneration
+            from transformers import Blip2Processor as BlipProcessor
+        elif self.cfg.model_type == "blip":
+            from transformers import BlipForConditionalGeneration, BlipProcessor
+        else:
+            raise ValueError(f"Invalid model_type: {self.cfg.model_type}, available models: blip, blip2")
 
         if dtype not in (torch.float32, torch.float16, torch.int8):
             raise ValueError(
@@ -45,10 +61,18 @@ class BLIP:
             self.dtype = torch.float32
             init_kwargs = {"device_map": "auto"}
 
+        # BLIP does not support device_map
+        if self.cfg.model_type == "blip":
+            init_kwargs.pop("device_map")
+            if dtype == torch.int8:
+                raise ValueError(
+                    f"BLIP does not support dtype: {dtype}, available dtypes: {torch.float32}, {torch.float16}"
+                )
+
         model_name = self.cfg.model_name
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.processor = Blip2Processor.from_pretrained(model_name)
-        self.model = Blip2ForConditionalGeneration.from_pretrained(model_name, **init_kwargs).to(
+        self.processor = BlipProcessor.from_pretrained(model_name)
+        self.model = BlipForConditionalGeneration.from_pretrained(model_name, **init_kwargs).to(
             self.device, self.dtype
         )
 
@@ -56,9 +80,11 @@ class BLIP:
         self,
         images: Union[Image.Image, np.ndarray, List[Image.Image], List[np.ndarray]],
         prompt: Union[str, List[str]] = None,
+        max_length: int = 100,
     ) -> np.ndarray:
         """Caption image."""
         images = prepare_images(images)
+        assert isinstance(images, list)
         with torch.inference_mode():
             if prompt:
                 # conditional image captioning
@@ -67,5 +93,5 @@ class BLIP:
                 # unconditional image captioning
                 inputs = self.processor(images, return_tensors="pt").to(self.device, self.dtype)
 
-            out = self.model.generate(**inputs)
-            return self.processor.decode(out[0], skip_special_tokens=True).strip()
+            out = self.model.generate(**inputs, max_length=max_length)
+            return [self.processor.decode(out[idx], skip_special_tokens=True).strip() for idx in range(len(images))]

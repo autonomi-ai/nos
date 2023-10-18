@@ -7,7 +7,7 @@ from nos.test.utils import NOS_TEST_IMAGE, skip_if_no_torch_cuda
 
 @pytest.fixture(scope="module")
 def model():
-    MODEL_NAME = "Salesforce/blip2-opt-2.7b"
+    MODEL_NAME = "Salesforce/blip-image-captioning-large"
     yield BLIP(model_name=MODEL_NAME)
 
 
