@@ -12,8 +12,9 @@ from nos.common import ImageSpec, TaskType, TensorSpec
 from nos.common.git import cached_repo
 from nos.common.io import prepare_images
 from nos.common.types import Batch, ImageT, TensorT
-from nos.hub import MMLabConfig, MMLabHub
 from nos.logging import redirect_stdout_to_logger
+
+from .hub import OpenMMLabConfig, OpenMMLabHub
 
 
 try:
@@ -35,7 +36,7 @@ def import_repo(*args, **kwargs) -> str:
 
 
 @dataclass(frozen=True)
-class MMDetectionConfig(MMLabConfig):
+class MMDetectionConfig(OpenMMLabConfig):
     score_threshold: float = 0.3
     """Score threshold for predictions."""
 
@@ -69,7 +70,7 @@ class MMDetection:
             checkpoint="https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_tiny_8x8_300e_coco/yolox_tiny_8x8_300e_coco_20211124_171234-b4047906.pth",
         ),
         # Note: The following registers the configs for all models in the local hub.
-        **MMLabHub(namespace="openmmlab/mmdetection").configs,
+        **OpenMMLabHub(namespace="openmmlab/mmdetection").configs,
     }
     """MMDetection model configurations."""
 

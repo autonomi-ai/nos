@@ -1,8 +1,9 @@
+import pytest
 from loguru import logger
 from PIL import Image
 
 from nos.models.dreambooth.dreambooth import StableDiffusionLoRA
-from nos.test.utils import skip_if_no_torch_cuda
+from nos.test.utils import PyTestGroup, skip_if_no_torch_cuda
 
 
 def test_dreambooth_lora_configs():
@@ -12,7 +13,7 @@ def test_dreambooth_lora_configs():
 
 @skip_if_no_torch_cuda
 def test_dreambooth_lora():
-    from nos.models.dreambooth.dreambooth import StableDiffusionDreamboothHub
+    from nos.models.dreambooth.hub import StableDiffusionDreamboothHub
 
     namespace = "custom"
     hub = StableDiffusionDreamboothHub(namespace=namespace)
@@ -24,6 +25,7 @@ def test_dreambooth_lora():
         assert isinstance(img, Image.Image)
 
 
+@pytest.mark.benchmark(group=PyTestGroup.HUB)
 @skip_if_no_torch_cuda
 def test_dreambooth_lora_civit():
     import tempfile
