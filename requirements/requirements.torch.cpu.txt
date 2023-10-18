@@ -1,4 +1,4 @@
 -i https://download.pytorch.org/whl/cpu
-torch>=1.13.1+cpu
-torchaudio>=0.13.1+cpu
-torchvision>=0.14.1+cpu
+torch>=2.0.1+cpu
+torchaudio
+torchvision
