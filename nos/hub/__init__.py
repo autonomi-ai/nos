@@ -8,7 +8,7 @@ from nos.common.spec import (  # noqa: F401
     ModelSpecMetadataRegistry,
     TaskType,
 )
-from nos.hub.config import HuggingFaceHubConfig, MMLabConfig, MMLabHub, NosHubConfig, TorchHubConfig  # noqa: F401
+from nos.hub.config import HuggingFaceHubConfig, NosHubConfig, TorchHubConfig  # noqa: F401
 from nos.hub.hf import hf_login  # noqa: F401
 from nos.logging import logger
 
