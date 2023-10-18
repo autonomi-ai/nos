@@ -1,3 +1,0 @@
-controlnet_aux==0.0.6
-matplotlib
-opencv-contrib-python-headless

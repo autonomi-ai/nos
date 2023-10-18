@@ -13,7 +13,6 @@ DOCKER_ARGS :=
 DOCKER_CMD :=
 
 include makefiles/Makefile.base.mk
-include makefiles/Makefile.mmdet.mk
 include makefiles/Makefile.docs.mk
 
 default: help;
@@ -71,16 +70,12 @@ post-install-check: ## Post-install checks (check version, etc)
 
 develop-gpu: ## Install GPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
-	pip install --editable '.[dev,test,docs]'
+	pip install --editable '.[server,gpu,dev,test,docs]'
 	make post-install-check
 
 develop-cpu: ## Install CPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
-	pip install -r requirements/requirements.torch.cpu.txt
-	pip install \
-		-r requirements/requirements.txt \
-		-r requirements/requirements.server.txt
-	pip install --editable '.[dev,test,docs]'
+	pip install --editable '.[server,cpu,dev,test,docs]'
 	make post-install-check
 
 install: ## Install wheel package
@@ -117,14 +112,6 @@ test-all:  ## All tests including CPU, GPU, client, and server
 dist: clean ## builds source and wheel package
 	python -m build --sdist --wheel
 	ls -lh dist
-
-update-conda: ## Export conda environment
-	if [ ! -e "conda/envs/$(CONDA_DEFAULT_ENV)/env.yml" ]; then \
-		## create the file if it doesn't exist \
-		mkdir -p conda/envs/$(CONDA_DEFAULT_ENV); \
-		touch conda/envs/$(CONDA_DEFAULT_ENV)/env.yml; \
-	fi
-	conda env export --file conda/envs/$(CONDA_DEFAULT_ENV)/env.yml;
 
 test-locust:
 	locust -f tests/locustfile.py --config=tests/locust.conf

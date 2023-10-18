@@ -31,23 +31,22 @@ classifiers = [
 dynamic = ["version", "dependencies", "optional-dependencies"]
 
 [project.urls]
-"Documentation" = "https://autonomi-ai.github.io/nos/"
+"Documentation" = "https://docs.nos.run/"
 "Source Code" = "https://github.com/autonomi-ai/nos"
-"Homepage" = "https://www.autonomi.ai/"
+"Homepage" = "https://nos.run/"
 
 [tool.setuptools.dynamic]
 version = {attr = "nos.version.__version__"}
 dependencies = {file = ["requirements/requirements.txt"]}
 
   [tool.setuptools.dynamic.optional-dependencies]
-    torch = {file = ["requirements/requirements.torch.gpu.txt"]}
-    http = {file = ["requirements/requirements.http.txt"]}
-    extras = {file = ["requirements/requirements.extras.txt"]}
     server = {file = [
         "requirements/requirements.server.txt",
-        "requirements/requirements.torch.gpu.txt",
-        "requirements/requirements.extras.txt"
+        "requirements/requirements.torch.gpu.txt"
     ]}
+    cpu = {file = ["requirements/requirements.cpu.txt"]}
+    gpu = {file = ["requirements/requirements.gpu.txt"]}
+    http = {file = ["requirements/requirements.http.txt"]}
     dev = {file = ["requirements/requirements.dev.txt"]}
     test = {file = ["requirements/requirements.test.txt"]}
     docs = {file = ["requirements/requirements.docs.txt"]}
