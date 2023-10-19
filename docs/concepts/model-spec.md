@@ -1,4 +1,4 @@
-In NOS, the [`ModelSpec`](../api/common/spec.html#nos.common.spec.ModelSpec) class is a serializable specification of a model that captures all the relevant information for instantatiation, execution and runtime profile of a model.
+In NOS, the [`ModelSpec`](../api/common/spec.md#nos.common.spec.ModelSpec) class is a serializable specification of a model that captures all the relevant information for instantatiation, execution and runtime profile of a model.
 
 
 ## Model Specification

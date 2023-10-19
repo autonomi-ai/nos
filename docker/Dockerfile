@@ -58,6 +58,7 @@ RUN --mount=type=cache,target=/opt/conda/pkgs/ \
 RUN --mount=type=cache,target=~/.cache/pip \
   pip install \
   -r requirements/requirements.txt \
+  -r requirements/requirements.http.txt \
   -r requirements/requirements.server.txt
 
 # Cleanup

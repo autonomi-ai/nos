@@ -81,24 +81,6 @@ docker-build-and-push-multiplatform-cpu:
 docker-build-all: \
 	docker-build-cpu docker-build-gpu
 
-docker-test-cpu:
-	docker compose -f docker-compose.test.yml run --rm --build test-cpu
-
-docker-test-gpu:
-	docker compose -f docker-compose.test.yml run --rm --build test-gpu
-
-docker-test-cpu-benchmark:
-	docker compose -f docker-compose.test.yml run --rm --build test-cpu \
-	DOCKER_CMD="make test-cpu-benchmark"
-
-docker-test-gpu-benchmark:
-	docker compose -f docker-compose.test.yml run --rm --build test-gpu \
-	DOCKER_CMD="make test-gpu-benchmark"
-
-docker-test-all: \
-	docker-test-cpu docker-test-gpu \
-	docker-test-cpu-benchmark docker-test-gpu-benchmark
-
 docker-push-cpu:
 	make .docker-push-base \
 	TARGET=cpu
@@ -109,9 +91,3 @@ docker-push-gpu:
 
 docker-push-all: \
 	docker-push-cpu docker-push-gpu docker-build-and-push-multiplatform-cpu
-
-docker-compose-upd-cpu: docker-build-cpu
-	docker compose -f docker-compose.cpu.yml up
-
-docker-compose-upd-gpu: docker-build-gpu
-	docker compose -f docker-compose.gpu.yml up

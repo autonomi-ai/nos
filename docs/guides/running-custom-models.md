@@ -47,7 +47,7 @@ class CLIP:
 
 ## 📦 Wrapping the custom model
 
-In the section below, we'll show you a straightforward way to wrap the CLIP model with `nos` and run it at scale. In theory, you can wrap any custom Python class that is serializable with `cloudpickle`. Models are wrapped with the [`ModelSpec`](../api/common/spec.html#nos.common.spec.ModelSpec) class, which is a serializable specification of a model. In this example, we'll use the [`ModelSpec.from_cls`](../api/common/spec.html#nos.common.spec.ModelSpec.from_cls) method to wrap the CLIP model.
+In the section below, we'll show you a straightforward way to wrap the CLIP model with `nos` and run it at scale. In theory, you can wrap any custom Python class that is serializable with `cloudpickle`. Models are wrapped with the [`ModelSpec`](../api/common/spec.md#nos.common.spec.ModelSpec) class, which is a serializable specification of a model. In this example, we'll use the [`ModelSpec.from_cls`](../api/common/spec.md#nos.common.spec.ModelSpec.from_cls) method to wrap the CLIP model.
 
 ```python
 
@@ -75,7 +75,7 @@ As you can see, we can use the `ModelHandle` to call the underlying methods `enc
 
 ## 🚀 Scaling the model
 
-Once the model handle has been created, we can also use it to scale the model across multiple GPUs, or even multiple nodes. `ModelHandle` exposes a [`scale()`](/../api/managers.html#nos.managers.model.ModelHandle.scale) method that allows you to manually specify the number of replicas to scale the model. Optionally, you can also specify a more advanced NOS feature where the number of replicas is automatically inferred based on the memory overhead of the model via `scale(replicas="auto")`.
+Once the model handle has been created, we can also use it to scale the model across multiple GPUs, or even multiple nodes. `ModelHandle` exposes a [`scale()`](../api/managers.md#nos.managers.model.ModelHandle.scale) method that allows you to manually specify the number of replicas to scale the model. Optionally, you can also specify a more advanced NOS feature where the number of replicas is automatically inferred based on the memory overhead of the model via `scale(replicas="auto")`.
 
 We continue considering the example above and scale the model to 4 replicas. In order to use all the underlying replicas effectively, we need to ensure that the calls to the underlying methods `encode_image` and `encode_text` are no longer blocking. In other words, we need to ensure that the calls to the underlying methods are asynchronous and can fully utilize the model replicas without blocking on each other. NOS provides a few convenience methods to `submit` tasks and retrieve results asynchronously using it's `handle.results` API.
 
