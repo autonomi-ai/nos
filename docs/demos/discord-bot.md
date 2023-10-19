@@ -1,4 +1,4 @@
-# Building a MidJourney clone with NOS + Discord
+# Building an image generation bot with NOS + Discord
 
 1. **Registering a discord bot to create our API key**
 
