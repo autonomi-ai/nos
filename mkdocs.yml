@@ -1,4 +1,4 @@
-site_name: NOS
+site_name: ⚡️ NOS
 site_url: https://docs.nos.run
 site_author: Sudeep Pillai
 
@@ -17,8 +17,7 @@ nav:
   - 🔥 Quickstart: docs/quickstart.md
   - 🧠 Models: docs/models/supported-models.md
   - ⚡️ Concepts:
-    - Why NOS?: docs/concepts/what-is-nos.md
-    - Architecture: docs/concepts/architecture-overview.md
+    - What is NOS?: docs/concepts/architecture-overview.md
     - Model Specification: docs/concepts/model-spec.md
     - HW-aware Execution: docs/concepts/model-manager.md
     - Runtime Environments: docs/concepts/runtime-environments.md
@@ -43,12 +42,8 @@ nav:
     - nos system: docs/cli/system.md
     - nos hub: docs/cli/hub.md
     - nos predict: docs/cli/predict.md
-  #   - nos benchmark: docs/cli/benchmark.md
-  #   - nos docker: docs/cli/docker.md
   - 🔌 Integrations:
-    - PixelTable: docs/integrations/pixeltable.md
-    - SkyPilot: docs/integrations/skypilot.md
-    - AWS Inferentia: docs/integrations/aws-inferentia.md
+    - Deploying NOS with SkyPilot: docs/integrations/skypilot.md
   - ❓ Support / FAQ: docs/support.md
 
 plugins:

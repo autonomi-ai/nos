@@ -1,8 +1,8 @@
-<h1 align="center" style="font-size:54px;font-weight: bold;font-color:black;">🔥 NOS</h1>
-<h4 align="center">
-Nitrous Oxide System for AI. <br>
-Optimize, serve and auto-scale Pytorch models on any hardware. <br>
-Cut your inference costs by 10x.
+<h1 align="center" style="font-size:64px;font-weight: bold;font-color:black;">⚡️ NOS</h1>
+<h4 align="center">Nitrous Oxide System for your AI Infrastructure
+<p style="font-weight: normal;">
+Optimize, serve and auto-scale Pytorch models in production<br>
+</p>
 </h4>
 
 
@@ -30,31 +30,25 @@ Cut your inference costs by 10x.
 </p>
 
 
-**NOS** is a PyTorch library for optimizing and running lightning-fast inference of popular computer vision models.
+**NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running lightning-fast inference of popular foundational AI models.
 
 *Optimizing and serving models for production AI inference is still difficult, often leading to notoriously expensive cloud bills and often underutilized GPUs. That’s why we’re building **NOS** - a fast inference server for modern AI workloads. With a few lines of code, developers can optimize, serve, and auto-scale Pytorch model inference without having to deal with the complexities of ML compilers, HW-accelerators, or distributed inference. Simply put, NOS allows AI teams to cut inference costs up to **10x**, speeding up development time and time-to-market.*
 
 
-## What is NOS?
-- ⚡️ **Fast**: Built for PyTorch and designed to optimize/run models faster
-- 🔥 **Performant**: Run models such as SDv2 or object detection 2-3x faster out-of-the-box
-- 👩‍💻 **No PhD required**: Optimize models for maximum HW performance without a PhD in ML
-- 📦 **Extensible**: Easily add optimization and HW-support for custom models
-- ⚙️ **HW-accelerated:** Take full advantage of your HW (GPUs, ASICs) without compromise
-- ☁️ **Cloud-agnostic:** Run on any cloud HW (AWS, GCP, Azure, Lambda Labs, On-Prem)
+## 👩‍💻 What is NOS?
+- 👩‍💻 **Easy-to-use**: Built for [PyTorch](https://pytorch.org/) and designed to optimize, serve and auto-scale Pytorch models in production without compromising on developer experience.
+- 🥷 **Flexible**: Run and serve several foundational AI models ([Stable Diffusion](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0), [CLIP](https://huggingface.co/openai/clip-vit-base-patch32), [Whisper](https://huggingface.co/openai/whisper-large-v2)) in a single place.
+- 🔌 **Pluggable:** Plug your front-end to NOS with out-of-the-box high-performance gRPC/REST APIs, avoiding all kinds of ML model deployment hassles.
+- 🚀 **Scalable**: Optimize and scale models easily for maximum HW performance without a PhD in ML, distributed systems or infrastructure.
+- 📦 **Extensible**: Easily hack and add custom models, optimizations, and HW-support in a Python-first environment.
+- ⚙️ **HW-accelerated:** Take full advantage of your underlying HW (GPUs, ASICs) without compromise.
+- ☁️ **Cloud-agnostic:** Run on any cloud HW (AWS, GCP, Azure, Lambda Labs, On-Prem) with our ready-to-use inference server containers.
 
 
-**NOS** inherits its name from **N**itrous **O**xide **S**ystem, the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
+> **NOS** inherits its name from **N**itrous **O**xide **S**ystem, the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
 
 
-## Batteries Included
- - 💪 **SOTA Model Support:** NOS provides out-of-the-box support for popular CV models such as [Stable Diffusion](stabilityai/stable-diffusion-2), [OpenAI CLIP](openai/clip-vit-base-patch32), [YOLOX](https://github.com/Megvii-BaseDetection/YOLOX) object detection, tracking and more
- - 🔌 **APIs:** NOS provides out-of-the-box APIs and avoids all the ML model deployment hassles
- - 🐳 **Docker:** NOS ships with docker images to run accelerated and scalable CV workloads
- - 📈 **Multi-Platform**: NOS allows you to run models on different HW (NVIDIA, custom ASICs) without any model compilation or runtime management.
-
-
-## Getting Started
+## 🚀 Getting Started
 
 Get started with the full NOS server by installing via pip:
 
@@ -65,9 +59,65 @@ conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvi
 pip install torch-nos[server]
 ```
 
-- [API Documentation](https://autonomi-ai.github.io/nos/)
-- [Quickstart](https://autonomi-ai.github.io/nos/docs/quickstart/)
+## 📂 Repository Structure
+
+```bash
+├── docker         # Dockerfile for CPU/GPU servers
+├── docs           # mkdocs documentation
+├── examples       # example guides, jupyter notebooks, demos
+├── makefiles      # makefiles for building/testing
+├── nos          
+│   ├── cli        # CLI (hub, system)
+│   ├── client     # gRPC / REST client
+│   ├── common     # common utilities
+│   ├── executors  # runtime executor (i.e. Ray)
+│   ├── hub        # hub utilies
+│   ├── managers   # model manager / multiplexer
+│   ├── models     # model zoo
+│   ├── proto      # protobuf defs for NOS gRPC service
+│   ├── server     # server backend (gRPC)
+│   └── test       # pytest utilities
+├── requirements   # requirement extras (server, docs, tests)
+├── scripts        # basic scripts
+└── tests          # pytests (client, server, benchmark)
+```
+
+## 📚 Documentation
+
+- 📚 [NOS Documentation](https://docs.nos.run/)
+- 🔥 [Quickstart](https://docs.nos.run/docs/quickstart.html)
+- 🧠 [Models](https://docs.nos.run/docs/models/supported-models.html)
+- ⚡️ **Concepts**: [NOS Architecture](https://docs.nos.run/docs/concepts/architecture-overview.html)
+- 🤖 **Demos**: [Building a Discord Image Generation Bot](https://docs.nos.run/docs/demos/discord-bot.html), [Video Search Demo](https://docs.nos.run/docs/demos/video-search.html)
+
+## 🛣 Roadmap
+
+### HW / Cloud Support
+
+- [✅] **Commodity GPUs**
+  - [✅] NVIDIA GPUs (20XX, 30XX, 40XX)
+  - [ ] AMD GPUs (RX 6000 series)
+- [✅] **Cloud GPUs**
+  - [ ] NVIDIA (T4, A100, H100)
+  - [-] AMD (MI200, MI250)
+- [🟡] **Cloud ASICs**
+  - [🟡] [AWS Inferentia](https://aws.amazon.com/machine-learning/inferentia/) [Inf1](https://aws.amazon.com/ec2/instance-types/inf1/)/[Inf2](https://aws.amazon.com/ec2/instance-types/inf2/)
+  - [ ] Google TPU
+  - [ ] TBD (Graphcore, Habana Gaudi, Tenstorrent)
+- [✅] **Cloud Service Providers** (via [SkyPilot](https://github.com/skypilot-org/skypilot))
+    - [✅] **Big 3:** AWS, GCP, Azure
+    - [ ] **Opinionated Cloud:** Lambda Labs, RunPod, etc
 
 
-## Contribute
-We welcome contributions! Please see our [contributing guide](docs/CONTRIBUTING.md) for more information.
+## 📄 License
+
+This project is licensed under the [Apache-2.0 License](LICENSE).
+
+
+## 🤝 Contributing
+We welcome contributions! Please see our [contributing guide](CONTRIBUTING.md) for more information.
+
+### 🔗  Quick Links
+
+* 💬 Send us an email at [support@autonomi.ai](mailto:support@autonomi.ai) or join our [Discord](https://discord.gg/QAGgvTuvgg) for help.
+* 📣 Follow us on [Twitter](https://twitter.com/autonomi\_ai), and [LinkedIn](https://www.linkedin.com/company/autonomi-ai) to keep up-to-date on our products.
