@@ -6,7 +6,7 @@ from PIL import Image
 
 from nos.logging import logger
 from nos.test.conftest import (
-    CLIENT_SERVER_CONFIGURATIONS,
+    GRPC_CLIENT_SERVER_CONFIGURATIONS,
 )
 from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup
 
@@ -30,7 +30,7 @@ def test_grpc_client_inference_integration(runtime, request):  # noqa: F811
     _test_grpc_client_inference(client)
 
 
-@pytest.mark.parametrize("client_with_server", CLIENT_SERVER_CONFIGURATIONS)
+@pytest.mark.parametrize("client_with_server", GRPC_CLIENT_SERVER_CONFIGURATIONS)
 def test_grpc_client_inference(client_with_server, request):  # noqa: F811
     """Test end-to-end client inference interface (pytest fixtures + client-server integration tests).
 

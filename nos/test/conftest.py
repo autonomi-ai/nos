@@ -164,7 +164,7 @@ def grpc_server_docker_runtime_gpu():
 
 # Note: These fixtures need to be named the same as the following variables
 # so that we reference them by value in the test functions.
-CLIENT_WITH_LOCAL = "local_grpc_client_with_server"
+GRPC_CLIENT_WITH_LOCAL = "local_grpc_client_with_server"
 
 
 @pytest.fixture(scope="session")
@@ -180,7 +180,7 @@ def local_grpc_client_with_server(grpc_server, grpc_client):  # noqa: F811
 
 # Note: These fixtures need to be named the same as the following variables
 # so that we reference them by value in the test functions.
-CLIENT_WITH_CPU = "grpc_client_with_cpu_backend"
+GRPC_CLIENT_WITH_CPU = "grpc_client_with_cpu_backend"
 
 
 @pytest.fixture(scope="session")
@@ -196,7 +196,7 @@ def grpc_client_with_cpu_backend(grpc_server_docker_runtime_cpu, grpc_client_cpu
 
 # Note: These fixtures need to be named the same as the following variables
 # so that we reference them by value in the test functions.
-CLIENT_WITH_GPU = "grpc_client_with_gpu_backend"
+GRPC_CLIENT_WITH_GPU = "grpc_client_with_gpu_backend"
 
 
 @pytest.fixture(scope="session")
@@ -210,9 +210,67 @@ def grpc_client_with_gpu_backend(grpc_server_docker_runtime_gpu, grpc_client_gpu
     yield grpc_client_gpu
 
 
+# Note: These fixtures need to be named the same as the following variables
+# so that we reference them by value in the test functions.
+HTTP_CLIENT_WITH_LOCAL = "local_http_client_with_server"
+
+
+@pytest.fixture(scope="session")
+def local_http_client_with_server(grpc_server):  # noqa: F811
+    """Test local HTTP client with local runtime."""
+    from fastapi.testclient import TestClient
+
+    from nos.server.http._service import app
+
+    # Yield the HTTP client once the server is up and initialized
+    with TestClient(app(grpc_port=GRPC_TEST_PORT)) as _client:
+        yield _client
+
+
+# Note: These fixtures need to be named the same as the following variables
+# so that we reference them by value in the test functions.
+HTTP_CLIENT_WITH_CPU = "http_client_with_cpu_backend"
+
+
+@pytest.fixture(scope="session")
+def http_client_with_cpu_backend(grpc_server_docker_runtime_cpu):  # noqa: F811
+    """Test HTTP client with initialized CPU docker runtime (Port: 50053)."""
+    from fastapi.testclient import TestClient
+
+    from nos.server.http._service import app
+
+    # Yield the HTTP client once the server is up and initialized
+    with TestClient(app(grpc_port=GRPC_TEST_PORT_CPU)) as _client:
+        yield _client
+
+
+# Note: These fixtures need to be named the same as the following variables
+# so that we reference them by value in the test functions.
+HTTP_CLIENT_WITH_GPU = "http_client_with_gpu_backend"
+
+
+@pytest.fixture(scope="session")
+def http_client_with_gpu_backend(grpc_server_docker_runtime_gpu):  # noqa: F811
+    """Test HTTP client with initialized CPU docker runtime (Port: 50054)."""
+    from fastapi.testclient import TestClient
+
+    from nos.server.http._service import app
+
+    # Yield the HTTP client once the server is up and initialized
+    with TestClient(app(grpc_port=GRPC_TEST_PORT_GPU)) as _client:
+        yield _client
+
+
 # Needed for referencing relevant pytest fixtures
-CLIENT_SERVER_CONFIGURATIONS = [
-    # CLIENT_WITH_LOCAL,
-    # CLIENT_WITH_CPU,
-    CLIENT_WITH_GPU
+HTTP_CLIENT_SERVER_CONFIGURATIONS = [
+    # HTTP_CLIENT_WITH_LOCAL,
+    # HTTP_CLIENT_WITH_CPU,
+    HTTP_CLIENT_WITH_GPU
+]
+
+# Needed for referencing relevant pytest fixtures
+GRPC_CLIENT_SERVER_CONFIGURATIONS = [
+    # GRPC_CLIENT_WITH_LOCAL,
+    # GRPC_CLIENT_WITH_CPU,
+    GRPC_CLIENT_WITH_GPU
 ]

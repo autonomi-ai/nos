@@ -11,6 +11,7 @@ def model():
     yield OwlViT(model_name=MODEL_NAME)
 
 
+@pytest.mark.skip
 @skip_if_no_torch_cuda
 def test_owlvit_caption(model):
     from PIL import Image

@@ -1,15 +1,20 @@
 import pytest
 
+from nos.test.conftest import (  # noqa: F401, E402
+    HTTP_CLIENT_SERVER_CONFIGURATIONS,
+    http_client_with_cpu_backend,
+    http_client_with_gpu_backend,
+    local_http_client_with_server,
+)
 from nos.test.utils import NOS_TEST_IMAGE
 
 
 pytestmark = pytest.mark.client
 
 
-# TODO (spillai): Add support for "local", "cpu", "gpu" and "auto" runtimes
-# @pytest.mark.parametrize("runtime", ["cpu", "gpu", "auto"])
-def test_http_client(local_http_client_with_server):  # noqa: F811
-    http_client = local_http_client_with_server
+@pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
+def test_http_client(client_with_server, request):  # noqa: F811
+    http_client = request.getfixturevalue(client_with_server)
     assert http_client is not None
 
     # Health check
@@ -18,8 +23,9 @@ def test_http_client(local_http_client_with_server):  # noqa: F811
     assert response.json() == {"status": "ok"}
 
 
-def test_http_client_inference_object_detection_2d(local_http_client_with_server):
-    http_client = local_http_client_with_server
+@pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
+def test_http_client_inference_object_detection_2d(client_with_server, request):
+    http_client = request.getfixturevalue(client_with_server)
     assert http_client is not None
 
     import numpy as np
@@ -54,8 +60,9 @@ def test_http_client_inference_object_detection_2d(local_http_client_with_server
     assert np.array(predictions["bboxes"]).shape[-2:] == (N, 4)
 
 
-def test_http_client_inference_clip_embedding(local_http_client_with_server):
-    http_client = local_http_client_with_server
+@pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
+def test_http_client_inference_clip_embedding(client_with_server, request):
+    http_client = request.getfixturevalue(client_with_server)
     assert http_client is not None
 
     import numpy as np
@@ -107,8 +114,9 @@ def test_http_client_inference_clip_embedding(local_http_client_with_server):
     assert B == 1 and N == 512
 
 
-def test_http_client_inference_image_generation(local_http_client_with_server):
-    http_client = local_http_client_with_server
+@pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
+def test_http_client_inference_image_generation(client_with_server, request):
+    http_client = request.getfixturevalue(client_with_server)
     assert http_client is not None
 
     from PIL import Image

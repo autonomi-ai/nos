@@ -91,3 +91,9 @@ docker-push-gpu:
 
 docker-push-all: \
 	docker-push-cpu docker-push-gpu docker-build-and-push-multiplatform-cpu
+
+docker-test-cpu:
+	docker compose -f docker-compose.test.yml run --rm --build test-cpu
+
+docker-test-gpu:
+	docker compose -f docker-compose.test.yml run --rm --build test-gpu
