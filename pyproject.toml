@@ -50,6 +50,11 @@ dependencies = {file = ["requirements/requirements.txt"]}
     dev = {file = ["requirements/requirements.dev.txt"]}
     test = {file = ["requirements/requirements.test.txt"]}
     docs = {file = ["requirements/requirements.docs.txt"]}
+    all = {file = [
+        "requirements/requirements.server.txt",
+        "requirements/requirements.torch.gpu.txt",
+        "requirements/requirements.http.txt"
+    ]}
 
 [project.scripts]
 nos = "nos.cli.cli:app_cli"
