@@ -3,9 +3,9 @@ version: "3.8"
 services:
   nos-http-proxy:
     image: autonomi/nos:latest-cpu
-    command: nos-http-server
+    command: nos-http-server --port 80
     ports:
-      - 8000:8000
+      - 8000:80
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL=INFO
@@ -22,7 +22,6 @@ services:
   nos-server-cpu:
     image: autonomi/nos:latest-cpu
     ports:
-      - 8000:8000
       - 50051:50051
     environment:
       - NOS_HOME=/app/.nos
