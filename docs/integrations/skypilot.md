@@ -12,6 +12,9 @@ $ pip install skypilot[gcp]
 
 If you're installing SkyPilot for use with other cloud providers, you may install any of the relevant extras `skypilot[aws,gcp,azure]`. `
 
+### [OPTIONAL] Configure cloud credentials
+
+Run `sky check` for more details and installation instructions.
 
 ## 📦 Deploying NOS on GCP
 
