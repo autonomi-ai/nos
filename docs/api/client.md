@@ -1,6 +1,6 @@
 ## NOS Inference Service
 
-In this section, we expect that you have already installed NOS and have already [started the server](../starting-the-server.md).
+In this section, we expect that you have already installed NOS and have already [started the server](../guides/starting-the-server.md).
 
 ## ::: nos.client.grpc.Client
     handler: python

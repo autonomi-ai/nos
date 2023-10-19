@@ -20,28 +20,7 @@ If you're installing SkyPilot for use with other cloud providers, you may instal
 First, let's create a `server.yaml` YAML file with the following configuration. Here, we are going to provision a single GPU server on GCP (`us-west1`) with an NVIDIA T4 GPU and expose ports `8000` and `50051` for the NOS server. The `docker-compose.gpu.yml` also exposes these ports, so we can access the NOS server from our local machine. We also mount the current directory `.` to `/app` in the container so that we can access the `docker-compose.gpu.yml` file from within the container.
 
 ```yaml
-# NOS GPU server deployment on T4 (Google Cloud Platform)
-# Usage: sky launch -c nos-server server.yaml
-
-name: nos-server
-
-file_mounts:
-  /app: ./app
-
-resources:
-  cloud: gcp
-  region: us-west1
-  accelerators: T4:1
-  ports:
-    - 8000
-    - 50051
-
-setup: |
-  # Install docker compose plugin
-  sudo apt-get install -y docker-compose-plugin
-
-run: |
-  cd /app && docker compose -f docker-compose.gpu.yml up
+{% include '../../examples/skypilot/app/docker-compose.gpu.yml' %}
 ```
 
 ### 🚀 2. Launch your NOS server

@@ -1,11 +1,11 @@
-The NOS inference server supports custom runtime environments through the use of the `InferenceServiceRuntime` class and the [configurations](../api/server.html#InferenceServiceRuntime.configs) defined within. This class provides a high-level interface for defining new custom runtime environments that can be used with NOS.
+The NOS inference server supports custom runtime environments through the use of the `InferenceServiceRuntime` class and the [configurations](../api/server.md#InferenceServiceRuntime.configs) defined within. This class provides a high-level interfa.ce for defining new custom runtime environments that can be used with NOS.
 
 ### ⚡️ NOS Inference Runtime
 
-We use docker to configure different worker configurations to run workloads in different runtime environments. The configured runtime environments are specified in the [InferenceServiceRuntime](/docs/api/server#inferenceserviceruntime) class, which wraps the generic [`DockerRuntime`] class. For convenience, we have pre-built some runtime environments that can be used out-of-the-box `cpu`, `gpu`, `trt-runtime` etc.
+We use docker to configure different worker configurations to run workloads in different runtime environments. The configured runtime environments are specified in the [InferenceServiceRuntime](../api/server.md#inferenceserviceruntime) class, which wraps the generic [`DockerRuntime`] class. For convenience, we have pre-built some runtime environments that can be used out-of-the-box `cpu`, `gpu`, `trt-runtime` etc.
 
 This is the general flow of how the runtime environments are configured:
-- Configure runtime environments including `cpu`, `gpu`, `trt-runtime` etc in the [`InferenceServiceRuntime`](/docs/api/server#inferenceserviceruntime) `config` dictionary.
+- Configure runtime environments including `cpu`, `gpu`, `trt-runtime` etc in the [`InferenceServiceRuntime`](../api/server.md#inferenceserviceruntime) `config` dictionary.
 - Start the server with the appropriate runtime environment via the `--runtime` flag.
 - The ray cluster is now configured within the appropriate runtime environment and has access to the appropriate libraries and binaries.
 

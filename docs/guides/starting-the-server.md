@@ -13,10 +13,10 @@ The NOS server can be started in two ways:
     ```
 
 === "Via Docker Compose"
-    Navigate to [`examples/quickstart`](https://github.com/autonomi-ai/nos/nos/examples/quickstart) to see an example of the YAML specification.
+    Navigate to [`examples/skypilot`](https://github.com/autonomi-ai/nos/nos/examples/skypilot) to see an example of the YAML specification.
 
     ```yaml
-    {% include '../../examples/quickstart/docker-compose.quickstart.yml' %}
+    {% include '../../examples/skypilot/app/docker-compose.gpu.yml' %}
     ```
 
 ## API Reference

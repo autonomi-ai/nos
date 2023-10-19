@@ -84,6 +84,10 @@ install: ## Install wheel package
 lint: ## Format source code automatically
 	pre-commit run --all-files # Uses pyproject.toml
 
+test: ## Basic CPU testing with mkdocs-build
+	make test-cpu
+	make mkdocs-build
+
 test-cpu: ## Basic CPU testing
 	CUDA_VISIBLE_DEVICES="" \
 	pytest -sv tests
