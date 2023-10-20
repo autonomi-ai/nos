@@ -1,28 +1,47 @@
-## Core Features
- - **Batteries-included:** Server-side inference with all the necessary batteries (model hub, batching/parallelization, fast I/O, model-caching, model resource management via ModelManager, model optimization via ModelSpec)
- - **Server-side inference without client-side bloat:** Multiple lightweight clients can leverage complex server-side inference workers without the bloat of GPU libraries, runtimes or 3rd-party libraries.
- - **High device-utilization:** With better model management, client’s won’t have to wait on model inference and instead can take advantage of the full GPU resources available. Model multiplexing, and efficient bin-packing of models will allow us to leverage the resources optimally (without the user’s knowledge).
- - **Custom model support:** We use Ray to configure different worker configurations (custom conda environment, with resource naming) to run workers on different runtime environments. For example, if you want to run a model on a custom runtime environment, you can provide custom `pip` requirements (see [example](../guides/running-custom-models.md).
+!!!note ""
+    **NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running lightning-fast inference of popular foundational AI models.
+
+*Optimizing and serving models for production AI inference is still difficult, often leading to notoriously expensive cloud bills and often underutilized GPUs. That’s why we’re building **NOS** - a fast inference server for modern AI workloads. With a few lines of code, developers can optimize, serve, and auto-scale Pytorch model inference without having to deal with the complexities of ML compilers, HW-accelerators, or distributed inference. Simply put, NOS allows AI teams to cut inference costs up to **10x**, speeding up development time and time-to-market.*
+
+## ⚡️ Core Features
+
+ - 🔋 **Batteries-included:** Server-side inference with all the necessary batteries (model hub, batching/parallelization, fast I/O, model-caching, model resource management via ModelManager, model optimization via ModelSpec)
+ - 📡 **Client-Server architecture:** Multiple lightweight clients can leverage powerful server-side inference workers running remotely without the bloat of GPU libraries, runtimes or 3rd-party libraries.
+ - 💪 **High device-utilization:**  With better model management, client’s won’t have to wait on model inference and instead can take advantage of the full GPU resources available. Model multiplexing, and efficient bin-packing of models allow us to leverage the resources optimally (without requiring additional user input).
+ - 📦 **Custom model support:** NOS allows you to easily add support for custom models with a few lines of code. We provide a simple API to register custom models with NOS, and allow you to optimize and run models on any hardware (NVIDIA, custom ASICs) without any model compilation or runtime management (see [example](../guides/running-custom-models.md)).
+ - **Concurrency**: NOS is built to efficiently serve AI models, ensuring concurrency, parallelism, optimal memory management, and automatic garbage collection. It is particularly well-suited for multi-modal AI applications.
 
 ![Unified NOS Inference Server](./assets/arch-how-nos-works.png)
 
-## Core Components
+## 🛠️ Core Components
 
- NOS is built to be modular and extensible. The core components of NOS are:
+NOS is built to efficiently serve AI models, ensuring concurrency, parallelism, optimal memory management, and automatic garbage collection. It is particularly well-suited for multi-modal AI applications. Finally, NOS is built to be modular and extensible. The core components of NOS are:
 
-- [**`ModelManager`**](./model-manager.md): Model manager for serving and running models with Ray actors.
+- **`ModelManager`**: The Model Manager is responsible for managing and serving AI models with various policies like FIFO and LRU (not implemented). It ensures that the maximum number of concurrent models is not exceeded.
+    - FIFO and LRU (not implemented) eviction policies.
+    - Control the maximum number of concurrent models.
+    - Load, add, and evict models as needed.
+    - Prevent Out-Of-Memory errors with automatic model cleanup.
+- **`ModelHandle`**:The `ModelHandle` is the core component for serving AI models. It allows you to interact with and scale models as needed. Each Model Handle can have multiple replicas for parallelism.
+    - Call models directly or submit tasks to replicas.
+    - Scale models up or down dynamically.
+    - Submit tasks to specific methods of the model.
+    - Garbage collect models when they are evicted.
+
+Model manager for serving and running multiple models with Ray actors.
 - [**`InferenceService`**](#inferenceservice): Ray-executor based inference service that executes inference requests.
 - [**`InferenceRuntimeService`**](#inferenceruntimeservice): Dockerized runtime environment for server-side remote execution
 
 ![NOS Architecture](./assets/arch-client-server.png)
 
 
-### InferenceService
+## Overview
 
-The `InferenceService` along with the `InferenceServiceImpl` gRPC service implementation provides a fully wrapped inference service via gRPC/HTTP2. The `InferenceServiceImpl` wraps the relevant API services such as `ListModels()`, `GetModelInfo()` and crucially `Run()` and executes the inference request via the `InferenceService` class. The `InferenceService` class manages models via the `ModelManager`, and sets up the necessary execution backend via `RayExecutor`. In addition to this, it is also responsible for managing shared memory regions (if requested) for high-performance inference running locally in a single machine.
+NOS is built to efficiently serve AI models, ensuring concurrency, parallelism, optimal memory management, and automatic garbage collection. It is particularly well-suited for multi-modal AI applications.
 
-### Nomenclature
+Key Features:
+- Concurrency support for multiple models running simultaneously.
+- Parallelism support with multiple replicas of the same model.
+- Optimal memory management, dynamically adjusting to model memory consumption.
+- Automatic garbage collection to prevent Out-Of-Memory issues.
 
-- **Device memory**: We refer to device and GPU memory interchangeably
-- **Runtime**: A dockerized runtime environment that has just the pertinent runtime libraries and binaries for execution purposes. The build or compilation libraries are removed via multi-stage builds.
-- **Executor**: A single-node ray head that orchestrates inference jobs. We use Ray actors for device-inference and orchestrating auto-scaling (eventually in the multi-node case).
