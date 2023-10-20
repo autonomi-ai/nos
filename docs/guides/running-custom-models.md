@@ -4,7 +4,7 @@ In this guide, we will walk through how to run custom models with NOS. We will u
 
 Here we're using the popular OpenAI CLIP for extracting embeddings using the Huggingface `transformers` `CLIPModel`.
 
-```python
+```python linenums="1"
 from typing import Union, List
 from PIL import Image
 
@@ -49,7 +49,7 @@ class CLIP:
 
 In the section below, we'll show you a straightforward way to wrap the CLIP model with `nos` and run it at scale. In theory, you can wrap any custom Python class that is serializable with `cloudpickle`. Models are wrapped with the [`ModelSpec`](../api/common/spec.md#nos.common.spec.ModelSpec) class, which is a serializable specification of a model. In this example, we'll use the [`ModelSpec.from_cls`](../api/common/spec.md#nos.common.spec.ModelSpec.from_cls) method to wrap the CLIP model.
 
-```python
+```python linenums="1"
 
 from nos.common import ModelSpec
 from nos.manager import ModelManager, ModelHandle

@@ -73,10 +73,11 @@ from nos.client import Client, TaskType
 
 client = Client()
 response = client.Run(
-    task=TaskType.IMAGE_GENERATION
-    model_name="stabilityai/stable-diffusion-2",
-    texts=["astronaut on the moon"],
-    num_images=1, width=512, height=512)
+    "stabilityai/stable-diffusion-2",
+    inputs={
+        "texts"=["astronaut on the moon"],
+        "num_images": 1, "width": 512, "height": 512
+    })
 img = response["images"][0]
 ```
 

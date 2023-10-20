@@ -34,12 +34,13 @@ repos:
     - id: debug-statements
     - id: detect-private-key      # check for private keys
     - id: end-of-file-fixer
-      exclude: ^tests/test_data|^.data
+      exclude: ^tests/test_data|^docs|^examples/notebook/
     - id: pretty-format-json
-      exclude: ^tests/test_data|^.data|^docs|^examples/notebook/
+      exclude: ^tests/test_data|^docs|^examples/notebook/
     - id: trailing-whitespace
+      exclude: ^tests/test_data|^docs|^examples/notebook/
     - id: check-added-large-files
       args: ['--maxkb=100']
-      exclude: ^tests/test_data|^.data
+      exclude: ^tests/test_data
     - id: requirements-txt-fixer
       files: requirements.*\.txt$

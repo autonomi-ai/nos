@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  nos-server-gpu:
+    image: autonomi/nos:0.1.0rc1-gpu
+    ports:
+      - 50051:50051
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL=INFO
+    volumes:
+      - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
+    network_mode: host
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]

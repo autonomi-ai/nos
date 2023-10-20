@@ -18,19 +18,23 @@ nav:
   - 🧠 Models: docs/models/supported-models.md
   - ⚡️ Concepts:
     - What is NOS?: docs/concepts/architecture-overview.md
-    - Model Specification: docs/concepts/model-spec.md
-    - HW-aware Execution: docs/concepts/model-manager.md
-    - Runtime Environments: docs/concepts/runtime-environments.md
+    - Model specification: docs/concepts/model-spec.md
+    - HW-aware execution: docs/concepts/model-manager.md
+    - Runtime environments: docs/concepts/runtime-environments.md
   - 🤖 Demos:
-    - Build a Discord Image Generation Bot: docs/demos/discord-bot.md
-    - Build a Video Search Engine: docs/demos/video-search.md
+    - Build a Discord image-generation bot: docs/demos/discord-bot.md
+    - Build a video search engine: docs/demos/video-search.md
   - 📚 Usage Guide:
-    - Starting the NOS Server: docs/guides/starting-the-server.md
-    - Running Inference: docs/guides/running-inference.md
-    - Running Custom Models: docs/guides/running-custom-models.md
+    - Starting the server: docs/guides/starting-the-server.md
+    - Running inference: docs/guides/running-inference.md
+    - Running custom models: docs/guides/running-custom-models.md
   - 👩‍💻 API Reference:
     - nos.common:
+      - nos.common.exceptions: docs/api/common/exceptions.md
+      - nos.common.metaclass: docs/api/common/metaclass.md
+      - nos.common.shm: docs/api/common/shm.md
       - nos.common.spec: docs/api/common/spec.md
+      - nos.common.system: docs/api/common/system.md
       - nos.common.types: docs/api/common/types.md
       - nos.common.tasks: docs/api/common/tasks.md
     - nos.client: docs/api/client.md
