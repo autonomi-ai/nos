@@ -7,7 +7,7 @@ import nos
 nos.init(runtime="auto")
 ```
 
-### Connecting to the NOS Server
+## Connecting to the NOS Server
 
 You can now send inference requests using the NOS client.
 Let's start by importing the NOS client and creating an `Client` instance. The client instance is used to send inference requests to the NOS server via gRPC.
@@ -32,14 +32,14 @@ NOS provides a `client.Module` interface to get model handles for remote-model e
 
 ```python
 # Get a model handle for yolox/nano
-detect2d = client.Module(TaskType.OBJECT_DETECTION_2D, "yolox/nano")
+detect2d = client.Module("yolox/nano")
 
 # Run inference on a sample image
 img = Image.open("sample.jpg")
 predictions = detect2d(images=[img])
 ```
 
-!!!note In essense, the `client.Module` is an inference [`Module`](../api/client.md#nosclientgrpcclient)  that provides a *logical* handle for the model on the remote server. The model handle could contain multiple replicas, or live in a specialized runtime (GPU, ASICs), however, the user does not need to be aware of these abstractions. Instead, you can simply call the model as a regular Python function where the task gets dispatched to the associated set of remote workers.
+In essense, the `client.Module` is an inference [`Module`](../api/client.md#nosclientgrpcclient)  that provides a *logical* handle for the model on the remote server. The model handle could contain multiple replicas, or live in a specialized runtime (GPU, ASICs), however, the user does not need to be aware of these abstractions. Instead, you can simply call the model as a regular Python function where the task gets dispatched to the associated set of remote workers.
 
 ## More examples
 
@@ -47,7 +47,7 @@ predictions = detect2d(images=[img])
 
 ```python
 prompts = ["fox jumped over the moon", "fox jumped over the sun"]
-sdv2 = client.Module(TaskType.IMAGE_GENERATION, "stabilityai/stable-diffusion-2")
+sdv2 = client.Module("stabilityai/stable-diffusion-2")
 images = sdv2(inputs={
     "prompts": prompts, "width": 512, "height": 512, "num_images": 1
 })
@@ -57,15 +57,15 @@ images[0]
 ### Image-embedding with [OpenAI CLIP](https://huggingface.co/openai/clip-vit-base-patch32)
 
 ```python
-clip_img2vec = client.Module(TaskType.IMAGE_EMBEDDING, "openai/clip")
-predictions = clip_img2vec(inputs={"images": [img]})
+clip = client.Module("openai/clip")
+predictions = clip.encode_image(inputs={"images": [img]})
 predictions["embedding"].shape
 ```
 
 ### Text-embedding with [OpenAI CLIP](https://huggingface.co/openai/clip-vit-base-patch32)
 ```python
-clip_txt2vec = client.Run(TaskType.TEXT_EMBEDDING, "openai/clip")
-predictions = clip_txt2vec(inputs={
+clip = client.Run("openai/clip")
+predictions = clip.encode_text(inputs={
     "texts": ["fox jumped over the mooon", "fox jumped over the sun"]
 })
 predictions["embedding"].shape

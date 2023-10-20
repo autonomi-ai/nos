@@ -17,7 +17,7 @@ services:
     network_mode: host
     ipc: host
     depends_on:
-      - nos-server-gpu
+      - nos-server-cpu
 
   nos-server-cpu:
     image: autonomi/nos:latest-cpu

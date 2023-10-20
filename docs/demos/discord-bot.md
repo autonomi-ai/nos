@@ -21,9 +21,9 @@
 
     # Init nos server
     nos.init(runtime='gpu')
-    nos_client = Client()
-    nos_client.WaitForServer()
-    assert nos_client.IsHealthy()
+    client = Client()
+    client.WaitForServer()
+    assert client.IsHealthy()
     ```
 
     See `examples/notebook/inference-client-example.ipynb` for a better overview. Nos will initialize a GPU-ready container on our machine and return
@@ -41,8 +41,7 @@
 
     @bot.command()
     async def generate(ctx, *, prompt):
-        response = nos_client.Run(
-            TaskType.IMAGE_GENERATION,
+        response = client.Run(
             "stabilityai/stable-diffusion-2",
             inputs={
                 "prompts": [prompt],
@@ -63,7 +62,7 @@
 
     We need the `message_content` intent so we can access the contents of user messages to retrieve image prompts. We'll parse generation requests
     as `$generate image prompt here...`. Any messages beginning with `$generate` will be sent to Nos for image generation. The rest of our
-    message handler is pretty straightforward: we run the client (with `TaskType.IMAGE_GENERATION`) to produce a set of images, then we retrieve
+    message handler is pretty straightforward: we use the client to generate a set of images, then we retrieve
     the first result from the list, save it locally, and call `ctx.send` to upload the image with the discord `File` interface.
 
 3. **Time to run the server**
@@ -71,19 +70,20 @@
     The full server is only ~40 LOC:
     ```python
     #!/usr/bin/env python
+    import io
+    import os
 
     import discord
     from discord.ext import commands
 
     import nos
-    from nos.client import Client, TaskType
-    import os
+    from nos.client import Client
 
     # Init nos server
     nos.init(runtime='gpu')
-    nos_client = Client()
-    nos_client.WaitForServer()
-    assert nos_client.IsHealthy()
+    client = Client()
+    client.WaitForServer()
+    assert client.IsHealthy()
 
     intents = discord.Intents.default()
     intents.message_content = True
@@ -92,8 +92,7 @@
 
     @bot.command()
     async def generate(ctx, *, prompt):
-        response = nos_client.Run(
-            TaskType.IMAGE_GENERATION,
+        response = client.Run(
             "stabilityai/stable-diffusion-2",
             inputs={
                 "prompts": [prompt],
@@ -104,12 +103,10 @@
         )
         image, = response["images"]
 
-        tmp_file_path = "image.png"
-        image.save(tmp_file_path)
-        with open(tmp_file_path, "rb") as img_file:
-            await ctx.send(file=discord.File(img_file))
-
-        os.remove(tmp_file_path)
+        image_bytes = io.BytesIO()
+        img.save(image_bytes, format="PNG")
+        image_bytes.seek(0)
+        await ctx.send(file=discord.File(image_bytes, filename=f"{ctx.message.id}.png"))
 
     bot_token = os.environ.get("BOT_TOKEN")
     if bot_token is None:
@@ -118,8 +115,4 @@
     bot.run(bot_token)
     ```
 
-
-    We should be call set. You can try out the whole thing with `python nos/experimental/nos_bot.py`
-
-
-    ![Bot Running](./discord-bot/discord-bot-demo.png)
+    ![Bot Running](./assets/discord-bot-demo.png)

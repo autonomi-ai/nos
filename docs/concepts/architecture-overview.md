@@ -1,7 +1,7 @@
 !!!note ""
     **NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running lightning-fast inference of popular foundational AI models.
 
-*Optimizing and serving models for production AI inference is still difficult, often leading to notoriously expensive cloud bills and often underutilized GPUs. That’s why we’re building **NOS** - a fast inference server for modern AI workloads. With a few lines of code, developers can optimize, serve, and auto-scale Pytorch model inference without having to deal with the complexities of ML compilers, HW-accelerators, or distributed inference. Simply put, NOS allows AI teams to cut inference costs up to **10x**, speeding up development time and time-to-market.*
+Optimizing and serving models for production AI inference is still difficult, often leading to notoriously expensive cloud bills and often underutilized GPUs. That’s why we’re building **NOS** - a fast inference server for modern AI workloads. With a few lines of code, developers can optimize, serve, and auto-scale Pytorch model inference without having to deal with the complexities of ML compilers, HW-accelerators, or distributed inference. Simply put, NOS allows AI teams to cut inference costs up to **10x**, speeding up development time and time-to-market.
 
 ## ⚡️ Core Features
 
@@ -9,9 +9,11 @@
  - 📡 **Client-Server architecture:** Multiple lightweight clients can leverage powerful server-side inference workers running remotely without the bloat of GPU libraries, runtimes or 3rd-party libraries.
  - 💪 **High device-utilization:**  With better model management, client’s won’t have to wait on model inference and instead can take advantage of the full GPU resources available. Model multiplexing, and efficient bin-packing of models allow us to leverage the resources optimally (without requiring additional user input).
  - 📦 **Custom model support:** NOS allows you to easily add support for custom models with a few lines of code. We provide a simple API to register custom models with NOS, and allow you to optimize and run models on any hardware (NVIDIA, custom ASICs) without any model compilation or runtime management (see [example](../guides/running-custom-models.md)).
- - **Concurrency**: NOS is built to efficiently serve AI models, ensuring concurrency, parallelism, optimal memory management, and automatic garbage collection. It is particularly well-suited for multi-modal AI applications.
+ - ⏩ **Concurrency**: NOS is built to efficiently serve AI models, ensuring concurrency, parallelism, optimal memory management, and automatic garbage collection. It is particularly well-suited for multi-modal AI applications.
 
-![Unified NOS Inference Server](./assets/arch-how-nos-works.png)
+## 🏗️ Architecture
+
+![NOS Architecture](./assets/arch-client-server.png)
 
 ## 🛠️ Core Components
 
@@ -28,20 +30,6 @@ NOS is built to efficiently serve AI models, ensuring concurrency, parallelism, 
     - Submit tasks to specific methods of the model.
     - Garbage collect models when they are evicted.
 
-Model manager for serving and running multiple models with Ray actors.
-- [**`InferenceService`**](#inferenceservice): Ray-executor based inference service that executes inference requests.
-- [**`InferenceRuntimeService`**](#inferenceruntimeservice): Dockerized runtime environment for server-side remote execution
+- [**`InferenceService`**](../api/server.md#inferenceservice): Ray-executor based inference service that executes inference requests.
 
-![NOS Architecture](./assets/arch-client-server.png)
-
-
-## Overview
-
-NOS is built to efficiently serve AI models, ensuring concurrency, parallelism, optimal memory management, and automatic garbage collection. It is particularly well-suited for multi-modal AI applications.
-
-Key Features:
-- Concurrency support for multiple models running simultaneously.
-- Parallelism support with multiple replicas of the same model.
-- Optimal memory management, dynamically adjusting to model memory consumption.
-- Automatic garbage collection to prevent Out-Of-Memory issues.
-
+- [**`InferenceRuntimeService`**](../api/server.md#inferenceserviceruntime): Dockerized runtime environment for server-side remote execution

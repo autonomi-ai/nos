@@ -1,1 +1,1 @@
-## ::: nos.common.types
+::: nos.common.types
