@@ -254,7 +254,7 @@ def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = NOS_GRP
     server.add_insecure_port(address)
 
     console = rich.console.Console()
-    console.print(f"[bold green] ✓ Starting server on {address}[/bold green]")
+    console.print(f"[bold green] ✓ Starting gRPC server on {address}[/bold green]")
     start_t = time.time()
     server.start()
     console.print(

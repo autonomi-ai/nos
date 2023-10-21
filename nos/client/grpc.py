@@ -290,57 +290,6 @@ class Client:
         module: Module = self.Module(model_id, shm=shm)
         return module(**inputs, _method=method)
 
-    def Train(
-        self, method: str, inputs: Dict[str, Any], metadata: Dict[str, Any] = None
-    ) -> nos_service_pb2.GenericResponse:
-        """Training module.
-
-        Args:
-            method (str): Training method (e.g. `stable-diffusion-dreambooth-lora`).
-            inputs (Dict[str, Any]): Training inputs.
-            metadata (Dict[str, Any], optional): Metadata for the training job. Defaults to None.
-        Returns:
-            str: Job ID.
-        Raises:
-            NosClientException: If the server fails to respond to the request.
-        """
-        raise NotImplementedError("Training not supported yet.")
-
-    def Volume(self, name: str = None) -> str:
-        """Remote volume module for NOS.
-
-        Note: This is meant for remote volume mounts especially useful for training.
-        """
-        raise NotImplementedError("Volumes not supported yet.")
-
-    def Wait(self, job_id: str, timeout: int = 60, retry_interval: int = 5) -> None:
-        """Wait for job to finish.
-
-        Args:
-            job_id (str): Job ID.
-            timeout (int, optional): Timeout in seconds. Defaults to 60.
-            retry_interval (int, optional): Retry interval in seconds. Defaults to 5.
-        """
-        st = time.time()
-        response = None
-        while time.time() - st <= timeout:
-            try:
-                response: nos_service_pb2.GenericResponse = self.stub.GetJobStatus(
-                    nos_service_pb2.GenericRequest(request_bytes=dumps({"job_id": job_id}))
-                )
-                response = loads(response.response_bytes)
-                if str(response) != "PENDING" and str(response) != "RUNNING":
-                    return response
-                else:
-                    logger.debug(
-                        f"Waiting for job to finish [job_id={job_id}, response={response}, elapsed={time.time() - st:.0f}s]"
-                    )
-            except Exception as e:
-                logger.warning(f"Failed to fetch job status ... [elapsed={time.time() - st:.0f}s, e={e}]")
-            time.sleep(retry_interval)
-        logger.warning(f"Job timed out [job_id={job_id}]")
-        return response
-
 
 @dataclass
 class Module:
