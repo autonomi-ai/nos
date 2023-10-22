@@ -169,11 +169,10 @@ txt_vec = clip.encode_text(text=["fox jumped over the moon"])
 
 ## 📚 Documentation
 
-- [NOS Documentation](https://docs.nos.run/)
-- [Quickstart](https://docs.nos.run/docs/quickstart.html)
-- [Models](https://docs.nos.run/docs/models/supported-models.html)
-- **Concepts**: [NOS Architecture](https://docs.nos.run/docs/concepts/architecture-overview.html)
-- **Demos**: [Building a Discord Image Generation Bot](https://docs.nos.run/docs/demos/discord-bot.html), [Video Search Demo](https://docs.nos.run/docs/demos/video-search.html)
+- [Quickstart](./docs/quickstart.md)
+- [Models](./docs/models/supported-models.md)
+- **Concepts**: [NOS Architecture](./docs/concepts/architecture-overview.md)
+- **Demos**: [Building a Discord Image Generation Bot](./docs/demos/discord-bot.md), [Video Search Demo](./docs/demos/video-search.md)
 
 ## 🛣 Roadmap
 
@@ -184,7 +183,7 @@ txt_vec = clip.encode_text(text=["fox jumped over the moon"])
     - [ ] AMD GPUs (RX 7000)
 
 - [x] **Cloud GPUs**
-    - [x] NVIDIA (T4, A100, H100)
+    - [x] NVIDIA (H100, A100, A10G, A30G, T4, L4)
     - [ ] AMD (MI200, MI250)
 
 - [x] **Cloud Service Providers** (via [SkyPilot](https://github.com/skypilot-org/skypilot))
@@ -194,7 +193,7 @@ txt_vec = clip.encode_text(text=["fox jumped over the moon"])
 - [ ] **Cloud ASICs**
     - [ ] [AWS Inferentia](https://aws.amazon.com/machine-learning/inferentia/) ([Inf1](https://aws.amazon.com/ec2/instance-types/inf1/)/[Inf2](https://aws.amazon.com/ec2/instance-types/inf2/))
     - [ ] Google TPU
-    - [ ] TBD (Graphcore, Habana Gaudi, Tenstorrent)
+    - [ ] Coming soon! (Habana Gaudi, Tenstorrent)
 
 
 ## 📄 License

@@ -1,6 +1,8 @@
 import time
 import traceback
 from functools import lru_cache
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Union
 
 import grpc
@@ -219,6 +221,31 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             logger.error(f"Failed to unregister shm [e{e}]")
             context.abort(grpc.StatusCode.INTERNAL, str(e))
         return nos_service_pb2.GenericResponse()
+
+    def UploadFile(self, request_iterator: Any, context: grpc.ServicerContext) -> nos_service_pb2.GenericResponse:
+        """Upload a file."""
+        tmp_file = NamedTemporaryFile(delete=False)
+        tmp_path = Path(tmp_file.name)
+        basename = None
+        with tmp_path.open("wb") as f:
+            for chunk_request in request_iterator:
+                chunk = loads(chunk_request.request_bytes)
+                f.write(chunk["chunk_bytes"])
+                if basename is None:
+                    basename = Path(chunk["filename"]).name
+        logger.debug(f"Uploaded file [path={tmp_path}]")
+        return nos_service_pb2.GenericResponse(response_bytes=dumps({"path": tmp_path}))
+
+    def DeleteFile(self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext) -> empty_pb2.Empty:
+        """Delete a file by its file-identifier."""
+        request = loads(request.request_bytes)
+        path = request["path"]
+        logger.debug(f"Deleting file [path={path}]")
+        if not path.exists():
+            logger.error(f"File handle {path} not found")
+            context.abort(grpc.StatusCode.NOT_FOUND, f"File handle {path} not found")
+        path.unlink()
+        return empty_pb2.Empty()
 
     def Run(
         self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext

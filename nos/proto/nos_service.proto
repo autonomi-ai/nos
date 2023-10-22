@@ -50,4 +50,10 @@ service InferenceService {
   // Unregister shared memory
   rpc UnregisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
 
+  // Upload file
+  rpc UploadFile(stream GenericRequest) returns (GenericResponse) {}
+
+  // Delete file
+  rpc DeleteFile(GenericRequest) returns (google.protobuf.Empty) {}
+
 }

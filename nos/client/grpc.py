@@ -1,8 +1,10 @@
 """gRPC client for NOS service."""
+import contextlib
 import secrets
 import time
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache, partial
+from pathlib import Path
 from typing import Any, Callable, Dict, List
 
 import grpc
@@ -265,6 +267,66 @@ class Client:
 
     def ModuleFromCls(self, cls: Callable, shm: bool = False) -> "Module":
         raise NotImplementedError("ModuleFromCls not implemented yet.")
+
+    def _upload_file(self, path: Path) -> Path:
+        """Upload a file to the server.
+
+        Args:
+            path (Path): Path to the file to be uploaded.
+        Returns:
+            path: Temporary remote path of the uploaded file.
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            with path.open("rb") as f:
+                for cidx, chunk in enumerate(iter(lambda: f.read(4 * (1024**3)), b"")):
+                    response: nos_service_pb2.GenericResponse = self.stub.UploadFile(
+                        iter(
+                            [
+                                nos_service_pb2.GenericRequest(
+                                    request_bytes=dumps(
+                                        {"chunk_bytes": chunk, "chunk_index": cidx, "filename": str(path)}
+                                    )
+                                )
+                            ]
+                        )
+                    )
+            return loads(response.response_bytes)["path"]
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to upload file (details={e.details()})", e)
+
+    def _delete_file(self, path: Path) -> None:
+        """Delete a file from the server.
+
+        Args:
+            path (Path): Path to the file to be deleted.
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            self.stub.DeleteFile(nos_service_pb2.GenericRequest(request_bytes=dumps({"path": path})))
+        except grpc.RpcError as e:
+            raise NosClientException(f"Failed to delete file (details={e.details()})", e)
+
+    @contextlib.contextmanager
+    def UploadFile(self, path: Path) -> Path:
+        """Upload a file to the server, and delete it after use."""
+        try:
+            logger.debug(f"Uploading file [path={path}]")
+            remote_path = self._upload_file(path)
+            logger.debug(f"Uploaded file [path={path}, remote_path={remote_path}]")
+            yield remote_path
+            logger.debug(f"Deleting file [path={path}, remote_path={remote_path}]")
+        except Exception as e:
+            logger.error(f"Failed to upload file [path={path}, e={e}]")
+        finally:
+            logger.debug(f"Deleting file [path={path}, remote_path={remote_path}]")
+            try:
+                self._delete_file(remote_path)
+            except Exception as e:
+                logger.error(f"Failed to delete file [path={path}, remote_path={remote_path}, e={e}]")
+            logger.debug(f"Deleted file [path={path}, remote_path={remote_path}]")
 
     def Run(
         self,
