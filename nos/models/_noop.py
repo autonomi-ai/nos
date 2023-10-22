@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Union
 
 import numpy as np
@@ -18,6 +19,10 @@ class NoOp:
 
     def process_texts(self, texts: List[str]) -> List[int]:
         return list(range(len(texts)))
+
+    def process_file(self, path: Path) -> bool:
+        assert path.exists(), f"File not found: {path}"
+        return True
 
 
 # Register noop model separately for each method
@@ -68,4 +73,14 @@ hub.register(
     },
     outputs={"result": List[int]},
     method="process_texts",
+)
+hub.register(
+    "noop/process-file",
+    TaskType.CUSTOM,
+    NoOp,
+    inputs={
+        "path": Path,
+    },
+    outputs={"result": bool},
+    method="process_file",
 )

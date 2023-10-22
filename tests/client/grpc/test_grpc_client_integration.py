@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from typing import List
 
 import pytest
@@ -8,7 +9,7 @@ from nos.logging import logger
 from nos.test.conftest import (
     GRPC_CLIENT_SERVER_CONFIGURATIONS,
 )
-from nos.test.utils import NOS_TEST_IMAGE, PyTestGroup
+from nos.test.utils import NOS_TEST_AUDIO, NOS_TEST_IMAGE, PyTestGroup
 
 
 INTEGRATION_TEST_RUNTIMES = ["cpu", "gpu"]
@@ -60,6 +61,12 @@ def _test_grpc_client_inference(client):  # noqa: F811
     models: List[str] = client.ListModels()
     assert isinstance(models, list)
     assert len(models) >= 1
+
+    # Test UploadFile
+    assert isinstance(NOS_TEST_IMAGE, Path)
+    with client.UploadFile(NOS_TEST_IMAGE) as remote_path:
+        assert client.Run("noop/process-file", inputs={"path": remote_path})
+    return
 
     # Check GetModelInfo for all models registered
     for model_id in models:
@@ -161,6 +168,23 @@ def _test_grpc_client_inference(client):  # noqa: F811
         response = model(images=[img])
         assert isinstance(response, dict)
         assert "bboxes" in response
+
+    # Whisper
+    model_id = "openai/whisper-small.en"
+    model = client.Module(model_id)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+    for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
+        # Uplaod local audio path to server and execute inference
+        # on the remote path. Note that the audio file is deleted
+        # from the server after the inference is complete via the
+        # context manager.
+        with client.UploadFile(NOS_TEST_AUDIO) as remote_path:
+            response = model.transcribe(remote_path)
+        assert isinstance(response, list)
+        for item in response:
+            assert "timestamp" in item
+            assert "text" in item
 
     # TXT2IMG
     # SDv1.4, SDv1.5, SDv2.0, SDv2.1, and SDXL

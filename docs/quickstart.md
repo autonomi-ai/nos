@@ -32,25 +32,27 @@ You will need to install [Docker](https://docs.docker.com/get-docker/), [Nvidia 
 We highly recommend doing all of the following inside of a Conda or Virtualenv environment. You can install Conda on your machine following the official [guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Create a new env:
 ```bash
 conda create -n nos python=3.8
+conda activate nos
 ```
 
-=== "Without PyTorch"
+=== "Client-only Installation"
 
     ``` sh
     pip install torch-nos
     ```
 
-=== "With PyTorch"
+=== "Server Installation (GPU)"
 
-    ``` sh
-    pip install torch-nos[torch]"
-    ```
-    This will install the `torch` extra dependencies for NOS. If you plan to run the NOS server locally (i.e. outside docker), you will also need to install the `server` extra dependencies:
+    If you plan to run the NOS server locally (i.e. outside docker), you will also need to install the `server` extra dependencies:
     ```sh
-    pip install torch-nos[torch,server]"
+    pip install torch-nos[server]"
     ```
 
-    **Note:** Python 3.8 is currently required to run the server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
+    !!!note
+        We currently only support running the NOS server on Linux with GPUs. 
+
+    !!!note
+        Python 3.8 is currently required to run the server on MacOS due to Ray requirements. If you don't plan to run the server locally then this requirement can be relaxed.
 
 ## ⚡️ Start the NOS backend server
 
@@ -78,7 +80,7 @@ response = client.Run(
         "texts"=["astronaut on the moon"],
         "num_images": 1, "width": 512, "height": 512
     })
-img = response["images"][0]
+img, = response["images"]
 ```
 
 If you run into issues after following this guide, feel free to ping us on [#nos-support](https://discord.gg/qEvfUcgS5m).

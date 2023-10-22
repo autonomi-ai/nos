@@ -1,22 +1,17 @@
-import base64
-import io
-import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, List
 
 import torch
 
 from nos import hub
 from nos.common import TaskType
-from nos.common.types import Batch
 from nos.hub import HuggingFaceHubConfig
 
 
 @dataclass(frozen=True)
 class WhisperConfig(HuggingFaceHubConfig):
-
-    chunk_length_s: int = 30
-    """Chunk length in seconds."""
+    pass
 
 
 class Whisper:
@@ -42,7 +37,7 @@ class Whisper:
         ),
     }
 
-    def __init__(self, model_name: str = "openai/whisper-tiny.en"):
+    def __init__(self, model_name: str = "openai/whisper-tiny.en", dtype: str = "float32"):
 
         from transformers import pipeline
 
@@ -53,36 +48,30 @@ class Whisper:
 
         if torch.cuda.is_available():
             self.device = torch.device("cuda:0")
-            torch.backends.cuda.matmul.allow_tf32 = True
         else:
             self.device = torch.device("cpu")
+        self.torch_dtype = getattr(torch, dtype)
 
         model_name = self.cfg.model_name
         self.pipe = pipeline(
             "automatic-speech-recognition",
             model=model_name,
-            chunk_length_s=self.cfg.chunk_length_s,
             device=self.device,
+            torch_dtype=self.torch_dtype,
         )
 
-    def transcribe_file(self, filename: str) -> List[Dict[str, Any]]:
+    def transcribe(
+        self, path: Path, chunk_length_s: int = 30, batch_size: int = 1, return_timestamps: bool = True
+    ) -> List[Dict[str, Any]]:
         """Transcribe the audio file."""
         with torch.inference_mode():
-            # Run the prediction
-            # prediction = [{'text': ' ...', 'timestamp': (0.0, 5.44)}]
-            return self.pipe(filename, return_timestamps=True)["chunks"]
-
-    def transcribe_file_blob(self, audio: str) -> List[Dict[str, Any]]:
-        # Decode and write into a virtual file
-        decoded = base64.b64decode(audio)
-        fileobject = io.BytesIO(decoded)
-
-        with tempfile.NamedTemporaryFile(suffix=".mp3") as tmp_audio:
-            with open(tmp_audio.name, "wb") as f:
-                f.write(fileobject.read())
-            transcription = self.transcribe_file(tmp_audio.name)
-
-        return transcription
+            # Response is a dictionary with "chunks" and "text" keys
+            # We ignore the text key/value since its redundant
+            # response: {"chunks": [{'text': ' ...', 'timestamp': (0.0, 5.44)}], "text": " ..."}
+            response = self.pipe(
+                str(path), chunk_length_s=chunk_length_s, batch_size=batch_size, return_timestamps=return_timestamps
+            )
+            return response["chunks"]
 
 
 for model_name in Whisper.configs:
@@ -92,7 +81,7 @@ for model_name in Whisper.configs:
         TaskType.AUDIO_TRANSCRIPTION,
         Whisper,
         init_args=(model_name,),
-        method="transcribe_file_blob",
-        inputs={"audio": str},
-        outputs={"text": Batch[str]},
+        method="transcribe",
+        inputs={"path": Path, "chunk_length_s": int, "batch_size": int, "return_timestamps": bool},
+        outputs={"result": List[Dict[str, Any]]},
     )
