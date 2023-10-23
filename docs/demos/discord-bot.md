@@ -115,4 +115,6 @@
     bot.run(bot_token)
     ```
 
+    We should be all set, kick off the bot with `python examples/discord/app/bot.py`
+
     ![Bot Running](./assets/discord-bot-demo.png)
