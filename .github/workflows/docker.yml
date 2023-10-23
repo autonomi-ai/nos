@@ -1,19 +1,16 @@
-name: Publish Docker image
+name: Publish Docker and Pypi
 
 on:
-   release:
-     types: [released]
+    workflow_run:
+      workflows: ["Release Tests"]
+      types:
+        - completed
 
 jobs:
   push_to_registry:
     name: Push Docker image to Docker Hub
     runs-on: ubuntu-latest
     steps:
-      - name: Run CI tests
-        uses: benc-uk/workflow-dispatch@v1
-        with:
-         workflow: integrations.yml
-
       - name: Check out the repo
         uses: actions/checkout@v2
 

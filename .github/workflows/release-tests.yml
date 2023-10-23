@@ -1,0 +1,24 @@
+name: Release Tests
+
+on:
+  release:
+    types: [released]
+
+jobs:
+  docker-test-cpu:
+    name: Test CPU (Docker)
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: true
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.8"]
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - name: Checkout git repo
+        uses: actions/checkout@master
+      - name: Build and test-cpu within docker container
+        run: make docker-test-cpu
