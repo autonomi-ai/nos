@@ -138,6 +138,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             err_msg = f"Failed to initialize executor [e={e}]"
             logger.info(err_msg)
             raise RuntimeError(err_msg)
+        self._tmp_files = {}
         super().__init__(*args, **kwargs)
 
     def Ping(self, _: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.PingResponse:
@@ -224,27 +225,37 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
 
     def UploadFile(self, request_iterator: Any, context: grpc.ServicerContext) -> nos_service_pb2.GenericResponse:
         """Upload a file."""
-        tmp_file = NamedTemporaryFile(delete=False)
-        tmp_path = Path(tmp_file.name)
-        basename = None
-        with tmp_path.open("wb") as f:
-            for chunk_request in request_iterator:
-                chunk = loads(chunk_request.request_bytes)
-                f.write(chunk["chunk_bytes"])
-                if basename is None:
-                    basename = Path(chunk["filename"]).name
-        logger.debug(f"Uploaded file [path={tmp_path}]")
-        return nos_service_pb2.GenericResponse(response_bytes=dumps({"path": tmp_path}))
+        for chunk_idx, chunk_request in enumerate(request_iterator):
+            chunk = loads(chunk_request.request_bytes)
+            chunk_bytes = chunk["chunk_bytes"]
+            path = Path(chunk["filename"]).absolute()
+            if str(path) not in self._tmp_files:
+                tmp_file = NamedTemporaryFile(delete=False, dir="/tmp")
+                self._tmp_files[str(path)] = tmp_file
+                logger.debug(f"Streaming upload [path={tmp_file.name}, size={Path(tmp_file.name).stat().st_size / (1024 * 1024):.2f} MB]")
+            else:
+                tmp_file = self._tmp_files[str(path)]
+            with open(tmp_file.name, "ab") as f:
+                f.write(chunk_bytes)
+        return nos_service_pb2.GenericResponse(response_bytes=dumps({"path": tmp_file.name}))
 
     def DeleteFile(self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext) -> empty_pb2.Empty:
         """Delete a file by its file-identifier."""
         request = loads(request.request_bytes)
-        path = request["path"]
+
+        filename = str(request["filename"])
+        try:
+            tmp_file = self._tmp_files[str(filename)]
+            path = Path(tmp_file.name)
+            assert path.exists(), f"File handle {filename} not found"
+        except Exception as e:
+            err_msg = f"Failed to delete file [filename={filename}, e={e}]"
+            logger.error(err_msg)
+            context.abort(grpc.StatusCode.NOT_FOUND, err_msg)
+
         logger.debug(f"Deleting file [path={path}]")
-        if not path.exists():
-            logger.error(f"File handle {path} not found")
-            context.abort(grpc.StatusCode.NOT_FOUND, f"File handle {path} not found")
         path.unlink()
+        del self._tmp_files[str(filename)]
         return empty_pb2.Empty()
 
     def Run(

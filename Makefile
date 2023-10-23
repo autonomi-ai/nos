@@ -14,6 +14,7 @@ DOCKER_CMD :=
 
 include makefiles/Makefile.base.mk
 include makefiles/Makefile.docs.mk
+include makefiles/Makefile.agibuild.mk
 
 default: help;
 

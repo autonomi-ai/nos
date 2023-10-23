@@ -6,7 +6,7 @@ runtimes:
       - ./tests:/app/tests
     env:
       - NOS_HUB_CATALOG_PATH=/app/models/catalog.yaml
-      
+
 models:
   custom-model:
     model_path: models/model.py

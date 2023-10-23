@@ -38,6 +38,7 @@ class Hub:
             cls._instance = cls()
             # Register models / Populate the registry
             import nos.models  # noqa: F401, E402
+
             # Register models from the catalog dynamically
             cls.register_from_catalog()
         return cls._instance
@@ -194,7 +195,7 @@ class Hub:
                 model_cls_name = values.get("model_cls")
                 model_path = values.get("model_path")
 
-                # Check if model_path is a valid path relative to the directory containing 
+                # Check if model_path is a valid path relative to the directory containing
                 # the catalog.yaml file.
                 model_path = Path(filename).parent / model_path
                 if not model_path.exists():
@@ -285,7 +286,9 @@ class Hub:
 
         logger.debug("Loading hub models from catalog.")
         paths: List[Path] = [
-            Path(filename) for filename in NOS_HUB_CATALOG_PATH.split(":") if filename.endswith(".yaml") or filename.endswith(".yml")
+            Path(filename)
+            for filename in NOS_HUB_CATALOG_PATH.split(":")
+            if filename.endswith(".yaml") or filename.endswith(".yml")
         ]
         logger.debug(f"Found {len(paths)} catalog files.")
 

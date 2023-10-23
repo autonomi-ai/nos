@@ -1,3 +1,4 @@
+agi-pack==0.1.18
 av>=10.0.0
 cloudpickle>=2.2.1
 docker>=6.0.0
@@ -11,6 +12,7 @@ psutil>=5.9.5
 py-cpuinfo>=9.0.0
 pydantic>=1.10.12,<2.0.0
 python-multipart
+pyyaml
 rich>=12.5.1
 tqdm
 typer>=0.7.0

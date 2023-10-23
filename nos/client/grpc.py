@@ -29,6 +29,8 @@ from nos.version import __version__
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
+MB_BYTES = 1024**2
+
 
 @dataclass
 class ClientState:
@@ -268,7 +270,7 @@ class Client:
     def ModuleFromCls(self, cls: Callable, shm: bool = False) -> "Module":
         raise NotImplementedError("ModuleFromCls not implemented yet.")
 
-    def _upload_file(self, path: Path) -> Path:
+    def _upload_file(self, path: Path, chunk_size: int = 4 * MB_BYTES) -> Path:
         """Upload a file to the server.
 
         Args:
@@ -280,7 +282,7 @@ class Client:
         """
         try:
             with path.open("rb") as f:
-                for cidx, chunk in enumerate(iter(lambda: f.read(4 * (1024**3)), b"")):
+                for cidx, chunk in enumerate(iter(lambda: f.read(chunk_size), b"")):
                     response: nos_service_pb2.GenericResponse = self.stub.UploadFile(
                         iter(
                             [
@@ -305,16 +307,16 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         try:
-            self.stub.DeleteFile(nos_service_pb2.GenericRequest(request_bytes=dumps({"path": path})))
+            self.stub.DeleteFile(nos_service_pb2.GenericRequest(request_bytes=dumps({"filename": str(path)})))
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to delete file (details={e.details()})", e)
 
     @contextlib.contextmanager
-    def UploadFile(self, path: Path) -> Path:
+    def UploadFile(self, path: Path, chunk_size: int = 4 * MB_BYTES) -> Path:
         """Upload a file to the server, and delete it after use."""
         try:
             logger.debug(f"Uploading file [path={path}]")
-            remote_path = self._upload_file(path)
+            remote_path = self._upload_file(path, chunk_size=chunk_size)
             logger.debug(f"Uploaded file [path={path}, remote_path={remote_path}]")
             yield remote_path
             logger.debug(f"Deleting file [path={path}, remote_path={remote_path}]")
@@ -323,7 +325,7 @@ class Client:
         finally:
             logger.debug(f"Deleting file [path={path}, remote_path={remote_path}]")
             try:
-                self._delete_file(remote_path)
+                self._delete_file(path)
             except Exception as e:
                 logger.error(f"Failed to delete file [path={path}, remote_path={remote_path}, e={e}]")
             logger.debug(f"Deleted file [path={path}, remote_path={remote_path}]")
@@ -394,7 +396,8 @@ class Module:
         # Patch the module with methods from model spec signature
         for method in self._spec.signature.keys():
             if hasattr(self, method):
-                logger.debug(f"Module ({self.id}) already has method ({method}), skipping ...")
+                log = logger.debug if method == "__call__" else logger.warning
+                log(f"Module ({self.id}) already has method ({method}), skipping ...")
                 continue
             assert self._spec.signature[method].method == method
             setattr(self, method, partial(self.__call__, _method=method))

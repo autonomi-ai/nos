@@ -1,10 +1,12 @@
 """Various test utilities."""
 from enum import Enum
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import pytest
 
 from nos.common.system import has_gpu
+from nos.logging import logger
 
 
 NOS_TEST_DATA_DIR = Path(__file__).parent / "test_data"
@@ -58,20 +60,35 @@ def skip_all_if_no_torch_cuda():
     return pytest.mark.skipif(not torch.cuda.is_available(), reason="Requires CUDA")
 
 
-def get_benchmark_video() -> str:
-    """Download a benchmark video from URL to local file."""
+def download_url(url: str, filename: str = None) -> Path:
+    """Download URL to local cache dir or filename for testing purposes."""
     import requests
 
     from nos.constants import NOS_CACHE_DIR
 
-    URL = "https://zackakil.github.io/video-intelligence-api-visualiser/assets/test_video.mp4"
+    if filename is None:
+        test_dir = NOS_CACHE_DIR / "test_data"
+        test_dir.mkdir(parents=True, exist_ok=True)
+        basename = Path(url).name
+        path = test_dir / basename
+    else:
+        path = Path(str(filename))
+    
+    if not path.exists():
+        logger.debug(f"Downloading [url={url}, path={path}]")
+        with NamedTemporaryFile(delete=False) as f:
+            f.write(requests.get(url).content)
+            f.flush()
+            Path(f.name).rename(path)
+        assert path.exists(), f"Failed to download {url}"
+    return path
 
-    # Download video from URL to local file
-    tmp_videos_dir = NOS_CACHE_DIR / "test_data" / "videos"
-    tmp_videos_dir.mkdir(parents=True, exist_ok=True)
-    tmp_video_filename = tmp_videos_dir / "test_video.mp4"
-    if not tmp_video_filename.exists():
-        with open(str(tmp_video_filename), "wb") as f:
-            f.write(requests.get(URL).content)
-        assert tmp_video_filename.exists()
-    return str(tmp_video_filename)
+
+def get_benchmark_video() -> Path:
+    VIDEO_URL = "https://zackakil.github.io/video-intelligence-api-visualiser/assets/test_video.mp4"
+    return download_url(VIDEO_URL)
+
+
+def get_benchmark_audio() -> Path:
+    AUDIO_URL = "https://huggingface.co/datasets/reach-vb/random-audios/resolve/main/sam_altman_lex_podcast_367.flac"
+    return download_url(AUDIO_URL)
