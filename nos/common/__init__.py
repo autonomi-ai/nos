@@ -6,8 +6,9 @@ import psutil
 from tqdm import tqdm as _tqdm
 
 from .cloudpickle import dumps, loads
+from .runtime import RuntimeEnv
 from .shm import SharedMemoryDataDict, SharedMemoryNumpyObject, SharedMemoryTransportManager  # noqa: F401
-from .spec import FunctionSignature, ModelSpec, ModelSpecMetadata, ObjectTypeInfo, RuntimeEnv
+from .spec import FunctionSignature, ModelSpec, ModelSpecMetadata, ObjectTypeInfo
 from .tasks import TaskType
 from .types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT
 

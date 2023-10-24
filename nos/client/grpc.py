@@ -29,6 +29,8 @@ from nos.version import __version__
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 
+MB_BYTES = 1024**2
+
 
 @dataclass
 class ClientState:
@@ -268,7 +270,7 @@ class Client:
     def ModuleFromCls(self, cls: Callable, shm: bool = False) -> "Module":
         raise NotImplementedError("ModuleFromCls not implemented yet.")
 
-    def _upload_file(self, path: Path) -> Path:
+    def _upload_file(self, path: Path, chunk_size: int = 4 * MB_BYTES) -> Path:
         """Upload a file to the server.
 
         Args:
@@ -279,8 +281,9 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         try:
+            response = None
             with path.open("rb") as f:
-                for cidx, chunk in enumerate(iter(lambda: f.read(4 * (1024**3)), b"")):
+                for cidx, chunk in enumerate(iter(lambda: f.read(chunk_size), b"")):
                     response: nos_service_pb2.GenericResponse = self.stub.UploadFile(
                         iter(
                             [
@@ -292,7 +295,7 @@ class Client:
                             ]
                         )
                     )
-            return loads(response.response_bytes)["path"]
+            return Path(loads(response.response_bytes)["filename"])
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to upload file (details={e.details()})", e)
 
@@ -305,16 +308,16 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         try:
-            self.stub.DeleteFile(nos_service_pb2.GenericRequest(request_bytes=dumps({"path": path})))
+            self.stub.DeleteFile(nos_service_pb2.GenericRequest(request_bytes=dumps({"filename": str(path)})))
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to delete file (details={e.details()})", e)
 
     @contextlib.contextmanager
-    def UploadFile(self, path: Path) -> Path:
+    def UploadFile(self, path: Path, chunk_size: int = 4 * MB_BYTES) -> Path:
         """Upload a file to the server, and delete it after use."""
         try:
             logger.debug(f"Uploading file [path={path}]")
-            remote_path = self._upload_file(path)
+            remote_path: Path = self._upload_file(path, chunk_size=chunk_size)
             logger.debug(f"Uploaded file [path={path}, remote_path={remote_path}]")
             yield remote_path
             logger.debug(f"Deleting file [path={path}, remote_path={remote_path}]")
@@ -323,7 +326,7 @@ class Client:
         finally:
             logger.debug(f"Deleting file [path={path}, remote_path={remote_path}]")
             try:
-                self._delete_file(remote_path)
+                self._delete_file(path)
             except Exception as e:
                 logger.error(f"Failed to delete file [path={path}, remote_path={remote_path}, e={e}]")
             logger.debug(f"Deleted file [path={path}, remote_path={remote_path}]")
@@ -394,10 +397,21 @@ class Module:
         # Patch the module with methods from model spec signature
         for method in self._spec.signature.keys():
             if hasattr(self, method):
-                logger.debug(f"Module ({self.id}) already has method ({method}), skipping ...")
+                # If the method to patch is __call__ just log a debug message and skip,
+                # otherwise log a warning so that the user is warned that the method is skipped.
+                log = logger.debug if method == "__call__" else logger.warning
+                log(f"Module ({self.id}) already has method ({method}), skipping ...")
                 continue
+
             assert self._spec.signature[method].method == method
-            setattr(self, method, partial(self.__call__, _method=method))
+            # Patch the module with the partial method only if the default method is
+            # not the same as the method being patched i.e., there's no need to pass
+            # `method`` to the partial method since it's already the default method.
+            if self._spec.default_method != method:
+                method_partial = partial(self.__call__, _method=method)
+            else:
+                method_partial = self.__call__
+            setattr(self, method, method_partial)
             logger.debug(f"Module ({self.id}) patched [method={method}].")
         logger.debug(f"Module ({self.id}) initialized [spec={self._spec}, shm={self.shm}].")
 

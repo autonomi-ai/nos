@@ -1,0 +1,66 @@
+images:
+  base-gpu:
+    base: nvidia/cuda:11.8.0-base-ubuntu22.04
+    name: nos
+    python: "3.8"
+    system:
+      - gnupg2
+      - sudo
+      - curl
+      - tzdata
+      - build-essential
+      - git
+    conda:
+      - pytorch==2.0.1
+      - torchvision
+      - pytorch-cuda=11.8
+      - cudatoolkit=11.8
+      - cudnn=8.2.1
+      - -c pytorch -c nvidia
+    requirements:
+      - requirements/requirements.txt
+      - requirements/requirements.http.txt
+      - requirements/requirements.server.txt
+    add:
+      - ./scripts/entrypoint.sh:/app/entrypoint.sh
+    run:
+      - mamba install -y -c conda-forge x264=='1!161.3030' ffmpeg=4.3.2
+      - python -c "import torch as t; print(f'torch={t.__version__}, cuda={t.cuda.is_available()}, cudnn={t.backends.cudnn.is_available()}')"
+    env:
+      LOGURU_LEVEL: WARNING
+      TZ: "America/Los_Angeles"
+      NOS_HOME: /app/.nos
+      NOS_LOGGING_LEVEL: WARNING
+      NOS_DASHBOARD_ENABLED: 0
+      NOS_MEMRAY_ENABLED: 0
+      TORCH_HOME: ${NOS_HOME}/cache/torch
+      HF_HOME: ${NOS_HOME}/cache/huggingface
+      TRANSFORMERS_CACHE: ${NOS_HOME}/cache/transformers
+      RAY_LOG_TO_STDERR: 0
+      RAY_DEDUP_LOGS: 1
+      RAY_USAGE_STATS_ENABLED: 0
+      RAY_DATA_DISABLE_PROGRESS_BARS: 1
+      RAY_CONDA_HOME: /opt/conda
+      RAY_ENABLE_MAC_LARGE_OBJECT_STORE: 1
+
+  gpu:
+    base: base-gpu
+    add:
+      - ./pyproject.toml:./pyproject.toml
+      - ./nos:./nos
+    run:
+      - pip install --no-deps '.' && rm -rf build
+    command: ["/app/entrypoint.sh"]
+
+  test-gpu:
+    base: gpu
+    system:
+      - make
+    requirements:
+      - requirements/requirements.test.txt
+      - requirements/requirements.dev.txt
+    add:
+      - ./makefiles:./makefiles
+      - ./Makefile:./Makefile
+      - ./tests:./tests
+    command: ["/app/entrypoint.sh"]

@@ -14,6 +14,7 @@ DOCKER_CMD :=
 
 include makefiles/Makefile.base.mk
 include makefiles/Makefile.docs.mk
+include makefiles/Makefile.agibuild.mk
 
 default: help;
 
@@ -96,7 +97,7 @@ test-gpu: ## Basic GPU testing with single GPU
 	CUDA_VISIBLE_DEVICES="0" \
 	pytest -sv tests
 
-test-client: docker-build-cpu docker-build-gpu ## Basic client-side testing
+test-client: agi-build-cpu agi-build-gpu ## Basic client-side testing
 	CUDA_VISIBLE_DEVICES="" \
 	pytest -sv tests/client -m "client"
 

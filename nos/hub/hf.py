@@ -3,7 +3,7 @@ import os
 from nos.logging import logger
 
 
-def hf_login(write_permission: bool = False):
+def hf_login(write_permission: bool = False) -> str:
     """Login to huggingface hub."""
     from huggingface_hub import login
 
@@ -14,3 +14,4 @@ def hf_login(write_permission: bool = False):
     login(
         token=token, write_permission=write_permission
     )  # Login to HF (required for private repos with write permission)
+    return token

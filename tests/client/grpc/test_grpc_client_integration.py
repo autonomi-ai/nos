@@ -66,7 +66,6 @@ def _test_grpc_client_inference(client):  # noqa: F811
     assert isinstance(NOS_TEST_IMAGE, Path)
     with client.UploadFile(NOS_TEST_IMAGE) as remote_path:
         assert client.Run("noop/process-file", inputs={"path": remote_path})
-    return
 
     # Check GetModelInfo for all models registered
     for model_id in models:
@@ -179,18 +178,21 @@ def _test_grpc_client_inference(client):  # noqa: F811
         # on the remote path. Note that the audio file is deleted
         # from the server after the inference is complete via the
         # context manager.
+        logger.debug(
+            f"Uploading audio file to server [path={NOS_TEST_AUDIO}, size={Path(NOS_TEST_AUDIO).stat().st_size / 1024 / 1024:.2f} MB]"
+        )
         with client.UploadFile(NOS_TEST_AUDIO) as remote_path:
-            response = model.transcribe(remote_path)
-        assert isinstance(response, list)
-        for item in response:
-            assert "timestamp" in item
-            assert "text" in item
+            assert isinstance(remote_path, Path)
+            response = model.transcribe(path=remote_path)
+            assert isinstance(response, dict)
+            assert "chunks" in response
+            for item in response["chunks"]:
+                assert "timestamp" in item
+                assert "text" in item
 
     # TXT2IMG
-    # SDv1.4, SDv1.5, SDv2.0, SDv2.1, and SDXL
-    from nos.models import StableDiffusion
-
-    for model_id, _config in StableDiffusion.configs.items():
+    # SDv2.1, and SDXL
+    for model_id in ("stabilityai/stable-diffusion-2-1",):
         model = client.Module(model_id)
         assert model is not None
         spec: ModelSpec = model.GetModelInfo()

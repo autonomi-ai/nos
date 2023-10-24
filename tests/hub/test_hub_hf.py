@@ -12,4 +12,5 @@ def test_hf_login():
         logger.warning("HUGGINGFACE_HUB_TOKEN not set")
         pytest.skip("HUGGINGFACE_HUB_TOKEN not set")
 
-    hf_login()
+    tok = hf_login()
+    assert tok is not None

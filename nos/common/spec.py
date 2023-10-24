@@ -10,6 +10,7 @@ from pydantic.dataclasses import dataclass
 
 from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import NosInputValidationException
+from nos.common.runtime import RuntimeEnv
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
 from nos.logging import logger
@@ -222,16 +223,6 @@ class FunctionSignature:
             Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]: Outputs spec.
         """
         return {k: AnnotatedParameter(ann) for k, ann in self.output_annotations.items()}
-
-
-@dataclass
-class RuntimeEnv:
-    conda: Dict[str, Any]
-    """Conda environment specification."""
-
-    @classmethod
-    def from_packages(cls, packages: List[str]) -> Dict[str, Any]:
-        return cls(conda={"dependencies": ["pip", {"pip": packages}]})
 
 
 @dataclass
@@ -520,7 +511,12 @@ class ModelSpec:
 
     @classmethod
     def from_cls(
-        cls, func_or_cls: Callable, method: str = "__call__", runtime_env: RuntimeEnv = None, **kwargs: Any
+        cls,
+        func_or_cls: Callable,
+        method: str = "__call__",
+        runtime_env: RuntimeEnv = None,
+        model_id: str = None,
+        **kwargs: Any,
     ) -> "ModelSpec":
         """Wrap custom models/classes into a nos-compatible model spec.
 
@@ -528,6 +524,7 @@ class ModelSpec:
             func_or_cls (Callable): Model function or class. For now, only classes are supported.
             method (str): Method name to be executed.
             runtime_env (RuntimeEnv): Runtime environment specification.
+            model_id (str): Optional model identifier.
             **kwargs: Additional keyword arguments.
                 These include `init_args` and `init_kwargs` to initialize the model instance.
 
@@ -560,7 +557,7 @@ class ModelSpec:
         logger.debug(f"Registering methods [methods={methods}].")
 
         # Add function signature for each method
-        model_id: str = func_or_cls.__name__
+        model_id: str = func_or_cls.__name__ if model_id is None else model_id
         signature: Dict[str, FunctionSignature] = {}
         metadata: Dict[str, ModelSpecMetadata] = {}
         for method in methods:

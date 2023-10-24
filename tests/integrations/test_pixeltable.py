@@ -76,7 +76,7 @@ def pixeltable_integration(write_profile: bool = False):
 
     # Get benchmark video, and read first frame for image dimensions
     FILENAME = str(NOS_TEST_VIDEO)
-    # FILENAME = get_benchmark_video()
+    # FILENAME = str(get_benchmark_video())
 
     assert Path(FILENAME).exists()
     _video = VideoReader(FILENAME)

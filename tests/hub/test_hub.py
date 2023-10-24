@@ -77,6 +77,22 @@ def test_hub_load_noop():
         hub.load("not-a-model-name")
 
 
+def test_hub_catalog():
+    """Test loading models from the hub catalog."""
+    import os
+
+    from nos.test.utils import NOS_TEST_DATA_DIR
+
+    pvalue = os.getenv("NOS_HUB_CATALOG_PATH", "")
+    nmodels = len(Hub.list())
+    os.environ["NOS_HUB_CATALOG_PATH"] = str(NOS_TEST_DATA_DIR / "hub/custom_model/catalog.yaml")
+    Hub.register_from_catalog()
+    os.environ["NOS_HUB_CATALOG_PATH"] = pvalue
+    assert (
+        len(Hub.list()) >= nmodels + 1
+    ), "Failed to register custom model from catalog, assumes at least one model is registered."
+
+
 @skip_if_no_torch_cuda
 @pytest.mark.benchmark(group=PyTestGroup.MODEL_BENCHMARK)
 def test_hub_load_all():

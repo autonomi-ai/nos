@@ -1,4 +1,7 @@
 import importlib
+from typing import Any, Dict, List
+
+from pydantic.dataclasses import dataclass
 
 
 def is_package_available(name: str) -> bool:
@@ -19,3 +22,13 @@ def is_torch_neuron_available():
 
 def is_torch_neuronx_available():
     return is_package_available("torch_neuronx")
+
+
+@dataclass
+class RuntimeEnv:
+    conda: Dict[str, Any]
+    """Conda environment specification."""
+
+    @classmethod
+    def from_packages(cls, packages: List[str]) -> Dict[str, Any]:
+        return cls(conda={"dependencies": ["pip", {"pip": packages}]})
