@@ -225,14 +225,16 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
 
     def UploadFile(self, request_iterator: Any, context: grpc.ServicerContext) -> nos_service_pb2.GenericResponse:
         """Upload a file."""
-        for chunk_idx, chunk_request in enumerate(request_iterator):
+        for _chunk_idx, chunk_request in enumerate(request_iterator):
             chunk = loads(chunk_request.request_bytes)
             chunk_bytes = chunk["chunk_bytes"]
             path = Path(chunk["filename"]).absolute()
             if str(path) not in self._tmp_files:
                 tmp_file = NamedTemporaryFile(delete=False, dir="/tmp")
                 self._tmp_files[str(path)] = tmp_file
-                logger.debug(f"Streaming upload [path={tmp_file.name}, size={Path(tmp_file.name).stat().st_size / (1024 * 1024):.2f} MB]")
+                logger.debug(
+                    f"Streaming upload [path={tmp_file.name}, size={Path(tmp_file.name).stat().st_size / (1024 * 1024):.2f} MB]"
+                )
             else:
                 tmp_file = self._tmp_files[str(path)]
             with open(tmp_file.name, "ab") as f:

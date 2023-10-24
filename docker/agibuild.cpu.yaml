@@ -24,6 +24,7 @@ images:
       - python -c "import torch as t; print(f'torch={t.__version__}, cuda={t.cuda.is_available()}, cudnn={t.backends.cudnn.is_available()}')"
     env:
       LOGURU_LEVEL: WARNING
+      TZ: "America/Los_Angeles"
       NOS_HOME: /app/.nos
       NOS_LOGGING_LEVEL: WARNING
       NOS_DASHBOARD_ENABLED: 0
@@ -43,12 +44,17 @@ images:
     add:
       - ./pyproject.toml:./pyproject.toml
       - ./nos:./nos
+    run:
+      - pip install --no-deps '.' && rm -rf build
     command: ["/app/entrypoint.sh"]
 
-  test-gpu:
-    base: base-cpu
+  test-cpu:
+    base: cpu
     system:
       - make
+    requirements:
+      - requirements/requirements.test.txt
+      - requirements/requirements.dev.txt
     add:
       - ./makefiles:./makefiles
       - ./Makefile:./Makefile

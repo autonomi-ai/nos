@@ -73,7 +73,7 @@ def download_url(url: str, filename: str = None) -> Path:
         path = test_dir / basename
     else:
         path = Path(str(filename))
-    
+
     if not path.exists():
         logger.debug(f"Downloading [url={url}, path={path}]")
         with NamedTemporaryFile(delete=False) as f:
