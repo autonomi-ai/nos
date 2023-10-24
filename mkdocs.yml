@@ -44,8 +44,6 @@ nav:
     - nos.executors: docs/api/executors.md
   - 💻 CLI Reference:
     - nos system: docs/cli/system.md
-    - nos hub: docs/cli/hub.md
-    - nos predict: docs/cli/predict.md
   - 🔌 Integrations:
     - Deploying NOS with SkyPilot: docs/integrations/skypilot.md
   - ❓ Support / FAQ: docs/support.md
