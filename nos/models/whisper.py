@@ -7,6 +7,7 @@ import torch
 from nos import hub
 from nos.common import TaskType
 from nos.hub import HuggingFaceHubConfig
+from nos.logging import logger
 
 
 @dataclass(frozen=True)
@@ -61,10 +62,11 @@ class Whisper:
         )
 
     def transcribe(
-        self, path: Path, chunk_length_s: int = 30, batch_size: int = 1, return_timestamps: bool = True
+        self, path: Path, chunk_length_s: int = 30, batch_size: int = 24, return_timestamps: bool = True
     ) -> List[Dict[str, Any]]:
         """Transcribe the audio file."""
         with torch.inference_mode():
+            logger.debug(f"Transcribing audio file [path={path}, size={path.stat().st_size / 1024 / 1024:.2f} MB]")
             # Response is a dictionary with "chunks" and "text" keys
             # We ignore the text key/value since its redundant
             # response: {"chunks": [{'text': ' ...', 'timestamp': (0.0, 5.44)}], "text": " ..."}

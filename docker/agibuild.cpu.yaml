@@ -21,6 +21,7 @@ images:
     add:
       - ./scripts/entrypoint.sh:/app/entrypoint.sh
     run:
+      - mamba install -y -c conda-forge x264=='1!161.3030' ffmpeg=4.3.2
       - python -c "import torch as t; print(f'torch={t.__version__}, cuda={t.cuda.is_available()}, cudnn={t.backends.cudnn.is_available()}')"
     env:
       LOGURU_LEVEL: WARNING

@@ -281,6 +281,7 @@ class Client:
             NosClientException: If the server fails to respond to the request.
         """
         try:
+            response = None
             with path.open("rb") as f:
                 for cidx, chunk in enumerate(iter(lambda: f.read(chunk_size), b"")):
                     response: nos_service_pb2.GenericResponse = self.stub.UploadFile(
