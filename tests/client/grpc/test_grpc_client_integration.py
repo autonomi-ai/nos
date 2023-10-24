@@ -66,7 +66,6 @@ def _test_grpc_client_inference(client):  # noqa: F811
     assert isinstance(NOS_TEST_IMAGE, Path)
     with client.UploadFile(NOS_TEST_IMAGE) as remote_path:
         assert client.Run("noop/process-file", inputs={"path": remote_path})
-    return
 
     # Check GetModelInfo for all models registered
     for model_id in models:
@@ -180,9 +179,10 @@ def _test_grpc_client_inference(client):  # noqa: F811
         # from the server after the inference is complete via the
         # context manager.
         with client.UploadFile(NOS_TEST_AUDIO) as remote_path:
-            response = model.transcribe(remote_path)
-        assert isinstance(response, list)
-        for item in response:
+            response = model.transcribe(path=remote_path)
+        assert isinstance(response, dict)
+        assert "chunks" in response
+        for item in response["chunks"]:
             assert "timestamp" in item
             assert "text" in item
 

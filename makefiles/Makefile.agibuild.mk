@@ -6,14 +6,9 @@ agi-build-cpu:  # equivalent to agi-build-py38-cpu (target=base-cpu, cpu, test-c
 		-p 3.8.15 \
 		-b debian:buster-slim \
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}'
-
-agi-build-py38-cpu:
-	agi-pack build \
-		-c docker/agibuild.cpu.yaml \
-		-o docker/Dockerfile.py38-cpu \
-		-p 3.8.15 \
-		-b debian:buster-slim \
-		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py38'
+	docker tag \
+		${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-cpu \
+		${DOCKER_IMAGE_NAME}:latest-cpu
 
 agi-build-gpu:  # equivalent to agi-build-py38-cu118 (target=base-gpu, gpu, test-gpu)
 	agi-pack build \
@@ -22,6 +17,17 @@ agi-build-gpu:  # equivalent to agi-build-py38-cu118 (target=base-gpu, gpu, test
 		-p 3.8.15 \
 		-b nvidia/cuda:11.8.0-base-ubuntu22.04 \
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}'
+	docker tag \
+		${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-gpu \
+		${DOCKER_IMAGE_NAME}:latest-gpu
+
+agi-build-py38-cpu:
+	agi-pack build \
+		-c docker/agibuild.cpu.yaml \
+		-o docker/Dockerfile.py38-cpu \
+		-p 3.8.15 \
+		-b debian:buster-slim \
+		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py38'
 
 agi-build-py38-cu118:
 	agi-pack build \

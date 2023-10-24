@@ -294,7 +294,7 @@ class Client:
                             ]
                         )
                     )
-            return loads(response.response_bytes)["path"]
+            return Path(loads(response.response_bytes)["filename"])
         except grpc.RpcError as e:
             raise NosClientException(f"Failed to upload file (details={e.details()})", e)
 
@@ -316,7 +316,7 @@ class Client:
         """Upload a file to the server, and delete it after use."""
         try:
             logger.debug(f"Uploading file [path={path}]")
-            remote_path = self._upload_file(path, chunk_size=chunk_size)
+            remote_path: Path = self._upload_file(path, chunk_size=chunk_size)
             logger.debug(f"Uploaded file [path={path}, remote_path={remote_path}]")
             yield remote_path
             logger.debug(f"Deleting file [path={path}, remote_path={remote_path}]")
@@ -396,11 +396,21 @@ class Module:
         # Patch the module with methods from model spec signature
         for method in self._spec.signature.keys():
             if hasattr(self, method):
+                # If the method to patch is __call__ just log a debug message and skip,
+                # otherwise log a warning so that the user is warned that the method is skipped.
                 log = logger.debug if method == "__call__" else logger.warning
                 log(f"Module ({self.id}) already has method ({method}), skipping ...")
                 continue
+
             assert self._spec.signature[method].method == method
-            setattr(self, method, partial(self.__call__, _method=method))
+            # Patch the module with the partial method only if the default method is
+            # not the same as the method being patched i.e., there's no need to pass
+            # `method`` to the partial method since it's already the default method.
+            if self._spec.default_method != method:
+                method_partial = partial(self.__call__, _method=method)
+            else:
+                method_partial = self.__call__
+            setattr(self, method, method_partial)
             logger.debug(f"Module ({self.id}) patched [method={method}].")
         logger.debug(f"Module ({self.id}) initialized [spec={self._spec}, shm={self.shm}].")
 

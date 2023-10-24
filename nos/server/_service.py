@@ -230,7 +230,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             chunk_bytes = chunk["chunk_bytes"]
             path = Path(chunk["filename"]).absolute()
             if str(path) not in self._tmp_files:
-                tmp_file = NamedTemporaryFile(delete=False, dir="/tmp")
+                tmp_file = NamedTemporaryFile(delete=False, dir="/tmp", suffix=path.suffix)
                 self._tmp_files[str(path)] = tmp_file
                 logger.debug(
                     f"Streaming upload [path={tmp_file.name}, size={Path(tmp_file.name).stat().st_size / (1024 * 1024):.2f} MB]"
@@ -239,7 +239,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
                 tmp_file = self._tmp_files[str(path)]
             with open(tmp_file.name, "ab") as f:
                 f.write(chunk_bytes)
-        return nos_service_pb2.GenericResponse(response_bytes=dumps({"path": tmp_file.name}))
+        return nos_service_pb2.GenericResponse(response_bytes=dumps({"filename": tmp_file.name}))
 
     def DeleteFile(self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext) -> empty_pb2.Empty:
         """Delete a file by its file-identifier."""

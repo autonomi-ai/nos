@@ -62,13 +62,9 @@ class ModelHandlePartial:
     """Method name."""
 
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        if "_method" in kwargs:
-            kwargs.pop("_method")
         return self.handle.__call__(*args, **kwargs, _method=self.method)
 
     def submit(self, *args: Any, **kwargs: Any) -> str:
-        if "_method" in kwargs:
-            kwargs.pop("_method")
         return self.handle.submit(*args, **kwargs, _method=self.method)
 
 

@@ -83,5 +83,5 @@ for model_name in Whisper.configs:
         init_args=(model_name,),
         method="transcribe",
         inputs={"path": Path, "chunk_length_s": int, "batch_size": int, "return_timestamps": bool},
-        outputs={"result": List[Dict[str, Any]]},
+        outputs={"chunks": List[Dict[str, Any]]},
     )
