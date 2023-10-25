@@ -68,9 +68,6 @@ dependency_links = [
     "https://download.pytorch.org/whl/cu118",
 ]
 
-[tool.setuptools]
-include-package-data = false
-
 [tool.setuptools.packages.find]
 include = ["nos*","scripts*"]
 exclude = [
@@ -85,7 +82,7 @@ exclude = [
 
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.proto", "test_data/*.*"]
+"*" = ["*.json", "*.proto", "*.j2", "test_data/*.*"]
 
 [tool.black]
 line-length = 119
@@ -168,10 +165,10 @@ max-complexity = 10
 [tool.pytest.ini_options]
 addopts = "-sv -m 'not (skip) and not (client) and not (benchmark) and not (server)'"
 markers = [
+    "cli",       # CLI tests
     "client",    # Client-side (integration) tests
     "server",    # Server-side tests
     "benchmark", # Benchmark tests that is slow for basic CI
-    "asyncio",   # Async IO tests
 ]
 filterwarnings = [
     "error",

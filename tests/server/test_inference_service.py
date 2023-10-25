@@ -55,8 +55,7 @@ def test_inference_service_noop(client_with_server, shm, request):  # noqa: F811
         # __call__(images: np.ndarray, 3-dim)
         inputs = {"images": np.asarray(img.resize(shape))}
         response = model(**inputs)
-        assert isinstance(response, dict)
-        assert "result" in response
+        assert isinstance(response, list)
 
         # __call__(images: List[np.ndarray], List of 3-dim)
         # This call should register a new shared memory region
@@ -69,8 +68,7 @@ def test_inference_service_noop(client_with_server, shm, request):  # noqa: F811
             response = model(**inputs)
         if warn:
             assert len(warn) == 0, "Expected no warnings, but warnings were raised"
-        assert isinstance(response, dict)
-        assert "result" in response
+        assert isinstance(response, list)
 
         # __call__(image: Image.Image)
         # This will not use shared memory transport
@@ -78,6 +76,7 @@ def test_inference_service_noop(client_with_server, shm, request):  # noqa: F811
         # and send the image over the wire.
         inputs = {"images": img.resize(shape)}
         response = model(**inputs)
+        assert isinstance(response, list)
 
         # __call__(image: List[Image.Image])
         # This will not use shared memory transport
@@ -86,6 +85,7 @@ def test_inference_service_noop(client_with_server, shm, request):  # noqa: F811
         # no new shm region changes should happen here.
         inputs = {"images": [img.resize(shape)]}
         response = model(**inputs)
+        assert isinstance(response, list)
 
     # TODO (spillai) Compare round-trip-times with and without shared memory transport
     # Note: This test is only valid for the local server.
@@ -143,7 +143,7 @@ def test_shm_registry(client_with_server, request):  # noqa: F811
             p_namespace, p_object_id = model.namespace, model.object_id
 
         response = model(**inputs)
-        assert isinstance(response, dict)
+        assert isinstance(response, list)
         if shm:
             model.UnregisterSystemSharedMemory()
 
@@ -176,7 +176,7 @@ def test_memray_tracking(client_with_server, request):  # noqa: F811
     images = [np.asarray(img.resize(shape))]
     inputs = {"images": images}
     response = model(**inputs)
-    assert isinstance(response, dict)
+    assert isinstance(response, list)
 
 
 @pytest.mark.skip(reason="Currently this fails to catch the exceptions since we're not checking required args/kwargs.")
@@ -196,8 +196,7 @@ def test_client_exception_types(client_with_server, request):
     # we finish input validation the test should change accordingly.
     inputs = {}
     with pytest.raises(NosInputValidationException):
-        response = model(**inputs)
-        assert isinstance(response, dict)
+        _ = model(**inputs)
 
 
 BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 8)]
@@ -296,7 +295,7 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
                 except Exception as e:
                     logger.error(f"Exception: {e}")
                     continue
-                assert isinstance(response, dict)
+                assert isinstance(response, list)
             timing_records.append(
                 TimingInfo(
                     desc=f"{model_id}_{B}x{shape[0]}x{shape[1]}x3",

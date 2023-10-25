@@ -3,8 +3,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import yaml
-from pydantic import root_validator
+from pydantic import ValidationError, root_validator
 from pydantic.dataclasses import dataclass
+from pydantic.errors import ConfigError
 
 from nos.common.metaclass import SingletonMetaclass  # noqa: F401
 from nos.common.spec import (  # noqa: F401
@@ -185,8 +186,8 @@ class Hub:
             runtime_env: str
             """Runtime environment."""
 
-            @root_validator(pre=True)
-            def _validate_model_cls_import(cls, values) -> str:
+            @root_validator(pre=True, allow_reuse=True)
+            def _validate_model_cls_import(cls, values):
                 """Validate the model."""
                 import importlib
                 import importlib.util
@@ -223,7 +224,7 @@ class Hub:
                     logger.error(
                         f"Failed to import model class, model_cls={model_cls_name}, model_path={model_path}, e={e}\n\n{tback_str}."
                     )
-                    raise ImportError(
+                    raise ValueError(
                         f"Invalid model class provided, model_cls={model_cls_name}, model_path={model_path}, e={e}\n\n{tback_str}."
                     )
 
@@ -234,9 +235,9 @@ class Hub:
         path = Path(filename)
         logger.debug(f"Loading deployment configuration from {path}")
         if not path.exists():
-            raise FileNotFoundError(f"YAML file {path.name} does not exist")
+            raise FileNotFoundError(f"YAML file {path.absolute()} does not exist")
         if not (path.name.endswith(".yaml") or path.name.endswith(".yml")):
-            raise ValueError(f"YAML file {path.name} must have a .yaml or .yml extension")
+            raise ValueError(f"YAML file {path.absolute()} must have a .yaml or .yml extension")
 
         # Load the YAML file
         with path.open("r") as f:
@@ -250,7 +251,11 @@ class Hub:
             # Add the model id to the config
             mconfig.update({"id": model_id})
             # Generate the model spec from the config
-            mconfig = _ModelImportConfig(**mconfig)
+            try:
+                mconfig = _ModelImportConfig(**mconfig)
+            except (ValidationError, ConfigError) as e:
+                raise ValueError(f"Invalid model config provided, filename={filename}, e={e}")
+
             # Register the model as a custom model
             spec: ModelSpec = cls.register(
                 mconfig.id,

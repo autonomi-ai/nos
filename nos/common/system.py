@@ -55,6 +55,21 @@ def has_docker() -> bool:
     return sh("docker --version") is not None
 
 
+def docker_compose_command() -> Optional[str]:
+    """Return the docker-compose command."""
+    if sh("docker-compose --version") is not None:
+        return "docker-compose"
+    elif sh("docker compose version") is not None:
+        return "docker compose"
+    else:
+        return None
+
+
+def has_docker_compose() -> bool:
+    """Check if Docker Compose is available."""
+    return docker_compose_command() is not None
+
+
 def is_inside_docker() -> bool:
     """Check if within Docker."""
     cgroup = "/proc/self/cgroup"

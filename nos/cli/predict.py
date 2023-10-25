@@ -21,7 +21,7 @@ from nos.client import Client
 from nos.common.exceptions import NosClientException
 
 
-predict_cli = typer.Typer(name="predict", help="NOS gRPC Serve CLI.", no_args_is_help=True)
+predict_cli = typer.Typer(name="predict", help="NOS gRPC Prediction CLI.", no_args_is_help=True)
 console = rich.console.Console()
 
 

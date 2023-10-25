@@ -2,12 +2,14 @@ import pytest
 import torch
 
 from nos.common.system import (
+    docker_compose_command,
     get_nvidia_smi,
     get_system_info,
     get_torch_cuda_info,
     get_torch_info,
     get_torch_mps_info,
     has_docker,
+    has_docker_compose,
     has_gpu,
     has_nvidia_docker,
     has_nvidia_docker_runtime_enabled,
@@ -33,11 +35,13 @@ def test_system_info():
 
     _ = has_gpu()
     _ = has_docker()
+    _ = has_docker_compose
     _ = is_inside_docker()
     _ = is_apple()
     _ = is_apple_silicon()
     _ = has_nvidia_docker()
     _ = has_nvidia_docker_runtime_enabled()
+    assert docker_compose_command() in (None, "docker-compose", "docker compose")
 
 
 @skip_if_no_torch_cuda

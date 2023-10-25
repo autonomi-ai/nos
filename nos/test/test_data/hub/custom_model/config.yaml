@@ -1,11 +1,7 @@
-runtimes:
+images:
   gpu:
     base: autonomi/nos:latest-gpu
-    add:
-      - ./models:/app/models
-      - ./tests:/app/tests
-    env:
-      - NOS_HUB_CATALOG_PATH=/app/models/catalog.yaml
+    workdir: /app/serve
 
 models:
   custom-model:
