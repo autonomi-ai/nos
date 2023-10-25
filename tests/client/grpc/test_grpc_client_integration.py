@@ -44,11 +44,60 @@ def test_grpc_client_inference(client_with_server, request):  # noqa: F811
     assert client is not None
     assert client.IsHealthy()
 
+    _test_grpc_client_inference_spec(client)
     _test_grpc_client_inference(client)
 
 
+def _test_grpc_client_inference_spec(client):  # noqa: F811
+    from nos.common import ImageSpec, ModelSpec, ObjectTypeInfo, TaskType, TensorSpec
+
+    # List models
+    models: List[str] = client.ListModels()
+    assert isinstance(models, list)
+    assert len(models) >= 1
+
+    # Check GetModelInfo for all models registered
+    for model_id in models:
+        spec: ModelSpec = client.GetModelInfo(model_id)
+        assert spec.task() and spec.name
+        assert spec.signature is not None
+        assert len(spec.signature) > 0
+        assert isinstance(spec.default_signature.parameters, dict)
+        assert len(spec.default_signature.parameters) >= 1
+        assert spec.default_signature.return_annotation is not None
+
+        inputs = spec.default_signature.get_inputs_spec()
+        outputs = spec.default_signature.get_outputs_spec()
+        assert isinstance(inputs, dict)
+        for _, v in inputs.items():
+            assert isinstance(v, (list, ObjectTypeInfo))
+            if isinstance(v, list):
+                assert isinstance(v[0], ObjectTypeInfo)
+        assert isinstance(outputs, (dict, ObjectTypeInfo))
+
+        for method in spec.signature:
+            task: TaskType = spec.task(method)
+            assert isinstance(task, TaskType)
+            assert task.value is not None
+            logger.debug(f"Testing model [id={model_id}, spec={spec}, method={method}, task={spec.task(method)}]")
+            inputs = spec.signature[method].get_inputs_spec()
+            outputs = spec.signature[method].get_outputs_spec()
+            assert isinstance(inputs, dict)
+            for _, v in inputs.items():
+                assert isinstance(v, (list, ObjectTypeInfo))
+                if isinstance(v, list):
+                    assert isinstance(v[0], ObjectTypeInfo)
+            assert isinstance(outputs, (dict, ObjectTypeInfo))
+
+            for _, type_info in inputs.items():
+                assert isinstance(type_info, (list, ObjectTypeInfo))
+                if isinstance(type_info, ObjectTypeInfo):
+                    assert type_info.base_spec() is None or isinstance(type_info.base_spec(), (ImageSpec, TensorSpec))
+                    assert type_info.base_type() is not None
+
+
 def _test_grpc_client_inference(client):  # noqa: F811
-    from nos.common import ImageSpec, ModelSpec, ObjectTypeInfo, TaskType, TensorSpec, tqdm
+    from nos.common import ModelSpec, tqdm
 
     # Get service info
     version = client.GetServiceVersion()
@@ -67,47 +116,14 @@ def _test_grpc_client_inference(client):  # noqa: F811
     with client.UploadFile(NOS_TEST_IMAGE) as remote_path:
         assert client.Run("noop/process-file", inputs={"path": remote_path})
 
-    # Check GetModelInfo for all models registered
-    for model_id in models:
-        spec: ModelSpec = client.GetModelInfo(model_id)
-        assert spec.task() and spec.name
-        assert spec.signature is not None
-        assert len(spec.signature) > 0
-        assert isinstance(spec.default_signature.parameters, dict)
-        assert len(spec.default_signature.parameters) >= 1
-        assert spec.default_signature.return_annotation is not None
-
-        inputs = spec.default_signature.get_inputs_spec()
-        outputs = spec.default_signature.get_outputs_spec()
-        assert isinstance(inputs, dict)
-        assert isinstance(outputs, dict)
-
-        for method in spec.signature:
-            task: TaskType = spec.task(method)
-            assert isinstance(task, TaskType)
-            assert task.value is not None
-            logger.debug(f"Testing model [id={model_id}, spec={spec}, method={method}, task={spec.task(method)}]")
-            inputs = spec.signature[method].get_inputs_spec()
-            outputs = spec.signature[method].get_outputs_spec()
-            assert isinstance(inputs, dict)
-            assert isinstance(outputs, dict)
-
-            for _, type_info in inputs.items():
-                assert isinstance(type_info, (list, ObjectTypeInfo))
-                if isinstance(type_info, ObjectTypeInfo):
-                    assert type_info.base_spec() is None or isinstance(type_info.base_spec(), (ImageSpec, TensorSpec))
-                    assert type_info.base_type() is not None
-
     # noop/process-images with default method
     img = Image.open(NOS_TEST_IMAGE).resize((224, 224))
     response = client.Run("noop/process-images", inputs={"images": [img]})
-    assert isinstance(response, dict)
-    assert "result" in response
+    assert isinstance(response, list)
 
     # noop/process-texts with default method
     response = client.Run("noop/process-texts", inputs={"texts": ["a cat dancing on the grass"]})
-    assert isinstance(response, dict)
-    assert "result" in response
+    assert isinstance(response, list)
 
     # noop/process
     model_id = "noop/process"
@@ -116,20 +132,16 @@ def _test_grpc_client_inference(client):  # noqa: F811
     assert model.GetModelInfo() is not None
     for _ in tqdm(range(1), desc=f"Test [model={model_id}]"):
         response = client.Run(model_id, inputs={"images": [img]}, method="process_images")
-        assert isinstance(response, dict)
-        assert "result" in response
+        assert isinstance(response, list)
 
         response = client.Run(model_id, inputs={"texts": ["a cat dancing on the grass"]}, method="process_texts")
-        assert isinstance(response, dict)
-        assert "result" in response
+        assert isinstance(response, list)
 
         response = model.process_images(images=[img])
-        assert isinstance(response, dict)
-        assert "result" in response
+        assert isinstance(response, list)
 
         response = model.process_texts(texts=["a cat dancing on the grass."])
-        assert isinstance(response, dict)
-        assert "result" in response
+        assert isinstance(response, list)
 
     # TXT2VEC / IMG2VEC
     model_id = "openai/clip"

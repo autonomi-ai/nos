@@ -13,7 +13,7 @@ import nos
 from nos.common import TaskType, TimingInfo, tqdm
 from nos.common.exceptions import NosInputValidationException
 from nos.common.shm import NOS_SHM_ENABLED
-from nos.test.conftest import ray_executor  # noqa: F401
+from nos.test.conftest import GRPC_CLIENT_SERVER_CONFIGURATIONS, ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
 from nos.version import __version__ as nos_version
 
@@ -30,110 +30,10 @@ def warns(warn_cls=UserWarning, shm_enabled=NOS_SHM_ENABLED):
         yield
 
 
-CLIENT_WITH_LOCAL = "local_grpc_client_with_server"
-CLIENT_WITH_CPU = "grpc_client_with_cpu_backend"
-CLIENT_WITH_GPU = "grpc_client_with_gpu_backend"
-CLIENT_SERVER_CONFIGURATIONS = [
-    CLIENT_WITH_LOCAL,
-]  #  CLIENT_WITH_CPU, CLIENT_WITH_GPU,]
-
-
-@pytest.mark.skipif(not NOS_SHM_ENABLED, reason="Shared memory transport is not enabled.")
-@pytest.mark.parametrize("client_with_server", CLIENT_SERVER_CONFIGURATIONS)
-def test_shm_registry(client_with_server, request):  # noqa: F811
-    """Test shm registry."""
-    shm_enabled = NOS_SHM_ENABLED
-
-    client = request.getfixturevalue(client_with_server)
-    assert client is not None
-    assert client.IsHealthy()
-
-    assert client.ListModels() is not None
-
-    # Load dummy image
-    img = Image.open(NOS_TEST_IMAGE)
-
-    # Load noop model
-    _task, model_id = TaskType.CUSTOM, "noop/process-images"
-    model = client.Module(model_id)
-    assert model is not None
-    assert model.GetModelInfo() is not None
-
-    # Test manually registering/unregistering shared memory regions
-    p_namespace, p_object_id = None, None
-    for _shape in [(224, 224), (640, 480), (1280, 720)]:
-        images = np.stack([np.asarray(img.resize(_shape)) for _ in range(8)])
-        inputs = {"images": images}
-        if shm_enabled:
-            model.RegisterSystemSharedMemory(inputs)
-            # Test if the object_ids change with each RegisterSystemSharedMemory call
-            if p_namespace is not None:
-                assert p_namespace != model.namespace
-                assert p_object_id != model.object_id
-            p_namespace, p_object_id = model.namespace, model.object_id
-
-        response = model(**inputs)
-        assert isinstance(response, dict)
-        if shm_enabled:
-            model.UnregisterSystemSharedMemory()
-
-    # Repeatedly register/unregister shared memory regions
-    # so that we can test the shared memory registry.
-    for _ in range(10):
-        model.RegisterSystemSharedMemory(inputs)
-        model.UnregisterSystemSharedMemory()
-        # shm_files = list(Path("/dev/shm/").rglob("nos_psm_*"))
-        # assert len(shm_files) == 0, "Expected no shared memory regions, but found some."
-
-
-@pytest.mark.parametrize("client_with_server", CLIENT_SERVER_CONFIGURATIONS)
-def test_memray_tracking(client_with_server, request):  # noqa: F811
-    client = request.getfixturevalue(client_with_server)
-    assert client is not None
-    assert client.IsHealthy()
-
-    # Load dummy image
-    img = Image.open(NOS_TEST_IMAGE)
-
-    # Load noop model (This should still trigger memray tracking)
-    _task, model_id = TaskType.CUSTOM, "noop/process-images"
-    model = client.Module(model_id)
-    assert model is not None
-    assert model.GetModelInfo() is not None
-
-    # Make an inference request and confirm that this doesn't break inference
-    shape = (224, 224)
-    images = [np.asarray(img.resize(shape))]
-    inputs = {"images": images}
-    response = model(**inputs)
-    assert isinstance(response, dict)
-
-
-@pytest.mark.skip(reason="Currently this fails to catch the exceptions since we're not checking required args/kwargs.")
-@pytest.mark.parametrize("client_with_server", CLIENT_SERVER_CONFIGURATIONS)
-def test_client_exception_types(client_with_server, request):
-    # Inference request with malformed input.
-    client = request.getfixturevalue(client_with_server)
-    assert client is not None
-    assert client.IsHealthy()
-
-    _task, model_id = TaskType.CUSTOM, "noop/process-images"
-    model = client.Module(model_id)
-    assert model is not None
-    assert model.GetModelInfo() is not None
-
-    # TODO(scott): We only validate input count and not the types themselves. When
-    # we finish input validation the test should change accordingly.
-    inputs = {}
-    with pytest.raises(NosInputValidationException):
-        response = model(**inputs)
-        assert isinstance(response, dict)
-
-
-@pytest.mark.parametrize("client_with_server", CLIENT_SERVER_CONFIGURATIONS)
-def test_inference_service_noop(client_with_server, request):  # noqa: F811
-    """Test inference service with shared memory transport."""
-    shm_enabled = NOS_SHM_ENABLED
+@pytest.mark.parametrize("client_with_server", GRPC_CLIENT_SERVER_CONFIGURATIONS)
+@pytest.mark.parametrize("shm", [True, False])
+def test_inference_service_noop(client_with_server, shm, request):  # noqa: F811
+    """Test inference service on noop."""
 
     client = request.getfixturevalue(client_with_server)
     assert client is not None
@@ -144,7 +44,7 @@ def test_inference_service_noop(client_with_server, request):  # noqa: F811
 
     # Load noop model
     _task, model_id = TaskType.CUSTOM, "noop/process-images"
-    model = client.Module(model_id)
+    model = client.Module(model_id, shm=shm)
     assert model is not None
     assert model.GetModelInfo() is not None
 
@@ -162,10 +62,10 @@ def test_inference_service_noop(client_with_server, request):  # noqa: F811
         # This call should register a new shared memory region
         # and raise a user warning.
         inputs = {"images": [np.asarray(img.resize(shape))]}
-        with warns(UserWarning, shm_enabled=shm_enabled) as warn:
+        with warns(UserWarning, shm_enabled=shm) as warn:
             response = model(**inputs)
         # This call should not raise any warnings.
-        with warns(None, shm_enabled=shm_enabled) as warn:
+        with warns(None, shm_enabled=shm) as warn:
             response = model(**inputs)
         if warn:
             assert len(warn) == 0, "Expected no warnings, but warnings were raised"
@@ -190,6 +90,115 @@ def test_inference_service_noop(client_with_server, request):  # noqa: F811
     # TODO (spillai) Compare round-trip-times with and without shared memory transport
     # Note: This test is only valid for the local server.
 
+    # Load all noops
+    model_id = "noop/process"
+    model = client.Module(model_id, shm=shm)
+    assert model is not None
+
+    inputs = {"images": [img]}
+    response = model.process_images(**inputs)
+    assert isinstance(response, list)
+
+    inputs = {"texts": "This is a test"}
+    response = model.process_texts(**inputs)
+    assert isinstance(response, list)
+
+    inputs = {"path": NOS_TEST_IMAGE}
+    response = model.process_file(**inputs)
+    assert isinstance(response, bool)
+
+
+@pytest.mark.skipif(not NOS_SHM_ENABLED, reason="Shared memory transport is not enabled.")
+@pytest.mark.parametrize("client_with_server", GRPC_CLIENT_SERVER_CONFIGURATIONS)
+def test_shm_registry(client_with_server, request):  # noqa: F811
+    """Test shm registry."""
+    shm = NOS_SHM_ENABLED
+
+    client = request.getfixturevalue(client_with_server)
+    assert client is not None
+    assert client.IsHealthy()
+
+    assert client.ListModels() is not None
+
+    # Load dummy image
+    img = Image.open(NOS_TEST_IMAGE)
+
+    # Load noop model
+    _task, model_id = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(model_id, shm=shm)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # Test manually registering/unregistering shared memory regions
+    p_namespace, p_object_id = None, None
+    for _shape in [(224, 224), (640, 480), (1280, 720)]:
+        images = np.stack([np.asarray(img.resize(_shape)) for _ in range(8)])
+        inputs = {"images": images}
+        if shm:
+            model.RegisterSystemSharedMemory(inputs)
+            # Test if the object_ids change with each RegisterSystemSharedMemory call
+            if p_namespace is not None:
+                assert p_namespace != model.namespace
+                assert p_object_id != model.object_id
+            p_namespace, p_object_id = model.namespace, model.object_id
+
+        response = model(**inputs)
+        assert isinstance(response, dict)
+        if shm:
+            model.UnregisterSystemSharedMemory()
+
+    # Repeatedly register/unregister shared memory regions
+    # so that we can test the shared memory registry.
+    for _ in range(10):
+        model.RegisterSystemSharedMemory(inputs)
+        model.UnregisterSystemSharedMemory()
+        # shm_files = list(Path("/dev/shm/").rglob("nos_psm_*"))
+        # assert len(shm_files) == 0, "Expected no shared memory regions, but found some."
+
+
+@pytest.mark.parametrize("client_with_server", GRPC_CLIENT_SERVER_CONFIGURATIONS)
+def test_memray_tracking(client_with_server, request):  # noqa: F811
+    client = request.getfixturevalue(client_with_server)
+    assert client is not None
+    assert client.IsHealthy()
+
+    # Load dummy image
+    img = Image.open(NOS_TEST_IMAGE)
+
+    # Load noop model (This should still trigger memray tracking)
+    _task, model_id = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(model_id)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # Make an inference request and confirm that this doesn't break inference
+    shape = (224, 224)
+    images = [np.asarray(img.resize(shape))]
+    inputs = {"images": images}
+    response = model(**inputs)
+    assert isinstance(response, dict)
+
+
+@pytest.mark.skip(reason="Currently this fails to catch the exceptions since we're not checking required args/kwargs.")
+@pytest.mark.parametrize("client_with_server", GRPC_CLIENT_SERVER_CONFIGURATIONS)
+def test_client_exception_types(client_with_server, request):
+    # Inference request with malformed input.
+    client = request.getfixturevalue(client_with_server)
+    assert client is not None
+    assert client.IsHealthy()
+
+    _task, model_id = TaskType.CUSTOM, "noop/process-images"
+    model = client.Module(model_id)
+    assert model is not None
+    assert model.GetModelInfo() is not None
+
+    # TODO(scott): We only validate input count and not the types themselves. When
+    # we finish input validation the test should change accordingly.
+    inputs = {}
+    with pytest.raises(NosInputValidationException):
+        response = model(**inputs)
+        assert isinstance(response, dict)
+
 
 BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 8)]
 BENCHMARK_IMAGE_SHAPES = [(224, 224), (640, 480), (1280, 720), (2880, 1620)]
@@ -207,12 +216,7 @@ BENCHMARK_IMAGE_TYPES = [np.ndarray, Image.Image]
 
 
 @pytest.mark.benchmark
-@pytest.mark.parametrize(
-    "client_with_server",
-    [
-        CLIENT_WITH_LOCAL,
-    ],
-)
+@pytest.mark.parametrize("client_with_server", GRPC_CLIENT_SERVER_CONFIGURATIONS)
 def test_benchmark_inference_service_noop(client_with_server, request):  # noqa: F811
     """Benchmark shared memory transport and inference between the client-server.
 

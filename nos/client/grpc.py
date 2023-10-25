@@ -641,7 +641,6 @@ class Module:
         st = time.perf_counter()
         try:
             response = self._decode(response.response_bytes)
-            response = {k: loads(v) for k, v in response.items()}
         except Exception as e:
             logger.error(f"Failed to decode response [model={self.id}, e={e}]")
             raise NosClientException(f"Failed to decode response [model={self.id}, e={e}]", e)

@@ -62,7 +62,7 @@ class InferenceService:
         else:
             self.shm_manager = None
 
-    def execute(self, model_name: str, method: str = None, inputs: Dict[str, Any] = None) -> Dict[str, Any]:
+    def execute(self, model_name: str, method: str = None, inputs: Dict[str, Any] = None) -> Any:
         """Execute the model.
 
         Args:
@@ -108,14 +108,8 @@ class InferenceService:
             logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         # If the response is a single value, wrap it in a dict with the appropriate key
-        if len(sig.output_annotations) == 1:
+        if isinstance(sig.output_annotations, dict) and len(sig.output_annotations) == 1:
             response = {k: response for k in sig.output_annotations}
-
-        # Encode the response
-        st = time.perf_counter()
-        response = SharedMemoryDataDict.encode(response)
-        if NOS_PROFILING_ENABLED:
-            logger.debug(f"Encoded response [elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
         return response
 
