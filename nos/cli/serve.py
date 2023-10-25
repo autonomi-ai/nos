@@ -60,6 +60,22 @@ class ServeOptions:
     """Volumes to mount for the server."""
 
 
+@serve_cli.command("build", help="Build the NOS server locally.")
+def _serve_build(
+    config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
+    target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=False),
+    tag: str = typer.Option("{name}:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
+    prod: bool = typer.Option(
+        False,
+        "-p",
+        "--prod",
+        help="Run with production flags (slimmer images, no dev. dependencies).",
+        show_default=False,
+    ),
+) -> None:
+    _serve_up(config_filename=config_filename, runtime="auto", target=target, tag=tag, build=True, prod=prod)
+
+
 @serve_cli.command("up", help="Spin up the NOS server locally.")
 def _serve_up(
     config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
@@ -73,6 +89,9 @@ def _serve_up(
     logging_level: str = typer.Option("INFO", "--logging-level", help="Logging level.", show_default=True),
     daemon: bool = typer.Option(False, "-d", "--daemon", help="Run in daemon mode.", show_default=True),
     reload: bool = typer.Option(False, "--reload", help="Reload on file changes.", show_default=False),
+    build: bool = typer.Option(
+        False, "--build", help="Only build the custom image, without serving it.", show_default=False
+    ),
     prod: bool = typer.Option(
         False,
         "-p",
@@ -141,12 +160,8 @@ def _serve_up(
                 f"Invalid inference service runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
             )
 
-    # Pull docker image (if necessary)
-    image_name = InferenceServiceRuntime.configs[runtime].image
-    _pull_image(image_name)
-    logger.debug(f"Using runtime={runtime}, image={image_name}")
-
     # Check if the config file exists
+    image_name = None
     sandbox_name: str = Path.cwd().name
     if config_filename is not None:
         path = Path(config_filename)
@@ -204,7 +219,6 @@ def _serve_up(
             logger.debug(f"Using target={target}.")
 
         # Build the runtime environments (unless target is specified)
-        image_name = None
         for docker_target, filename in dockerfiles.items():
             # Skip if the target is not the one we want to build
             if target is not None and docker_target != target:
@@ -221,6 +235,7 @@ def _serve_up(
             print(tree)
             with redirect_stdout_to_logger(level="DEBUG"):
                 builder.build(filename=filename, target=docker_target, tags=[image_name])
+            print(f"[green]✓[/green] Successfully built Docker image (image=[bold white]{image_name}[/bold white]).")
 
         # Check if the image was built
         if image_name is None:
@@ -228,6 +243,15 @@ def _serve_up(
     else:
         container_sandbox_path: Path = None
         container_config_path: Path = None
+
+        # Pull docker image (if necessary)
+        image_name = InferenceServiceRuntime.configs[runtime].image
+        _pull_image(image_name)
+        logger.debug(f"Using runtime={runtime}, image={image_name}")
+
+    # If the `--build` flag is specified, then we can stop here
+    if build:
+        return
 
     # Render the docker-compose file using the tag name, http port, etc.
     SERVE_TEMPLATE = Path(__file__).parent / "templates/docker-compose.serve.yml.j2"
