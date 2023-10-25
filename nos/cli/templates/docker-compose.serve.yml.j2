@@ -4,14 +4,18 @@ services:
 {%- if http %}
   nos-http-gateway:
     image: {{ image }}
-    command: nos-http-server --port {{ http_port }}
+    command: nos-http-server --port {{ http_port }} --workers {{ http_workers }} {% if reload %}--reload --reload-dir {{ reload_dir }} {% endif %}
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL={{ logging_level }}
-      - NOS_HTTP_MAX_WORKER_THREADS={{ http_max_workers }}
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
+    {%- if volumes|length > 0 %}
+        {%- for volume in volumes %}
+      - {{ volume }}
+        {%- endfor %}
+      {%- endif %}
     network_mode: host
     ipc: host
     depends_on:
@@ -22,10 +26,17 @@ services:
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL={{ logging_level }}
+      {%- if config %}
       - NOS_HUB_CATALOG_PATH=$NOS_HUB_CATALOG_PATH:{{ config }}
+      {%- endif %}
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
+      {%- if volumes|length > 0 %}
+        {%- for volume in volumes %}
+      - {{ volume }}
+        {%- endfor %}
+      {%- endif %}
     network_mode: host
     ipc: host
 {%- if gpu %}

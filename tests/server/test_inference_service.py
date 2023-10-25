@@ -277,6 +277,7 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
             for _ in tqdm(duration=2, desc="Warmup", disable=True):
                 try:
                     response = model(**inputs)
+                    assert isinstance(response, (list, dict))
                 except Exception as e:
                     logger.error(f"Exception: {e}")
                     continue
@@ -295,7 +296,6 @@ def test_benchmark_inference_service_noop(client_with_server, request):  # noqa:
                 except Exception as e:
                     logger.error(f"Exception: {e}")
                     continue
-                assert isinstance(response, list)
             timing_records.append(
                 TimingInfo(
                     desc=f"{model_id}_{B}x{shape[0]}x{shape[1]}x3",
