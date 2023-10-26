@@ -18,7 +18,7 @@ from rich.console import Console
 from rich.tree import Tree
 
 
-serve_cli = typer.Typer(name="serve", help="NOS Serve CLI.", no_args_is_help=True)
+serve_cli = typer.Typer(name="serve", help="NOS gRPC/REST Serve CLI.", no_args_is_help=True)
 console = Console()
 
 
@@ -107,7 +107,6 @@ def _serve_up(
     from jinja2 import Environment, FileSystemLoader
 
     from nos.common.system import docker_compose_command, has_docker
-    from nos.hub import Hub
     from nos.logging import logger, redirect_stdout_to_logger
     from nos.server import InferenceServiceRuntime, _pull_image
 
@@ -182,9 +181,6 @@ def _serve_up(
         SANDBOX_DIR = "/app/serve"
         container_sandbox_path: Path = Path(SANDBOX_DIR) / sandbox_name
         logger.debug(f"[config={config_filename}, sandbox={sandbox_name}, container_sandbox={container_sandbox_path}]")
-
-        # Get all the "models" defined in the config
-        Hub.register_from_yaml(config_filename)
 
         # Load the "images" defined in the config
         config = AGIPackConfig.load_yaml(config_filename)

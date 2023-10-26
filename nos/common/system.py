@@ -42,7 +42,7 @@ def get_nvidia_smi(df: bool = False) -> Optional[Union[str, pd.DataFrame]]:
     )
     if output is None or not df:
         return output
-    return pd.read_csv(StringIO(output), sep=", ")
+    return pd.read_csv(StringIO(output), sep=", ", engine="python")
 
 
 def has_gpu() -> bool:
@@ -226,7 +226,6 @@ def get_system_info(docker: bool = False, gpu: bool = False) -> Dict[str, Any]:
             "used": vmem.used,
             "available": vmem.available,
         },
-        "torch": get_torch_info(),
     }
     if docker:
         info["docker"] = get_docker_info()

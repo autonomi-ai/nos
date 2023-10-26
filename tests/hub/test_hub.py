@@ -103,6 +103,9 @@ def test_hub_register_from_yaml():
     ]:
         Hub.register_from_yaml(yaml)
 
+    # Disable logging for following tests
+    logger.disable("nos")
+
     # Test invalid/malformed model configs
     with pytest.raises(FileNotFoundError):
         Hub.register_from_yaml(NOS_TEST_DATA_DIR / "hub/custom_model/config-not-found.yaml")
@@ -112,6 +115,7 @@ def test_hub_register_from_yaml():
         NOS_TEST_DATA_DIR / "hub/custom_model/config-malformed-model-path.yaml",
         NOS_TEST_DATA_DIR / "hub/custom_model/config-malformed-model-method.yaml",
     ]:
+
         with pytest.raises(Exception):
             try:
                 Hub.register_from_yaml(yaml)
@@ -120,6 +124,8 @@ def test_hub_register_from_yaml():
                     f"Successfully raised exception when loading model spec from malformed YAML: {yaml}, e={exc}"
                 )
                 raise exc
+
+    logger.enable("nos")
 
 
 @skip_if_no_torch_cuda
