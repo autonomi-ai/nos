@@ -157,8 +157,8 @@ class FunctionSignature:
     """Output / return function signature (as returned by inspect.signature)."""
 
     input_annotations: Dict[str, Any] = field(default_factory=dict)
-    """Mapping of input names to dtypes."""
-    output_annotations: Dict[str, Any] = field(default_factory=dict)
+    """Mapping of input keyword arguments to dtypes."""
+    output_annotations: Union[Any, Dict[str, Any]] = field(default_factory=inspect.Signature.empty)
     """Mapping of output names to dtypes."""
 
     def __post_init__(self):
@@ -222,7 +222,9 @@ class FunctionSignature:
         Returns:
             Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]: Outputs spec.
         """
-        return {k: AnnotatedParameter(ann) for k, ann in self.output_annotations.items()}
+        if isinstance(self.output_annotations, dict):
+            return {k: AnnotatedParameter(ann) for k, ann in self.output_annotations.items()}
+        return AnnotatedParameter(self.output_annotations)
 
 
 @dataclass

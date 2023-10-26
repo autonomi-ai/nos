@@ -5,18 +5,17 @@ import rich.status
 import rich.table
 import typer
 
-from nos import hub
 from nos.constants import NOS_MODELS_DIR
 
 
-DEFAULT_MODEL_CACHE_DIR = NOS_MODELS_DIR
-
-
 hub_cli = typer.Typer(name="hub", help="NOS Hub CLI.", no_args_is_help=True)
+DEFAULT_MODEL_CACHE_DIR = NOS_MODELS_DIR
 
 
 @hub_cli.command("list")
 def _list_models(private: bool = typer.Option(False, "-p", "--private", help="List private models.")) -> None:
+    from nos import hub
+
     console = rich.console.Console()
     with rich.status.Status("Fetching models from registry ..."):
         console.print(hub.list(private=private))
@@ -33,6 +32,7 @@ def _download_hf_model(
         help="Download huggingface models locally.",
     ),
 ) -> None:
+    from nos import hub
 
     output_directory = Path(output_directory) / model_name
     output_directory.mkdir(parents=True, exist_ok=True)

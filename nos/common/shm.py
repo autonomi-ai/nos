@@ -141,7 +141,7 @@ class SharedMemoryDataDict:
     @staticmethod
     def encode(data: Dict[str, Any]) -> Dict[str, Any]:
         """Encode the data dictionary with shared-memory references."""
-        return {k: dumps(v) for k, v in data.items()}
+        return dumps(data)
 
 
 @dataclass

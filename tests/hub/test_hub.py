@@ -85,12 +85,41 @@ def test_hub_catalog():
 
     pvalue = os.getenv("NOS_HUB_CATALOG_PATH", "")
     nmodels = len(Hub.list())
-    os.environ["NOS_HUB_CATALOG_PATH"] = str(NOS_TEST_DATA_DIR / "hub/custom_model/catalog.yaml")
+    os.environ["NOS_HUB_CATALOG_PATH"] = str(NOS_TEST_DATA_DIR / "hub/custom_model/config.yaml")
     Hub.register_from_catalog()
     os.environ["NOS_HUB_CATALOG_PATH"] = pvalue
     assert (
         len(Hub.list()) >= nmodels + 1
     ), "Failed to register custom model from catalog, assumes at least one model is registered."
+
+
+def test_hub_register_from_yaml():
+    """Test loading models from the hub yaml config."""
+    from nos.test.utils import NOS_TEST_DATA_DIR
+
+    # Test valid model configs
+    for yaml in [
+        NOS_TEST_DATA_DIR / "hub/custom_model/config.yaml",
+    ]:
+        Hub.register_from_yaml(yaml)
+
+    # Test invalid/malformed model configs
+    with pytest.raises(FileNotFoundError):
+        Hub.register_from_yaml(NOS_TEST_DATA_DIR / "hub/custom_model/config-not-found.yaml")
+
+    for yaml in [
+        NOS_TEST_DATA_DIR / "hub/custom_model/config-malformed-model-cls.yaml",
+        NOS_TEST_DATA_DIR / "hub/custom_model/config-malformed-model-path.yaml",
+        NOS_TEST_DATA_DIR / "hub/custom_model/config-malformed-model-method.yaml",
+    ]:
+        with pytest.raises(Exception):
+            try:
+                Hub.register_from_yaml(yaml)
+            except Exception as exc:
+                logger.debug(
+                    f"Successfully raised exception when loading model spec from malformed YAML: {yaml}, e={exc}"
+                )
+                raise exc
 
 
 @skip_if_no_torch_cuda

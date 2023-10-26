@@ -1,0 +1,3 @@
+# Auto generated files such as the ones below should not be committed
+Dockerfile.*
+docker-compose.*

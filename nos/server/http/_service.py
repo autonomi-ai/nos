@@ -168,6 +168,15 @@ def main():
     parser.add_argument(
         "--server", type=bool, default=False, help="Initialize the gRPC server with the REST API service"
     )
+    parser.add_argument(
+        "--reload", action="store_true", help="Reload the REST API service when the source code changes"
+    )
+    parser.add_argument(
+        "--reload-dir",
+        type=str,
+        default=".",
+        help="Directory to watch for changes when reloading the REST API service",
+    )
     args = parser.parse_args()
     logger.debug(f"args={args}")
 
@@ -194,6 +203,7 @@ def main():
         workers=args.workers,
         log_level="info",
         factory=True,
+        reload=args.reload,
     )
 
 

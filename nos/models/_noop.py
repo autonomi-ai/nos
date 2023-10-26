@@ -36,7 +36,7 @@ hub.register(
             Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 1],
         ]
     },
-    outputs={"result": List[int]},
+    outputs=List[int],
     method="process_images",
 )
 hub.register(
@@ -46,11 +46,17 @@ hub.register(
     inputs={
         "texts": Batch[str, 1],
     },
-    outputs={"result": List[int]},
+    outputs=List[int],
     method="process_texts",
 )
+hub.register(
+    "noop/process-file",
+    TaskType.CUSTOM,
+    NoOp,
+    method="process_file",
+)
 
-# Register model with two methods under the same name
+# Register model with multiple methods under the same name
 hub.register(
     "noop/process",
     TaskType.CUSTOM,
@@ -61,7 +67,6 @@ hub.register(
             Batch[ImageT[Image.Image, ImageSpec(shape=(960, 1280, 3), dtype="uint8")], 1],
         ]
     },
-    outputs={"result": List[int]},
     method="process_images",
 )
 hub.register(
@@ -71,16 +76,11 @@ hub.register(
     inputs={
         "texts": Batch[str, 1],
     },
-    outputs={"result": List[int]},
     method="process_texts",
 )
 hub.register(
-    "noop/process-file",
+    "noop/process",
     TaskType.CUSTOM,
     NoOp,
-    inputs={
-        "path": Path,
-    },
-    outputs={"result": bool},
     method="process_file",
 )
