@@ -10,6 +10,7 @@ import rich.console
 import rich.status
 from google.protobuf import empty_pb2, wrappers_pb2
 
+import nos.telemetry  # noqa: F401
 from nos import hub
 from nos.common import FunctionSignature, ModelSpec, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTransportManager

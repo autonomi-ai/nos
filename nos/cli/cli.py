@@ -1,5 +1,6 @@
 import typer
 
+import nos.telemetry  # noqa: F401
 from nos.cli.hub import hub_cli
 from nos.cli.predict import predict_cli
 from nos.cli.serve import serve_cli

@@ -1,3 +1,4 @@
+import nos.telemetry  # noqa: F401
 from nos.client.grpc import Client  # noqa: F401
 from nos.common.exceptions import NosClientException  # noqa: F401
 from nos.common.spec import FunctionSignature, ModelSpec  # noqa: F401
