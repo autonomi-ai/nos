@@ -18,7 +18,7 @@ from rich.console import Console
 from rich.tree import Tree
 
 
-serve_cli = typer.Typer(name="serve", help="NOS Serve CLI.", no_args_is_help=True)
+serve_cli = typer.Typer(name="serve", help="NOS gRPC/REST Serve CLI.", no_args_is_help=True)
 console = Console()
 
 

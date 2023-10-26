@@ -68,12 +68,14 @@ class DynamicProtobufCompiler:
         import importlib.util
 
         # Load the module
+        st = time.time()
         module_path = f"{Path(self.cache_dir) / module_name}.py"
         logger.debug(f"Loading module [module={module_path}]")
         spec = importlib.util.spec_from_file_location(module_name, module_path)
 
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
+        logger.debug(f"Loaded module [module={module_path}, elapsed={(time.time() - st)*1e3:.1f} ms]")
         return module
 
 

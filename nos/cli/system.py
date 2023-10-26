@@ -1,10 +1,12 @@
+from typing import Any, Dict
+
 import typer
 from rich.console import Console
 from rich.json import JSON
 from rich.panel import Panel
 
 from docker.errors import APIError
-from nos.common.system import get_system_info, has_gpu
+from nos.common.system import get_system_info, has_docker, has_gpu
 from nos.logging import logger
 from nos.server import DockerRuntime
 
@@ -18,7 +20,8 @@ def _system_info() -> None:
     """Get system information (including CPU, GPU, RAM, etc.)"""
 
     # Get system info
-    console.print(Panel(JSON.from_data(get_system_info(docker=True, gpu=True)), title="System"))
+    system_info: Dict[str, Any] = get_system_info(docker=has_docker(), gpu=has_gpu())
+    console.print(Panel(JSON.from_data(system_info), title="System"))
 
     if not has_gpu():
         console.print("No GPU detected, exiting early.")
@@ -40,6 +43,7 @@ def _system_info() -> None:
             nvidia_docker_gpu_info += "\n" if i > 0 else ""
             nvidia_docker_gpu_info += f"{log.strip().decode()}"
         container.stop()
+        container.remove()
     except (APIError, ModuleNotFoundError, Exception) as exc:
         logger.error(f"Failed to run nvidia-smi within docker container: {exc}")
         nvidia_docker_gpu_info = "Failed to run nvidia-smi within docker container"

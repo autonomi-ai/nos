@@ -27,7 +27,7 @@
 > *Optimizing and serving models for production AI inference is still difficult, often leading to notoriously expensive cloud bills and often underutilized GPUs. That’s why we’re building **NOS** - a fast and flexible inference server for modern AI workloads. With a few lines of code, developers can optimize, serve, and auto-scale Pytorch model inference without having to deal with the complexities of ML compilers, HW-accelerators, or distributed inference. Simply put, NOS allows AI teams to cut inference costs up to **10x**, speeding up development time and time-to-market.*
 
 ## ⚡️ What is NOS?
-**NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running lightning-fast inference of popular foundational AI models.
+**NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running inference of popular foundational AI models.
 
 - 👩‍💻 **Easy-to-use**: Built for [PyTorch](https://pytorch.org/) and designed to optimize, serve and auto-scale Pytorch models in production without compromising on developer experience.
 - 🥷 **Flexible**: Run and serve several foundational AI models ([Stable Diffusion](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0), [CLIP](https://huggingface.co/openai/clip-vit-base-patch32), [Whisper](https://huggingface.co/openai/whisper-large-v2)) in a single place.
@@ -52,7 +52,7 @@ Get started with the full NOS server by installing via pip:
   $ pip install torch-nos[server]
   ```
 
-If you want to simply use a light-weight NOS client and run inference on your local machine, you can install the client-only package:
+If you want to simply use a light-weight NOS client and run inference on your local machine (via docker), you can install the client-only package:
 
   ```shell
   $ conda env create -n nos-py38 python=3.8
@@ -144,7 +144,7 @@ txt_vec = clip.encode_text(text=["fox jumped over the moon"])
 </table>
 
 
-## 📂 Repository Structure
+## 📂 Directory Structure
 
 ```bash
 ├── docker         # Dockerfile for CPU/GPU servers
@@ -202,7 +202,7 @@ This project is licensed under the [Apache-2.0 License](LICENSE).
 
 ## 📡 Telemetry
 
-NOS collects anonymous usage data using [Sentry](https://sentry.io/). This is used to help us understand how the community is using NOS and to help us prioritize features. You can opt-out of telemetry by setting `SENTRY_ENABLED=0`.
+NOS collects anonymous usage data using [Sentry](https://sentry.io/). This is used to help us understand how the community is using NOS and to help us prioritize features. You can opt-out of telemetry by setting `NOS_TELEMETRY_ENABLED=0`.
 
 ## 🤝 Contributing
 We welcome contributions! Please see our [contributing guide](CONTRIBUTING.md) for more information.

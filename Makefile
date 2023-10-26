@@ -1,5 +1,6 @@
 export DOCKER_BUILDKIT ?= 1
 export COMPOSE_DOCKER_CLI_BUILD ?= 1
+export NOS_TELEMETRY_ENABLED ?= 0
 
 .DEFAULT_GOAL := help
 .PHONY: default clean clean-build clean-pyc clean-test test test-coverage develop install style

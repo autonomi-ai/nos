@@ -1,13 +1,17 @@
 import typer
 
-import nos.telemetry  # noqa: F401
 from nos.cli.hub import hub_cli
 from nos.cli.predict import predict_cli
 from nos.cli.serve import serve_cli
 from nos.cli.system import system_cli
 
 
-app_cli = typer.Typer(no_args_is_help=True)
+app_cli = typer.Typer(
+    help="[bold]🔥 NOS CLI - Nitrous Oxide for your AI infrastructure[/bold] ",
+    no_args_is_help=True,
+    rich_markup_mode="rich",
+)
+
 app_cli.add_typer(hub_cli)
 app_cli.add_typer(system_cli)
 app_cli.add_typer(predict_cli)

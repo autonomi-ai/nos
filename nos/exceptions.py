@@ -1,8 +1,6 @@
 """Custom exceptions for the nos package."""
 from dataclasses import dataclass
 
-import nos.telemetry  # noqa: F401
-
 
 @dataclass(frozen=True)
 class NosServerException(Exception):

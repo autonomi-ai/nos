@@ -1,8 +1,8 @@
 import contextlib
 import os
-import sys
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 from .constants import NOS_LOG_DIR
 
@@ -10,25 +10,27 @@ from .constants import NOS_LOG_DIR
 # Set the loguru logger level to the same level as the nos logger
 date = datetime.utcnow().strftime("%Y-%m-%d_%H%M%S")
 LOGGING_PATH = os.getenv("NOS_LOGGING_PATH", os.path.join(NOS_LOG_DIR, f"nos-{date}.log"))
-LOGGING_ROTATION = os.getenv("NOS_LOGGING_ROTATION", "100 MB")
+LOGGING_ROTATION = os.getenv("NOS_LOGGING_ROTATION", "10 MB")
 LOGGING_LEVEL = os.getenv("NOS_LOGGING_LEVEL", "INFO")
+os.environ["LOGURU_LEVEL"] = LOGGING_LEVEL
 
 
-def build_logger(name: str = None, level: str = LOGGING_LEVEL):
+def build_logger(name: str = "nos", level: str = LOGGING_LEVEL):
     """Get a logger with the specified name"""
     from loguru import logger as _logger
 
-    # Set loguru logger level to the same level as the nos logger
-    # and automatically rotate big files
-    if name:
-        os.path.join(NOS_LOG_DIR, f"nos-{name}-{date}.log")
-    else:
-        pass
+    from nos.telemetry import _init_telemetry_logger
 
-    # Remove the default logger
-    _logger.remove()
-    _logger.add(sys.stdout, level=LOGGING_LEVEL)
-    _logger.add(sys.stderr, level="ERROR")
+    # Set loguru logger level to the same level as the nos logger
+    # and automatically rotate big files.
+    basename = f"{date}.log"
+    if name:
+        basename = f"{name}-{basename}"
+    path = Path(NOS_LOG_DIR / basename)
+    # Add file sink for logging
+    _logger.add(str(path), rotation=LOGGING_ROTATION, level=level)
+    # Add telemetry/sentry sinks for logging
+    _init_telemetry_logger()
     return _logger
 
 
