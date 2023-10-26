@@ -1,3 +1,4 @@
+# Copyright 2022- Autonomi AI, Inc. All rights reserved.
 export DOCKER_BUILDKIT ?= 1
 export COMPOSE_DOCKER_CLI_BUILD ?= 1
 export NOS_TELEMETRY_ENABLED ?= 0
@@ -20,7 +21,7 @@ include makefiles/Makefile.agibuild.mk
 default: help;
 
 help:
-	@echo "nos 🔥: Nitrous Oxide System (NOS) for Computer Vision"
+	@echo "🔥 NOS - Nitrous Oxide for your AI infrastructure."
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""

@@ -1,3 +1,4 @@
+# Copyright 2022- Autonomi AI, Inc. All rights reserved.
 
 agi-build-cpu:  # equivalent to agi-build-py38-cpu (target=base-cpu, cpu, test-cpu)
 	agi-pack build \

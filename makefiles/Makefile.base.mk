@@ -1,5 +1,7 @@
+# Copyright 2022- Autonomi AI, Inc. All rights reserved.
+
 help-base:
-	@echo "nos 🔥: Nitrous Oxide System (NOS) for Computer Vision"
+	@echo "⚡️ NOS - Nitrous Oxide for your AI Infrastructure"
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
