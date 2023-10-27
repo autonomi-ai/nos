@@ -1,6 +1,7 @@
+import inspect
 from dataclasses import field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import yaml
 from pydantic import ValidationError, root_validator
@@ -99,7 +100,7 @@ class Hub:
         init_args: Tuple[Any] = (),
         init_kwargs: Dict[str, Any] = {},  # noqa: B006
         inputs: Dict[str, Any] = {},  # noqa: B006
-        outputs: Dict[str, Any] = {},  # noqa: B006
+        outputs: Union[Any, Dict[str, Any], None] = None,  # noqa: B006
         **kwargs,
     ) -> ModelSpec:
         """Model registry decorator.

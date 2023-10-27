@@ -151,14 +151,14 @@ class FunctionSignature:
     init_kwargs: Dict[str, Any] = field(default_factory=dict)
     """Keyword arguments to initialize the model instance."""
 
-    parameters: Dict[str, Any] = field(default_factory=dict, init=False)
+    parameters: Dict[str, Any] = field(init=False)
     """Input function signature (as returned by inspect.signature)."""
-    return_annotation: Any = field(default_factory=inspect.Signature.empty, init=False)
+    return_annotation: Any = field(init=False)
     """Output / return function signature (as returned by inspect.signature)."""
 
     input_annotations: Dict[str, Any] = field(default_factory=dict)
     """Mapping of input keyword arguments to dtypes."""
-    output_annotations: Union[Any, Dict[str, Any]] = field(default_factory=inspect.Signature.empty)
+    output_annotations: Union[Any, Dict[str, Any], None] = field(default=None)
     """Mapping of output names to dtypes."""
 
     def __post_init__(self):
@@ -216,15 +216,18 @@ class FunctionSignature:
         parameters.pop("self", None)
         return {k: AnnotatedParameter(self.input_annotations.get(k, p.annotation), p) for k, p in parameters.items()}
 
-    def get_outputs_spec(self) -> Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]:
+    def get_outputs_spec(self) -> Dict[str, Union[ObjectTypeInfo, Dict[str, ObjectTypeInfo]]]:
         """Return the full output function signature specification.
 
         Returns:
-            Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]: Outputs spec.
+            Dict[str, Union[ObjectTypeInfo, Dict[str, ObjectTypeInfo]]]: Outputs spec.
         """
-        if isinstance(self.output_annotations, dict):
+        if self.output_annotations is None:
+            return AnnotatedParameter(self.return_annotation)
+        elif isinstance(self.output_annotations, dict):
             return {k: AnnotatedParameter(ann) for k, ann in self.output_annotations.items()}
-        return AnnotatedParameter(self.output_annotations)
+        else:
+            return AnnotatedParameter(self.output_annotations)
 
 
 @dataclass

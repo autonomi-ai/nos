@@ -1,6 +1,25 @@
 ## GPU benchmarks
 
-### Timing records (0.1.0 - 2023-10-15)
+### Timing records (0.1.0rc2 - 2023-10-27)
+Timing records
+                      desc  elapsed    n  latency_ms     fps
+0             noop_294x240     1.14  168        6.79  147.37
+1             noop_640x480     1.17  168        6.96  143.59
+2            noop_1280x720     4.96  168       29.52   33.87
+3           noop_2880x1620    17.22  168      102.50    9.76
+4     yolox_medium_294x240     2.06  168       12.26   81.55
+5     yolox_medium_640x480     1.90  168       11.31   88.42
+6    yolox_medium_1280x720     8.51  168       50.65   19.74
+7   yolox_medium_2880x1620    20.87  168      124.23    8.05
+8       yolox_tiny_294x240     2.00  168       11.90   84.00
+9       yolox_tiny_640x480     1.73  168       10.30   97.11
+10     yolox_tiny_1280x720     7.38  168       43.93   22.76
+11    yolox_tiny_2880x1620    19.80  168      117.86    8.48
+12          openai_224x224     2.34  168       13.93   71.79
+13           sdv21_512x512     2.74    2     1370.00    0.73
+14          sdxl_1024x1024    13.72    2     6860.00    0.15
+
+### Timing records (0.1.0rc1 - 2023-10-15)
 ```bash
                       desc  elapsed    n  latency_ms     fps
 0             noop_294x240     1.09  168        6.49  154.13
