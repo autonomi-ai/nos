@@ -55,13 +55,11 @@ RUN pip install --upgrade pip
 # Install pip requirements, with cache mounting ${PIP_CACHE_DIR} for faster builds
 # Note: Cache mounts allow us to re-use the cache for pip packages
 # instead of having to re-download them every time we build.
-COPY requirements/requirements.torch.cpu.txt /tmp/reqs/requirements/requirements.torch.cpu.txt
 COPY requirements/requirements.txt /tmp/reqs/requirements/requirements.txt
 COPY requirements/requirements.http.txt /tmp/reqs/requirements/requirements.http.txt
 COPY requirements/requirements.server.txt /tmp/reqs/requirements/requirements.server.txt
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
     pip install --upgrade pip \
-    && pip install -r /tmp/reqs/requirements/requirements.torch.cpu.txt \
     && pip install -r /tmp/reqs/requirements/requirements.txt \
     && pip install -r /tmp/reqs/requirements/requirements.http.txt \
     && pip install -r /tmp/reqs/requirements/requirements.server.txt \
@@ -81,6 +79,9 @@ ADD ./scripts/entrypoint.sh /app/entrypoint.sh
 
 # Run commands
 RUN echo "running commands"
+RUN --mount=type=cache,target=${CONDA_PKGS_DIRS} \
+    --mount=type=cache,target=${PIP_CACHE_DIR} \
+    pip install torch>=2.0.0+cpu torchaudio torchvision -i https://download.pytorch.org/whl/cpu
 RUN --mount=type=cache,target=${CONDA_PKGS_DIRS} \
     --mount=type=cache,target=${PIP_CACHE_DIR} \
     mamba install -y -c conda-forge x264=='1!161.3030' ffmpeg=4.3.2
