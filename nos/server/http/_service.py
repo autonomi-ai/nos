@@ -3,7 +3,7 @@ import time
 from dataclasses import field
 from typing import Any, Dict
 
-from fastapi import Depends, FastAPI, status
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
@@ -13,7 +13,7 @@ from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
 
-from ._utils import decode_dict, encode_dict
+from ._utils import decode_item, encode_item
 
 
 nos_service_pb2 = import_module("nos_service_pb2")
@@ -87,7 +87,10 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
         )
 
     @app.post("/infer", status_code=status.HTTP_201_CREATED)
-    def infer(request: InferenceRequest, client: Client = Depends(get_client)) -> JSONResponse:
+    def infer(
+        request: InferenceRequest,
+        client: Client = Depends(get_client),
+    ) -> JSONResponse:
         """Perform inference on the given input data.
 
         $ curl -X "POST" \
@@ -113,7 +116,7 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
 
         Args:
             request: Inference request.
-            file_object: Uploaded image / video / audio file for inference.
+            file: Uploaded image / video / audio file for inference.
             client: Inference client.
 
         Returns:
@@ -121,26 +124,45 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
         """
         st = time.perf_counter()
 
+        # Check if the model is supported
         logger.debug(f"Initializing module for inference [model={request.model_id}, method={request.method}]")
         try:
             model = client.Module(request.model_id)
         except Exception:
-            logger.error(f"Model '{request.model_id}' not supported")
+            logger.exception(f"Model '{request.model_id}' not supported")
             return JSONResponse(
                 content={"error": f"Model '{request.model_id}' not supported"},
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
-        logger.debug(f"Initialized module for inference [model={request.model_id}, method={request.method}]")
+        logger.debug(f"Initialized module for inference [model={request.model_id}]")
 
+        # Check if the model supports the given method
+        if request.method is None:
+            request.method = "__call__"
+        if not hasattr(model, request.method):
+            logger.exception(f"Method '{request.method}' not supported")
+            return JSONResponse(
+                content={"error": f"Method '{request.method}' not supported"},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+        logger.debug(f"Initialized module method for inference [model={request.model_id}, method={request.method}]")
+
+        # Decode input dictionary
         logger.debug(f"Decoding input dictionary [model={request.model_id}, method={request.method}]")
-        inputs = decode_dict(request.inputs)
+        inputs = decode_item(request.inputs)
         logger.debug(f"Decoded input dictionary [model={request.model_id}, method={request.method}]")
         logger.debug(f"Inference [model={request.model_id}, keys={inputs.keys()}]")
         response = model(**inputs, _method=request.method)
         logger.debug(
             f"Inference [model={request.model_id}, , method={request.method}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
         )
-        return JSONResponse(content=encode_dict(response), status_code=status.HTTP_201_CREATED)
+
+        # # Handle response types
+        try:
+            return JSONResponse(content=encode_item(response), status_code=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.exception(f"Failed to encode response [type={type(response)}, e={e}]")
+            raise HTTPException(status_code=500, detail="Image generation failed")
 
     return app
 
