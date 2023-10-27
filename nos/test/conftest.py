@@ -263,14 +263,14 @@ def http_client_with_gpu_backend(grpc_server_docker_runtime_gpu):  # noqa: F811
 
 # Needed for referencing relevant pytest fixtures
 HTTP_CLIENT_SERVER_CONFIGURATIONS = [
-    HTTP_CLIENT_WITH_LOCAL,
+    # HTTP_CLIENT_WITH_LOCAL,
     # HTTP_CLIENT_WITH_CPU,
-    # HTTP_CLIENT_WITH_GPU
+    HTTP_CLIENT_WITH_GPU
 ]
 
 # Needed for referencing relevant pytest fixtures
 GRPC_CLIENT_SERVER_CONFIGURATIONS = [
-    GRPC_CLIENT_WITH_LOCAL,
+    # GRPC_CLIENT_WITH_LOCAL,
     # GRPC_CLIENT_WITH_CPU,
-    # GRPC_CLIENT_WITH_GPU
+    GRPC_CLIENT_WITH_GPU
 ]
