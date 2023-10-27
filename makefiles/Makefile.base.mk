@@ -50,6 +50,8 @@ docker-build-gpu: agi-build-gpu
 docker-build-gpu-prod:
 	make agi-build-gpu AGIPACK_ARGS=--prod
 
+docker-build-cu118: agi-build-cu118
+
 docker-build-and-push-multiplatform-cpu:
 	agi-pack generate ${AGIPACK_ARGS} \
 		-c docker/agibuild.cpu.yaml \
@@ -63,7 +65,7 @@ docker-build-and-push-multiplatform-cpu-prod:
 	make .docker-build-and-push-multiplatform-cpu AGIPACK_ARGS=--prod
 
 docker-build-all: \
-	docker-build-cpu docker-build-gpu
+	docker-build-cpu docker-build-gpu docker-build-cu118
 
 docker-push-cpu:
 	make .docker-push-base \
@@ -73,8 +75,10 @@ docker-push-gpu:
 	make .docker-push-base \
 	TARGET=gpu
 
+docker-push-cu118: agi-push-cu118
+
 docker-push-all: \
-	docker-push-cpu docker-push-gpu docker-build-and-push-multiplatform-cpu
+	docker-push-cpu docker-push-gpu docker-push-cu118
 
 docker-test-cpu:
 	docker compose -f docker-compose.test.yml run --rm --build test-cpu
