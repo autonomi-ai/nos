@@ -1,10 +1,12 @@
 import base64
 import json
 from io import BytesIO
+from pathlib import Path
 from typing import Any, Dict
 
 import numpy as np
 from fastapi import UploadFile
+from fastapi.responses import FileResponse
 from PIL import Image
 
 
@@ -21,6 +23,8 @@ def encode_item(v: Any) -> Any:
             return v.tolist()
         else:
             raise ValueError(f"Unsupported ndarray dimension: {v.ndim}")
+    elif isinstance(v, Path):
+        return FileResponse(v)
     else:
         return v
 
