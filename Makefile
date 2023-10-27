@@ -1,4 +1,4 @@
-# Copyright 2022- Autonomi AI, Inc. All rights reserved.
+# Copyright 2023- Autonomi AI, Inc. All rights reserved.
 export DOCKER_BUILDKIT ?= 1
 export COMPOSE_DOCKER_CLI_BUILD ?= 1
 export NOS_TELEMETRY_ENABLED ?= 0

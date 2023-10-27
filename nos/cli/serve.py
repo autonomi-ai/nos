@@ -194,7 +194,12 @@ def _serve_up(
         for _target, image_config in config.images.items():
             image_config.workdir = str(container_sandbox_path)
             image_config.add.append(f"./:{str(container_sandbox_path)}")
+            # Add the sandbox directory to the PYTHONPATH so that
+            # we can import the models via "from <sandbox_name>.models.model import X"
+            image_config.env["PYTHONPATH"] = f"$PYTHONPATH:{SANDBOX_DIR}"
             image_config.env["NOS_HUB_CATALOG_PATH"] = f"$NOS_HUB_CATALOG_PATH:{str(container_config_path)}"
+            if reload:
+                image_config.env["NOS_MAX_CONCURRENT_MODELS"] = "0"
 
         # Render the dockerfiles
         builder = AGIPack(config)

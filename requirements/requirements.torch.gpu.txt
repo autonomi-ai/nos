@@ -1,3 +1,4 @@
-torch>=1.12.1,<2.0.0
-torchaudio>=0.13.1
-torchvision>=0.13.0
+-i https://download.pytorch.org/whl/cu118/torch_stable.html
+torch>=2.0.1
+torchaudio
+torchvision

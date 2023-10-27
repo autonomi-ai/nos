@@ -1,4 +1,4 @@
-# Copyright 2022- Autonomi AI, Inc. All rights reserved.
+# Copyright 2023 Autonomi AI, Inc. All rights reserved.
 
 NOS_VERSION := $(shell python -c 'from nos.version import __version__; print(__version__.replace("-", "."))')
 PYPI_USERNAME :=

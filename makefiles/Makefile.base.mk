@@ -1,4 +1,4 @@
-# Copyright 2022- Autonomi AI, Inc. All rights reserved.
+# Copyright 2023 Autonomi AI, Inc. All rights reserved.
 
 help-base:
 	@echo "⚡️ NOS - Nitrous Oxide for your AI Infrastructure"
@@ -42,13 +42,11 @@ help-base:
 	@echo "DOCKER_TARGET: ${DOCKER_TARGET}"
 	@echo "IMAGE: ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET}"
 	@echo "docker buildx create --use"
-	docker buildx build -f docker/Dockerfile \
+	docker buildx build -f docker/Dockerfile.multiplatform.${TARGET} \
 		--platform linux/amd64,linux/arm64 \
 		--target ${DOCKER_TARGET} \
 		-t ${DOCKER_IMAGE_NAME}:latest-${TARGET} \
 		-t ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET} \
-		--build-arg TARGET=${TARGET} \
-		--build-arg BASE_IMAGE=${BASE_IMAGE} \
 		--push \
 		.
 
@@ -61,24 +59,19 @@ help-base:
 	docker push ${DOCKER_IMAGE_NAME}:latest-${TARGET}
 	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-${TARGET}
 
-docker-build-cpu:
-	make .docker-build \
-	TARGET=cpu \
-	DOCKER_TARGET=${DOCKER_TARGET} \
-	BASE_IMAGE=python:3.8.10-slim
+docker-build-cpu: agi-build-cpu
 
-docker-build-gpu:
-	make .docker-build \
-	TARGET=gpu \
-	CUDA_VERSION=11.8 \
-	DOCKER_TARGET=${DOCKER_TARGET} \
-	BASE_IMAGE=nvidia/cuda:11.8.0-base-ubuntu22.04
+docker-build-gpu: agi-build-gpu
 
 docker-build-and-push-multiplatform-cpu:
+	agi-pack generate \
+		-c docker/agibuild.cpu.yaml \
+		-o docker/Dockerfile.multiplatform.cpu \
+		-p 3.8.15 \
+		-b debian:buster-slim \
+		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}'
 	make .docker-build-and-push-multiplatform \
-	TARGET=cpu \
-	DOCKER_TARGET=${DOCKER_TARGET} \
-	BASE_IMAGE=python:3.8.10-slim
+		TARGET=cpu DOCKER_TARGET=cpu
 
 docker-build-all: \
 	docker-build-cpu docker-build-gpu

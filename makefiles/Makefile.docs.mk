@@ -1,4 +1,4 @@
-# Copyright 2022- Autonomi AI, Inc. All rights reserved.
+# Copyright 2023 Autonomi AI, Inc. All rights reserved.
 
 .PHONY: mkdocs-serve mkdocs-build mkdocs-clean
 

@@ -1,6 +1,7 @@
 images:
   base-cpu:
     base: debian:buster-slim
+    name: nos
     python: "3.8"
     system:
       - gnupg2
@@ -9,12 +10,8 @@ images:
       - tzdata
       - build-essential
       - git
-    conda:
-      - pytorch==2.0.1
-      - torchvision
-      - cpuonly
-      - -c pytorch
     requirements:
+      - requirements/requirements.torch.cpu.txt
       - requirements/requirements.txt
       - requirements/requirements.http.txt
       - requirements/requirements.server.txt

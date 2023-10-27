@@ -445,7 +445,6 @@ class ModelManager:
         # If the model handle is full, pop the oldest model
         if len(self.handlers) >= self.max_concurrent_models:
             _handle: ModelHandle = self.evict()
-            logger.debug(f"Deleting oldest model [model={_handle.spec.name}]")
 
         # Create the serve deployment from the model handle
         # Note: Currently one model per (model-name, task) is supported.
