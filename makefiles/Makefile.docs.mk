@@ -1,3 +1,5 @@
+# Copyright 2023 Autonomi AI, Inc. All rights reserved.
+
 .PHONY: mkdocs-serve mkdocs-build mkdocs-clean
 
 mkdocs-clean:

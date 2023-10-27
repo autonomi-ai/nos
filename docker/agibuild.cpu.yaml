@@ -1,6 +1,7 @@
 images:
   base-cpu:
     base: debian:buster-slim
+    name: nos
     python: "3.8"
     system:
       - gnupg2
@@ -9,11 +10,6 @@ images:
       - tzdata
       - build-essential
       - git
-    conda:
-      - pytorch==2.0.1
-      - torchvision
-      - cpuonly
-      - -c pytorch
     requirements:
       - requirements/requirements.txt
       - requirements/requirements.http.txt
@@ -21,6 +17,7 @@ images:
     add:
       - ./scripts/entrypoint.sh:/app/entrypoint.sh
     run:
+      - pip install torch>=2.0.0+cpu torchaudio torchvision -i https://download.pytorch.org/whl/cpu
       - mamba install -y -c conda-forge x264=='1!161.3030' ffmpeg=4.3.2
       - python -c "import torch as t; print(f'torch={t.__version__}, cuda={t.cuda.is_available()}, cudnn={t.backends.cudnn.is_available()}')"
     env:

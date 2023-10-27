@@ -1,3 +1,4 @@
+# Copyright 2023- Autonomi AI, Inc. All rights reserved.
 export DOCKER_BUILDKIT ?= 1
 export COMPOSE_DOCKER_CLI_BUILD ?= 1
 export NOS_TELEMETRY_ENABLED ?= 0
@@ -9,7 +10,6 @@ SHELL := /bin/bash
 NOS_VERSION := $(shell python -c "exec(open('nos/version.py').read().strip()); print(__version__)")
 NOS_VERSION_TAG = ${NOS_VERSION}
 DOCKER_IMAGE_NAME := autonomi/nos
-DOCKER_TARGET := server
 DOCKER_ARGS :=
 DOCKER_CMD :=
 
@@ -20,7 +20,7 @@ include makefiles/Makefile.agibuild.mk
 default: help;
 
 help:
-	@echo "nos 🔥: Nitrous Oxide System (NOS) for Computer Vision"
+	@echo "🔥 NOS - Nitrous Oxide for your AI infrastructure."
 	@echo ""
 	@echo "Usage: make <target>"
 	@echo ""
