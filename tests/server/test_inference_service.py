@@ -103,9 +103,10 @@ def test_inference_service_noop(client_with_server, shm, request):  # noqa: F811
     response = model.process_texts(**inputs)
     assert isinstance(response, list)
 
-    inputs = {"path": NOS_TEST_IMAGE}
-    response = model.process_file(**inputs)
-    assert isinstance(response, bool)
+    with client.UploadFile(NOS_TEST_IMAGE) as path:
+        inputs = {"path": path}
+        response = model.process_file(**inputs)
+        assert isinstance(response, bool)
 
 
 @pytest.mark.skipif(not NOS_SHM_ENABLED, reason="Shared memory transport is not enabled.")
