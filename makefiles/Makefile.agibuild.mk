@@ -65,4 +65,14 @@ agi-build-py311-cu118:
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py311-cu118'
 
 
-agi-build-cu118: agi-build-py38-cu118 agi-build-py39-cu118 agi-build-py310-cu118 agi-build-py311-cu118
+agi-build-cu118: \
+	agi-build-py38-cu118 \
+	agi-build-py39-cu118 \
+	agi-build-py310-cu118 \
+	agi-build-py311-cu118
+
+agi-push-cu118:
+	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-gpu-py38-cu118
+	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-gpu-py39-cu118
+	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-gpu-py310-cu118
+	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-gpu-py311-cu118
