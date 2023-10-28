@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "nos/version.py"
+      - ".github/workflows/docs.yml"
   release:
     types: [released]
 
@@ -25,4 +26,5 @@ jobs:
           key: ${{ github.ref }}
           path: .cache
       - run: pip install -r requirements/requirements.docs.txt
+      - run: cp docs/CNAME .
       - run: mkdocs gh-deploy --force
