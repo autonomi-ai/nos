@@ -1,5 +1,4 @@
 agi-pack>=0.1.19
-av>=10.0.0
 cloudpickle>=2.2.1
 docker>=6.0.0
 gitpython

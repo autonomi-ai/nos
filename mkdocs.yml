@@ -1,4 +1,4 @@
-site_name: ⚡️ NOS
+site_name: NOS Docs
 site_url: https://docs.nos.run
 site_author: Sudeep Pillai
 
@@ -42,8 +42,6 @@ nav:
     - nos.hub: docs/api/hub.md
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
-  - 💻 CLI Reference:
-    - nos system: docs/cli/system.md
   - 🔌 Integrations:
     - Deploying NOS with SkyPilot: docs/integrations/skypilot.md
   - ❓ Support / FAQ: docs/support.md
@@ -100,6 +98,7 @@ markdown_extensions:
 - admonition
 - attr_list
 - md_in_html
+- mkdocs-typer
 - pymdownx.details
 - pymdownx.emoji:
     emoji_index: !!python/name:materialx.emoji.twemoji
@@ -119,6 +118,8 @@ markdown_extensions:
 
 
 theme:
+  favicon: docs/assets/favicon.png
+  logo: docs/assets/favicon.png
   name: material
   custom_dir: docs/overrides
   features:

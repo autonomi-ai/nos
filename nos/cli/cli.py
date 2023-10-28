@@ -7,9 +7,9 @@ from nos.cli.system import system_cli
 
 
 app_cli = typer.Typer(
-    help="[bold]🔥 NOS CLI - Nitrous Oxide for your AI infrastructure[/bold] ",
+    name="nos",
+    help="🔥 NOS CLI - Nitrous Oxide for your AI infrastructure.",
     no_args_is_help=True,
-    rich_markup_mode="rich",
 )
 
 app_cli.add_typer(hub_cli)

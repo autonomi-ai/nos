@@ -1,30 +1,28 @@
 <center><img src="./docs/assets/nos-header.svg" alt="Nitrous Oxide for your AI Infrastructure"></center>
-
-<p align="center">
-<a href="https://nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
-</p>
-
+<p></p>
 <p align="center">
 <a href="https://pypi.org/project/torch-nos/">
-    <img alt="PyPi Version" src="https://badge.fury.io/py/torch-nos.svg">
+    <img alt="PyPI Version" src="https://badge.fury.io/py/torch-nos.svg">
 </a>
 <a href="https://pypi.org/project/torch-nos/">
-    <img alt="PyPi Version" src="https://img.shields.io/pypi/pyversions/torch-nos">
+    <img alt="PyPI Version" src="https://img.shields.io/pypi/pyversions/torch-nos">
 </a>
-<a href="https://pypi.org/project/torch-nos/">
-    <img alt="PyPi Downloads" src="https://img.shields.io/pypi/dm/torch-nos">
+<a href="https://www.pepy.tech/projects/torch-nos">
+    <img alt="PyPI Downloads" src="https://img.shields.io/pypi/dm/torch-nos">
 </a>
+<a href="https://github.com/autonomi-ai/nos/blob/main/LICENSE">
+    <img alt="PyPi Downloads" src="https://img.shields.io/github/license/torch-nos/torch-nos.svg">
+</a><br>
 <a href="https://discord.gg/QAGgvTuvgg">
     <img alt="Discord" src="https://img.shields.io/badge/discord-chat-purple?color=%235765F2&label=discord&logo=discord">
 </a>
 <a href="https://twitter.com/autonomi_ai">
     <img alt="PyPi Version" src="https://img.shields.io/twitter/follow/autonomi_ai.svg?style=social&logo=twitter">
 </a>
-
 </p>
-
-
-> *Optimizing and serving models for production AI inference is still difficult, often leading to notoriously expensive cloud bills and often underutilized GPUs. That’s why we’re building **NOS** - a fast and flexible inference server for modern AI workloads. With a few lines of code, developers can optimize, serve, and auto-scale Pytorch model inference without having to deal with the complexities of ML compilers, HW-accelerators, or distributed inference. Simply put, NOS allows AI teams to cut inference costs up to **10x**, speeding up development time and time-to-market.*
+<p align="center">
+<a href="https://nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
+</p>
 
 ## ⚡️ What is NOS?
 **NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running inference of popular foundational AI models.
@@ -48,7 +46,7 @@ Get started with the full NOS server by installing via pip:
   ```shell
   $ conda env create -n nos-py38 python=3.8
   $ conda activate nos-py38
-  $ conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+  $ conda install pytorch>=2.0.1 torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
   $ pip install torch-nos[server]
   ```
 
@@ -67,11 +65,25 @@ If you want to simply use a light-weight NOS client and run inference on your lo
 
 <table>
 <tr>
-<td> REST API </td>
 <td> gRPC API ⚡ </td>
+<td> REST API </td>
 </tr>
 <tr>
 <td>
+
+```python
+from nos.client import Client
+
+client = Client("[::]:50051")
+
+sdxl = client.Module("stabilityai/stable-diffusion-xl-base-1-0")
+image, = sdxl(prompts=["fox jumped over the moon"],
+              width=1024, height=1024, num_images=1)
+```
+
+</td>
+<td>
+
 
 ```bash
 curl \
@@ -89,19 +101,6 @@ curl \
 ```
 
 </td>
-<td>
-
-```python
-from nos.client import Client
-
-client = Client("[::]:50051")
-
-sdxl = client.Module("stabilityai/stable-diffusion-xl-base-1-0")
-image, = sdxl(prompts=["fox jumped over the moon"],
-              width=1024, height=1024, num_images=1)
-```
-
-</td>
 </tr>
 </table>
 
@@ -109,10 +108,22 @@ image, = sdxl(prompts=["fox jumped over the moon"],
 
 <table>
 <tr>
-<td> REST API </td>
 <td> gRPC API ⚡ </td>
+<td> REST API </td>
 </tr>
 <tr>
+<td>
+
+```python
+from nos.client import Client
+
+client = Client("[::]:50051")
+
+clip = client.Module("openai/clip")
+txt_vec = clip.encode_text(text=["fox jumped over the moon"])
+```
+
+</td>
 <td>
 
 ```bash
@@ -128,17 +139,6 @@ curl \
     }'
 ```
 
-</td>
-<td>
-
-```python
-from nos.client import Client
-
-client = Client("[::]:50051")
-
-clip = client.Module("openai/clip")
-txt_vec = clip.encode_text(text=["fox jumped over the moon"])
-```
 </td>
 </tr>
 </table>
@@ -187,7 +187,7 @@ txt_vec = clip.encode_text(text=["fox jumped over the moon"])
     - [ ] AMD (MI200, MI250)
 
 - [x] **Cloud Service Providers** (via [SkyPilot](https://github.com/skypilot-org/skypilot))
-    - [x] **Big 3:** AWS, GCP, Azure
+    - [x] AWS, GCP, Azure
     - [ ] **Opinionated Cloud:** Lambda Labs, RunPod, etc
 
 - [ ] **Cloud ASICs**
@@ -211,3 +211,5 @@ We welcome contributions! Please see our [contributing guide](CONTRIBUTING.md) f
 
 * 💬 Send us an email at [support@autonomi.ai](mailto:support@autonomi.ai) or join our [Discord](https://discord.gg/QAGgvTuvgg) for help.
 * 📣 Follow us on [Twitter](https://twitter.com/autonomi\_ai), and [LinkedIn](https://www.linkedin.com/company/autonomi-ai) to keep up-to-date on our products.
+
+<style> .md-typeset h1, .md-content__button { display: none; } </style>
