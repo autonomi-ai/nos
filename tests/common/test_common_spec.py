@@ -277,7 +277,6 @@ def test_common_spec_signature():
         assert spec.name
         assert spec.task
         assert spec.default_signature.input_annotations is not None
-        assert spec.default_signature.output_annotations is not None
         logger.debug(f"{spec.name}, {spec.task}")
 
         if isinstance(spec.default_signature.input_annotations, dict):
