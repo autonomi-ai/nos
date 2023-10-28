@@ -26,14 +26,14 @@ You can also start the server with the REST API proxy enabled as shown in the 3r
     ```
 
 === "Via Docker Compose (gRPC + REST)"
-    Navigate to [`examples/skypilot`](https://github.com/autonomi-ai/nos/nos/examples/skypilot) to see an example of the YAML specification. You can start the server with the following command:
+    Navigate to [`examples/docker`](https://github.com/autonomi-ai/nos/nos/examples/docker) to see an example of the YAML specification. You can start the server with the following command:
 
     ```bash
-    docker-compose -f docker-compose.gpu.yml up
+    docker-compose -f docker-compose.gpu-with-gateway.yml up
     ```
 
-    ```yaml title="docker-compose.gpu.yml"
-    {% include '../../examples/docker/docker-compose.gpu.yml' %}
+    ```yaml title="docker-compose.gpu-with-gateway.yml"
+    {% include '../../examples/docker/docker-compose.gpu-with-gateway.yml' %}
     ```
 
 

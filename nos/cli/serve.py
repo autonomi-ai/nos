@@ -79,18 +79,18 @@ def _serve_build(
 @serve_cli.command("up", help="Spin up the NOS server locally.")
 def _serve_up(
     config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
-    runtime: str = typer.Option("auto", "-r", "--runtime", help="Runtime environment to use.", show_default=True),
-    model: str = typer.Option(None, "-m", "--model", help="Serve a specific model.", show_default=False),
-    target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=False),
+    runtime: str = typer.Option("auto", "-r", "--runtime", help="Runtime environment to use.", show_default=False),
+    model: str = typer.Option(None, "-m", "--model", help="Serve a specific model.", show_default=True),
+    target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=True),
     tag: str = typer.Option("{name}:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
     http: bool = typer.Option(False, "--http", help="Serve with HTTP gateway.", show_default=True),
     http_port: int = typer.Option(8000, "--http-port", help="HTTP port to use.", show_default=True),
     http_workers: int = typer.Option(1, "--http-workers", help="HTTP max workers.", show_default=True),
     logging_level: str = typer.Option("INFO", "--logging-level", help="Logging level.", show_default=True),
     daemon: bool = typer.Option(False, "-d", "--daemon", help="Run in daemon mode.", show_default=True),
-    reload: bool = typer.Option(False, "--reload", help="Reload on file changes.", show_default=False),
+    reload: bool = typer.Option(False, "--reload", help="Reload on file changes.", show_default=True),
     build: bool = typer.Option(
-        False, "--build", help="Only build the custom image, without serving it.", show_default=False
+        False, "--build", help="Only build the custom image, without serving it.", show_default=True
     ),
     prod: bool = typer.Option(
         False,
@@ -99,7 +99,7 @@ def _serve_up(
         help="Run with production flags (slimmer images, no dev. dependencies).",
         show_default=False,
     ),
-    verbose: bool = typer.Option(False, "-v", "--verbose", help="Verbose output.", show_default=False),
+    verbose: bool = typer.Option(False, "-v", "--verbose", help="Verbose output.", show_default=True),
 ) -> None:
     """Main entrypoint for nos serving (either locally or in the cloud)."""
     from agipack.builder import AGIPack
@@ -309,24 +309,6 @@ def _serve_up(
 
 @serve_cli.command("down", help="Tear down the NOS server.")
 def _serve_down(
-    config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
-    runtime: str = typer.Option("auto", "-r", "--runtime", help="Runtime environment to use.", show_default=True),
-    model: str = typer.Option(None, "-m", "--model", help="Serve a specific model.", show_default=False),
-    target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=False),
-    tag: str = typer.Option("{name}:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
-    http: bool = typer.Option(False, "--http", help="Serve with HTTP gateway.", show_default=True),
-    http_port: int = typer.Option(8000, "--http-port", help="HTTP port to use.", show_default=True),
-    http_workers: int = typer.Option(1, "--http-workers", help="HTTP max workers.", show_default=True),
-    logging_level: str = typer.Option("INFO", "--logging-level", help="Logging level.", show_default=True),
-    daemon: bool = typer.Option(False, "-d", "--daemon", help="Run in daemon mode.", show_default=True),
-    reload: bool = typer.Option(False, "--reload", help="Reload on file changes.", show_default=False),
-    prod: bool = typer.Option(
-        False,
-        "-p",
-        "--prod",
-        help="Run with production flags (slimmer images, no dev. dependencies).",
-        show_default=False,
-    ),
     verbose: bool = typer.Option(False, "-v", "--verbose", help="Verbose output.", show_default=False),
 ) -> None:
     """Main entrypoint for teardown ."""

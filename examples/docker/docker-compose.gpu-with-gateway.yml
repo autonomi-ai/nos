@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  nos-http-gateway:
+    image: autonomi/nos:latest-gpu
+    command: nos-http-server --port 8000 --workers 1
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL=INFO
+    volumes:
+      - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
+    network_mode: host
+    ipc: host
+    depends_on:
+      - nos-server
+
+  nos-server:
+    image: autonomi/nos:latest-gpu
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL=INFO
+      - NOS_HUB_CATALOG_PATH=$NOS_HUB_CATALOG_PATH:/app/serve/custom_model/config.yaml
+    volumes:
+      - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
+    network_mode: host
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
