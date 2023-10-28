@@ -14,6 +14,9 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v2
 
+      - name: Install agi-pack
+        run: pip install agi-pack
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
