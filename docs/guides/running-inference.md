@@ -1,7 +1,7 @@
 !!! note
     In this section, we expect that you have already installed NOS and have already [started the server](./starting-the-server.md).
 
-```python
+```python linenums="1"
 import nos
 
 nos.init(runtime="auto")
