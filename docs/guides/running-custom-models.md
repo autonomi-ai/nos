@@ -1,3 +1,6 @@
+!!!info "Advanced topic"
+    This guide is for advanced users of the NOS server-side custom model registry. If you're looking for a way to quickly define your custom model and runtime for serving purposes, we recommend you go through the [serving custom models](./serving-custom-models.md) guide first. 
+
 In this guide, we will walk through how to run custom models with NOS. We will use the [OpenAI CLIP](https://huggingface.co/openai/clip-vit-base-patch32) model from the popular [HuggingFace](https://huggingface.co/) library to load the model, and then use `nos` to wrap and execute the model at scale.
 
 ## 👩‍💻 Defining the custom model
@@ -79,7 +82,7 @@ Once the model handle has been created, we can also use it to scale the model ac
 
 We continue considering the example above and scale the model to 4 replicas. In order to use all the underlying replicas effectively, we need to ensure that the calls to the underlying methods `encode_image` and `encode_text` are no longer blocking. In other words, we need to ensure that the calls to the underlying methods are asynchronous and can fully utilize the model replicas without blocking on each other. NOS provides a few convenience methods to `submit` tasks and retrieve results asynchronously using it's `handle.results` API.
 
-```python
+```python linenums="1"
 # Scale the above model handle to 4 replicas
 handle.scale(replicas=4)
 print(handle)
@@ -111,7 +114,7 @@ In the example above, we load images from a video file and asynchronously submit
 
 For custom models that require execution in a custom runtime environment (e.g. with `TensorRT` or other library dependencies), we can specify the runtime environment via the `runtime_env` argument in the `ModelSpec`.
 
-```python
+```python linenums="1"
 class CustomModel:
     """Custom inference model with scikit-learn."""
 

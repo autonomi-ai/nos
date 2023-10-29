@@ -20,7 +20,6 @@ services:
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL=INFO
-      - NOS_HUB_CATALOG_PATH=$NOS_HUB_CATALOG_PATH:/app/serve/custom_model/config.yaml
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
