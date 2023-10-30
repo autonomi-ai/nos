@@ -24,7 +24,7 @@ create-pypi-release-loose:
 		echo "examining file: $$file"; \
 		if [ -f "$$file" ] && echo "$$file" | grep -qE "$(WHL_GREP_PATTERN)"; then \
 			echo "Uploading: $$file"; \
-			twine upload --repository "$$file" --username $(PYPI_USERNAME) --password $(PYPI_PASSWORD); \
+			twine upload "$$file" --username $(PYPI_USERNAME) --password $(PYPI_PASSWORD); \
 		fi; \
 	done
 	@echo "Upload completed"
