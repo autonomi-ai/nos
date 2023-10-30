@@ -80,7 +80,6 @@ def _serve_build(
 def _serve_up(
     config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
     runtime: str = typer.Option("auto", "-r", "--runtime", help="Runtime environment to use.", show_default=False),
-    model: str = typer.Option(None, "-m", "--model", help="Serve a specific model.", show_default=True),
     target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=True),
     tag: str = typer.Option("{name}:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
     http: bool = typer.Option(False, "--http", help="Serve with HTTP gateway.", show_default=True),

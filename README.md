@@ -107,7 +107,7 @@ from nos.client import Client
 
 client = Client("[::]:50051")
 
-clip = client.Module("openai/clip")
+clip = client.Module("openai/clip-vit-base-patch32")
 txt_vec = clip.encode_text(text=["fox jumped over the moon"])
 ```
 
@@ -119,7 +119,7 @@ curl \
 -X POST http://localhost:8000/infer \
 -H 'Content-Type: application/json' \
 -d '{
-      "model_id": "openai/clip",
+      "model_id": "openai/clip-vit-base-patch32",
       "method": "encode_text",
       "inputs": {
           "texts": ["fox jumped over the moon"]
@@ -159,7 +159,7 @@ curl \
 
 - [Quickstart](./docs/quickstart.md)
 - [Models](./docs/models/supported-models.md)
-- **Concepts**: [NOS Architecture](./docs/concepts/architecture-overview.md)
+- **Concepts**: [Architecture Overview](./docs/concepts/architecture-overview.md), [ModelSpec](./docs/concepts/model-spec.md), [ModelManager](./docs/concepts/model-manager.md), [Runtime Environments](./docs/concepts/runtime-environments.md)
 - **Demos**: [Building a Discord Image Generation Bot](./docs/demos/discord-bot.md), [Video Search Demo](./docs/demos/video-search.md)
 
 ## 🛣 Roadmap

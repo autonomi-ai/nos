@@ -3,12 +3,15 @@ This README lists the models supported by NOS, along with their corresponding li
 <table>
     <tr>
         <td><b>Modality</b></td>
+        <td><b>Task</b></td>
         <td><b>Model Name</b></td>
         <td><b>Supported Devices</b></td>
         <td><b><center>API</center></b></td>
     </tr>
+
     <tr>
         <td>🏞️</td>
+        <td><b>Object Detection</b></td>
         <td><a href="https://github.com/Megvii-BaseDetection/YOLOX">YOLOX</a></td>
         <td>CPU, GPU</td>
         <td>
@@ -16,28 +19,64 @@ This README lists the models supported by NOS, along with their corresponding li
             ```python
             img = Image.open("test.png")
 
-            yolox = client.Module(""yolox/nano")
+            yolox = client.Module("yolox/nano")
             predictions = yolox(images=img)
             # {"bboxes": ..., "scores": ..., "labels": ...}
             ```
         </td>
     </tr>
+
+    <tr>
+        <td>🏞️</td>
+        <td><b>Depth Estimation</b></td>
+        <td><a href="https://github.com/isl-org/MiDaS">MiDaS</a></td>
+        <td>CPU, GPU</td>
+        <td>
+
+            ```python
+            img = Image.open("test.png")
+
+            model = client.Module("isl-org/MiDaS")
+            result = model(images=img)
+            # {"depths": np.ndarray}
+            ```
+        </td>
+    </tr>
+
     <tr>
         <td>📝, 🏞️</td>
+        <td><b>Text-Image Embedding</b></td>
         <td><a href="https://huggingface.co/openai/clip-vit-base-patch32">OpenAI - CLIP</a></td>
         <td>CPU, GPU</td>
         <td>
             ```python
             img = Image.open("test.png")
 
-            clip = client.Module("openai/clip")
+            clip = client.Module("openai/clip-vit-base-patch32")
             img_vec = clip.encode_image(images=img)
             txt_vec = clip.encode_text(text=["fox jumped over the moon"])
             ```
         </td>
     </tr>
+
     <tr>
         <td>📝, 🏞️</td>
+        <td><b>Text/Input Conditioned Image Segmentation</b></td>
+        <td><a href="https://huggingface.co/facebook/sam-vit-large">Facebook Research - Segment Anything</a></td>
+        <td>CPU, GPU</td>
+        <td>
+            ```python
+            img = Image.open("test.png")
+
+            model = client.Module("facebook/sam-vit-large")
+            outputs: List[np.ndarray] = model(images=img, grid_size=20)
+            ```
+        </td>
+    </tr>
+
+    <tr>
+        <td>📝, 🏞️</td>
+        <td><b>Text-to-Image Generation</b></td>
         <td><a href="https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0">Stability AI - Stable Diffusion XL</a></td>
         <td>GPU</td>
         <td>
@@ -48,8 +87,10 @@ This README lists the models supported by NOS, along with their corresponding li
             ```
         </td>
     </tr>
+
     <tr>
         <td>📝, 🏞️</td>
+        <td><b>Text-to-Image Generation</b></td>
         <td><a href="https://huggingface.co/stabilityai/stable-diffusion-2-1">Stability AI - Stable Diffusion 2.1</a></td>
         <td>GPU</td>
         <td>
@@ -60,8 +101,10 @@ This README lists the models supported by NOS, along with their corresponding li
             ```
         </td>
     </tr>
+
     <tr>
         <td>📝, 🏞️</td>
+        <td><b>Text-to-Image Generation</b></td>
         <td><a href="https://huggingface.co/stabilityai/stable-diffusion-2">Stability AI - Stable Diffusion 2</a></td>
         <td>GPU</td>
         <td>
@@ -72,8 +115,10 @@ This README lists the models supported by NOS, along with their corresponding li
             ```
         </td>
     </tr>
+
     <tr>
         <td>📝, 🏞️</td>
+        <td><b>Text-to-Image Generation</b></td>
         <td><a href="https://huggingface.co/runwayml/stable-diffusion-v1-5">RunwayML - Stable Diffusion v1.5</a></td>
         <td>CPU, GPU</td>
         <td>
@@ -84,8 +129,10 @@ This README lists the models supported by NOS, along with their corresponding li
             ```
         </td>
     </tr>
+
     <tr>
         <td>🎙️</td>
+        <td><b>Speech-to-Text</b></td>
         <td><a href="https://huggingface.co/openai/whisper-large-v2">OpenAI - Whisper</a></td>
         <td>GPU</td>
         <td>
@@ -100,8 +147,10 @@ This README lists the models supported by NOS, along with their corresponding li
             ```
         </td>
     </tr>
+
     <tr>
         <td>🎙️</td>
+        <td><b>Text-to-Speech</b></td>
         <td><a href="https://huggingface.co/suno/bark">Suno - Bark</a></td>
         <td>GPU</td>
         <td>
