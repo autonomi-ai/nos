@@ -33,7 +33,7 @@ jobs:
       - name: Build pypi packages
         run: make dist
       - name: Publish pypi packages
-        run: make -f makefiles/Makefile.admin.mk create-pypi-release-loose PYPI_USERNAME=${{ secrets.PYPI_USERNAME }} PYPI_PASSWORD=${{ secrets.PYPI_PASSWORD }}
+        run: make -f makefiles/Makefile.admin.mk create-pypi-release PYPI_USERNAME=${{ secrets.PYPI_USERNAME }} PYPI_PASSWORD=${{ secrets.PYPI_PASSWORD }}
 
   push_cu118_to_registry:
     needs: push_cpu_gpu_to_registry
