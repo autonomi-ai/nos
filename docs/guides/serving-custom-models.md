@@ -1,5 +1,9 @@
 In this guide, we will walk you through how to serve custom models with NOS. We will use the [WhisperX](https://github.com/m-bain/whisperX) model to build a custom runtime environment with docker, load the model and serve it via a gRPC/REST API. Feel free to navigate to [nos-playground/examples/whisperx](https://github.com/autonomi-ai/nos-playground/tree/main/examples/whisperx) for a full working example.
 
+Here's the a demo of the final result:
+
+[![asciicast](https://asciinema.org/a/618013.svg)](https://asciinema.org/a/618013?autoplay=1)
+
 ## 👩‍💻 Defining the custom model
 
 The first step is to define the custom model in `models/whisperx.py`. Here we're using the popular [WhisperX](https://github.com/m-bain/whisperX) for transcribing audio files. Let's define a simple `WhisperX` class that wraps the `whisperx` package, loads the model and transcribes an audio file to a Python dictionary given its path.
