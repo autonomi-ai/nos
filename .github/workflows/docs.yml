@@ -3,9 +3,6 @@ name: Generate / Deploy Docs
 on:
   push:
     branches: [main]
-    paths:
-      - "nos/version.py"
-      - ".github/workflows/docs.yml"
   release:
     types: [released]
 

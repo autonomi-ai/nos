@@ -8,6 +8,12 @@ services:
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL={{ logging_level }}
+    {%- if env_file|length > 0 %}
+    env_file:
+      {%- for envf in env_file %}
+      - {{ envf }}
+      {%- endfor %}
+    {%- endif %}
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
@@ -29,6 +35,12 @@ services:
       {%- if config %}
       - NOS_HUB_CATALOG_PATH=$NOS_HUB_CATALOG_PATH:{{ config }}
       {%- endif %}
+    {%- if env_file|length > 0 %}
+    env_file:
+      {%- for envf in env_file %}
+      - {{ envf }}
+      {%- endfor %}
+    {%- endif %}
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
