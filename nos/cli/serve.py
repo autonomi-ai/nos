@@ -9,7 +9,7 @@ Usage:
 import subprocess
 from dataclasses import asdict, field
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, List, Union
 
 import typer
 from pydantic.dataclasses import dataclass
@@ -56,8 +56,11 @@ class ServeOptions:
     reload_dir: str = field(default=".")
     """Directory to watch for file changes."""
 
-    volumes: list = field(default_factory=list)
+    volumes: List[str] = field(default_factory=list)
     """Volumes to mount for the server."""
+
+    env_file: List[str] = field(default=list)
+    """Environment file to use for the server."""
 
 
 @serve_cli.command("build", help="Build the NOS server locally.")
@@ -97,6 +100,9 @@ def _serve_up(
         "--prod",
         help="Run with production flags (slimmer images, no dev. dependencies).",
         show_default=False,
+    ),
+    env_file: str = typer.Option(
+        None, "--env-file", help="Provide an environment file for secrets.", show_default=True
     ),
     verbose: bool = typer.Option(False, "-v", "--verbose", help="Verbose output.", show_default=True),
 ) -> None:
@@ -157,6 +163,11 @@ def _serve_up(
             raise ValueError(
                 f"Invalid inference service runtime: {runtime}, available: {list(InferenceServiceRuntime.configs.keys())}"
             )
+
+    # Check if the env_file provided exists
+    if env_file is not None:
+        if not Path(env_file).exists():
+            raise FileNotFoundError(f"File {env_file} not found, please provide a valid environment file.")
 
     # Check if the config file exists
     image_name = None
@@ -282,6 +293,7 @@ def _serve_up(
         http_workers=http_workers,
         logging_level=logging_level,
         daemon=daemon,
+        env_file=[env_file] if env_file is not None else [],
         **additional_kwargs,
     )
     content = template.render(**asdict(options))
