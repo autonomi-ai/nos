@@ -48,7 +48,7 @@ If you want to simply use a light-weight NOS client and run inference on your lo
 
 ## 🔥 Quickstart / Show me the code
 
-### Image Generation as-a-Service
+### 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
 
 
 <table>
@@ -78,21 +78,21 @@ curl \
 -X POST http://localhost:8000/infer \
 -H 'Content-Type: application/json' \
 -d '{
-      "model_id": "stabilityai/stable-diffusion-xl-base-1-0",
-      "inputs": {
-          "prompts": ["fox jumped over the moon"],
-          "width": 1024,
-          "height": 1024,
-          "num_images": 1
-      }
-    }'
+    "model_id": "stabilityai/stable-diffusion-xl-base-1-0",
+    "inputs": {
+        "prompts": ["fox jumped over the moon"],
+        "width": 1024,
+        "height": 1024,
+        "num_images": 1
+    }
+}'
 ```
 
 </td>
 </tr>
 </table>
 
-### Text & Image Embedding-as-a-Service (CLIP-as-a-Service)
+### 🧠 Text & Image Embedding (CLIP-as-a-Service)
 
 <table>
 <tr>
@@ -119,12 +119,86 @@ curl \
 -X POST http://localhost:8000/infer \
 -H 'Content-Type: application/json' \
 -d '{
-      "model_id": "openai/clip-vit-base-patch32",
-      "method": "encode_text",
-      "inputs": {
-          "texts": ["fox jumped over the moon"]
-      }
-    }'
+    "model_id": "openai/clip-vit-base-patch32",
+    "method": "encode_text",
+    "inputs": {
+        "texts": ["fox jumped over the moon"]
+    }
+}'
+```
+
+</td>
+</tr>
+</table>
+
+### 🎙️ Audio Transcription (Whisper-as-a-Service)
+
+<table>
+<tr>
+<td> gRPC API ⚡ </td>
+<td> REST API </td>
+</tr>
+<tr>
+<td>
+
+```python
+from pathlib import Path
+from nos.client import Client
+
+client = Client("[::]:50051")
+
+model = client.Module("openai/whisper-large-v2")
+response = model(path=Path("audio.wav"))
+# {"chunks": ...}
+```
+
+</td>
+<td>
+
+```bash
+curl \
+-X POST http://localhost:8000/infer_file \
+-H 'accept: application/json' \
+-H 'Content-Type: multipart/form-data' \
+-F 'model_id=openai/whisper-large-v2' \
+-F 'file=@audio.wav'
+```
+
+</td>
+</tr>
+</table>
+
+### 🧐 Object Detection (YOLOX-as-a-Service)
+
+<table>
+<tr>
+<td> gRPC API ⚡ </td>
+<td> REST API </td>
+</tr>
+<tr>
+<td>
+
+```python
+from pathlib import Path
+from nos.client import Client
+
+client = Client("[::]:50051")
+
+model = client.Module("yolox/medium")
+response = model(images=[Image.open("image.jpg")])
+# {"bboxes": ..., "scores": ..., "labels": ...}
+```
+
+</td>
+<td>
+
+```bash
+curl \
+-X POST http://localhost:8000/infer_file \
+-H 'accept: application/json' \
+-H 'Content-Type: multipart/form-data' \
+-F 'model_id=yolox/medium' \
+-F 'file=@image.jpg'
 ```
 
 </td>
@@ -132,7 +206,7 @@ curl \
 </table>
 
 
-## 📂 Directory Structure
+## 🗂️ Directory Structure
 
 ```bash
 ├── docker         # Dockerfile for CPU/GPU servers

@@ -34,8 +34,9 @@ def test_http_client_inference_object_detection_2d(client_with_server, request):
     from nos.server.http._utils import encode_dict
 
     # Test inference with JSON encoding
+    model_id = "yolox/small"
     data = {
-        "model_id": "yolox/small",
+        "model_id": model_id,
         "inputs": {
             "images": Image.open(NOS_TEST_IMAGE),
         },
@@ -58,6 +59,19 @@ def test_http_client_inference_object_detection_2d(client_with_server, request):
 
     assert "bboxes" in predictions
     assert np.array(predictions["bboxes"]).shape[-2:] == (N, 4)
+
+    # Test inference with file upload
+    response = http_client.post(
+        "/infer_file",
+        headers={"accept": "application/json"},
+        files={
+            "model_id": (None, model_id),
+            "file": NOS_TEST_IMAGE.open("rb"),
+        },
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert isinstance(result, dict)
 
 
 @pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
@@ -113,6 +127,20 @@ def test_http_client_inference_clip_embedding(client_with_server, request):
     (B, N) = np.array(result["embedding"]).shape
     assert B == 1 and N == 512
 
+    # Test inference with file upload
+    response = http_client.post(
+        "/infer_file",
+        headers={"accept": "application/json"},
+        files={
+            "model_id": (None, model_id),
+            "method": (None, "encode_image"),
+            "file": NOS_TEST_IMAGE.open("rb"),
+        },
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert isinstance(result, dict)
+
 
 @pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
 def test_http_client_inference_image_generation(client_with_server, request):
@@ -124,8 +152,9 @@ def test_http_client_inference_image_generation(client_with_server, request):
     from nos.server.http._utils import decode_dict, encode_dict
 
     # Test inference with JSON encoding
+    model_id = "stabilityai/stable-diffusion-2-1"
     data = {
-        "model_id": "stabilityai/stable-diffusion-2-1",
+        "model_id": model_id,
         "inputs": {
             "prompts": [
                 "A photo of a bench on the moon",
@@ -148,3 +177,27 @@ def test_http_client_inference_image_generation(client_with_server, request):
     result = decode_dict(result)
     assert isinstance(result["images"][0], Image.Image)
     assert result["images"][0].size == (512, 512)
+
+
+@pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
+def test_http_client_whisper(client_with_server, request):
+    http_client = request.getfixturevalue(client_with_server)
+    assert http_client is not None
+
+    from nos.test.utils import NOS_TEST_AUDIO
+
+    # Test inference with file upload
+    model_id = "openai/whisper-tiny.en"
+    response = http_client.post(
+        "/infer_file",
+        headers={"accept": "application/json"},
+        files={
+            "model_id": (None, model_id),
+            "method": (None, "transcribe"),
+            "file": NOS_TEST_AUDIO.open("rb"),
+        },
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert isinstance(result, dict)
+    assert "chunks" in result

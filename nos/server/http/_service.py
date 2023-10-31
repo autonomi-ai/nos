@@ -1,10 +1,14 @@
+import contextlib
 import dataclasses
 import time
 from dataclasses import field
+from pathlib import Path
+from tempfile import NamedTemporaryFile, SpooledTemporaryFile
 from typing import Any, Dict
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
+from PIL import Image
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
@@ -71,6 +75,42 @@ class InferenceService:
         logger.debug(f"Connected to gRPC server (address={self.client.address}, runtime={runtime}, version={version})")
 
 
+def is_image(filename: str) -> bool:
+    """Check if the given filename is an image."""
+    return filename.lower().endswith((".jpg", ".jpeg", ".png"))
+
+
+def is_video(filename: str) -> bool:
+    """Check if the given filename is a video."""
+    return filename.lower().endswith((".mp4", ".avi", ".mov"))
+
+
+def is_audio(filename: str) -> bool:
+    """Check if the given filename is an audio."""
+    return filename.lower().endswith((".mp3", ".wav", ".flac", ".m4a"))
+
+
+@contextlib.contextmanager
+def as_path(file: SpooledTemporaryFile, suffix: str, chunk_size_mb: int = 4 * 1024 * 1024) -> Path:
+    """Save an in-memory SpooledTemporaryFile to a temporary file on the
+    file-system and yield its path.
+
+    Args:
+        file (SpooledTemporaryFile): In-memory SpooledTemporaryFile to save (temporarily).
+        suffix (str): File suffix (mp3, avi etc).
+        chunk_size_mb (int): Chunk size for reading the file. Defaults to 4MB.
+    Yield:
+        (Path) Path to the temporary file.
+    """
+    with NamedTemporaryFile(suffix=suffix) as tmp:
+        path = Path(tmp.name)
+        file.seek(0)
+        for chunk in iter(lambda: file.read(chunk_size_mb), b""):
+            tmp.write(chunk)
+        tmp.flush()
+        yield path
+
+
 def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = False) -> FastAPI:
     nos_app = InferenceService(version=version, grpc_port=grpc_port, debug=debug)
     app = nos_app.app
@@ -91,6 +131,58 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
         request: InferenceRequest,
         client: Client = Depends(get_client),
     ) -> JSONResponse:
+        logger.debug(f"Decoding input dictionary [model={request.model_id}, method={request.method}]")
+        request.inputs = decode_item(request.inputs)
+        return _infer(request, client)
+
+    @app.post("/infer_file", status_code=status.HTTP_201_CREATED)
+    def infer_file(
+        model_id: str = Form(...),
+        method: str = Form(None),
+        file: UploadFile = File(...),
+        client: Client = Depends(get_client),
+    ) -> JSONResponse:
+        """Perform inference on the given input data."""
+        # Check if the file-type is supported
+        if not (is_video(file.filename) or is_audio(file.filename) or is_image(file.filename)):
+            logger.exception(f"Unsupported file type [filename={file.filename}]")
+            return JSONResponse(
+                content={"error": f"Unsupported file type [filename={file.filename}]"},
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Save the uploaded file to a temporary file and process it
+        with as_path(file.file, suffix=Path(file.filename).suffix) as path:
+            logger.debug(
+                f"Decoding input file [model={model_id}, method={method}, path={path}, size_mb={path.stat().st_size / 1024 / 1024} MB]"
+            )
+            if path.stat().st_size == 0:
+                logger.exception(f"Empty file [path={path}]")
+                return JSONResponse(
+                    content={"error": f"Empty file [path={path}]"},
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                )
+            # Create the inference request
+            ctx = None
+            logger.debug(f"Creating inference request [model={model_id}, method={method}, path={path}]")
+            request = InferenceRequest(model_id=model_id, method=method, inputs={})
+            if path is not None:
+                if is_image(path.name):
+                    request.inputs["images"] = [Image.open(str(path))]
+                elif is_audio(path.name):
+                    ctx = client.UploadFile(path)
+                    remote_path = ctx.__enter__()
+                    request.inputs["path"] = remote_path
+                else:
+                    logger.exception(f"Unsupported file type [path={path}]")
+                    return JSONResponse(
+                        content={"error": f"Unsupported file type [path={path}]"},
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+            # Perform inference
+            return _infer(request, client)
+
+    def _infer(request: InferenceRequest, client: Client) -> JSONResponse:
         """Perform inference on the given input data.
 
         $ curl -X "POST" \
@@ -147,17 +239,17 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
             )
         logger.debug(f"Initialized module method for inference [model={request.model_id}, method={request.method}]")
 
-        # Decode input dictionary
-        logger.debug(f"Decoding input dictionary [model={request.model_id}, method={request.method}]")
-        inputs = decode_item(request.inputs)
-        logger.debug(f"Decoded input dictionary [model={request.model_id}, method={request.method}]")
+        # Handle file uploads as inputs
+        inputs = request.inputs
+
+        # Perform inference
         logger.debug(f"Inference [model={request.model_id}, keys={inputs.keys()}]")
         response = model(**inputs, _method=request.method)
         logger.debug(
             f"Inference [model={request.model_id}, , method={request.method}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
         )
 
-        # # Handle response types
+        # Handle response types
         try:
             return JSONResponse(content=encode_item(response), status_code=status.HTTP_201_CREATED)
         except Exception as e:
