@@ -18,7 +18,7 @@ def test_http_client(client_with_server, request):  # noqa: F811
     assert http_client is not None
 
     # Health check
-    response = http_client.get("/health")
+    response = http_client.get("/v1/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
@@ -42,7 +42,7 @@ def test_http_client_inference_object_detection_2d(client_with_server, request):
         },
     }
     response = http_client.post(
-        "/infer",
+        "/v1/infer",
         headers={"Content-Type": "application/json"},
         json=encode_dict(data),
     )
@@ -62,11 +62,24 @@ def test_http_client_inference_object_detection_2d(client_with_server, request):
 
     # Test inference with file upload
     response = http_client.post(
-        "/infer_file",
+        "/v1/infer/file",
         headers={"accept": "application/json"},
         files={
             "model_id": (None, model_id),
             "file": NOS_TEST_IMAGE.open("rb"),
+        },
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert isinstance(result, dict)
+
+    # Test inference with URL
+    response = http_client.post(
+        "/v1/infer/file",
+        headers={"accept": "application/json"},
+        files={
+            "model_id": (None, model_id),
+            "url": (None, "https://raw.githubusercontent.com/autonomi-ai/nos/main/nos/test/test_data/test.jpg"),
         },
     )
     assert response.status_code == 201, response.text
@@ -94,7 +107,7 @@ def test_http_client_inference_clip_embedding(client_with_server, request):
         },
     }
     response = http_client.post(
-        "/infer",
+        "/v1/infer",
         headers={"Content-Type": "application/json"},
         json=encode_dict(data),
     )
@@ -115,7 +128,7 @@ def test_http_client_inference_clip_embedding(client_with_server, request):
         },
     }
     response = http_client.post(
-        "/infer",
+        "/v1/infer",
         headers={"Content-Type": "application/json"},
         json=encode_dict(data),
     )
@@ -129,12 +142,26 @@ def test_http_client_inference_clip_embedding(client_with_server, request):
 
     # Test inference with file upload
     response = http_client.post(
-        "/infer_file",
+        "/v1/infer/file",
         headers={"accept": "application/json"},
         files={
             "model_id": (None, model_id),
             "method": (None, "encode_image"),
             "file": NOS_TEST_IMAGE.open("rb"),
+        },
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert isinstance(result, dict)
+
+    # Test inference with URL
+    response = http_client.post(
+        "/v1/infer/file",
+        headers={"accept": "application/json"},
+        files={
+            "model_id": (None, model_id),
+            "method": (None, "encode_image"),
+            "url": (None, "https://raw.githubusercontent.com/autonomi-ai/nos/main/nos/test/test_data/test.jpg"),
         },
     )
     assert response.status_code == 201, response.text
@@ -165,7 +192,7 @@ def test_http_client_inference_image_generation(client_with_server, request):
         },
     }
     response = http_client.post(
-        "/infer",
+        "/v1/infer",
         headers={"Content-Type": "application/json"},
         json=encode_dict(data),
     )
@@ -189,12 +216,29 @@ def test_http_client_whisper(client_with_server, request):
     # Test inference with file upload
     model_id = "openai/whisper-tiny.en"
     response = http_client.post(
-        "/infer_file",
+        "/v1/infer/file",
         headers={"accept": "application/json"},
         files={
             "model_id": (None, model_id),
-            "method": (None, "transcribe"),
             "file": NOS_TEST_AUDIO.open("rb"),
+        },
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert isinstance(result, dict)
+    assert "chunks" in result
+
+    # Test inference with URL
+    model_id = "openai/whisper-tiny.en"
+    response = http_client.post(
+        "/v1/infer/file",
+        headers={"accept": "application/json"},
+        files={
+            "model_id": (None, model_id),
+            "url": (
+                None,
+                "https://raw.githubusercontent.com/autonomi-ai/nos/main/nos/test/test_data/test_speech.flac",
+            ),
         },
     )
     assert response.status_code == 201, response.text

@@ -4,8 +4,9 @@ import time
 from dataclasses import field
 from pathlib import Path
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
+import requests
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import JSONResponse
 from PIL import Image
@@ -87,7 +88,7 @@ def is_video(filename: str) -> bool:
 
 def is_audio(filename: str) -> bool:
     """Check if the given filename is an audio."""
-    return filename.lower().endswith((".mp3", ".wav", ".flac", ".m4a"))
+    return filename.lower().endswith((".mp3", ".mp4", ".wav", ".flac", ".m4a", ".webm"))
 
 
 @contextlib.contextmanager
@@ -119,40 +120,111 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
         """Get the inference client."""
         return nos_app.client
 
-    @app.get("/health", status_code=status.HTTP_200_OK)
+    @app.get("/")
+    def root():
+        return {"Hello": "World"}
+
+    @app.get(f"/{version}/health", status_code=status.HTTP_200_OK)
     def health(client: Client = Depends(get_client)) -> JSONResponse:
         """Check if the server is alive."""
         return JSONResponse(
             content={"status": "ok" if client.IsHealthy() else "not_ok"}, status_code=status.HTTP_200_OK
         )
 
-    @app.post("/infer", status_code=status.HTTP_201_CREATED)
+    @app.post(f"/{version}/infer", status_code=status.HTTP_201_CREATED)
     def infer(
         request: InferenceRequest,
         client: Client = Depends(get_client),
     ) -> JSONResponse:
+        """Perform inference on the given input data.
+
+        $ curl -X "POST" \
+            "http://localhost:8000/v1/infer" \
+            -H "Content-Type: appication/json" \
+            -d '{
+                "model_id": "yolox/small",
+                "inputs": {
+                    "images": ["data:image/jpeg;base64,..."],
+                }
+            }'
+
+        $ curl -X "POST" \
+            "http://localhost:8000/v1/infer" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "model_id": "openai/clip",
+                "method": "encode_text",
+                "inputs": {
+                    "texts": ["fox jumped over the moon"]
+                }
+            }'
+
+        """
         logger.debug(f"Decoding input dictionary [model={request.model_id}, method={request.method}]")
         request.inputs = decode_item(request.inputs)
         return _infer(request, client)
 
-    @app.post("/infer_file", status_code=status.HTTP_201_CREATED)
+    @app.post(f"/{version}/infer/file", status_code=status.HTTP_201_CREATED)
     def infer_file(
         model_id: str = Form(...),
-        method: str = Form(None),
-        file: UploadFile = File(...),
+        method: Optional[str] = Form(None),
+        file: Optional[UploadFile] = File(None),
+        url: Optional[str] = Form(None),
         client: Client = Depends(get_client),
     ) -> JSONResponse:
-        """Perform inference on the given input data."""
-        # Check if the file-type is supported
-        if not (is_video(file.filename) or is_audio(file.filename) or is_image(file.filename)):
-            logger.exception(f"Unsupported file type [filename={file.filename}]")
+        """Perform inference on the given input data using multipart/form-data.
+
+        $ curl -X POST \
+            'http://localhost:8000/v1/infer/file \
+            -H 'accept: application/json' \
+            -H 'Content-Type: multipart/form-data' \
+            -F 'model_id=yolox/small' \
+            -F 'file=@test.jpg'
+
+        $ curl -X POST \
+            'http://localhost:8000/v1/infer/file \
+            -H 'accept: application/json' \
+            -H 'Content-Type: multipart/form-data' \
+            -F 'model_id=yolox/small' \
+            -F 'url=https://.../test.jpg'
+
+        """
+        logger.debug(f"Received inference request [model={model_id}, method={method}]")
+        request = InferenceRequest(model_id=model_id, method=method, inputs={})
+        file_object: SpooledTemporaryFile = None
+        file_basename: str = None
+        if file is not None:
+            assert isinstance(file.file, SpooledTemporaryFile), f"Invalid file [file={file}]"
+            file_object: SpooledTemporaryFile = file.file
+            file_basename = Path(file.filename).name
+            logger.debug(
+                f"Received file upload [model={model_id}, method={method}, filename={file.filename}, basename={file_basename}]"
+            )
+        elif url is not None:
+            assert isinstance(url, str) and url.startswith("http"), f"Invalid url [url={url}]"
+            file_object = SpooledTemporaryFile()
+            file_object.write(requests.get(url).content)
+            file_basename = url.split("?")[0].split("/")[-1]
+            logger.debug(f"Downloaded file from url [url={url}, basename={file_basename}]")
+        else:
+            logger.exception(f"Invalid input data [model={model_id}, method={method}]")
             return JSONResponse(
-                content={"error": f"Unsupported file type [filename={file.filename}]"},
+                content={
+                    "error": f"Invalid input data, provide atleast (file, url or json) [model={model_id}, method={method}]"
+                },
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check if the file-type is supported
+        if not (is_video(file_basename) or is_audio(file_basename) or is_image(file_basename)):
+            logger.exception(f"Unsupported file type [filename={file_basename}]")
+            return JSONResponse(
+                content={"error": f"Unsupported file type [filename={file_basename}]"},
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
 
         # Save the uploaded file to a temporary file and process it
-        with as_path(file.file, suffix=Path(file.filename).suffix) as path:
+        with as_path(file_object, suffix=Path(file_basename).suffix) as path:
             logger.debug(
                 f"Decoding input file [model={model_id}, method={method}, path={path}, size_mb={path.stat().st_size / 1024 / 1024} MB]"
             )
@@ -165,7 +237,6 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
             # Create the inference request
             ctx = None
             logger.debug(f"Creating inference request [model={model_id}, method={method}, path={path}]")
-            request = InferenceRequest(model_id=model_id, method=method, inputs={})
             if path is not None:
                 if is_image(path.name):
                     request.inputs["images"] = [Image.open(str(path))]
@@ -184,27 +255,6 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
 
     def _infer(request: InferenceRequest, client: Client) -> JSONResponse:
         """Perform inference on the given input data.
-
-        $ curl -X "POST" \
-            "http://localhost:8000/infer" \
-            -H "Content-Type: appication/json" \
-            -d '{
-                "model_id": "yolox/small",
-                "inputs": {
-                    "images": ["data:image/jpeg;base64,..."],
-                }
-            }'
-
-        $ curl -X "POST" \
-            "http://localhost:8000/infer" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "model_id": "openai/clip",
-                "method": "encode_text",
-                "inputs": {
-                    "texts": ["fox jumped over the moon"]
-                }
-            }' | jq
 
         Args:
             request: Inference request.
@@ -228,10 +278,8 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
             )
         logger.debug(f"Initialized module for inference [model={request.model_id}]")
 
-        # Check if the model supports the given method
-        if request.method is None:
-            request.method = "__call__"
-        if not hasattr(model, request.method):
+        # Check if the model supports the given method (if provided)
+        if request.method is not None and not hasattr(model, request.method):
             logger.exception(f"Method '{request.method}' not supported")
             return JSONResponse(
                 content={"error": f"Method '{request.method}' not supported"},

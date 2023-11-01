@@ -1,9 +1,10 @@
 The NOS gRPC server can be started in two ways:
 
 - Via the NOS SDK using [`nos.init(...)`](#api-reference) **(preferred for development)**
+- Via the NOS `serve` CLI.
 - Via Docker Compose **(recommended for production deployments)**
 
-You can also start the server with the REST API proxy enabled as shown in the 3rd example below.
+You can also start the server with the REST API proxy enabled as shown in the 2nd and 4th examples below.
 
 === "Via SDK"
 
@@ -12,6 +13,17 @@ You can also start the server with the REST API proxy enabled as shown in the 3r
     import nos
 
     nos.init(runtime="auto")
+    ```
+=== "Via CLI"
+
+    You can start the nos server via the NOS `serve` CLI:
+    ```bash
+    nos serve up
+    ```
+
+    Optionally, to use the REST API, you can start an HTTP gateway proxy alongside the gRPC server:
+    ```bash
+    nos serve up --http
     ```
 
 === "Via Docker Compose (gRPC)"
