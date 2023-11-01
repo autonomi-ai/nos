@@ -46,7 +46,19 @@ If you want to simply use a light-weight NOS client and run inference on your lo
   $ pip install torch-nos
   ```
 
+For a more detailed quickstart, navigate to our [quickstart](https://docs.nos.run/docs/quickstart.html) docs. 
+
 ## 🔥 Quickstart / Show me the code
+
+### ⚡️ Start the GPU server
+
+The quickest way to get started is to start the GPU server. The `--http` flag optionally starts an HTTP gateway server so that you can run the REST API examples. We recommend you test out the gRPC client API to get the most out-of-the-box performance. 
+
+```bash
+nos serve up --http
+```
+
+This command pulls and starts the latest GPU docker server with all the NOS goodies, without you requiring to manually do any setup. You'll see a bunch of debug logs on the console, wait until you see `Uvicorn running on http://0.0.0.0:8000` before continuing to the next section. To follow the remaining examples, start a new terminal (leaving the server running in the background). 
 
 ### 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
 
@@ -231,10 +243,10 @@ curl \
 
 ## 📚 Documentation
 
-- [Quickstart](./docs/quickstart.md)
-- [Models](./docs/models/supported-models.md)
-- **Concepts**: [Architecture Overview](./docs/concepts/architecture-overview.md), [ModelSpec](./docs/concepts/model-spec.md), [ModelManager](./docs/concepts/model-manager.md), [Runtime Environments](./docs/concepts/runtime-environments.md)
-- **Demos**: [Building a Discord Image Generation Bot](./docs/demos/discord-bot.md), [Video Search Demo](./docs/demos/video-search.md)
+- [Quickstart](https://docs.nos.run/docs/quickstart.html)
+- [Models](https://docs.nos.run/docs/models/supported-models.html)
+- **Concepts**: [Architecture Overview](https://docs.nos.run/docs/concepts/architecture-overview.html), [ModelSpec](https://docs.nos.run/docs/concepts/model-spec.html), [ModelManager](https://docs.nos.run/docs/concepts/model-manager.html), [Runtime Environments](https://docs.nos.run/docs/concepts/runtime-environments.html)
+- **Demos**: [Building a Discord Image Generation Bot](https://docs.nos.run/docs/demos/discord-bot.html), [Video Search Demo](https://docs.nos.run/docs/demos/video-search.html)
 
 ## 🛣 Roadmap
 
