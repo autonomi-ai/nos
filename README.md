@@ -46,19 +46,19 @@ If you want to simply use a light-weight NOS client and run inference on your lo
   $ pip install torch-nos
   ```
 
-For a more detailed quickstart, navigate to our [quickstart](https://docs.nos.run/docs/quickstart.html) docs. 
+For a more detailed quickstart, navigate to our [quickstart](https://docs.nos.run/docs/quickstart.html) docs.
 
 ## 🔥 Quickstart / Show me the code
 
 ### ⚡️ Start the GPU server
 
-The quickest way to get started is to start the GPU server. The `--http` flag optionally starts an HTTP gateway server so that you can run the REST API examples. We recommend you test out the gRPC client API to get the most out-of-the-box performance. 
+The quickest way to get started is to start the GPU server. The `--http` flag optionally starts an HTTP gateway server so that you can run the REST API examples. We recommend you test out the gRPC client API to get the most out-of-the-box performance.
 
 ```bash
 nos serve up --http
 ```
 
-This command pulls and starts the latest GPU docker server with all the NOS goodies, without you requiring to manually do any setup. You'll see a bunch of debug logs on the console, wait until you see `Uvicorn running on http://0.0.0.0:8000` before continuing to the next section. To follow the remaining examples, start a new terminal (leaving the server running in the background). 
+This command pulls and starts the latest GPU docker server with all the NOS goodies, without you requiring to manually do any setup. You'll see a bunch of debug logs on the console, wait until you see `Uvicorn running on http://0.0.0.0:8000` before continuing to the next section. To follow the remaining examples, start a new terminal (leaving the server running in the background).
 
 ### 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
 
@@ -87,7 +87,7 @@ image, = sdxl(prompts=["fox jumped over the moon"],
 
 ```bash
 curl \
--X POST http://localhost:8000/infer \
+-X POST http://localhost:8000/v1/infer \
 -H 'Content-Type: application/json' \
 -d '{
     "model_id": "stabilityai/stable-diffusion-xl-base-1-0",
@@ -128,7 +128,7 @@ txt_vec = clip.encode_text(text=["fox jumped over the moon"])
 
 ```bash
 curl \
--X POST http://localhost:8000/infer \
+-X POST http://localhost:8000/v1/infer \
 -H 'Content-Type: application/json' \
 -d '{
     "model_id": "openai/clip-vit-base-patch32",
@@ -169,7 +169,7 @@ response = model(path=Path("audio.wav"))
 
 ```bash
 curl \
--X POST http://localhost:8000/infer_file \
+-X POST http://localhost:8000/v1/infer/file \
 -H 'accept: application/json' \
 -H 'Content-Type: multipart/form-data' \
 -F 'model_id=openai/whisper-large-v2' \
@@ -206,7 +206,7 @@ response = model(images=[Image.open("image.jpg")])
 
 ```bash
 curl \
--X POST http://localhost:8000/infer_file \
+-X POST http://localhost:8000/v1/infer/file \
 -H 'accept: application/json' \
 -H 'Content-Type: multipart/form-data' \
 -F 'model_id=yolox/medium' \
