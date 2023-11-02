@@ -4,12 +4,12 @@
 <a href="https://pypi.org/project/torch-nos/"><img alt="PyPI Version" src="https://badge.fury.io/py/torch-nos.svg"></a>
 <a href="https://pypi.org/project/torch-nos/"><img alt="PyPI Version" src="https://img.shields.io/pypi/pyversions/torch-nos"></a>
 <a href="https://www.pepy.tech/projects/torch-nos"><img alt="PyPI Downloads" src="https://img.shields.io/pypi/dm/torch-nos"></a>
-<a href="https://github.com/autonomi-ai/nos/blob/main/LICENSE"><img alt="PyPi Downloads" src="https://img.shields.io/github/license/torch-nos/torch-nos.svg"></a><br>
+<a href="https://github.com/autonomi-ai/nos/blob/main/LICENSE"><img alt="PyPi Downloads" src="https://img.shields.io/github/license/autonomi-ai/nos.svg"></a><br>
 <a href="https://discord.gg/QAGgvTuvgg"><img alt="Discord" src="https://img.shields.io/badge/discord-chat-purple?color=%235765F2&label=discord&logo=discord"></a>
 <a href="https://twitter.com/autonomi_ai"><img alt="PyPi Version" src="https://img.shields.io/twitter/follow/autonomi_ai.svg?style=social&logo=twitter"></a>
 </p>
 <p align="center">
-<a href="https://nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
+<a href="https://docs.nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
 </p>
 
 ## ⚡️ What is NOS?
