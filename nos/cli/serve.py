@@ -44,6 +44,9 @@ class ServeOptions:
     http_workers: int = field(default=1)
     """HTTP workers to use for the server."""
 
+    http_env: str = field(default=None)
+    """Environment to use for the HTTP server (dev/test/prod)."""
+
     logging_level: str = field(default="INFO")
     """Logging level to use for the server."""
 
@@ -146,6 +149,10 @@ def _serve_up(
     #   config.yaml ("models") -> check if ModelSpec can be created from
     #   the config locally; registry happens in the server/container.
 
+    # Reload not yet supported
+    if reload:
+        raise NotImplementedError("Reload not yet supported.")
+
     # Check if docker / docker compose is installed
     if not has_docker():
         raise RuntimeError("Docker is not installed, please set up docker first before serving.")
@@ -208,8 +215,6 @@ def _serve_up(
             # we can import the models via "from <sandbox_name>.models.model import X"
             image_config.env["PYTHONPATH"] = f"$PYTHONPATH:{SANDBOX_DIR}"
             image_config.env["NOS_HUB_CATALOG_PATH"] = f"$NOS_HUB_CATALOG_PATH:{str(container_config_path)}"
-            if reload:
-                image_config.env["NOS_MAX_CONCURRENT_MODELS"] = "0"
 
         # Render the dockerfiles
         builder = AGIPack(config)
@@ -291,6 +296,7 @@ def _serve_up(
         http=http,
         http_port=http_port,
         http_workers=http_workers,
+        http_env="prod" if prod else "dev",
         logging_level=logging_level,
         daemon=daemon,
         env_file=[env_file] if env_file is not None else [],

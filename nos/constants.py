@@ -15,12 +15,10 @@ NOS_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 NOS_LOG_DIR.mkdir(parents=True, exist_ok=True)
 NOS_TMP_DIR.mkdir(parents=True, exist_ok=True)
 
-DEFAULT_GRPC_PORT = int(os.getenv("NOS_GRPC_PORT", 50051))
 DEFAULT_HTTP_PORT = int(os.getenv("NOS_HTTP_PORT", 8000))
+DEFAULT_GRPC_PORT = int(os.getenv("NOS_GRPC_PORT", 50051))
 GRPC_MAX_MESSAGE_LENGTH = 32 * 1024 * 1024  # 32 MB
-
-NOS_GRPC_MAX_WORKER_THREADS = int(os.getenv("NOS_GRPC_MAX_WORKER_THREADS", 4))
-NOS_HTTP_MAX_WORKER_THREADS = int(os.getenv("NOS_HTTP_MAX_WORKER_THREADS", 4))
+GRPC_MAX_WORKER_THREADS = int(os.getenv("NOS_GRPC_MAX_WORKER_THREADS", 4))
 
 NOS_PROFILING_ENABLED = bool(int(os.getenv("NOS_PROFILING_ENABLED", "0")))
 NOS_MEMRAY_ENABLED = bool(int(os.getenv("NOS_MEMRAY_ENABLED", "0")))

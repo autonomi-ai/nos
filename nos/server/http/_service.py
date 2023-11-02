@@ -1,5 +1,6 @@
 import contextlib
 import dataclasses
+import os
 import time
 from dataclasses import field
 from pathlib import Path
@@ -20,6 +21,9 @@ from nos.version import __version__
 
 from ._utils import decode_item, encode_item
 
+
+HTTP_API_VERSION = "v1"
+HTTP_ENV = os.getenv("NOS_HTTP_ENV", "prod")
 
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
@@ -42,17 +46,11 @@ class InferenceService:
     version: str = field(default="v1")
     """NOS version."""
 
-    grpc_port: int = field(default=DEFAULT_GRPC_PORT)
-    """gRPC port number."""
+    address: str = field(default=f"[::]:{DEFAULT_GRPC_PORT}")
+    """gRPC address."""
 
-    debug: bool = field(default=False)
-    """Debug mode."""
-
-    app: FastAPI = field(init=False, default=None)
-    """FastAPI app."""
-
-    client: Client = field(init=False, default=None)
-    """Inference client."""
+    env: str = field(default=HTTP_ENV)
+    """Environment (dev/prod/test)."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     """Model configuration."""
@@ -63,11 +61,11 @@ class InferenceService:
             title="NOS REST API",
             description=f"NOS REST API (version={__version__}, api_version={self.version})",
             version=self.version,
-            debug=True,
+            debug=self.env != "prod",
         )
-        logger.debug(f"Starting NOS REST API (version={__version__})")
+        logger.debug(f"Starting NOS REST API (version={__version__}, env={self.env})")
 
-        self.client = Client(f"[::]:{self.grpc_port}")
+        self.client = Client(self.address)
         logger.debug(f"Connecting to gRPC server (address={self.client.address})")
 
         self.client.WaitForServer(timeout=60)
@@ -112,8 +110,20 @@ def as_path(file: SpooledTemporaryFile, suffix: str, chunk_size_mb: int = 4 * 10
         yield path
 
 
-def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = False) -> FastAPI:
-    nos_app = InferenceService(version=version, grpc_port=grpc_port, debug=debug)
+def app_factory(
+    version: str = HTTP_API_VERSION, address: str = f"[::]:{DEFAULT_GRPC_PORT}", env: str = HTTP_ENV
+) -> FastAPI:
+    """Create a FastAPI factory application for the NOS REST API gateway.
+
+    Args:
+        version (str): NOS version.
+        address (str): gRPC address.
+        env (str): Environment (prod, dev, test).
+
+    Returns:
+        (FastAPI) FastAPI application.
+    """
+    nos_app = InferenceService(version=version, address=address, env=env)
     app = nos_app.app
 
     def get_client() -> Client:
@@ -308,28 +318,19 @@ def app(version: str = "v1", grpc_port: int = DEFAULT_GRPC_PORT, debug: bool = F
 
 
 def main():
-    """Main entrypoint for the NOS REST API service.
-
-    We start the NOS gRPC server as part of this entrypoint to ensure that the gRPC client proxy
-    is able to connect to the gRPC server before starting the REST API service.
-    """
+    """Main entrypoint for the NOS REST API service / gateway."""
     import argparse
-    import os
 
     import uvicorn
 
-    import nos
     from nos.client import Client
-    from nos.constants import DEFAULT_GRPC_PORT, DEFAULT_HTTP_PORT, NOS_HTTP_MAX_WORKER_THREADS
+    from nos.constants import DEFAULT_GRPC_PORT, DEFAULT_HTTP_PORT
     from nos.logging import logger
 
     parser = argparse.ArgumentParser(description="NOS REST API Service")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="Host address")
     parser.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT, help="Port number")
-    parser.add_argument("--workers", type=int, default=NOS_HTTP_MAX_WORKER_THREADS, help="Number of workers")
-    parser.add_argument(
-        "--server", type=bool, default=False, help="Initialize the gRPC server with the REST API service"
-    )
+    parser.add_argument("--workers", type=int, default=1, help="Number of workers")
     parser.add_argument(
         "--reload", action="store_true", help="Reload the REST API service when the source code changes"
     )
@@ -339,13 +340,9 @@ def main():
         default=".",
         help="Directory to watch for changes when reloading the REST API service",
     )
+    parser.add_argument("--log-level", type=str, default="info", help="Logging level")
     args = parser.parse_args()
     logger.debug(f"args={args}")
-
-    if args.server:
-        # Start the NOS gRPC Server
-        logger.debug(f"Starting NOS gRPC server (port={DEFAULT_GRPC_PORT})")
-        nos.init(runtime="auto", logging_level=os.environ.get("NOS_LOGGING_LEVEL", "INFO"))
 
     # Wait for the gRPC server to be ready
     logger.debug(f"Initializing gRPC client (port={DEFAULT_GRPC_PORT})")
@@ -357,15 +354,18 @@ def main():
         raise RuntimeError("gRPC server is not healthy")
 
     # Start the NOS REST API service
-    logger.debug(f"Starting NOS REST API service (host={args.host}, port={args.port}, workers={args.workers})")
+    logger.debug(
+        f"Starting NOS REST API service (host={args.host}, port={args.port}, workers={args.workers}, env={HTTP_ENV})"
+    )
     uvicorn.run(
-        "nos.server.http._service:app",
+        "nos.server.http._service:app_factory",
         host=args.host,
         port=args.port,
-        workers=args.workers,
-        log_level="info",
-        factory=True,
+        log_level=args.log_level,
         reload=args.reload,
+        reload_dirs=[args.reload_dir],
+        workers=args.workers,
+        factory=True,
     )
 
 
