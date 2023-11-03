@@ -14,7 +14,7 @@ You will need to install [Docker](https://docs.docker.com/get-docker/), [Nvidia 
 
     Next, let's install Nvidia Docker. This will install the Nvidia Container Toolkit which is required to run GPU accelerated containers. This is only required if you plan to run the NOS server with GPU support.
     ```bash
-    sudo apt-get update nvidia-container-toolkit-base
+    sudo apt-get install nvidia-container-toolkit-base
     ```
 
     Finally, you should be able to run the following command without any errors and the `nvidia-smi` output:
