@@ -57,12 +57,10 @@ RUN pip install --upgrade pip
 # instead of having to re-download them every time we build.
 COPY requirements/requirements.txt /tmp/reqs/requirements/requirements.txt
 COPY requirements/requirements.http.txt /tmp/reqs/requirements/requirements.http.txt
-COPY requirements/requirements.server.txt /tmp/reqs/requirements/requirements.server.txt
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} \
     pip install --upgrade pip \
     && pip install -r /tmp/reqs/requirements/requirements.txt \
     && pip install -r /tmp/reqs/requirements/requirements.http.txt \
-    && pip install -r /tmp/reqs/requirements/requirements.server.txt \
     && echo "pip requirements install complete"
 
 # Export conda environment on login
@@ -76,18 +74,22 @@ WORKDIR /app/$AGIPACK_PYENV
 
 # Add project files
 ADD ./scripts/entrypoint.sh /app/entrypoint.sh
+ADD ./requirements/requirements.server.txt /tmp/requirements.server.txt
 
 # Run commands
 RUN echo "running commands"
 RUN --mount=type=cache,target=${CONDA_PKGS_DIRS} \
     --mount=type=cache,target=${PIP_CACHE_DIR} \
-    pip install torch>=2.0.0+cpu torchaudio torchvision -i https://download.pytorch.org/whl/cpu
+    mamba install pytorch==2.0.1 torchvision>=0.16 torchaudio>=0.10.2 cpuonly -c pytorch
+RUN --mount=type=cache,target=${CONDA_PKGS_DIRS} \
+    --mount=type=cache,target=${PIP_CACHE_DIR} \
+    pip config set global.extra-index-url https://download.pytorch.org/whl/cpu
+RUN --mount=type=cache,target=${CONDA_PKGS_DIRS} \
+    --mount=type=cache,target=${PIP_CACHE_DIR} \
+    pip install -r /tmp/requirements.server.txt && rm -rf /tmp/requirements.server.txt
 RUN --mount=type=cache,target=${CONDA_PKGS_DIRS} \
     --mount=type=cache,target=${PIP_CACHE_DIR} \
     mamba install -y -c conda-forge x264=='1!161.3030' ffmpeg=4.3.2
-RUN --mount=type=cache,target=${CONDA_PKGS_DIRS} \
-    --mount=type=cache,target=${PIP_CACHE_DIR} \
-    python -c "import torch as t; print(f'torch={t.__version__}, cuda={t.cuda.is_available()}, cudnn={t.backends.cudnn.is_available()}')"
 RUN echo "run commands complete"
 
 # Setup environment variables
