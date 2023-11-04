@@ -149,10 +149,6 @@ def _serve_up(
     #   config.yaml ("models") -> check if ModelSpec can be created from
     #   the config locally; registry happens in the server/container.
 
-    # Reload not yet supported
-    if reload:
-        raise NotImplementedError("Reload not yet supported.")
-
     # Check if docker / docker compose is installed
     if not has_docker():
         raise RuntimeError("Docker is not installed, please set up docker first before serving.")

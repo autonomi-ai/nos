@@ -21,7 +21,12 @@ NOS_MEMRAY_ENABLED = bool(int(os.getenv("NOS_MEMRAY_ENABLED", "0")))
 NOS_RAY_LOGS_DIR = os.getenv("NOS_RAY_LOGS_DIR", "/tmp/ray/session_latest/logs")
 
 if NOS_MEMRAY_ENABLED:
-    import memray
+    try:
+        import memray
+    except ImportError:
+        msg = "Failed to import memray, `pip install memray` before continuing."
+        logger.error(msg)
+        raise ImportError(msg)
 
     Path(NOS_RAY_LOGS_DIR).mkdir(parents=True, exist_ok=True)
 

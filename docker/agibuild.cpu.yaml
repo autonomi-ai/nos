@@ -13,13 +13,14 @@ images:
     requirements:
       - requirements/requirements.txt
       - requirements/requirements.http.txt
-      - requirements/requirements.server.txt
     add:
       - ./scripts/entrypoint.sh:/app/entrypoint.sh
+      - ./requirements/requirements.server.txt:/tmp/requirements.server.txt
     run:
-      - pip install torch>=2.0.0+cpu torchaudio torchvision -i https://download.pytorch.org/whl/cpu
+      - mamba install pytorch==2.0.1 torchvision>=0.16 torchaudio>=0.10.2 cpuonly -c pytorch
+      - pip config set global.extra-index-url https://download.pytorch.org/whl/cpu
+      - pip install -r /tmp/requirements.server.txt && rm -rf /tmp/requirements.server.txt
       - mamba install -y -c conda-forge x264=='1!161.3030' ffmpeg=4.3.2
-      - python -c "import torch as t; print(f'torch={t.__version__}, cuda={t.cuda.is_available()}, cudnn={t.backends.cudnn.is_available()}')"
     env:
       LOGURU_LEVEL: WARNING
       TZ: "America/Los_Angeles"
