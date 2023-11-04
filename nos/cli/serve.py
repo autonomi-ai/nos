@@ -70,7 +70,7 @@ class ServeOptions:
 def _serve_build(
     config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
     target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=False),
-    tag: str = typer.Option("{name}:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
+    tag: str = typer.Option("autonomi/nos:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
     prod: bool = typer.Option(
         False,
         "-p",
@@ -79,7 +79,8 @@ def _serve_build(
         show_default=False,
     ),
 ) -> None:
-    _serve_up(config_filename=config_filename, runtime="auto", target=target, tag=tag, build=True, prod=prod)
+    """Main entrypoint for custom NOS runtime builds."""
+    _serve(config_filename=config_filename, runtime="auto", target=target, tag=tag, build=True, prod=prod)
 
 
 @serve_cli.command("up", help="Spin up the NOS server locally.")
@@ -87,7 +88,7 @@ def _serve_up(
     config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
     runtime: str = typer.Option("auto", "-r", "--runtime", help="Runtime environment to use.", show_default=False),
     target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=True),
-    tag: str = typer.Option("{name}:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
+    tag: str = typer.Option("autonomi/nos:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
     http: bool = typer.Option(False, "--http", help="Serve with HTTP gateway.", show_default=True),
     http_port: int = typer.Option(8000, "--http-port", help="HTTP port to use.", show_default=True),
     http_workers: int = typer.Option(1, "--http-workers", help="HTTP max workers.", show_default=True),
@@ -107,9 +108,48 @@ def _serve_up(
     env_file: str = typer.Option(
         None, "--env-file", help="Provide an environment file for secrets.", show_default=True
     ),
+    debug: bool = typer.Option(
+        False, "--debug", help="Debug intermediate outputs (Dockerfile, docker-compose.yml).", show_default=True
+    ),
     verbose: bool = typer.Option(False, "-v", "--verbose", help="Verbose output.", show_default=True),
 ) -> None:
-    """Main entrypoint for nos serving (either locally or in the cloud)."""
+    """Main entrypoint for custom NOS runtime serving (either locally or in the cloud)."""
+    return _serve(
+        config_filename=config_filename,
+        runtime=runtime,
+        target=target,
+        tag=tag,
+        http=http,
+        http_port=http_port,
+        http_workers=http_workers,
+        logging_level=logging_level,
+        daemon=daemon,
+        reload=reload,
+        build=build,
+        prod=prod,
+        env_file=env_file,
+        debug=debug,
+        verbose=verbose,
+    )
+
+
+def _serve(
+    config_filename: str,
+    runtime: str = "auto",
+    target: str = None,
+    tag: str = "autonomi/nos:{target}",
+    http: bool = False,
+    http_port: int = 8000,
+    http_workers: int = 1,
+    logging_level: str = "INFO",
+    daemon: bool = False,
+    reload: bool = False,
+    build: bool = False,
+    prod: bool = False,
+    env_file: str = None,
+    debug: bool = False,
+    verbose: bool = False,
+) -> None:
     from agipack.builder import AGIPack
     from agipack.config import AGIPackConfig
     from jinja2 import Environment, FileSystemLoader
@@ -249,6 +289,11 @@ def _serve_up(
                 builder.build(filename=filename, target=docker_target, tags=[image_name])
             print(f"[green]✓[/green] Successfully built Docker image (image=[bold white]{image_name}[/bold white]).")
 
+        # Remove the Dockerfile if debug is not enabled
+        if not debug:
+            for _docker_target, filename in dockerfiles.items():
+                Path(filename).unlink()
+
         # Check if the image was built
         if image_name is None:
             raise ValueError(f"Failed to build target={target}, cannot proceed.")
@@ -318,6 +363,9 @@ def _serve_up(
     if proc.returncode != 0:
         logger.error(f"Failed to serve, e={proc.stderr}")
         raise RuntimeError(f"Failed to serve, e={proc.stderr}")
+    else:
+        if not debug:
+            compose_path.unlink()
 
 
 @serve_cli.command("down", help="Tear down the NOS server.")
