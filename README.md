@@ -32,7 +32,7 @@
 Get started with the full NOS server by installing via pip:
 
   ```shell
-  $ conda env create -n nos-py38 python=3.8
+  $ conda create -n nos-py38 python=3.8
   $ conda activate nos-py38
   $ conda install pytorch>=2.0.1 torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
   $ pip install torch-nos[server]
@@ -41,7 +41,7 @@ Get started with the full NOS server by installing via pip:
 If you want to simply use a light-weight NOS client and run inference on your local machine (via docker), you can install the client-only package:
 
   ```shell
-  $ conda env create -n nos-py38 python=3.8
+  $ conda create -n nos-py38 python=3.8
   $ conda activate nos-py38
   $ pip install torch-nos
   ```
@@ -160,7 +160,8 @@ from nos.client import Client
 client = Client("[::]:50051")
 
 model = client.Module("openai/whisper-large-v2")
-response = model(path=Path("audio.wav"))
+with client.UploadFile(Path("audio.wav")) as remote_path:
+  response = model(path=remote_path)
 # {"chunks": ...}
 ```
 
