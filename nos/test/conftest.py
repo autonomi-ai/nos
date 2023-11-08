@@ -220,10 +220,10 @@ def local_http_client_with_server(grpc_server):  # noqa: F811
     """Test local HTTP client with local runtime."""
     from fastapi.testclient import TestClient
 
-    from nos.server.http._service import app
+    from nos.server.http._service import app_factory
 
     # Yield the HTTP client once the server is up and initialized
-    with TestClient(app(grpc_port=GRPC_TEST_PORT)) as _client:
+    with TestClient(app_factory(address=f"[::]:{GRPC_TEST_PORT}")) as _client:
         yield _client
 
 
@@ -237,10 +237,10 @@ def http_client_with_cpu_backend(grpc_server_docker_runtime_cpu):  # noqa: F811
     """Test HTTP client with initialized CPU docker runtime (Port: 50053)."""
     from fastapi.testclient import TestClient
 
-    from nos.server.http._service import app
+    from nos.server.http._service import app_factory
 
     # Yield the HTTP client once the server is up and initialized
-    with TestClient(app(grpc_port=GRPC_TEST_PORT_CPU)) as _client:
+    with TestClient(app_factory(address=f"[::]:{GRPC_TEST_PORT_CPU}")) as _client:
         yield _client
 
 
@@ -254,10 +254,10 @@ def http_client_with_gpu_backend(grpc_server_docker_runtime_gpu):  # noqa: F811
     """Test HTTP client with initialized CPU docker runtime (Port: 50054)."""
     from fastapi.testclient import TestClient
 
-    from nos.server.http._service import app
+    from nos.server.http._service import app_factory
 
     # Yield the HTTP client once the server is up and initialized
-    with TestClient(app(grpc_port=GRPC_TEST_PORT_GPU)) as _client:
+    with TestClient(app_factory(address=f"[::]:{GRPC_TEST_PORT_GPU}")) as _client:
         yield _client
 
 
