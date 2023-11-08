@@ -315,6 +315,8 @@ class Client:
     @contextlib.contextmanager
     def UploadFile(self, path: Path, chunk_size: int = 4 * MB_BYTES) -> Path:
         """Upload a file to the server, and delete it after use."""
+        if not path.exists():
+            raise FileNotFoundError(f"File not found [path={path}]")
         try:
             logger.debug(f"Uploading file [path={path}]")
             remote_path: Path = self._upload_file(path, chunk_size=chunk_size)

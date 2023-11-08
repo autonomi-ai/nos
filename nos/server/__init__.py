@@ -228,20 +228,10 @@ def _pull_image(image: str, quiet: bool = False, platform: str = None) -> str:
     except docker.errors.ImageNotFound:
         try:
             logger.info(f"Pulling new server image: {image} (this may take a while).")
-            # use subprocess to pull image and stream output
-            proc = subprocess.Popen(
-                f"docker pull {image}", stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True
-            )
-            status_q = deque(maxlen=25)
-            status_str = f"Pulling new server image: {image} (this may take a while)."
-            with rich.status.Status("[bold white]" + status_str + "[/bold white]") as status:
-                while proc.stdout.readable():
-                    line = proc.stdout.readline()
-                    if not line:
-                        break
-                    status_q.append(line.decode("utf-8").strip())
-                    status.update("[bold white]" + f"{status_str}\n\t" + "\n\t".join(status_q) + "[/bold white]")
-            proc.wait()
+            proc = subprocess.run(f"docker pull {image}", shell=True)
+            if proc.returncode != 0:
+                logger.exception(f"Failed to pull docker image, e={proc.stderr}")
+                raise RuntimeError(f"Failed to pull docker image, e={proc.stderr}")
             logger.info(f"Pulled new server image: {image}")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             logger.error(f"Failed to pull image: {image}, exiting early: {exc}")

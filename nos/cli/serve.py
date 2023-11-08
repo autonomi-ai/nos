@@ -6,6 +6,7 @@ Usage:
     nos serve -c config.yaml --http
 
 """
+import shutil
 import subprocess
 from dataclasses import asdict, field
 from pathlib import Path
@@ -17,6 +18,11 @@ from rich import print
 from rich.console import Console
 from rich.tree import Tree
 
+from nos.constants import NOS_TMP_DIR
+
+
+NOS_SERVE_TMP_DIR = NOS_TMP_DIR / "serve"
+NOS_SERVE_TMP_DIR.mkdir(parents=True, exist_ok=True)
 
 serve_cli = typer.Typer(name="serve", help="NOS gRPC/REST Serve CLI.", no_args_is_help=True)
 console = Console()
@@ -255,7 +261,9 @@ def _serve(
         # Render the dockerfiles
         builder = AGIPack(config)
         dockerfiles: Dict[str, Path] = builder.render(
-            filename=f"Dockerfile.{sandbox_name}", env="prod" if prod else "dev", skip_base_builds=True
+            filename=str(NOS_SERVE_TMP_DIR / f"Dockerfile.{sandbox_name}"),
+            env="prod" if prod else "dev",
+            skip_base_builds=True,
         )
 
         # Check if several targets are defined, if so, expect the user
@@ -289,10 +297,10 @@ def _serve(
                 builder.build(filename=filename, target=docker_target, tags=[image_name])
             print(f"[green]✓[/green] Successfully built Docker image (image=[bold white]{image_name}[/bold white]).")
 
-        # Remove the Dockerfile if debug is not enabled
-        if not debug:
-            for _docker_target, filename in dockerfiles.items():
-                Path(filename).unlink()
+        # Copy the dockerfiles to the current working directory if debug is enabled.
+        for _docker_target, filename in dockerfiles.items():
+            if debug:
+                shutil.copyfile(filename, Path.cwd() / filename.name)
 
         # Check if the image was built
         if image_name is None:
@@ -340,14 +348,15 @@ def _serve(
         http_env="prod" if prod else "dev",
         logging_level=logging_level,
         daemon=daemon,
-        env_file=[env_file] if env_file is not None else [],
+        env_file=[str(Path(env_file).absolute())] if env_file is not None else [],
         **additional_kwargs,
     )
     content = template.render(**asdict(options))
     logger.debug(f"Rendered template content:\n{content}")
 
     # Write the docker-compose file
-    compose_path = Path.cwd() / f"docker-compose.{sandbox_name}.yml"
+    # Create a temporary directory to store the docker-compose file
+    compose_path = NOS_SERVE_TMP_DIR / f"docker-compose.{sandbox_name}.yml"
     with compose_path.open("w") as f:
         f.write(content)
     print(
@@ -355,7 +364,7 @@ def _serve(
     )
 
     # Launch docker compose with the built images
-    cmd = f"{docker_compose_cmd} -f {compose_path.name} up"
+    cmd = f"{docker_compose_cmd} -f {str(compose_path)} up"
     if daemon:
         cmd += " -d"
     print(f"[green]✓[/green] Launching docker compose with command: [bold white]{cmd}[/bold white]")
@@ -364,8 +373,9 @@ def _serve(
         logger.error(f"Failed to serve, e={proc.stderr}")
         raise RuntimeError(f"Failed to serve, e={proc.stderr}")
     else:
-        if not debug:
-            compose_path.unlink()
+        # Copy the docker-compose file to the current working directory if debug is enabled.
+        if debug:
+            shutil.copyfile(compose_path, Path.cwd() / compose_path.name)
 
 
 @serve_cli.command("down", help="Tear down the NOS server.")
