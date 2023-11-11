@@ -12,7 +12,7 @@ from nos.logging import logger
 
 @dataclass(frozen=True)
 class WhisperConfig(HuggingFaceHubConfig):
-    pass
+    torch_dtype: str = "float32"
 
 
 class Whisper:
@@ -36,9 +36,20 @@ class Whisper:
         "openai/whisper-large-v2": WhisperConfig(
             model_name="openai/whisper-large-v2",
         ),
+        "openai/whisper-large-v3": WhisperConfig(
+            model_name="openai/whisper-large-v3",
+        ),
+        "distil-whisper/distil-medium.en": WhisperConfig(
+            model_name="distil-whisper/distil-medium.en",
+            torch_dtype="float16",
+        ),
+        "distil-whisper/distil-large-v2": WhisperConfig(
+            model_name="distil-whisper/distil-large-v2",
+            torch_dtype="float16",
+        ),
     }
 
-    def __init__(self, model_name: str = "openai/whisper-tiny.en", dtype: str = "float32"):
+    def __init__(self, model_name: str = "openai/whisper-tiny.en"):
 
         from transformers import pipeline
 
@@ -51,14 +62,13 @@ class Whisper:
             self.device = torch.device("cuda:0")
         else:
             self.device = torch.device("cpu")
-        self.torch_dtype = getattr(torch, dtype)
 
         model_name = self.cfg.model_name
         self.pipe = pipeline(
             "automatic-speech-recognition",
             model=model_name,
             device=self.device,
-            torch_dtype=self.torch_dtype,
+            torch_dtype=getattr(torch, self.cfg.torch_dtype),
         )
 
     def transcribe(

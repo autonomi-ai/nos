@@ -1,12 +1,10 @@
 from pathlib import Path
 
-import humanize
-import rich.console
-import rich.status
-import rich.table
 import typer
 from rich import print
+from rich.tree import Tree
 
+from nos import hub
 from nos.common.spec import ModelSpec
 from nos.constants import NOS_MODELS_DIR
 
@@ -17,26 +15,11 @@ DEFAULT_MODEL_CACHE_DIR = NOS_MODELS_DIR
 
 @hub_cli.command("list")
 def _list_models(private: bool = typer.Option(False, "-p", "--private", help="List private models.")) -> None:
-    from nos import hub
-
-    table = rich.table.Table(title="[green]  Models [/green]")
-    table.add_column("Model Name")
-    table.add_column("Method")
-    table.add_column("Task")
-    table.add_column("Resources (CPU Memory)")
-    table.add_column("Resources (GPU Memory)")
-
+    tree = Tree("[bold white]Models[/bold white]")
     for model in hub.list(private=private):
         spec: ModelSpec = hub.load_spec(model)
-        for method in spec.signature:
-            table.add_row(
-                f"[green]{model}[/green]",
-                method,
-                spec.task(method),
-                f"{humanize.naturalsize(spec.metadata().resources.memory, binary=True)}",
-                f"{humanize.naturalsize(spec.metadata().resources.device_memory, binary=True)}",
-            )
-    print(table)
+        tree.add(f"[green]{str(model)}[/green]").add(str(spec))
+    print(tree)
 
 
 @hub_cli.command("download")

@@ -245,10 +245,10 @@ class ModelResources:
     """Device identifier (nvidia-2080, nvidia-4090, apple-m2, etc)."""
     cpus: float = 0
     """Number of CPUs (defaults to 0 CPUs)."""
-    memory: Union[int, str] = field(default=256 * 1024**2)
-    """Host memory (defaults to 256 MB)"""
-    device_memory: Union[int, str] = field(default=512 * 1024**2)
-    """Device memory (defaults to 512 MB)."""
+    memory: Union[None, int, str] = field(default=0)
+    """Host / CPU memory"""
+    device_memory: Union[None, int, str] = field(default=0)
+    """Device / GPU memory."""
 
     def __repr__(self) -> str:
         return (
@@ -269,10 +269,13 @@ class ModelResources:
     @validator("device_memory")
     def _validate_device_memory(cls, device_memory: Union[int, str]) -> int:
         """Validate the device memory."""
+        if device_memory is None:
+            return
+
         if isinstance(device_memory, str):
             raise NotImplementedError()
 
-        if device_memory < 1 * 1024**2 or device_memory > 128 * 1024**3:
+        if device_memory > 128 * 1024**3:
             err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
             logger.error(err_msg)
             raise ValueError(err_msg)
@@ -293,10 +296,13 @@ class ModelResources:
     @validator("memory")
     def _validate_memory(cls, memory: Union[int, str]) -> int:
         """Validate the host memory."""
+        if memory is None:
+            return
+
         if isinstance(memory, str):
             raise NotImplementedError()
 
-        if memory < 256 * 1024**2 or memory > 128 * 1024**3:
+        if memory > 128 * 1024**3:
             err_msg = f"Invalid device memory provided, memory={memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
             logger.error(err_msg)
             raise ValueError(err_msg)
@@ -314,6 +320,9 @@ class ModelSpecMetadataCatalog:
 
     _resources_catalog: Dict[str, "ModelResources"] = {}
     """Model resources catalog."""
+
+    _metadata_catalog: Dict[str, Dict[str, Any]] = {}
+    """Model metadata catalog of various additional profiling details."""
 
     @classmethod
     def get(cls) -> "ModelSpecMetadataCatalog":
@@ -359,7 +368,10 @@ class ModelSpecMetadataCatalog:
         for col in [
             "model_id",
             "method",
+            "runtime",
             "device_name",
+            "device_type",
+            "device_index",
             "version",
             "prof.batch_size",
             "prof.shape",
@@ -371,24 +383,18 @@ class ModelSpecMetadataCatalog:
         for _, row in df.iterrows():
             model_id, method = row["model_id"], row["method"]
             self._resources_catalog[f"{model_id}/{method}"] = ModelResources(
-                runtime="cpu",
-                device="cpu",
+                runtime=row["runtime"],
+                device=row["device_name"],
                 device_memory=math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500)
                 * 500
                 * 1024**2,
             )
+            self._metadata_catalog[f"{model_id}/{method}"] = row.to_dict()
 
 
 @dataclass
 class ModelSpecMetadata:
-    """Model specification metadata.
-
-    The metadata contains the model profiles, metrics, etc.
-
-     (id, method, task, device_id, resources)
-    - openai/clip-fp16, transcribe, _, nvidia-4090, (cpu=0, 4500m)
-    - openai/clip-fp32, transcribe, _, nvidia-a100, (cpu=0, 9000m)
-    """
+    """Model specification metadata."""
 
     id: str
     """Model identifier."""
@@ -413,6 +419,16 @@ class ModelSpecMetadata:
             logger.debug(f"Model resources not found in catalog, id={self.id}, method={self.method}.")
             return ModelResources(runtime="cpu", device="cpu", device_memory=1024**2 * 512)
 
+    @property
+    def metadata(self) -> Dict[str, Any]:
+        """Return the model metadata."""
+        catalog = ModelSpecMetadataCatalog.get()
+        try:
+            return catalog._metadata_catalog[f"{self.id}/{self.method}"]
+        except KeyError:
+            logger.debug(f"Model metadata not found in catalog, id={self.id}, method={self.method}.")
+            return {}
+
 
 @dataclass
 class ModelSpec:
@@ -430,7 +446,7 @@ class ModelSpec:
     """Runtime environment with custom packages."""
 
     def __repr__(self):
-        return f"""ModelSpec(id={self.id}, methods=[{', '.join(list(self.signature))}], tasks=[{', '.join([str(self.task(m)) for m in self.signature])}])"""
+        return f"""ModelSpec(id={self.id}, methods=({', '.join(list(self.signature.keys()))}), tasks=({', '.join([str(self.task(m)) for m in self.signature])}))"""
 
     @validator("id", pre=True)
     def _validate_id(cls, id: str) -> str:

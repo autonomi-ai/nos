@@ -34,6 +34,9 @@ class StableDiffusion:
         "stabilityai/stable-diffusion-xl-base-1-0": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-xl-base-1.0",
         ),
+        "segmind/SSD-1B": StableDiffusionConfig(
+            model_name="segmind/SSD-1B",
+        ),
     }
 
     def __init__(

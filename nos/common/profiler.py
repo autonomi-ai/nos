@@ -253,33 +253,6 @@ class ModelProfileRequest:
         return f"BenchmarkModel (model_id={self.model_id}, method={self.method}, kwargs={self.kwargs})"
 
 
-@dataclass(frozen=True)
-class ModelProfileResult:
-    profile: pd.DataFrame
-    """Profiled results as a dataframe."""
-    acc_info: Dict[str, Any] = None
-    """Accelerator (GPU) info."""
-
-    def __post_init__(self):
-        assert isinstance(self.profile, pd.DataFrame), "Profile must be a DataFrame."
-        assert self.profile.index.name == "key", "Profile must have a 'key' index."
-        assert "device_id" in self.profile.columns, "Profile must have a device_id."
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to a dictionary."""
-        return {
-            "profile": self.profile.to_dict(),
-            "sys_info": get_system_info(docker=False, gpu=True),
-        }
-
-    def save(self, filename: Union[str, Path]) -> None:
-        """Save profiled results to JSON."""
-        import json
-
-        with open(str(filename), "w") as f:
-            json.dump(self.to_dict(), f, indent=4)
-
-
 @dataclass
 class ModelProfiler:
     """Benchmark profiler.
@@ -291,6 +264,8 @@ class ModelProfiler:
 
     mode: str = "full"
     """Benchmark mode (full, memory, execution)."""
+    runtime: str = "gpu"
+    """Runtime (cpu, gpu)."""
     requests: List[ModelProfileRequest] = field(default_factory=list)
     """Model requests to benchmark."""
     prof: Profiler = None
@@ -335,6 +310,7 @@ class ModelProfiler:
             print(f"Found GPU devices: {len(gpu_devices_df)}, unique: {len(unique_gpu_devices)}")
             if len(unique_gpu_devices) > 1:
                 print(f"Multiple devices detected, selecting {unique_gpu_devices[0]}.")
+
             print(gpu_devices_df.to_markdown())
 
             # Select the appropriate device, and retrieve its name
@@ -365,6 +341,7 @@ class ModelProfiler:
             namespace=f"nos::{request.model_id}",
             model_id=request.model_id,
             method=request.method,
+            runtime=self.runtime,
             device_name=self.device_name,
             device_type=self.device.type,
             device_index=self.device.index,
@@ -387,13 +364,13 @@ class ModelProfiler:
 
                 # Inference Warmup
                 if self.mode == "full" or self.mode == "execution":
-                    with record.profile_execution("forward_warmup", duration=1) as prof:
+                    with record.profile_execution("forward_warmup", duration=2) as prof:
                         [predict(**batched_inputs) for _ in prof.iterator]
                     tree.add(f"[bold green]✓[/bold green] {prof}).")
 
                 # Inference (profile execution)
                 if self.mode == "full" or self.mode == "execution":
-                    with record.profile_execution("forward", duration=2) as prof:
+                    with record.profile_execution("forward", duration=5) as prof:
                         [predict(**batched_inputs) for _ in prof.iterator]
                     tree.add(f"[bold green]✓[/bold green] {prof}).")
 
