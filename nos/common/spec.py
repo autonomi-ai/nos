@@ -1,10 +1,12 @@
 import copy
 import inspect
+import math
 import re
-from dataclasses import InitVar, asdict, field
+from dataclasses import asdict, field
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union, get_args, get_origin
 
+import humanize
 from pydantic import validator
 from pydantic.dataclasses import dataclass
 
@@ -13,6 +15,7 @@ from nos.common.exceptions import NosInputValidationException
 from nos.common.runtime import RuntimeEnv
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
+from nos.constants import NOS_METADATA_CATALOG_PATH
 from nos.logging import logger
 from nos.protoc import import_module
 
@@ -234,18 +237,24 @@ class FunctionSignature:
 class ModelResources:
     """Model resources (device/host memory etc)."""
 
-    runtime: str = "cpu"
-    """Runtime type (cpu, gpu, trt-runtime, etc).
+    runtime: str
+    """Runtime type (cpu, gpu, trt, etc).
     See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
     """
-    device: str = "cpu"
-    """Device type (cpu, cuda, mps, neuron, etc)."""
-    device_memory: Union[int, str] = field(default=512 * 1024**2)
-    """Device memory (defaults to 512 MB)."""
+    device: str
+    """Device identifier (nvidia-2080, nvidia-4090, apple-m2, etc)."""
     cpus: float = 0
     """Number of CPUs (defaults to 0 CPUs)."""
     memory: Union[int, str] = field(default=256 * 1024**2)
     """Host memory (defaults to 256 MB)"""
+    device_memory: Union[int, str] = field(default=512 * 1024**2)
+    """Device memory (defaults to 512 MB)."""
+
+    def __repr__(self) -> str:
+        return (
+            f"""ModelResources(runtime={self.runtime}, device={self.device}, cpus={self.cpus}, """
+            f"""memory={humanize.naturalsize(self.memory, binary=True)}, device_memory={humanize.naturalsize(self.device_memory, binary=True)})"""
+        )
 
     @validator("runtime")
     def _validate_runtime(cls, runtime: str) -> str:
@@ -257,24 +266,13 @@ class ModelResources:
             raise ValueError(f"Invalid runtime, runtime={runtime}.")
         return runtime
 
-    @validator("device")
-    def _validate_device(cls, device: str) -> str:
-        """Validate the device."""
-        from nos.server._runtime import NOS_SUPPORTED_DEVICES
-
-        if device not in NOS_SUPPORTED_DEVICES:
-            err_msg = f"Invalid device provided, device={device}. Use one of {NOS_SUPPORTED_DEVICES}."
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        return device
-
     @validator("device_memory")
     def _validate_device_memory(cls, device_memory: Union[int, str]) -> int:
         """Validate the device memory."""
         if isinstance(device_memory, str):
             raise NotImplementedError()
 
-        if device_memory < 256 * 1024**2 or device_memory > 128 * 1024**3:
+        if device_memory < 1 * 1024**2 or device_memory > 128 * 1024**3:
             err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
             logger.error(err_msg)
             raise ValueError(err_msg)
@@ -305,40 +303,80 @@ class ModelResources:
         return memory
 
 
-class ModelSpecMetadataRegistry:
-    """Model specification registry."""
+class ModelSpecMetadataCatalog:
+    """Model specification catalog."""
 
-    _instance: Optional["ModelSpecMetadataRegistry"] = None
+    _instance: Optional["ModelSpecMetadataCatalog"] = None
     """Singleton instance."""
 
     _registry: Dict[str, "ModelSpecMetadata"] = {}
     """Model specification metadata registry."""
 
+    _resources_catalog: Dict[str, "ModelResources"] = {}
+    """Model resources catalog."""
+
     @classmethod
-    def get(cls) -> "ModelSpecMetadataRegistry":
+    def get(cls) -> "ModelSpecMetadataCatalog":
         """Get the singleton instance."""
         if cls._instance is None:
             cls._instance = cls()
+            try:
+                cls._instance.load_catalog()
+            except FileNotFoundError:
+                logger.warning(f"Model metadata catalog not found, path={NOS_METADATA_CATALOG_PATH}.")
         return cls._instance
 
-    def __contains__(self, model_id: Any) -> bool:
+    def __contains__(self, model_method_id: Any) -> bool:
         """Check if the model spec metadata is available."""
-        return model_id in self._registry
+        return model_method_id in self._registry
 
-    def __getitem__(self, model_id: Any) -> "ModelSpecMetadata":
+    def __getitem__(self, model_method_id: Any) -> "ModelSpecMetadata":
         """Load the model spec metadata."""
         try:
-            return self._registry[model_id]
+            return self._registry[model_method_id]
         except KeyError:
-            raise KeyError(f"Unavailable model (id={model_id}).")
+            raise KeyError(f"Unavailable model (id={model_method_id}).")
 
-    def __setitem__(self, model_id: Any, metadata: "ModelSpecMetadata"):
+    def __setitem__(self, model_method_id: Any, metadata: "ModelSpecMetadata"):
         """Add the model spec metadata."""
-        self._registry[model_id] = metadata
+        self._registry[model_method_id] = metadata
 
-    def load(self, model_id: Any) -> "ModelSpec":
+    def load(self, model_method_id: Any) -> "ModelSpec":
         """Load the model spec metadata (identical to __getitem__)."""
-        return self[model_id]
+        return self[model_method_id]
+
+    def load_catalog(self) -> "ModelSpecMetadataCatalog":
+        """Load the model spec metadata from a JSON catalog."""
+        import pandas as pd
+
+        if not NOS_METADATA_CATALOG_PATH.exists():
+            raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_METADATA_CATALOG_PATH}.")
+
+        # Read the catalog
+        df = pd.read_json(str(NOS_METADATA_CATALOG_PATH), orient="records")
+        columns = df.columns
+        # Check if the catalog is valid with the required columns
+        for col in [
+            "model_id",
+            "method",
+            "device_name",
+            "version",
+            "prof.batch_size",
+            "prof.shape",
+            "prof.forward::memory_cpu::allocated",
+        ]:
+            if col not in columns:
+                raise ValueError(f"Invalid model metadata catalog, missing column={col}.")
+        # Update the registry
+        for _, row in df.iterrows():
+            model_id, method = row["model_id"], row["method"]
+            self._resources_catalog[f"{model_id}/{method}"] = ModelResources(
+                runtime="cpu",
+                device="cpu",
+                device_memory=math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500)
+                * 500
+                * 1024**2,
+            )
 
 
 @dataclass
@@ -346,6 +384,10 @@ class ModelSpecMetadata:
     """Model specification metadata.
 
     The metadata contains the model profiles, metrics, etc.
+
+     (id, method, task, device_id, resources)
+    - openai/clip-fp16, transcribe, _, nvidia-4090, (cpu=0, 4500m)
+    - openai/clip-fp32, transcribe, _, nvidia-a100, (cpu=0, 9000m)
     """
 
     id: str
@@ -354,14 +396,22 @@ class ModelSpecMetadata:
     """Model method name."""
     task: TaskType = None
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
-    resources: Dict[str, ModelResources] = field(default_factory=dict)
-    """Model resource limits (device/host memory, etc)."""
-    """Key is the runtime type (cpu, gpu, trt-runtime, etc)."""
 
     def __repr__(self) -> str:
         return (
-            f"""ModelSpecMetadata(id={self.id}, task={self.task}, method={self.method}, resources={self.resources})"""
+            f"""ModelSpecMetadata(id={self.id}, task={self.task}, method={self.method})\n"""
+            f"""                  resources={self.resources}"""
         )
+
+    @property
+    def resources(self) -> ModelResources:
+        """Return the model resources."""
+        catalog = ModelSpecMetadataCatalog.get()
+        try:
+            return catalog._resources_catalog[f"{self.id}/{self.method}"]
+        except KeyError:
+            logger.debug(f"Model resources not found in catalog, id={self.id}, method={self.method}.")
+            return ModelResources(runtime="cpu", device="cpu", device_memory=1024**2 * 512)
 
 
 @dataclass
@@ -378,11 +428,6 @@ class ModelSpec:
     """Model function signatures to export (method -> FunctionSignature)."""
     runtime_env: RuntimeEnv = None
     """Runtime environment with custom packages."""
-    _metadata: InitVar[Dict[str, ModelSpecMetadata]] = None
-    """Model metadata (method -> ModelSpecMetadata)."""
-
-    def __post_init__(self, _metadata: Dict[str, ModelSpecMetadata] = None):
-        self._metadata: Dict[str, ModelSpecMetadata] = _metadata
 
     def __repr__(self):
         return f"""ModelSpec(id={self.id}, methods=[{', '.join(list(self.signature))}], tasks=[{', '.join([str(self.task(m)) for m in self.signature])}])"""
@@ -441,17 +486,22 @@ class ModelSpec:
             logger.debug(f"Model metadata not found, id={self.id}.")
             return None
 
+    def set_metadata(self, method: str, metadata: ModelSpecMetadata) -> None:
+        """Set the model spec metadata."""
+        catalog = ModelSpecMetadataCatalog.get()
+        catalog[f"{self.id}/{method}"] = metadata
+
     def metadata(self, method: str = None) -> ModelSpecMetadata:
         """Return the model spec metadata for a given method (or defaults to default method)."""
         if method is None:
             method = self.default_method
-        if self._metadata is None:
-            return None
+        catalog = ModelSpecMetadataCatalog.get()
         try:
-            return self._metadata[method]
+            metadata: ModelSpecMetadata = catalog[f"{self.id}/{method}"]
         except KeyError:
-            logger.debug(f"Model metadata not found, id={self.id}.")
-            return None
+            logger.debug(f"Model metadata not found in catalog, id={self.id}, method={method}.")
+            return ModelSpecMetadata(id=self.id, method=method)
+        return metadata
 
     @cached_property
     def default_method(self) -> str:
@@ -482,11 +532,11 @@ class ModelSpec:
         signature.update(self.signature)
         # Update the signature
         self.signature = signature
-        if self._metadata is not None:
-            metadata = {}
-            metadata[method] = self._metadata.pop(method)
-            metadata.update(self._metadata)
-            self._metadata = metadata
+        # if self._metadata is not None:
+        #     metadata = {}
+        #     metadata[method] = self._metadata.pop(method)
+        #     metadata.update(self._metadata)
+        #     self._metadata = metadata
         # Clear the cached properties to force re-computation
         self.__dict__.pop("default_method", None)
         self.__dict__.pop("default_signature", None)
