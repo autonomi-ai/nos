@@ -28,6 +28,7 @@ class PyTestGroup(Enum):
     STRESS = "stress"
     HUB = "hub"
     BENCHMARK = "benchmark"
+    MODEL_PROFILE = "model-profile"
     MODEL_BENCHMARK = "model-benchmark"
     MODEL_COMPILATION = "model-compilation"
 

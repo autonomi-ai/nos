@@ -59,7 +59,7 @@ class Whisper:
             raise ValueError(f"Invalid model_name: {model_name}, available models: {Whisper.configs.keys()}")
 
         if torch.cuda.is_available():
-            self.device = torch.device("cuda:0")
+            self.device = torch.device("cuda")
         else:
             self.device = torch.device("cpu")
 

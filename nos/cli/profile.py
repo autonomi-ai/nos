@@ -86,8 +86,6 @@ def profile_models(model_id: str = None, device_id: int = 0, save: bool = False,
 
     # Profile all models
     profiler = ModelProfiler(mode="full", runtime=runtime, device_id=device_id)
-
-    # tasks = set()
     for model_id, method, spec in _model_methods(model_id):  # noqa: B020
         logger.debug(f"Profiling model: {model_id} (method: {method})")
         if model_id is None and model_id != model_id:
@@ -95,11 +93,6 @@ def profile_models(model_id: str = None, device_id: int = 0, save: bool = False,
             continue
 
         task: TaskType = spec.task(method)
-        # if task in tasks:
-        #     logger.debug(f"Skipping task: {task} (already profiled).")
-        #     continue
-        # tasks.add(task)
-
         logger.debug(f"Task: {task}")
         if task == TaskType.IMAGE_EMBEDDING:
             profiler.add(
@@ -204,7 +197,6 @@ def profile_models(model_id: str = None, device_id: int = 0, save: bool = False,
 def _profile_model(
     model_id: str = typer.Option(..., "-m", "--model-id", help="Model identifier."),
     device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
-    save: bool = typer.Option(False, "--save", "-s", help="Save profiling."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
 ):
     """Profile a specific model by its identifier."""
@@ -231,6 +223,7 @@ def _profile_rebuild_catalog(
 
 @profile_cli.command(name="list")
 def _profile_list():
+    """List all models and their methods."""
     from rich.table import Table
 
     from nos import hub
@@ -252,28 +245,30 @@ def _profile_list():
         for method in spec.signature:
             metadata = spec.metadata(method)
             try:
+                runtime = metadata.resources.runtime
+                device = "-".join(metadata.resources.device.split("-")[-2:])
                 it_s = f'{metadata.metadata["prof.forward::execution.num_iterations"] * 1e3 / metadata.metadata["prof.forward::execution.total_ms"]:.1f}'
                 cpu_util = f'{metadata.metadata["prof.forward::execution.cpu_utilization"]:0.2f}'
                 gpu_util = f'{metadata.metadata["prof.forward::execution.gpu_utilization"]:0.2f}'
+                cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
+                gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
             except Exception:
                 it_s = "-"
                 cpu_util = "-"
                 gpu_util = "-"
-
+                cpu_memory = "-"
+                gpu_memory = "-"
+                runtime, device = None, None
             table.add_row(
                 f"[green]{model}[/green]",
                 method,
                 spec.task(method),
-                metadata.resources.runtime,
-                "-".join(metadata.resources.device.split("-")[-2:]),
+                runtime,
+                device,
                 it_s,
-                f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
-                if metadata.resources.memory
-                else "-",
+                cpu_memory,
                 cpu_util,
-                f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
-                if metadata.resources.device_memory
-                else "-",
+                gpu_memory,
                 gpu_util,
             )
     print(table)

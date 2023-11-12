@@ -251,9 +251,11 @@ class ModelResources:
     """Device / GPU memory."""
 
     def __repr__(self) -> str:
+        memory = humanize.naturalsize(self.memory, binary=True) if self.memory else None
+        device_memory = humanize.naturalsize(self.device_memory, binary=True) if self.device_memory else None
         return (
             f"""ModelResources(runtime={self.runtime}, device={self.device}, cpus={self.cpus}, """
-            f"""memory={humanize.naturalsize(self.memory, binary=True)}, device_memory={humanize.naturalsize(self.device_memory, binary=True)})"""
+            f"""memory={memory}, device_memory={device_memory})"""
         )
 
     @validator("runtime")
@@ -382,12 +384,16 @@ class ModelSpecMetadataCatalog:
         # Update the registry
         for _, row in df.iterrows():
             model_id, method = row["model_id"], row["method"]
+            try:
+                device_memory = (
+                    math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500) * 500 * 1024**2
+                )
+            except Exception:
+                device_memory = None
             self._resources_catalog[f"{model_id}/{method}"] = ModelResources(
                 runtime=row["runtime"],
                 device=row["device_name"],
-                device_memory=math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500)
-                * 500
-                * 1024**2,
+                device_memory=device_memory,
             )
             self._metadata_catalog[f"{model_id}/{method}"] = row.to_dict()
 
@@ -405,19 +411,19 @@ class ModelSpecMetadata:
 
     def __repr__(self) -> str:
         return (
-            f"""ModelSpecMetadata(id={self.id}, task={self.task}, method={self.method})\n"""
-            f"""                  resources={self.resources}"""
+            f"""ModelSpecMetadata(id={self.id}, task={self.task}, method={self.method},\n"""
+            f"""                  resources={self.resources})"""
         )
 
     @property
-    def resources(self) -> ModelResources:
+    def resources(self) -> Union[None, ModelResources]:
         """Return the model resources."""
         catalog = ModelSpecMetadataCatalog.get()
         try:
             return catalog._resources_catalog[f"{self.id}/{self.method}"]
         except KeyError:
             logger.debug(f"Model resources not found in catalog, id={self.id}, method={self.method}.")
-            return ModelResources(runtime="cpu", device="cpu", device_memory=1024**2 * 512)
+            return None
 
     @property
     def metadata(self) -> Dict[str, Any]:
@@ -543,16 +549,11 @@ class ModelSpec:
         if method not in self.signature:
             raise ValueError(f"Invalid method name provided, method={method}.")
 
+        # Update the default method in the signature
         signature = {}
         signature[method] = self.signature.pop(method)
         signature.update(self.signature)
-        # Update the signature
         self.signature = signature
-        # if self._metadata is not None:
-        #     metadata = {}
-        #     metadata[method] = self._metadata.pop(method)
-        #     metadata.update(self._metadata)
-        #     self._metadata = metadata
         # Clear the cached properties to force re-computation
         self.__dict__.pop("default_method", None)
         self.__dict__.pop("default_signature", None)
