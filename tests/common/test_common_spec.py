@@ -351,7 +351,7 @@ def test_common_spec_from_custom_model():
     # Note (spillai): This should raise a warning and we want to suppress it
     with suppress_logger("nos.common.spec"):
         metadata = CustomModel.metadata()
-        assert metadata is None, "Custom models should not have metadata unless explicitly added"
+        assert metadata.resources is None, "Custom models should not have resources set unless explicitly added"
 
     # Check if the wrapped model can be loaded (directly in the same process)
     model = CustomModel(model_name="custom/model")

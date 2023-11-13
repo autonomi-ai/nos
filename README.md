@@ -29,7 +29,7 @@
 
 ## 🚀 Getting Started
 
-To quickly get started with a light-weight NOS client, run the following command: 
+To quickly get started with a light-weight NOS client, run the following command:
 
   ```shell
   $ conda create -n nos-py38 python=3.8
@@ -219,7 +219,7 @@ curl \
 
 ### 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
 
-**Coming soon!** Stay tuned for updates on this by signing up on [Autonomi AI](https://www.autonomi.ai/) or join the [Discord](https://discord.gg/QAGgvTuvgg) for up-to-date announcements. 
+**Coming soon!** Stay tuned for updates on this by signing up on [Autonomi AI](https://www.autonomi.ai/) or join the [Discord](https://discord.gg/QAGgvTuvgg) for up-to-date announcements.
 
 ## 🗂️ Directory Structure
 

@@ -34,9 +34,9 @@ repos:
     - id: debug-statements
     - id: detect-private-key      # check for private keys
     - id: end-of-file-fixer
-      exclude: ^tests/test_data|^docs|^examples/notebook/|^docker
+      exclude: ^tests/test_data|^docs|^examples/notebook/|^docker|^nos/catalogs
     - id: pretty-format-json
-      exclude: ^tests/test_data|^docs|^examples/notebook/
+      exclude: ^tests/test_data|^docs|^examples/notebook/|^nos/catalogs
     - id: trailing-whitespace
       exclude: ^tests/test_data|^docs|^examples/notebook/
     - id: check-added-large-files
