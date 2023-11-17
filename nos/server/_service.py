@@ -1,9 +1,10 @@
 import time
 import traceback
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, Union
+from typing import Any, Dict, Iterator, Union
 
 import grpc
 import rich.console
@@ -39,6 +40,17 @@ def load_spec(model_id: str) -> ModelSpec:
     return model_spec
 
 
+@dataclass
+class _StreamingInferenceServiceResponse:
+    response: Any
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self.response)
+
+
 class InferenceService:
     """Ray-executor based inference service.
 
@@ -62,31 +74,36 @@ class InferenceService:
         else:
             self.shm_manager = None
 
-    def execute(self, model_name: str, method: str = None, inputs: Dict[str, Any] = None) -> Any:
+    def execute(self, model_name: str, method: str = None, inputs: Dict[str, Any] = None, stream: bool = False) -> Any:
         """Execute the model.
 
         Args:
             model_name (str): Model identifier (e.g. `openai/clip-vit-base-patch32`).
             method (str): Model method to execute (e.g. `__call__`).
             inputs (Dict[str, Any]): Model inputs.
+            stream (bool): Whether to stream the response.
         Returns:
             Dict[str, Any]: Model outputs.
         """
+        # Load the model spec (with caching to avoid repeated loading)
         try:
-            # Load the model spec (with caching to avoid repeated loading)
             model_spec: ModelSpec = load_spec(model_name)
         except Exception as e:
             raise ModelNotFoundError(f"Failed to load model spec [model_name={model_name}, e={e}]")
 
-        # TODO (spillai): Validate/Decode the inputs
+        # Validate the model method
         st = time.perf_counter()
         if method is None:
             method = model_spec.default_method
         if method not in model_spec.signature:
             raise ValueError(f"Invalid method [method={method}, model_spec={model_spec}]")
+
+        # Validate inputs based on the model signature
         sig: FunctionSignature = model_spec.signature[method]
         model_inputs: Dict[str, Any] = FunctionSignature.validate(inputs, sig.parameters)
         model_inputs: Dict[str, Any] = SharedMemoryDataDict.decode(model_inputs)
+
+        # Profile the inputs if enabled
         if NOS_PROFILING_ENABLED:
             model_inputs_types = [
                 f"{k}: List[type={type(v[0])}, len={len(v)}]" if isinstance(v, list) else str(type(v))
@@ -101,17 +118,22 @@ class InferenceService:
         # too many models are loaded are loaded simultaneously.
         model_handle: ModelHandle = self.model_manager.load(model_spec)
 
-        # Get the model handle and call it remotely (with model spec, actor handle)
         st = time.perf_counter()
-        response: Union[Any, Dict[str, Any]] = model_handle(**model_inputs, _method=method)
-        if NOS_PROFILING_ENABLED:
-            logger.debug(f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
+        if not stream:
+            # Get the model handle and call it remotely (with model spec, actor handle)
+            response: Union[Any, Dict[str, Any]] = model_handle(**model_inputs, _method=method)
+            if NOS_PROFILING_ENABLED:
+                logger.debug(
+                    f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                )
 
-        # If the response is a single value, wrap it in a dict with the appropriate key
-        if isinstance(sig.output_annotations, dict) and len(sig.output_annotations) == 1:
-            response = {k: response for k in sig.output_annotations}
-
-        return response
+            # If the response is a single value, wrap it in a dict with the appropriate key
+            if isinstance(sig.output_annotations, dict) and len(sig.output_annotations) == 1:
+                response = {k: response for k in sig.output_annotations}
+            return response
+        else:
+            response: Iterator[Any] = model_handle(**model_inputs, _method=method, _stream=True)
+            return _StreamingInferenceServiceResponse(response)
 
 
 class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, InferenceService):
@@ -267,6 +289,24 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
                 f"Executed request [model={request['id']}, method={request['method']}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )
             return nos_service_pb2.GenericResponse(response_bytes=dumps(response))
+        except (grpc.RpcError, Exception) as e:
+            msg = f"Failed to execute request [model={request['id']}, method={request['method']}]"
+            msg += f"{traceback.format_exc()}"
+            logger.error(f"{msg}, e={e}")
+            context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
+
+    def Stream(
+        self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
+    ) -> Iterator[nos_service_pb2.GenericResponse]:
+        """Main streaming model prediction interface."""
+        request: Dict[str, Any] = loads(request.request_bytes)
+        try:
+            logger.info(f"Executing request [model={request['id']}, method={request['method']}]")
+            for response in self.execute(
+                request["id"], method=request["method"], inputs=request["inputs"], stream=True
+            ):
+                yield nos_service_pb2.GenericResponse(response_bytes=dumps(response))
+            logger.info(f"Executed request [model={request['id']}, method={request['method']}]")
         except (grpc.RpcError, Exception) as e:
             msg = f"Failed to execute request [model={request['id']}, method={request['method']}]"
             msg += f"{traceback.format_exc()}"

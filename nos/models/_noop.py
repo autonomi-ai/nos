@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Union
+from typing import Iterable, List, Union
 
 import numpy as np
 from PIL import Image
@@ -23,6 +23,12 @@ class NoOp:
     def process_file(self, path: Path) -> bool:
         assert path.exists(), f"File not found: {path}"
         return True
+
+    def stream_texts(self, texts: List[str]) -> Iterable[str]:
+        for line in texts:
+            yield line.rstrip()
+        for line in Path(__file__).open("r").readlines():
+            yield line.rstrip()
 
 
 # Register noop model separately for each method
@@ -55,6 +61,13 @@ hub.register(
     NoOp,
     method="process_file",
 )
+hub.register(
+    "noop/stream-texts",
+    TaskType.CUSTOM,
+    NoOp,
+    outputs=Iterable[str],
+    method="stream_texts",
+)
 
 # Register model with multiple methods under the same name
 hub.register(
@@ -83,4 +96,10 @@ hub.register(
     TaskType.CUSTOM,
     NoOp,
     method="process_file",
+)
+hub.register(
+    "noop/process",
+    TaskType.CUSTOM,
+    NoOp,
+    method="stream_texts",
 )
