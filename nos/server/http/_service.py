@@ -5,11 +5,11 @@ import time
 from dataclasses import field
 from pathlib import Path
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
@@ -20,6 +20,7 @@ from nos.protoc import import_module
 from nos.version import __version__
 
 from ._utils import decode_item, encode_item
+from .integrations.openai.models import ChatCompletionsRequest, Choice, Completion, Message
 
 
 HTTP_API_VERSION = "v1"
@@ -140,6 +141,60 @@ def app_factory(
         return JSONResponse(
             content={"status": "ok" if client.IsHealthy() else "not_ok"}, status_code=status.HTTP_200_OK
         )
+
+    @app.get(f"/{version}/chat/models", status_code=status.HTTP_200_OK)
+    def models(
+        client: Client = Depends(get_client),
+    ) -> List[Dict[str, Any]]:
+        from nos.common.tasks import TaskType
+
+        chat_models = []
+        models: List[str] = client.ListModels()
+        for model_id in models:
+            spec = client.GetModelInfo(model_id)
+            if spec.task() != TaskType.TEXT_GENERATION:
+                continue
+            chat_models.append(
+                {
+                    "id": model_id,
+                    "object": "model",
+                    "created": 0,
+                    "owned_by": "autonomi-ai",
+                }
+            )
+        return chat_models
+
+    @app.post(f"/{version}/chat/completions", status_code=status.HTTP_201_CREATED)
+    async def chat(
+        request: ChatCompletionsRequest,
+        client: Client = Depends(get_client),
+    ) -> StreamingResponse:
+        model = client.Module(request.model)
+
+        SYSTEM_PROMPT = "You are NOS chat, a Llama 2 large language model (LLM) agent hosted by Autonomi AI."
+        history = [message.dict() for message in request.messages][:-1]
+        message = request.messages[-1]
+        assert message.role == "user", f"Invalid message role [role={message.role}]"
+        logger.debug(f"Chat [model={request.model}, message={message.content}, history={history}]")
+
+        def openai_streaming_generator():
+            # Add responses incrementally to the chat
+            for response in model.chat(
+                message=message.content,
+                history=history,
+                system_prompt=SYSTEM_PROMPT,
+                max_new_tokens=request.max_tokens,
+                _stream=True,
+            ):
+                choices = [Choice(message=Message(role="assistant", content=response))]
+                yield f"data: {Completion(id=request.id, text=response, model=request.model, choices=choices).json()}\n\n"
+            # Add a final message with a finish reason to indicate that the chat is done
+            choices = [Choice(message=Message(role="assistant", content=None), finish_reason="stop")]
+            yield f"data: {Completion(id=request.id, text=None, model=request.model, choices=choices, finish_reason='stop').json()}\n\n"
+            # Add a final message to indicate that the chat is done
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(openai_streaming_generator(), media_type="text/event-stream")
 
     @app.post(f"/{version}/infer", status_code=status.HTTP_201_CREATED)
     def infer(

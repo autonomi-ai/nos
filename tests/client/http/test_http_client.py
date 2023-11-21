@@ -245,3 +245,42 @@ def test_http_client_whisper(client_with_server, request):
     result = response.json()
     assert isinstance(result, dict)
     assert "chunks" in result
+
+
+@pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
+def test_http_client_chat(client_with_server, request):
+    http_client = request.getfixturevalue(client_with_server)
+    assert http_client is not None
+
+    response = http_client.get(
+        "/v1/chat/models",
+        headers={"accept": "application/json"},
+    )
+    assert response.status_code == 200, response.text
+    assert isinstance(response.json(), list)
+    for model in response.json():
+        assert "id" in model
+        assert "object" in model
+
+    model_id = "HuggingFaceH4/tiny-random-LlamaForCausalLM"
+    with http_client.stream(
+        "POST",
+        "/v1/chat/completions",
+        headers={"accept": "application/json"},
+        json={
+            "model": model_id,
+            "messages": [
+                {"role": "user", "content": "What is the meaning of life?"},
+                {"role": "assistant", "content": "I'm not sure I understand"},
+                {
+                    "role": "user",
+                    "content": "You're a sage who has spent 10 thousand hours on the meaning of life. What is the meaning of life?",
+                },
+            ],
+            "max_tokens": 512,
+            "temperature": 0.7,
+        },
+    ) as response:
+        # Parse the text/event-stream response
+        for chunk in response.iter_raw():
+            print(chunk.decode("utf-8"))

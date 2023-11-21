@@ -1,7 +1,7 @@
 import time
 from dataclasses import dataclass
 from threading import Thread
-from typing import Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
@@ -9,6 +9,9 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStream
 from nos import hub
 from nos.common import TaskType
 from nos.hub import HuggingFaceHubConfig, hf_login
+
+
+SYSTEM_PROMPT = "You are NOS chat, a Llama 2 large language model (LLM) agent hosted by Autonomi AI."
 
 
 @dataclass(frozen=True)
@@ -27,6 +30,9 @@ class Llama2ChatConfig(HuggingFaceHubConfig):
     needs_auth: bool = False
     """Whether the model needs authentication."""
 
+    additional_kwargs: Dict[str, Any] = None
+    """Additional keyword arguments to pass to the model."""
+
 
 class Llama2Chat:
     configs = {
@@ -42,6 +48,11 @@ class Llama2Chat:
         "HuggingFaceH4/tiny-random-LlamaForCausalLM": Llama2ChatConfig(
             model_name="HuggingFaceH4/tiny-random-LlamaForCausalLM",
             compute_dtype="float16",
+        ),
+        "NousResearch/Yarn-Mistral-7b-128k": Llama2ChatConfig(
+            model_name="NousResearch/Yarn-Mistral-7b-128k",
+            compute_dtype="float16",
+            additional_kwargs={"use_flashattention_2": True, "trust_remote_code": True},
         ),
     }
 
@@ -64,6 +75,7 @@ class Llama2Chat:
             torch_dtype=getattr(torch, self.cfg.compute_dtype),
             use_auth_token=use_auth_token,
             device_map=self.device_str,
+            **(self.cfg.additional_kwargs or {}),
         )
         self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name, use_auth_token=use_auth_token)
         self.tokenizer.use_default_system_prompt = False
@@ -72,10 +84,10 @@ class Llama2Chat:
     def chat(
         self,
         message: str,
-        system_prompt: str,
-        chat_history: Optional[List[Tuple[str, str]]] = None,
+        history: List[Dict[str, str]] = None,
+        system_prompt: str = SYSTEM_PROMPT,
         max_new_tokens: int = 1024,
-        temperature: float = 0.6,
+        temperature: float = 0.7,
         top_p: float = 0.9,
         top_k: int = 50,
         repetition_penalty: float = 1.2,
@@ -85,11 +97,13 @@ class Llama2Chat:
         conversation = []
         if system_prompt:
             conversation.append({"role": "system", "content": system_prompt})
-        if chat_history:
-            for user, assistant in chat_history:
-                conversation.extend([{"role": "user", "content": user}, {"role": "assistant", "content": assistant}])
+        if history is not None and isinstance(history, list):
+            for msg in history:
+                assert "role" in msg and "content" in msg
+                conversation.append(msg)
         conversation.append({"role": "user", "content": message})
 
+        self.logger.info(f"Conversation: {conversation}")
         input_ids = self.tokenizer.apply_chat_template(conversation, return_tensors="pt")
         if input_ids.shape[1] > self.cfg.max_input_token_length:
             input_ids = input_ids[:, -self.cfg.max_input_token_length :]
@@ -98,7 +112,7 @@ class Llama2Chat:
             )
         input_ids = input_ids.to(self.model.device)
 
-        streamer = TextIteratorStreamer(self.tokenizer, timeout=10.0, skip_prompt=True, skip_special_tokens=True)
+        streamer = TextIteratorStreamer(self.tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
             {"input_ids": input_ids},
             streamer=streamer,

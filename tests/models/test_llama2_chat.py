@@ -18,5 +18,7 @@ def model():
 def test_llama2_chat(model):
     from nos.common import tqdm
 
-    for _ in tqdm(model.chat(message="What is the meaning of life?", system_prompt=SYSTEM_PROMPT), skip=1):
+    for _ in tqdm(
+        model.chat(message="What is the meaning of life?", system_prompt=SYSTEM_PROMPT, max_new_tokens=512), skip=1
+    ):
         pass
