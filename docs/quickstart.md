@@ -97,4 +97,16 @@ response = client.Run(
 img, = response["images"]
 ```
 
-If you run into issues after following this guide, feel free to ping us on [#nos-support](https://discord.gg/qEvfUcgS5m).
+## Troubleshooting
+
+There is currently an issue causing a dependency import (`grpcio`) to fail on MacOS Darwin: 
+`symbol not found in flat namespace '_kCFStreamPropertySocketNativeHandle'`
+
+We're working on resolving this. In the meantime please rebuild grpcio from source with an additional flag:
+```bash
+pip uninstall grpcio
+export GRPC_PYTHON_LDFLAGS=" -framework CoreFoundation"
+pip install grpcio --no-binary :all:
+```
+
+If you run into other issues after following this guide, feel free to ping us on [#nos-support](https://discord.gg/qEvfUcgS5m).
