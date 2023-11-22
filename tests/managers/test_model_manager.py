@@ -167,6 +167,24 @@ def test_model_handler(manager):  # noqa: F811
     noop.cleanup()
 
 
+def test_model_handler_streaming(manager):  # noqa: F811
+    spec = hub.load_spec("noop/stream-texts")
+    assert spec is not None
+
+    # NoOp: __call__
+    noop: ModelHandle = manager.load(spec)
+    assert noop is not None
+
+    idx = 0
+    result = None
+    for result in noop(texts=["hello", "world"], _stream=True):
+        assert result is not None
+        assert isinstance(result, str)
+        idx += 1
+    assert result is not None
+    assert idx > 0
+
+
 @pytest.mark.server
 def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # noqa: F811
     """Test wrapping custom models for remote execution.

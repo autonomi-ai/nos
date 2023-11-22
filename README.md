@@ -29,16 +29,7 @@
 
 ## 🚀 Getting Started
 
-Get started with the full NOS server by installing via pip:
-
-  ```shell
-  $ conda create -n nos-py38 python=3.8
-  $ conda activate nos-py38
-  $ conda install pytorch>=2.0.1 torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-  $ pip install torch-nos[server]
-  ```
-
-If you want to simply use a light-weight NOS client and run inference on your local machine (via docker), you can install the client-only package:
+To quickly get started with a light-weight NOS client, run the following command:
 
   ```shell
   $ conda create -n nos-py38 python=3.8
@@ -46,7 +37,16 @@ If you want to simply use a light-weight NOS client and run inference on your lo
   $ pip install torch-nos
   ```
 
-For a more detailed quickstart, navigate to our [quickstart](https://docs.nos.run/docs/quickstart.html) docs.
+In the setup above, the client pulls and utilizes the NOS docker server that runs in the background. We do expect users to have installed [Docker with NVIDIA support](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) and [Docker Compose](https://docs.docker.com/compose/install/). For a more detailed quickstart, navigate to our [quickstart](https://docs.nos.run/docs/quickstart.html) docs.
+
+If you're interested in developing or contributing new models to NOS, consider installing the full NOS server via pip/conda:
+
+  ```shell
+  $ conda create -n nos-py38 python=3.8
+  $ conda activate nos-py38
+  $ conda install pytorch>=2.0.1 torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+  $ pip install torch-nos[server]
+  ```
 
 ## 🔥 Quickstart / Show me the code
 
@@ -120,7 +120,7 @@ from nos.client import Client
 client = Client("[::]:50051")
 
 clip = client.Module("openai/clip-vit-base-patch32")
-txt_vec = clip.encode_text(text=["fox jumped over the moon"])
+txt_vec = clip.encode_text(texts=["fox jumped over the moon"])
 ```
 
 </td>
@@ -199,7 +199,6 @@ client = Client("[::]:50051")
 
 model = client.Module("yolox/medium")
 response = model(images=[Image.open("image.jpg")])
-# {"bboxes": ..., "scores": ..., "labels": ...}
 ```
 
 </td>
@@ -218,6 +217,9 @@ curl \
 </tr>
 </table>
 
+### 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
+
+**Coming soon!** Stay tuned for updates on this by signing up on [Autonomi AI](https://www.autonomi.ai/) or join the [Discord](https://discord.gg/QAGgvTuvgg) for up-to-date announcements.
 
 ## 🗂️ Directory Structure
 

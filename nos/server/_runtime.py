@@ -33,7 +33,7 @@ NOS_DOCKER_IMAGE_GPU = f"autonomi/nos:{__version__}-gpu"
 NOS_INFERENCE_SERVICE_CONTAINER_NAME = "nos-inference-service"
 NOS_INFERENCE_SERVICE_CMD = ["/app/entrypoint.sh"]  # this needs to be consistent with the Dockerfile
 
-NOS_SUPPORTED_DEVICES = ("cpu", "cuda", "mps", "neuron")
+NOS_SUPPORTED_BACKENDS = ("cpu", "cuda", "mps", "neuron")
 
 
 def _default_environment(kwargs: Dict[str, str] = None) -> Dict[str, str]:

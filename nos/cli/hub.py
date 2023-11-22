@@ -1,10 +1,11 @@
 from pathlib import Path
 
-import rich.console
-import rich.status
-import rich.table
 import typer
+from rich import print
+from rich.tree import Tree
 
+from nos import hub
+from nos.common.spec import ModelSpec
 from nos.constants import NOS_MODELS_DIR
 
 
@@ -14,11 +15,11 @@ DEFAULT_MODEL_CACHE_DIR = NOS_MODELS_DIR
 
 @hub_cli.command("list")
 def _list_models(private: bool = typer.Option(False, "-p", "--private", help="List private models.")) -> None:
-    from nos import hub
-
-    console = rich.console.Console()
-    with rich.status.Status("Fetching models from registry ..."):
-        console.print(hub.list(private=private))
+    tree = Tree("[bold white]Models[/bold white]")
+    for model in hub.list(private=private):
+        spec: ModelSpec = hub.load_spec(model)
+        tree.add(f"[green]{str(model)}[/green]").add(str(spec))
+    print(tree)
 
 
 @hub_cli.command("download")

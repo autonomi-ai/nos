@@ -28,3 +28,5 @@ NOS_RAY_ENV = os.environ.get("NOS_ENV", os.getenv("CONDA_DEFAULT_ENV", None))
 NOS_RAY_DASHBOARD_ENABLED = bool(int(os.getenv("NOS_RAY_DASHBOARD_ENABLED", "0")))
 NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
 NOS_RAY_JOB_CLIENT_ADDRESS = "http://127.0.0.1:8265"
+
+NOS_METADATA_CATALOG_PATH = NOS_PATH / "catalogs/model_metadata_catalog.json"

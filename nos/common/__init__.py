@@ -13,7 +13,7 @@ from .tasks import TaskType
 from .types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT
 
 
-def tqdm(iterable: Any = None, *args, **kwargs) -> Any:
+def tqdm(iterable: Any = None, *args, skip: int = 0, **kwargs) -> Any:
     """Wrapper around tqdm that allows for a duration to be
     specified instead of an iterable
 
@@ -38,6 +38,8 @@ def tqdm(iterable: Any = None, *args, **kwargs) -> Any:
         st_ms = time.perf_counter() * 1_000
         while True:
             now_ms = time.perf_counter() * 1_000
+            if skip > 0 and idx < skip:
+                st_ms = now_ms
             elapsed_ms = now_ms - st_ms
             if elapsed_ms >= duration_ms:
                 return

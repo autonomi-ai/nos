@@ -1,6 +1,6 @@
 import time
 from pathlib import Path
-from typing import List
+from typing import Iterable, List
 
 import pytest
 from PIL import Image
@@ -28,7 +28,8 @@ def test_grpc_client_inference_integration(runtime, request):  # noqa: F811
     assert client is not None
     assert client.IsHealthy()
 
-    _test_grpc_client_inference(client)
+    _test_grpc_client_inference_noop(client)
+    _test_grpc_client_inference_models(client)
 
 
 @pytest.mark.parametrize("client_with_server", GRPC_CLIENT_SERVER_CONFIGURATIONS)
@@ -45,7 +46,8 @@ def test_grpc_client_inference(client_with_server, request):  # noqa: F811
     assert client.IsHealthy()
 
     _test_grpc_client_inference_spec(client)
-    _test_grpc_client_inference(client)
+    _test_grpc_client_inference_noop(client)
+    _test_grpc_client_inference_models(client)
 
 
 def _test_grpc_client_inference_spec(client):  # noqa: F811
@@ -96,8 +98,8 @@ def _test_grpc_client_inference_spec(client):  # noqa: F811
                     assert type_info.base_type() is not None
 
 
-def _test_grpc_client_inference(client):  # noqa: F811
-    from nos.common import ModelSpec, tqdm
+def _test_grpc_client_inference_noop(client):  # noqa: F811
+    from nos.common import tqdm
 
     # Get service info
     version = client.GetServiceVersion()
@@ -142,6 +144,29 @@ def _test_grpc_client_inference(client):  # noqa: F811
 
         response = model.process_texts(texts=["a cat dancing on the grass."])
         assert isinstance(response, list)
+
+        idx = 0
+        texts = ["a cat dancing on the grass.", "a dog running on the beach."]
+        response: Iterable[str] = client.Stream(model_id, inputs={"texts": texts}, method="stream_texts")
+        for resp in response:
+            assert resp is not None
+            assert isinstance(resp, str)
+            idx += 1
+        assert idx > len(texts)
+
+        idx = 0
+        response: Iterable[str] = model.stream_texts(texts=texts, _stream=True)
+        for resp in response:
+            assert resp is not None
+            assert isinstance(resp, str)
+            idx += 1
+        assert idx > len(texts)
+
+
+def _test_grpc_client_inference_models(client):  # noqa: F811
+    from nos.common import ModelSpec, tqdm
+
+    img = Image.open(NOS_TEST_IMAGE).resize((224, 224))
 
     # TXT2VEC / IMG2VEC
     model_id = "openai/clip"

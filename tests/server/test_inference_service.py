@@ -11,7 +11,7 @@ from PIL import Image
 
 import nos
 from nos.common import TaskType, TimingInfo, tqdm
-from nos.common.exceptions import NosInputValidationException
+from nos.common.exceptions import InputValidationException
 from nos.common.shm import NOS_SHM_ENABLED
 from nos.test.conftest import GRPC_CLIENT_SERVER_CONFIGURATIONS, ray_executor  # noqa: F401
 from nos.test.utils import NOS_TEST_IMAGE
@@ -196,7 +196,7 @@ def test_client_exception_types(client_with_server, request):
     # TODO(scott): We only validate input count and not the types themselves. When
     # we finish input validation the test should change accordingly.
     inputs = {}
-    with pytest.raises(NosInputValidationException):
+    with pytest.raises(InputValidationException):
         _ = model(**inputs)
 
 
