@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class NosClientException(Exception):
+class ClientException(Exception):
     """Base exception for the nos client."""
 
     message: str
@@ -15,21 +15,21 @@ class NosClientException(Exception):
         return f"{self.message}"
 
 
-class NosServerReadyException(NosClientException):
+class ServerReadyException(ClientException):
     """Exception raised when the server is not ready."""
 
     def __str__(self) -> str:
         return f"Server not ready. {self.message}"
 
 
-class NosInputValidationException(NosClientException):
+class InputValidationException(ClientException):
     """Exception raised when input validation fails."""
 
     def __str__(self) -> str:
         return f"Input validation failed. {self.message}"
 
 
-class NosInferenceException(NosClientException):
+class InferenceException(ClientException):
     """Exception raised when inference fails."""
 
     def __str__(self) -> str:

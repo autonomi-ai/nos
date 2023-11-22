@@ -12,6 +12,7 @@ from ._noop import NoOp  # noqa: F401
 from .blip import BLIP  # noqa: F401
 from .clip import CLIP  # noqa: F401
 from .faster_rcnn import FasterRCNN  # noqa: F401
+from .llama2_chat import Llama2Chat  # noqa: F401
 from .monodepth import MonoDepth  # noqa: F401
 from .owlvit import OwlViT  # noqa: F401
 from .sam import SAM

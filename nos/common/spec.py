@@ -11,7 +11,7 @@ from pydantic import validator
 from pydantic.dataclasses import dataclass
 
 from nos.common.cloudpickle import dumps, loads
-from nos.common.exceptions import NosInputValidationException
+from nos.common.exceptions import InputValidationException
 from nos.common.runtime import RuntimeEnv
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
@@ -188,7 +188,7 @@ class FunctionSignature:
         """Validate the input dict against the defined signature (input or output)."""
         # TOFIX (spillai): This needs to be able to validate using args/kwargs instead
         if not set(inputs.keys()).issubset(set(sig.keys())):  # noqa: W503
-            raise NosInputValidationException(
+            raise InputValidationException(
                 f"Invalid inputs, provided={set(inputs.keys())}, expected={set(sig.keys())}."
             )
         # TODO (spillai): Validate input types and shapes.
