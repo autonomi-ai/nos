@@ -77,15 +77,15 @@ class Llama2Chat:
             device_map=self.device_str,
             **(self.cfg.additional_kwargs or {}),
         )
+        self.model.eval()
         self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name, use_auth_token=use_auth_token)
         self.tokenizer.use_default_system_prompt = False
         self.logger = logger
 
+    @torch.inference_mode()
     def chat(
         self,
-        message: str,
-        history: List[Dict[str, str]] = None,
-        system_prompt: str = SYSTEM_PROMPT,
+        messages: List[Dict[str, str]],
         max_new_tokens: int = 1024,
         temperature: float = 0.7,
         top_p: float = 0.9,
@@ -94,17 +94,13 @@ class Llama2Chat:
         num_beams: int = 1,
     ) -> Iterable[str]:
         """Chat with the model."""
-        conversation = []
-        if system_prompt:
-            conversation.append({"role": "system", "content": system_prompt})
-        if history is not None and isinstance(history, list):
-            for msg in history:
-                assert "role" in msg and "content" in msg
-                conversation.append(msg)
-        conversation.append({"role": "user", "content": message})
-
-        self.logger.info(f"Conversation: {conversation}")
-        input_ids = self.tokenizer.apply_chat_template(conversation, return_tensors="pt")
+        if messages[0]["role"] != "system":
+            raise ValueError("First message must be from the system.")
+        for msg in messages:
+            assert "role" in msg
+            assert "content" in msg
+        self.logger.info(f"Conversation: {messages}")
+        input_ids = self.tokenizer.apply_chat_template(messages, return_tensors="pt")
         if input_ids.shape[1] > self.cfg.max_input_token_length:
             input_ids = input_ids[:, -self.cfg.max_input_token_length :]
             self.logger.warning(
@@ -112,7 +108,7 @@ class Llama2Chat:
             )
         input_ids = input_ids.to(self.model.device)
 
-        streamer = TextIteratorStreamer(self.tokenizer, timeout=30.0, skip_prompt=True, skip_special_tokens=True)
+        streamer = TextIteratorStreamer(self.tokenizer, timeout=180.0, skip_prompt=True, skip_special_tokens=True)
         generate_kwargs = dict(
             {"input_ids": input_ids},
             streamer=streamer,
