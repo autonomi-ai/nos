@@ -1,8 +1,27 @@
 import datetime
 import uuid
-from typing import List, Literal, Optional, TypeVar
+from typing import List, Literal, Optional, TypeVar, Union, Any
 
 from pydantic import BaseModel, Field
+
+
+class DeltaContent(BaseModel):
+    content: Optional[str] = None
+    """The contents of the chunk message."""
+
+    role: Optional[Literal["system", "user", "assistant", "tool"]] = None
+    """The role of the author of this message."""
+
+
+class DeltaChoice(BaseModel):
+    delta: DeltaContent
+    """Delta of the choice"""
+
+    finish_reason: Optional[Literal["stop"]] = Field(examples="stop")
+    """Reason for finishing the conversation"""
+
+    index: int = 0
+    """Index of the choice"""
 
 
 class ChatModel(BaseModel):
@@ -25,6 +44,7 @@ TModel = TypeVar("TModel", bound="Model")
 class Model(BaseModel):
     data: List[ChatModel]
     """List of models"""
+
     object: str = Field(default="list")
     """Type of the list"""
 
@@ -36,16 +56,17 @@ class Model(BaseModel):
 class Message(BaseModel):
     role: Literal["user", "assistant", "system"] = Field(default="user")
     """Role of the message, either 'user', 'assistant' or 'system'"""
+
     content: Optional[str] = None
     """Content of the message"""
 
 
 class Choice(BaseModel):
-    finish_reason: Optional[Literal["stop"]] = Field(examples="stop")
-    """Reason for finishing the conversation"""
-
     message: Optional[Message] = None
     """Message to add to the conversation"""
+
+    finish_reason: Optional[Literal["stop"]] = Field(examples="stop")
+    """Reason for finishing the conversation"""
 
     index: int = 0
     """Index of the choice"""
@@ -97,7 +118,7 @@ class Completion(BaseModel):
     id: str = Field(default_factory=lambda: f"chatcmpl-{uuid.uuid4()}")  # noqa: A003
     """ID of the completion"""
 
-    object: Literal["chat.completion"] = Field(default="chat.completion")
+    object: Literal["chat.completion", "chat.completion.chunk"] = Field(default="chat.completion")
     """Type of the completion"""
 
     created: int = Field(default_factory=lambda: int(datetime.datetime.utcnow().timestamp()))
@@ -106,7 +127,9 @@ class Completion(BaseModel):
     model: str
     """Model used for the chat completion"""
 
-    choices: List[Choice]
+    # TODO (spillai): need to investigate why adding
+    # Union[Choice, DeltaChoice] type here breaks the tests.
+    choices: List[Any]  # noqa: F821
     """Choices made during the chat completion"""
 
     usage: Optional[Usage] = None

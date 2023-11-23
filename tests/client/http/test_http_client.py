@@ -277,12 +277,8 @@ def test_http_client_chat(client_with_server, request):  # noqa: F811
         json={
             "model": model_id,
             "messages": [
+                {"role": "system", "content": "You are a helpful AI assistant."},
                 {"role": "user", "content": "What is the meaning of life?"},
-                {"role": "assistant", "content": "I'm not sure I understand"},
-                {
-                    "role": "user",
-                    "content": "You're a sage who has spent 10 thousand hours on the meaning of life. What is the meaning of life?",
-                },
             ],
             "max_tokens": 512,
             "temperature": 0.7,

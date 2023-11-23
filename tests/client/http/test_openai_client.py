@@ -61,3 +61,6 @@ def test_openai_client_chat_completion(http_server_with_gpu_backend):  # noqa: F
             st = None
         assert chunk is not None
         assert isinstance(chunk, openai.types.chat.chat_completion_chunk.ChatCompletionChunk)
+        assert chunk.choices is not None
+        assert isinstance(chunk.choices, list)
+        assert isinstance(chunk.choices[0].delta, openai.types.chat.chat_completion_chunk.ChoiceDelta)

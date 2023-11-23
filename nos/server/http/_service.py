@@ -21,7 +21,16 @@ from nos.protoc import import_module
 from nos.version import __version__
 
 from ._utils import decode_item, encode_item
-from .integrations.openai.models import ChatCompletionsRequest, ChatModel, Choice, Completion, Message, Model
+from .integrations.openai.models import (
+    ChatCompletionsRequest,
+    ChatModel,
+    Choice,
+    Completion,
+    DeltaChoice,
+    DeltaContent,
+    Message,
+    Model,
+)
 
 
 HTTP_API_VERSION = "v1"
@@ -179,7 +188,7 @@ def app_factory(
             raise HTTPException(status_code=400, detail=f"Invalid model {model}")
 
     @app.post(f"/{version}/chat/completions", status_code=status.HTTP_201_CREATED)
-    async def chat(
+    def chat(
         request: ChatCompletionsRequest,
         client: Client = Depends(get_client),
     ) -> StreamingResponse:
@@ -208,18 +217,18 @@ def app_factory(
             def openai_streaming_generator():
                 """Streaming generator for OpenAI chat completion."""
                 # Add responses incrementally to the chat
+                choices = [DeltaChoice(delta=DeltaContent(content="", role="assistant"), index=0, finish_reason=None)]
+                yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices).json()}\n\n"
                 for response in model.chat(
                     messages=messages,
                     max_new_tokens=request.max_tokens,
                     _stream=True,
                 ):
-                    choices = [Choice(message=Message(role="assistant", content=response))]
-                    yield f"data: {Completion(id=request.id, text=response, model=request.model, choices=choices).json()}\n\n"
+                    choices = [DeltaChoice(delta=DeltaContent(content=response), index=0, finish_reason=None)]
+                    yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices).json()}\n\n"
                 # Add a final message with a finish reason to indicate that the chat is done
-                choices = [Choice(message=Message(role="assistant", content=None), finish_reason="stop")]
-                yield f"data: {Completion(id=request.id, text=None, model=request.model, choices=choices, finish_reason='stop').json()}\n\n"
-                # Add a final message to indicate that the chat is done
-                yield "data: [DONE]\n\n"
+                choices = [DeltaChoice(delta=DeltaContent(content=None), index=0, finish_reason="stop")]
+                yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices, finish_reason='stop').json()}\n\n"
 
             return StreamingResponse(openai_streaming_generator(), media_type="text/event-stream")
 
