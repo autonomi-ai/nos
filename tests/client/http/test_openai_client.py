@@ -31,9 +31,13 @@ def test_openai_client_chat_completion(http_server_with_gpu_backend):  # noqa: F
     print(models)
 
     # Create a chat completion prompt
+    # Note (spllai): Some APIs provide multiple user messages, so
+    # we'll need to test this to make sure that the chat template
+    # doesn't raise an error.
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Tell a story in less than 300 words."},
+        {"role": "user", "content": "Make it funny."},
     ]
 
     # Test chat completion (non-streaming)

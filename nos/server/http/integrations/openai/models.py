@@ -1,20 +1,36 @@
 import datetime
 import uuid
-from typing import List, Literal, Optional, TypeVar, Union, Any
+from typing import Any, List, Literal, Optional, TypeVar
 
 from pydantic import BaseModel, Field
 
 
-class DeltaContent(BaseModel):
-    content: Optional[str] = None
-    """The contents of the chunk message."""
-
+class DeltaRole(BaseModel):
     role: Optional[Literal["system", "user", "assistant", "tool"]] = None
     """The role of the author of this message."""
 
+    content: str = ""
+    """The content of the message."""
+
+    def __str__(self):
+        return self.role
+
+
+class DeltaEOS(BaseModel):
+    class Config:
+        extra = "forbid"
+
+
+class DeltaContent(BaseModel):
+    content: str
+    """The contents of the chunk message."""
+
+    def __str__(self):
+        return self.content
+
 
 class DeltaChoice(BaseModel):
-    delta: DeltaContent
+    delta: Any  # noqa: F821
     """Delta of the choice"""
 
     finish_reason: Optional[Literal["stop"]] = Field(examples="stop")
@@ -134,3 +150,6 @@ class Completion(BaseModel):
 
     usage: Optional[Usage] = None
     """Usage information for the chat completion"""
+
+    system_fingerprint: Optional[str] = "fp_eeff13170a"
+    """System fingerprint for the chat completion"""

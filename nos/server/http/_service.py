@@ -28,6 +28,8 @@ from .integrations.openai.models import (
     Completion,
     DeltaChoice,
     DeltaContent,
+    DeltaEOS,
+    DeltaRole,
     Message,
     Model,
 )
@@ -217,7 +219,7 @@ def app_factory(
             def openai_streaming_generator():
                 """Streaming generator for OpenAI chat completion."""
                 # Add responses incrementally to the chat
-                choices = [DeltaChoice(delta=DeltaContent(content="", role="assistant"), index=0, finish_reason=None)]
+                choices = [DeltaChoice(delta=DeltaRole(content="", role="assistant"), index=0, finish_reason=None)]
                 yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices).json()}\n\n"
                 for response in model.chat(
                     messages=messages,
@@ -227,8 +229,10 @@ def app_factory(
                     choices = [DeltaChoice(delta=DeltaContent(content=response), index=0, finish_reason=None)]
                     yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices).json()}\n\n"
                 # Add a final message with a finish reason to indicate that the chat is done
-                choices = [DeltaChoice(delta=DeltaContent(content=None), index=0, finish_reason="stop")]
+                choices = [DeltaChoice(delta=DeltaEOS(), index=0, finish_reason="stop")]
                 yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices, finish_reason='stop').json()}\n\n"
+                # Add a final message to indicate that the chat is done
+                yield "data: [DONE]\n\n"
 
             return StreamingResponse(openai_streaming_generator(), media_type="text/event-stream")
 
