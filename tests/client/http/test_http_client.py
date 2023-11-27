@@ -245,3 +245,45 @@ def test_http_client_whisper(client_with_server, request):
     result = response.json()
     assert isinstance(result, dict)
     assert "chunks" in result
+
+
+@pytest.mark.client
+@pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
+def test_http_client_chat(client_with_server, request):  # noqa: F811
+    http_client = request.getfixturevalue(client_with_server)
+    assert http_client is not None
+
+    response = http_client.get(
+        "/v1/models",
+        headers={"accept": "application/json"},
+    )
+    assert response.status_code == 200
+    assert isinstance(response.json(), dict)
+    models = response.json()["data"]
+    for model in models:
+        assert "id" in model
+        assert "object" in model
+        response = http_client.get(
+            f"/v1/models/{model['id']}",
+            headers={"accept": "application/json"},
+        )
+        assert response.status_code == 200
+
+    model_id = "HuggingFaceH4--tiny-random-LlamaForCausalLM"
+    with http_client.stream(
+        "POST",
+        "/v1/chat/completions",
+        headers={"accept": "application/json"},
+        json={
+            "model": model_id,
+            "messages": [
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": "What is the meaning of life?"},
+            ],
+            "max_tokens": 512,
+            "temperature": 0.7,
+        },
+    ) as response:
+        # Parse the text/event-stream response
+        for chunk in response.iter_raw():
+            print(chunk.decode("utf-8"))
