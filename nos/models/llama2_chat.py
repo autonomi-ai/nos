@@ -49,6 +49,18 @@ class Llama2Chat:
             needs_auth=True,
             chat_template=LLAMA2_CHAT_TEMPLATE,
         ),
+        "meta-llama/Llama-2-13b-chat-hf": Llama2ChatConfig(
+            model_name="meta-llama/Llama-2-13b-chat-hf",
+            compute_dtype="float16",
+            needs_auth=True,
+            chat_template=LLAMA2_CHAT_TEMPLATE,
+        ),
+        "meta-llama/Llama-2-70b-chat-hf": Llama2ChatConfig(
+            model_name="meta-llama/Llama-2-70b-chat-hf",
+            compute_dtype="float16",
+            needs_auth=True,
+            chat_template=LLAMA2_CHAT_TEMPLATE,
+        ),
         "HuggingFaceH4/zephyr-7b-beta": Llama2ChatConfig(
             model_name="HuggingFaceH4/zephyr-7b-beta",
             compute_dtype="float16",
