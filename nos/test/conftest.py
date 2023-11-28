@@ -12,6 +12,8 @@ GRPC_TEST_PORT = DEFAULT_GRPC_PORT + 1
 GRPC_TEST_PORT_CPU = DEFAULT_GRPC_PORT + 2
 GRPC_TEST_PORT_GPU = DEFAULT_GRPC_PORT + 3
 
+HTTP_TEST_PORT = 8001
+
 
 nos_service_pb2 = import_module("nos_service_pb2")
 nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
@@ -274,3 +276,59 @@ GRPC_CLIENT_SERVER_CONFIGURATIONS = [
     # GRPC_CLIENT_WITH_CPU,
     GRPC_CLIENT_WITH_GPU
 ]
+
+
+@pytest.fixture(scope="session")
+def http_server_with_gpu_backend(grpc_client_with_gpu_backend):  # noqa: F811
+    """Test HTTP gateway server with GPU docker runtime."""
+    import time
+    from multiprocessing import Process
+
+    import requests
+    import uvicorn
+
+    from nos.server.http._service import app_factory
+
+    # Wait for server to start, then start uvicorn server
+    grpc_client = grpc_client_with_gpu_backend
+    grpc_client.WaitForServer(timeout=180, retry_interval=5)
+    logger.info("Server started!")
+
+    def _run_uvicorn_server():
+        uvicorn.run(
+            app_factory(address=f"[::]:{GRPC_TEST_PORT_GPU}", env="dev"),
+            host="localhost",
+            port=HTTP_TEST_PORT,
+            workers=1,
+            log_level="info",
+        )
+
+    # Start uvicorn server
+    proc = Process(target=_run_uvicorn_server, args=(), daemon=True)
+    proc.start()
+    time.sleep(5)
+
+    # Wait for the HTTP server by polling the health endpoint
+    def _wait_for_server(attempts: int = 10, base_url=f"http://localhost:{HTTP_TEST_PORT}/v1"):
+        if attempts <= 0:
+            raise RuntimeError("Failed to start HTTP server!")
+        try:
+            response = requests.get(f"{base_url}/health", timeout=1)
+            while response.status_code != 200 and attempts > 0:
+                logger.debug(f"Waiting for HTTP server to start up ... [pending_attempts={attempts}]")
+                time.sleep(1)
+                response = requests.get(f"{base_url}/health")
+                attempts -= 1
+            logger.info("HTTP server started!")
+        except Exception:
+            logger.debug("Failed to start HTTP server, retrying in 1 second")
+            time.sleep(1)
+            _wait_for_server(attempts=attempts - 1)
+
+    _wait_for_server()
+
+    # Yield once the server is up and initialized
+    yield
+
+    # Stop the HTTP server
+    proc.kill()

@@ -5,21 +5,34 @@ import time
 from dataclasses import field
 from pathlib import Path
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from PIL import Image
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
 from nos.client import DEFAULT_GRPC_PORT, Client
+from nos.common.tasks import TaskType
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
 
 from ._utils import decode_item, encode_item
+from .integrations.openai.models import (
+    ChatCompletionsRequest,
+    ChatModel,
+    Choice,
+    Completion,
+    DeltaChoice,
+    DeltaContent,
+    DeltaEOS,
+    DeltaRole,
+    Message,
+    Model,
+)
 
 
 HTTP_API_VERSION = "v1"
@@ -110,6 +123,9 @@ def as_path(file: SpooledTemporaryFile, suffix: str, chunk_size_mb: int = 4 * 10
         yield path
 
 
+_model_table: Dict[str, ChatModel] = {}
+
+
 def app_factory(
     version: str = HTTP_API_VERSION, address: str = f"[::]:{DEFAULT_GRPC_PORT}", env: str = HTTP_ENV
 ) -> FastAPI:
@@ -130,6 +146,20 @@ def app_factory(
         """Get the inference client."""
         return nos_app.client
 
+    def build_model_table(client: Client) -> Dict[str, ChatModel]:
+        """Build the model table."""
+        if len(_model_table) > 0:
+            return _model_table
+
+        models: List[str] = client.ListModels()
+        for model_id in models:
+            spec = client.GetModelInfo(model_id)
+            if spec.task() != TaskType.TEXT_GENERATION:
+                continue
+            owned_by, _ = model_id.split("/")
+            _model_table[model_id] = ChatModel(id=model_id.replace("/", "--"), created=0, owned_by=owned_by)
+        return _model_table
+
     @app.get("/")
     def root():
         return {"Hello": "World"}
@@ -140,6 +170,85 @@ def app_factory(
         return JSONResponse(
             content={"status": "ok" if client.IsHealthy() else "not_ok"}, status_code=status.HTTP_200_OK
         )
+
+    @app.get(f"/{version}/models", status_code=status.HTTP_200_OK, response_model=Model)
+    def models(
+        client: Client = Depends(get_client),
+    ) -> Model:
+        """List all available models."""
+        _model_table = build_model_table(client)
+        logger.debug(f"Listing models [models={_model_table.values()}]")
+        return Model(data=list(_model_table.values()))
+
+    @app.get(f"/{version}/models/" + "{model:path}", response_model=ChatModel)
+    def model_info(model: str, client: Client = Depends(get_client)) -> ChatModel:
+        """Get model information."""
+        _model_table = build_model_table(client)
+        try:
+            return _model_table[model]
+        except KeyError:
+            raise HTTPException(status_code=400, detail=f"Invalid model {model}")
+
+    @app.post(f"/{version}/chat/completions", status_code=status.HTTP_201_CREATED)
+    def chat(
+        request: ChatCompletionsRequest,
+        client: Client = Depends(get_client),
+    ) -> StreamingResponse:
+        """Perform chat completion on the given input data."""
+        logger.debug(f"Received chat request [model={request.model}, messages={request.messages}]")
+        model_id = request.model.replace("--", "/")
+        model = client.Module(model_id)
+
+        if not len(request.messages):
+            raise HTTPException(status_code=400, detail="Invalid chat request, no messages provided")
+
+        if len(request.messages) > 0 and request.messages[-1].role != "user":
+            raise HTTPException(status_code=400, detail="Invalid chat request, last message must be from the user")
+
+        messages = [message.dict() for message in request.messages]
+        if len(request.messages) > 1 and request.messages[0].role == "system":
+            system_prompt = request.messages[0].content
+        else:
+            system_prompt = "You are NOS chat, a Llama 2 large language model (LLM) agent hosted by Autonomi AI."
+            messages.insert(0, {"role": "system", "content": system_prompt})
+        logger.debug(f"Chat [model={request.model}, message={messages}, system_prompt={system_prompt}]")
+
+        # Perform chat completion (streaming)
+        if request.stream:
+
+            def openai_streaming_generator():
+                """Streaming generator for OpenAI chat completion."""
+                # Add responses incrementally to the chat
+                choices = [DeltaChoice(delta=DeltaRole(content="", role="assistant"), index=0, finish_reason=None)]
+                yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices).json()}\n\n"
+                for response in model.chat(
+                    messages=messages,
+                    max_new_tokens=request.max_tokens,
+                    _stream=True,
+                ):
+                    choices = [DeltaChoice(delta=DeltaContent(content=response), index=0, finish_reason=None)]
+                    yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices).json()}\n\n"
+                # Add a final message with a finish reason to indicate that the chat is done
+                choices = [DeltaChoice(delta=DeltaEOS(), index=0, finish_reason="stop")]
+                yield f"data: {Completion(id=request.id, object='chat.completion.chunk', model=request.model, choices=choices, finish_reason='stop').json()}\n\n"
+                # Add a final message to indicate that the chat is done
+                yield "data: [DONE]\n\n"
+
+            return StreamingResponse(openai_streaming_generator(), media_type="text/event-stream")
+
+        # Perform chat completion (batch)
+        else:
+            content = "".join(
+                list(
+                    model.chat(
+                        messages=messages,
+                        max_new_tokens=request.max_tokens,
+                        _stream=True,
+                    )
+                )
+            )
+            choices = [Choice(message=Message(role="assistant", content=content), finish_reason="stop")]
+            return Completion(id=request.id, model=request.model, choices=choices)
 
     @app.post(f"/{version}/infer", status_code=status.HTTP_201_CREATED)
     def infer(

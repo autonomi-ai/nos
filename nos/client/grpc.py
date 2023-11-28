@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass, field
 from functools import cached_property, lru_cache, partial
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, Iterable, List
 
 import grpc
 import numpy as np
@@ -14,10 +14,10 @@ from PIL import Image
 
 from nos.common import FunctionSignature, ModelSpec, TensorSpec, dumps, loads
 from nos.common.exceptions import (
-    NosClientException,
-    NosInferenceException,
-    NosInputValidationException,
-    NosServerReadyException,
+    ClientException,
+    InferenceException,
+    InputValidationException,
+    ServerReadyException,
 )
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
 from nos.constants import DEFAULT_GRPC_PORT, GRPC_MAX_MESSAGE_LENGTH, NOS_PROFILING_ENABLED
@@ -126,7 +126,7 @@ class Client:
             try:
                 self._stub = nos_service_pb2_grpc.InferenceServiceStub(self._channel)
             except Exception as e:
-                raise NosServerReadyException(f"Failed to connect to server ({e})", e)
+                raise ServerReadyException(f"Failed to connect to server ({e})", e)
         assert self._channel
         assert self._stub
         return self._stub
@@ -143,7 +143,7 @@ class Client:
             response: nos_service_pb2.PingResponse = self.stub.Ping(empty_pb2.Empty())
             return response.status == "ok"
         except grpc.RpcError as e:
-            raise NosServerReadyException(f"Failed to ping server (details={e.details()})", e)
+            raise ServerReadyException(f"Failed to ping server (details={e.details()})", e)
 
     def WaitForServer(self, timeout: int = 60, retry_interval: int = 5) -> None:
         """Ping the gRPC server for health.
@@ -163,7 +163,7 @@ class Client:
             except Exception:
                 logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
                 time.sleep(retry_interval)
-        raise NosServerReadyException("Failed to ping server.")
+        raise ServerReadyException("Failed to ping server.")
 
     def GetServiceVersion(self) -> str:
         """Get service version.
@@ -177,7 +177,7 @@ class Client:
             response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
             return response.version
         except grpc.RpcError as e:
-            raise NosServerReadyException(f"Failed to get service info (details={e.details()})", e)
+            raise ServerReadyException(f"Failed to get service info (details={e.details()})", e)
 
     def GetServiceRuntime(self) -> str:
         """Get service runtime.
@@ -191,7 +191,7 @@ class Client:
             response: nos_service_pb2.ServiceInfoResponse = self.stub.GetServiceInfo(empty_pb2.Empty())
             return response.runtime
         except grpc.RpcError as e:
-            raise NosServerReadyException(f"Failed to get service info (details={e.details()})", e)
+            raise ServerReadyException(f"Failed to get service info (details={e.details()})", e)
 
     def CheckCompatibility(self) -> bool:
         """Check if the service version is compatible with the client.
@@ -205,7 +205,7 @@ class Client:
         # until we have tests for client-server compatibility.
         is_compatible = self.GetServiceVersion() == __version__
         if not is_compatible:
-            raise NosClientException(
+            raise ClientException(
                 f"Client-Server version mismatch (client={__version__}, server={self.GetServiceVersion()})"
             )
         return is_compatible
@@ -223,7 +223,7 @@ class Client:
             models: List[str] = loads(response.response_bytes)
             return list(models)
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to list models (details={e.details()})", e)
+            raise ClientException(f"Failed to list models (details={e.details()})", e)
 
     def GetModelInfo(self, model_id: str) -> ModelSpec:
         """Get the relevant model information from the model name.
@@ -241,7 +241,7 @@ class Client:
             model_spec: ModelSpec = loads(response.response_bytes)
             return model_spec
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to get model info (details={(e.details())})", e)
+            raise ClientException(f"Failed to get model info (details={(e.details())})", e)
 
     @lru_cache(maxsize=8)  # noqa: B019
     def Module(self, model_id: str, shm: bool = False) -> "Module":
@@ -297,7 +297,7 @@ class Client:
                     )
             return Path(loads(response.response_bytes)["filename"])
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to upload file (details={e.details()})", e)
+            raise ClientException(f"Failed to upload file (details={e.details()})", e)
 
     def _delete_file(self, path: Path) -> None:
         """Delete a file from the server.
@@ -310,7 +310,7 @@ class Client:
         try:
             self.stub.DeleteFile(nos_service_pb2.GenericRequest(request_bytes=dumps({"filename": str(path)})))
         except grpc.RpcError as e:
-            raise NosClientException(f"Failed to delete file (details={e.details()})", e)
+            raise ClientException(f"Failed to delete file (details={e.details()})", e)
 
     @contextlib.contextmanager
     def UploadFile(self, path: Path, chunk_size: int = 4 * MB_BYTES) -> Path:
@@ -348,6 +348,7 @@ class Client:
             inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in the ModelSpec.signature.
             method (str, optional): Method to call on the model. Defaults to None.
+            stream (bool, optional): Stream the response. Defaults to False.
             shm (bool, optional): Enable shared memory transport. Defaults to False.
         Returns:
             nos_service_pb2.GenericResponse: Inference response.
@@ -356,6 +357,18 @@ class Client:
         """
         module: Module = self.Module(model_id, shm=shm)
         return module(**inputs, _method=method)
+
+    def Stream(
+        self,
+        model_id: str,
+        inputs: Dict[str, Any],
+        method: str = None,
+        shm: bool = False,
+    ) -> Iterable[nos_service_pb2.GenericResponse]:
+        """Run module in streaming mode."""
+        assert shm is False, "Shared memory transport is not supported for streaming yet."
+        module: Module = self.Module(model_id, shm=shm)
+        return module(**inputs, _method=method, _stream=True)
 
 
 @dataclass
@@ -453,7 +466,7 @@ class Module:
         if method is None:
             method = self._spec.default_method
         if method not in self._spec.signature:
-            raise NosInferenceException(f"Method {method} not found in spec signature.")
+            raise InferenceException(f"Method {method} not found in spec signature.")
         sig: FunctionSignature = self._spec.signature[method]
         inputs = FunctionSignature.validate(inputs, sig.parameters)
 
@@ -587,15 +600,16 @@ class Module:
                 logger.debug(f"Unregistered shm [{self._shm_objects}]")
             except grpc.RpcError as e:
                 logger.error(f"Failed to unregister shm [{self._shm_objects}], error: {e.details()}")
-                raise NosClientException(f"Failed to unregister shm [{self._shm_objects}]", e)
+                raise ClientException(f"Failed to unregister shm [{self._shm_objects}]", e)
 
-    def __call__(self, _method: str = None, **inputs: Dict[str, Any]) -> Dict[str, Any]:
+    def __call__(self, _method: str = None, _stream: bool = False, **inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Call the instantiated module/model.
 
         Args:
+            _method (str, optional): Method to call on the model. Defaults to None.
+            _stream (bool, optional): Stream the response. Defaults to False.
             **inputs (Dict[str, Any]): Inputs to the model ("images", "texts", "prompts" etc) as
                 defined in ModelSpec.signature.
-            _method (str, optional): Method to call on the model. Defaults to None.
         Returns:
             Dict[str, Any]: Inference response.
         Raises:
@@ -612,40 +626,59 @@ class Module:
             inputs = self._encode(inputs, method=_method)
         except Exception as e:
             logger.error(f"Failed to encode inputs [model={self.id}, method={_method}, inputs={inputs}, e={e}]")
-            raise NosInputValidationException(
+            raise InputValidationException(
                 f"Failed to encode inputs [model={self.id}, method={_method}, inputs={inputs}, e={e}]", e
             )
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Encoded inputs [model={self.id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
 
-        try:
-            # Prepare the request
-            request = nos_service_pb2.GenericRequest(
-                request_bytes=dumps(
-                    {
-                        "id": self._spec.id,
-                        "method": _method,
-                        "inputs": inputs,
-                    }
-                )
+        # Prepare the request
+        request = nos_service_pb2.GenericRequest(
+            request_bytes=dumps(
+                {
+                    "id": self._spec.id,
+                    "method": _method,
+                    "inputs": inputs,
+                }
             )
+        )
+        try:
             # Execute the request
             st = time.perf_counter()
             logger.debug(f"Executing request [model={self.id}]")
-            response: nos_service_pb2.GenericResponse = self.stub.Run(request)
+            if not _stream:
+                response: nos_service_pb2.GenericResponse = self.stub.Run(request)
+            else:
+                response: Iterable[nos_service_pb2.GenericResponse] = self.stub.Stream(request)
             if NOS_PROFILING_ENABLED:
                 logger.debug(f"Executed request [model={self.id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         except grpc.RpcError as e:
             logger.error(f"Run() failed [details={e.details()}, inputs={inputs.keys()}]")
-            raise NosInferenceException(f"Run() failed [model={self.id}, details={e.details()}]", e)
+            raise InferenceException(f"Run() failed [model={self.id}, details={e.details()}]", e)
 
-        # Decode the response
+        # Decode / stream the response
         st = time.perf_counter()
         try:
-            response = self._decode(response.response_bytes)
+            if not _stream:
+                response = self._decode(response.response_bytes)
+            else:
+                return _StreamingModuleResponse(response, self._decode)
         except Exception as e:
             logger.error(f"Failed to decode response [model={self.id}, e={e}]")
-            raise NosClientException(f"Failed to decode response [model={self.id}, e={e}]", e)
+            raise ClientException(f"Failed to decode response [model={self.id}, e={e}]", e)
         if NOS_PROFILING_ENABLED:
             logger.debug(f"Decoded response [model={self.id}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]")
         return response
+
+
+@dataclass
+class _StreamingModuleResponse:
+    response: Iterable[nos_service_pb2.GenericResponse]
+    fn: Callable
+
+    def __iter__(self) -> Any:
+        return self
+
+    def __next__(self) -> Any:
+        resp = next(self.response)
+        return self.fn(resp.response_bytes)

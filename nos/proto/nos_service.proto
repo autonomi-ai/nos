@@ -44,6 +44,9 @@ service InferenceService {
   // Run the inference request
   rpc Run(GenericRequest) returns (GenericResponse) {}
 
+  // Stream the inference response
+  rpc Stream(GenericRequest) returns (stream GenericResponse) {}
+
   // Register shared memory
   rpc RegisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
 

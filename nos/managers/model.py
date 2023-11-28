@@ -6,7 +6,7 @@ from collections import OrderedDict
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import ray
 import torch
@@ -71,6 +71,17 @@ class ModelHandlePartial:
 
     def submit(self, *args: Any, **kwargs: Any) -> str:
         return self.handle.submit(*args, **kwargs, _method=self.method)
+
+
+@dataclass
+class _StreamingModelHandleResponse:
+    iterable: Iterable[ray.ObjectRef]
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return ray.get(next(self.iterable))
 
 
 @dataclass
@@ -219,9 +230,18 @@ class ModelHandle:
             logger.warning("Model has >1 replicas, use `.submit()` instead to fully utilize them.")
 
         method: str = kwargs.pop("_method", self.spec.default_method)
+        # TODO (spillai): We should be able to determine if the output
+        # is an iterable or not from the signature, and set the default
+        stream: bool = kwargs.pop("_stream", False)
         actor_method_func = getattr(self._actors[0], method)
-        response_ref: ray.ObjectRef = actor_method_func.remote(**kwargs)
-        return ray.get(response_ref)
+        if not stream:
+            response_ref: ray.ObjectRef = actor_method_func.remote(**kwargs)
+            return ray.get(response_ref)
+        else:
+            response_refs: Iterable[ray.ObjectRef] = actor_method_func.options(num_returns="streaming").remote(
+                **kwargs
+            )
+            return _StreamingModelHandleResponse(response_refs)
 
     def scale(self, replicas: Union[int, str] = 1) -> "ModelHandle":
         """Scale the model handle to a new number of replicas.

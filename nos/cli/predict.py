@@ -18,7 +18,7 @@ import rich.table
 import typer
 
 from nos.client import Client
-from nos.common.exceptions import NosClientException
+from nos.common.exceptions import ClientException
 
 
 predict_cli = typer.Typer(name="predict", help="NOS gRPC Prediction CLI.", no_args_is_help=True)
@@ -51,7 +51,7 @@ def _list_models(ctx: typer.Context):
     try:
         models: List[str] = ctx.obj.client.ListModels()
         console.print(models)
-    except NosClientException as exc:
+    except ClientException as exc:
         console.print(f"[red] ✗ Failed to list models ({exc}).[/red]")
 
 
@@ -75,7 +75,7 @@ def _predict_img2vec(
             st = time.perf_counter()
             response = ctx.obj.client.Run(model_id, inputs={"images": [img]})
             end = time.perf_counter()
-        except NosClientException as exc:
+        except ClientException as exc:
             console.print(f"[red] ✗ Failed to encode image. [/red]\n[bold red]{exc}[/bold red]")
             return
     console.print(
@@ -101,7 +101,7 @@ def _predict_txt2vec(
             st = time.perf_counter()
             response = ctx.obj.client.Run(model_id, inputs={"texts": [prompt]})
             end = time.perf_counter()
-        except NosClientException as exc:
+        except ClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
             return
     console.print(
@@ -137,7 +137,7 @@ def _predict_txt2img(
                 },
             )
             end = time.perf_counter()
-        except NosClientException as exc:
+        except ClientException as exc:
             console.print(f"[red] ✗ Failed to generate image. [/red]\n[bold red]{exc}[/bold red]")
             return
     console.print(
@@ -168,7 +168,7 @@ def _predict_img2bbox(
             console.print(
                 f"[bold green] ✓ Predicted bounding boxes (bboxes={bboxes[0].shape}, scores={scores[0].shape}, labels={labels[0].shape}, time=~{(end - st) * 1e3:.1f}ms) [/bold green]"
             )
-        except NosClientException as exc:
+        except ClientException as exc:
             console.print(f"[red] ✗ Failed to predict bounding boxes. [/red]\n[bold red]{exc}[/bold red]")
             return
 
@@ -192,7 +192,7 @@ def _predict_segmentation(
             st = time.perf_counter()
             response = ctx.obj.client.Run(model_id, inputs={"images": [img]})
             time.perf_counter()
-        except NosClientException as exc:
+        except ClientException as exc:
             console.print(f"[red] ✗ Failed to predict segmentations. [/red]\n[bold red]{exc}[/bold red]")
             return
 

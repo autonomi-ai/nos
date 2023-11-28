@@ -12,7 +12,7 @@ def whisper_model():
     from nos.models import Whisper  # noqa: F401
 
     MODEL_NAME = "openai/whisper-small.en"
-    yield Whisper(model_name=MODEL_NAME, dtype="float16")
+    yield Whisper(model_name=MODEL_NAME)
 
 
 @skip_if_no_torch_cuda

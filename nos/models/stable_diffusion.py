@@ -12,7 +12,11 @@ from nos.hub import HuggingFaceHubConfig
 
 @dataclass(frozen=True)
 class StableDiffusionConfig(HuggingFaceHubConfig):
-    pass
+    model_cls: str = "DiffusionPipeline"
+    """Name of the model class to use."""
+
+    torch_dtype: str = "float16"
+    """Torch dtype string to use for inference."""
 
 
 class StableDiffusion:
@@ -33,6 +37,11 @@ class StableDiffusion:
         ),
         "stabilityai/stable-diffusion-xl-base-1-0": StableDiffusionConfig(
             model_name="stabilityai/stable-diffusion-xl-base-1.0",
+            model_cls="StableDiffusionXLPipeline",
+        ),
+        "segmind/SSD-1B": StableDiffusionConfig(
+            model_name="segmind/SSD-1B",
+            model_cls="StableDiffusionXLPipeline",
         ),
     }
 
@@ -40,11 +49,10 @@ class StableDiffusion:
         self,
         model_name: str = "stabilityai/stable-diffusion-2",
         scheduler: str = "ddim",
-        dtype: torch.dtype = torch.float16,
     ):
+        import diffusers
         from diffusers import (
             DDIMScheduler,
-            DiffusionPipeline,
             EulerDiscreteScheduler,
         )
 
@@ -56,14 +64,12 @@ class StableDiffusion:
         # Only run on CUDA if available
         if torch.cuda.is_available():
             self.device = "cuda"
-            self.dtype = dtype
-            self.revision = "fp16"
-            # TODO (spillai): Investigate if this has any effect on performance
-            # tf32 vs fp32: https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/279
+            self.torch_dtype = getattr(torch, self.cfg.torch_dtype)
+            self.revision = "fp16" if self.torch_dtype == torch.float16 else None
             torch.backends.cuda.matmul.allow_tf32 = True
         else:
             self.device = "cpu"
-            self.dtype = torch.float32
+            self.torch_dtype = torch.float32
             self.revision = None
 
         if scheduler == "ddim":
@@ -73,10 +79,11 @@ class StableDiffusion:
         else:
             raise ValueError(f"Unknown scheduler: {scheduler}, choose from: ['ddim', 'euler-discrete']")
 
-        self.pipe = DiffusionPipeline.from_pretrained(
+        model_cls = getattr(diffusers, self.cfg.model_cls)
+        self.pipe = model_cls.from_pretrained(
             self.cfg.model_name,
             scheduler=self.scheduler,
-            torch_dtype=self.dtype,
+            torch_dtype=self.torch_dtype,
         )
         self.pipe = self.pipe.to(self.device)
 
@@ -130,7 +137,7 @@ for model_name in StableDiffusion.configs.keys():
         TaskType.IMAGE_GENERATION,
         StableDiffusion,
         init_args=(model_name,),
-        init_kwargs={"scheduler": "ddim", "dtype": torch.float16},
+        init_kwargs={"scheduler": "ddim"},
         method="__call__",
         inputs={
             "prompts": Batch[str, 1],
