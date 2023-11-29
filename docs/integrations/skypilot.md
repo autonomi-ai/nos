@@ -20,7 +20,13 @@ Run `sky check` for more details and installation instructions.
 
 ### 1. Define your SkyPilot deployment YAML
 
-First, let's create a `server.yaml` YAML file with the following configuration. Here, we are going to provision a single GPU server on GCP (`us-west1`) with an NVIDIA T4 GPU and expose ports `8000` and `50051` for the NOS server. The `docker-compose.gpu.yml` also exposes these ports, so we can access the NOS server from our local machine. We also mount the current directory `.` to `/app` in the container so that we can access the `docker-compose.gpu.yml` file from within the container.
+First, let's create a `serve.yaml` YAML file with the following configuration. 
+
+```yaml
+{% include '../../examples/skypilot/serve.yaml' %}
+```
+
+Here, we are going to provision a single GPU server on GCP (`us-west1`) with an NVIDIA T4 GPU and expose ports `8000` and `50051` for the NOS server. The `docker-compose.gpu.yml` also exposes these ports, so we can access the NOS server from our local machine. We also mount the current directory `.` to `/app` in the container so that we can access the `docker-compose.gpu.yml` file from within the container.
 
 ```yaml
 {% include '../../examples/skypilot/app/docker-compose.gpu.yml' %}
