@@ -183,6 +183,20 @@ class FunctionSignature:
         """Return the function signature representation."""
         return f"FunctionSignature({asdict(self)})"
 
+    @validator("init_args", pre=True)
+    def _validate_init_args(cls, init_args: Union[Tuple[Any, ...], Any]) -> Tuple[Any, ...]:
+        """Validate the initialization arguments."""
+        # TODO (spillai): Check the function signature of the func_or_cls class and validate
+        # the init_args against the signature.
+        return init_args
+
+    @validator("init_kwargs", pre=True)
+    def _validate_init_kwargs(cls, init_kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate the initialization keyword arguments."""
+        # TODO (spillai): Check the function signature of the func_or_cls class and validate
+        # the init_kwargs against the signature.
+        return init_kwargs
+
     @staticmethod
     def validate(inputs: Dict[str, Any], sig: Dict[str, Any]) -> Dict[str, Any]:
         """Validate the input dict against the defined signature (input or output)."""

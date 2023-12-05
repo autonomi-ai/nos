@@ -65,10 +65,6 @@ class Llama2Chat:
             model_name="HuggingFaceH4/zephyr-7b-beta",
             compute_dtype="float16",
         ),
-        "ehartford/dolphin-2.1-mistral-7b": Llama2ChatConfig(
-            model_name="ehartford/dolphin-2.1-mistral-7b",
-            compute_dtype="float16",
-        ),
         "HuggingFaceH4/tiny-random-LlamaForCausalLM": Llama2ChatConfig(
             model_name="HuggingFaceH4/tiny-random-LlamaForCausalLM",
             compute_dtype="float16",

@@ -173,7 +173,9 @@ class Hub:
 
         @dataclass
         class _ModelImportConfig:
-            """Model import configuration."""
+            """Model import configuration.
+            Main entrypoint for defining new "models" in the serve.yaml.
+            """
 
             id: str
             """Model identifier."""
@@ -185,6 +187,8 @@ class Hub:
             """Default model method name."""
             runtime_env: str
             """Runtime environment."""
+            init_kwargs: Dict[str, Any] = field(default_factory=dict)
+            """Model class init keyword arguments."""
 
             @root_validator(pre=True, allow_reuse=True)
             def _validate_model_cls_import(cls, values):
@@ -262,6 +266,8 @@ class Hub:
                 TaskType.CUSTOM,
                 mconfig.model_cls,
                 method=mconfig.default_method,
+                init_args=(),
+                init_kwargs=mconfig.init_kwargs,
             )
             logger.debug(f"Registered model [id={model_id}, spec={spec}]")
             specs.append(spec)
