@@ -300,7 +300,7 @@ def _serve(
         # Copy the dockerfiles to the current working directory if debug is enabled.
         for _docker_target, filename in dockerfiles.items():
             if debug:
-                shutil.copyfile(filename, Path.cwd() / filename.name)
+                shutil.copyfile(filename, Path.cwd() / filename)
 
         # Check if the image was built
         if image_name is None:
