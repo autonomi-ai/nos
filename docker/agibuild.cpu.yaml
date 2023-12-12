@@ -45,7 +45,7 @@ images:
       - ./nos:./nos
     run:
       - pip install --no-deps '.' && rm -rf build
-    command: ["/app/entrypoint.sh"]
+    command: ["bash", "-c", "/app/entrypoint.sh"]
 
   test-cpu:
     base: cpu
