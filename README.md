@@ -232,6 +232,27 @@ curl \
 </tr>
 </table>
 
+### Custom models from [NOS Playground](https://github.com/autonomi-ai/nos-playground)
+
+### Text to video
+```python
+model_id: str = "animate-diff"
+```
+<img src="docs/assets/animatediff-puppy.gif" width="150">
+
+### Image to video
+```python
+model_id: str = "stable-video-diffusion"
+```
+<img src="docs/assets/exp_img2vid_in.png" width="150"><img src="docs/assets/exp_img2vid_out.gif" width="150">
+
+### Text to 360-view images
+```python
+model_id: str = "mv-dream"
+```
+<img src="docs/assets/mvdream_example.png" width="600">
+
+
 **Coming soon!** Stay tuned for updates on this by signing up on [Autonomi AI](https://www.autonomi.ai/) or join the [Discord](https://discord.gg/QAGgvTuvgg) for up-to-date announcements.
 
 ## 📚 Documentation
