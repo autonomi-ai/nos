@@ -28,11 +28,42 @@
 
 > **NOS** inherits its name from **N**itrous **O**xide **S**ystem, the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
 
-### **What can NOS do?**
 
-## 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
+## 🚀 Getting Started
 
-<img src="docs/assets/fox_jumped_over_the_moon.png" width="500" height="300">
+To quickly get started with a light-weight NOS client, run the following command:
+
+  ```shell
+  $ conda create -n nos-py38 python=3.8
+  $ conda activate nos-py38
+  $ pip install torch-nos
+  ```
+
+In the setup above, the client pulls and utilizes the NOS docker server that runs in the background. We do expect users to have installed [Docker with NVIDIA support](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) and [Docker Compose](https://docs.docker.com/compose/install/). For a more detailed quickstart, navigate to our [quickstart](https://docs.nos.run/docs/quickstart.html) docs.
+
+If you're interested in developing or contributing new models to NOS, consider installing the full NOS server via pip/conda:
+
+  ```shell
+  $ conda create -n nos-py38 python=3.8
+  $ conda activate nos-py38
+  $ conda install pytorch>=2.0.1 torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+  $ pip install torch-nos[server]
+  ```
+
+## 🔥 Quickstart / Show me the code
+
+### ⚡️ Start the GPU server
+
+The quickest way to get started is to start the GPU server. The `--http` flag optionally starts an HTTP gateway server so that you can run the REST API examples. We recommend you test out the gRPC client API to get the most out-of-the-box performance.
+
+```bash
+nos serve up --http
+```
+
+This command pulls and starts the latest GPU docker server with all the NOS goodies, without you requiring to manually do any setup. You'll see a bunch of debug logs on the console, wait until you see `Uvicorn running on http://0.0.0.0:8000` before continuing to the next section. To follow the remaining examples, start a new terminal (leaving the server running in the background).
+
+### 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
+
 
 <table>
 <tr>
@@ -75,9 +106,7 @@ curl \
 </tr>
 </table>
 
-## 🧠 Text & Image Embedding (CLIP-as-a-Service)
-
-<img src="docs/assets/embedding.png" width="500" height="300">
+### 🧠 Text & Image Embedding (CLIP-as-a-Service)
 
 <table>
 <tr>
@@ -116,9 +145,7 @@ curl \
 </tr>
 </table>
 
-## 🎙️ Audio Transcription (Whisper-as-a-Service)
-
-<img src="docs/assets/transcription.png" width="500" height="300">
+### 🎙️ Audio Transcription (Whisper-as-a-Service)
 
 <table>
 <tr>
@@ -156,9 +183,7 @@ curl \
 </tr>
 </table>
 
-## 🧐 Object Detection (YOLOX-as-a-Service)
-
-<img src="docs/assets/bench_park_detections.png" width="500" height="300">
+### 🧐 Object Detection (YOLOX-as-a-Service)
 
 <table>
 <tr>
@@ -194,66 +219,32 @@ curl \
 </tr>
 </table>
 
-## 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
-
-<img src="docs/assets/llama_nos.gif" width="500" height="300">
-
-<table>
-<tr>
-<td> gRPC API ⚡ </td>
-<td> REST API </td>
-</tr>
-<tr>
-<td>
-
-```python
-from pathlib import Path
-from nos.client import Client
-
-client = Client("[::]:50051")
-
-model = client.Module("meta-llama/Llama-2-7b-chat-hf")
-response = model(message="Tell me a story of 1000 words with emojis")
-```
-
-</td>
-<td>
-
-```bash
-curl \
--X POST http://localhost:8000/v1/infer/file \
--H 'accept: application/json' \
--H 'Content-Type: multipart/form-data' \
--F 'model_id=meta-llama/Llama-2-7b-chat-hf' \
--F 'file=@image.jpg'
-```
-
-</td>
-</tr>
-</table>
-
-### Custom models from [NOS Playground](https://github.com/autonomi-ai/nos-playground)
-
-### Text to video
-```python
-model_id: str = "animate-diff"
-```
-<img src="docs/assets/animatediff-puppy.gif" width="150">
-
-### Image to video
-```python
-model_id: str = "stable-video-diffusion"
-```
-<img src="docs/assets/exp_img2vid_in.png" width="150"><img src="docs/assets/exp_img2vid_out.gif" width="150">
-
-### Text to 360-view images
-```python
-model_id: str = "mv-dream"
-```
-<img src="docs/assets/mvdream_example.png" width="600">
-
+### 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
 
 **Coming soon!** Stay tuned for updates on this by signing up on [Autonomi AI](https://www.autonomi.ai/) or join the [Discord](https://discord.gg/QAGgvTuvgg) for up-to-date announcements.
+
+## 🗂️ Directory Structure
+
+```bash
+├── docker         # Dockerfile for CPU/GPU servers
+├── docs           # mkdocs documentation
+├── examples       # example guides, jupyter notebooks, demos
+├── makefiles      # makefiles for building/testing
+├── nos
+│   ├── cli        # CLI (hub, system)
+│   ├── client     # gRPC / REST client
+│   ├── common     # common utilities
+│   ├── executors  # runtime executor (i.e. Ray)
+│   ├── hub        # hub utilies
+│   ├── managers   # model manager / multiplexer
+│   ├── models     # model zoo
+│   ├── proto      # protobuf defs for NOS gRPC service
+│   ├── server     # server backend (gRPC)
+│   └── test       # pytest utilities
+├── requirements   # requirement extras (server, docs, tests)
+├── scripts        # basic scripts
+└── tests          # pytests (client, server, benchmark)
+```
 
 ## 📚 Documentation
 
@@ -262,9 +253,35 @@ model_id: str = "mv-dream"
 - **Concepts**: [Architecture Overview](https://docs.nos.run/docs/concepts/architecture-overview.html), [ModelSpec](https://docs.nos.run/docs/concepts/model-spec.html), [ModelManager](https://docs.nos.run/docs/concepts/model-manager.html), [Runtime Environments](https://docs.nos.run/docs/concepts/runtime-environments.html)
 - **Demos**: [Building a Discord Image Generation Bot](https://docs.nos.run/docs/demos/discord-bot.html), [Video Search Demo](https://docs.nos.run/docs/demos/video-search.html)
 
+## 🛣 Roadmap
+
+### HW / Cloud Support
+
+- [x] **Commodity GPUs**
+    - [x] NVIDIA GPUs (20XX, 30XX, 40XX)
+    - [ ] AMD GPUs (RX 7000)
+
+- [x] **Cloud GPUs**
+    - [x] NVIDIA (H100, A100, A10G, A30G, T4, L4)
+    - [ ] AMD (MI200, MI250)
+
+- [x] **Cloud Service Providers** (via [SkyPilot](https://github.com/skypilot-org/skypilot))
+    - [x] AWS, GCP, Azure
+    - [ ] **Opinionated Cloud:** Lambda Labs, RunPod, etc
+
+- [ ] **Cloud ASICs**
+    - [ ] [AWS Inferentia](https://aws.amazon.com/machine-learning/inferentia/) ([Inf1](https://aws.amazon.com/ec2/instance-types/inf1/)/[Inf2](https://aws.amazon.com/ec2/instance-types/inf2/))
+    - [ ] Google TPU
+    - [ ] Coming soon! (Habana Gaudi, Tenstorrent)
+
+
 ## 📄 License
 
 This project is licensed under the [Apache-2.0 License](LICENSE).
+
+## 📡 Telemetry
+
+NOS collects anonymous usage data using [Sentry](https://sentry.io/). This is used to help us understand how the community is using NOS and to help us prioritize features. You can opt-out of telemetry by setting `NOS_TELEMETRY_ENABLED=0`.
 
 ## 🤝 Contributing
 We welcome contributions! Please see our [contributing guide](CONTRIBUTING.md) for more information.
