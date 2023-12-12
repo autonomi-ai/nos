@@ -15,27 +15,6 @@
 ## ⚡️ What is NOS?
 **NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running inference of popular foundational AI models.
 
-## **What can NOS do?**
-- **Image Generation**: 
-
-![racecar](docs/assets/sdv2_racecar_alt.png)
-
-- **LLMs**:
-
-![nos_llama](docs/assets/llama_nos.gif)
-
-- **Audio Transcription**:
-
-![nos_whisper](docs/assets/transcription.png)
-
-- **Image Embeddings**:
-
-![embeddings](docs/assets/embedding.png)
-
-- **Object Detection**:
-
-![detection](docs/assets/bench_park_detections.png)
-
 ## 🤔 **Why use NOS?**
 
 - 👩‍💻 **Easy-to-use**: Built for [PyTorch](https://pytorch.org/) and designed to optimize, serve and auto-scale Pytorch models in production without compromising on developer experience.
