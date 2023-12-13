@@ -33,7 +33,7 @@
 ## **What can NOS do?**
 
 ### 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
-
+---
 NOS provides an OpenAI-compatible server with streaming support so that you can connect your favorite LLM client.
 
 <img src="docs/assets/llama_nos.gif" width="500" height="300">
@@ -64,8 +64,7 @@ curl \
 -H "Content-Type: application/json" \
 -d '{
     "model": "meta-llama/Llama-2-7b-chat-hf",
-    "messages": [{"role": "system", "content": "You are a helpful AI analyst/assistant."},
-                 {"role": "user", "content": "Tell me a story of 1000 words with emojis"}],
+    "messages": [{"role": "user", "content": "Tell me a story of 1000 words with emojis"}],
     "temperature": 0.7, "stream": true
   }'
 ```
@@ -74,11 +73,12 @@ curl \
 </tr>
 </table>
 
-### 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
 
+### 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
+---
 Build MidJourney discord bots in seconds.
 
-<img src="docs/assets/fox_jumped_over_the_moon.png" width="500" height="300">
+<img src="docs/assets/fox_jumped_over_the_moon.png" width="400">
 
 <table>
 <tr>
@@ -121,11 +121,13 @@ curl \
 </tr>
 </table>
 
+
+
 ### 🧠 Text & Image Embedding (CLIP-as-a-Service)
+---
+Build scalable semantic search of images/videos in minutes.
 
-Build scalable semantic search of images/videos in minutes. 
-
-<img src="docs/assets/embedding.png" width="500">
+<img src="docs/assets/embedding.png" width="400">
 
 <table>
 <tr>
@@ -164,14 +166,18 @@ curl \
 </tr>
 </table>
 
+
+
 ### 🎙️ Audio Transcription (Whisper-as-a-Service)
+---
 
-Perform real-time audio transcription using Whisper. 
+Perform real-time audio transcription using Whisper.
 
-<img src="docs/assets/transcription.png" width="500" height="300">
+<img src="docs/assets/transcription.png" width="400">
 
 <table>
 <tr>
+<td> Preview </td>
 <td> gRPC API ⚡ </td>
 <td> REST API </td>
 </tr>
@@ -207,10 +213,11 @@ curl \
 </table>
 
 ### 🧐 Object Detection (YOLOX-as-a-Service)
+---
 
-Run classical computer-vision tasks in 2 lines of code. 
+Run classical computer-vision tasks in 2 lines of code.
 
-<img src="docs/assets/bench_park_detections.png" width="500" height="300">
+<img src="docs/assets/bench_park_detections.png" width="400">
 
 <table>
 <tr>
@@ -247,7 +254,9 @@ curl \
 </table>
 
 
-### Custom models from [NOS Playground](https://github.com/autonomi-ai/nos-playground)
+### ⚒️ Custom models
+---
+Want to run models not supported by NOS? You can easily add your own models following the examples in the [NOS Playground](https://github.com/autonomi-ai/nos-playground/tree/main/examples).
 
 ### Text to video
 ```python
@@ -267,8 +276,6 @@ model_id: str = "mv-dream"
 ```
 <img src="docs/assets/mvdream_example.png" width="600">
 
-
-**Coming soon!** Stay tuned for updates on this by signing up on [Autonomi AI](https://www.autonomi.ai/) or join the [Discord](https://discord.gg/QAGgvTuvgg) for up-to-date announcements.
 
 ## 📚 Documentation
 
