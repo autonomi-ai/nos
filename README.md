@@ -12,10 +12,11 @@
 <a href="https://docs.nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
 </p>
 
-## ⚡️ What is NOS?
+## What is NOS?
 **NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running inference of popular foundational AI models.
+<br>
 
-## 🤔 **Why use NOS?**
+## **Why use NOS?**
 
 - 👩‍💻 **Easy-to-use**: Built for [PyTorch](https://pytorch.org/) and designed to optimize, serve and auto-scale Pytorch models in production without compromising on developer experience.
 - 🥷 **Flexible**: Run and serve several foundational AI models ([Stable Diffusion](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0), [CLIP](https://huggingface.co/openai/clip-vit-base-patch32), [Whisper](https://huggingface.co/openai/whisper-large-v2)) in a single place.
@@ -27,10 +28,55 @@
 
 
 > **NOS** inherits its name from **N**itrous **O**xide **S**ystem, the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
+<br>
 
-### **What can NOS do?**
+## **What can NOS do?**
 
-## 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
+### 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
+
+NOS provides an OpenAI-compatible server with streaming support so that you can connect your favorite LLM client.
+
+<img src="docs/assets/llama_nos.gif" width="500" height="300">
+
+<table>
+<tr>
+<td> gRPC API ⚡ </td>
+<td> REST API </td>
+</tr>
+<tr>
+<td>
+
+```python
+from nos.client import Client
+
+client = Client("[::]:50051")
+
+model = client.Module("meta-llama/Llama-2-7b-chat-hf")
+response = model.chat(message="Tell me a story of 1000 words with emojis")
+```
+
+</td>
+<td>
+
+```bash
+curl \
+-X POST http://localhost:8000/v1/chat/completions \
+-H "Content-Type: application/json" \
+-d '{
+    "model": "meta-llama/Llama-2-7b-chat-hf",
+    "messages": [{"role": "system", "content": "You are a helpful AI analyst/assistant."},
+                 {"role": "user", "content": "Tell me a story of 1000 words with emojis"}],
+    "temperature": 0.7, "stream": true
+  }'
+```
+
+</td>
+</tr>
+</table>
+
+### 🏞️ Image Generation (Stable-Diffusion-as-a-Service)
+
+Build MidJourney discord bots in seconds.
 
 <img src="docs/assets/fox_jumped_over_the_moon.png" width="500" height="300">
 
@@ -75,9 +121,11 @@ curl \
 </tr>
 </table>
 
-## 🧠 Text & Image Embedding (CLIP-as-a-Service)
+### 🧠 Text & Image Embedding (CLIP-as-a-Service)
 
-<img src="docs/assets/embedding.png" width="500" height="300">
+Build scalable semantic search of images/videos in minutes. 
+
+<img src="docs/assets/embedding.png" width="500">
 
 <table>
 <tr>
@@ -116,7 +164,9 @@ curl \
 </tr>
 </table>
 
-## 🎙️ Audio Transcription (Whisper-as-a-Service)
+### 🎙️ Audio Transcription (Whisper-as-a-Service)
+
+Perform real-time audio transcription using Whisper. 
 
 <img src="docs/assets/transcription.png" width="500" height="300">
 
@@ -156,7 +206,9 @@ curl \
 </tr>
 </table>
 
-## 🧐 Object Detection (YOLOX-as-a-Service)
+### 🧐 Object Detection (YOLOX-as-a-Service)
+
+Run classical computer-vision tasks in 2 lines of code. 
 
 <img src="docs/assets/bench_park_detections.png" width="500" height="300">
 
@@ -194,43 +246,6 @@ curl \
 </tr>
 </table>
 
-## 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
-
-<img src="docs/assets/llama_nos.gif" width="500" height="300">
-
-<table>
-<tr>
-<td> gRPC API ⚡ </td>
-<td> REST API </td>
-</tr>
-<tr>
-<td>
-
-```python
-from pathlib import Path
-from nos.client import Client
-
-client = Client("[::]:50051")
-
-model = client.Module("meta-llama/Llama-2-7b-chat-hf")
-response = model(message="Tell me a story of 1000 words with emojis")
-```
-
-</td>
-<td>
-
-```bash
-curl \
--X POST http://localhost:8000/v1/infer/file \
--H 'accept: application/json' \
--H 'Content-Type: multipart/form-data' \
--F 'model_id=meta-llama/Llama-2-7b-chat-hf' \
--F 'file=@image.jpg'
-```
-
-</td>
-</tr>
-</table>
 
 ### Custom models from [NOS Playground](https://github.com/autonomi-ai/nos-playground)
 
