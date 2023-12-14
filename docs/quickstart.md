@@ -24,9 +24,6 @@ You will need to install [Docker](https://docs.docker.com/get-docker/), [Nvidia 
 
     If you run into issues, refer to the official Nvidia install [guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) or just ping us on [#nos-support](https://discord.gg/qEvfUcgS5m).
 
-=== "MacOS (Intel/Apple Silicon)"
-    Download and install [Docker Desktop](https://docs.docker.com/desktop/mac/install/) directly from the Docker website.
-
 ## 👩‍💻 Install NOS
 
 We highly recommend doing all of the following inside of a Conda or Virtualenv environment. You can install Conda on your machine following the official [guide](https://conda.io/projects/conda/en/latest/user-guide/install/index.html). Create a new env:
@@ -97,16 +94,13 @@ response = client.Run(
 img, = response["images"]
 ```
 
-### Troubleshooting
+# Troubleshooting
 
-## MacOS
-
-MacOS isn't yet supported due to resource requirements (coming soon!). You may attempt to 
-init on MacOS but may run into any of the following:
-
-# Resource Requirements
+### Resource Requirements
 
 Most Macbook laptops don't meet the resource requirements for running most NOS models. This will cause the server to fail initialization with error messages describing resource constraints.
+
+### MacOS dependencies
 
 There is currently an issue causing a dependency import (`grpcio`) to fail on MacOS Darwin: 
 `symbol not found in flat namespace '_kCFStreamPropertySocketNativeHandle'`
