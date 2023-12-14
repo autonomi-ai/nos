@@ -36,7 +36,7 @@
 ---
 NOS provides an OpenAI-compatible server with streaming support so that you can connect your favorite LLM client.
 
-<img src="docs/assets/llama_nos.gif" width="500" height="300">
+<img src="docs/assets/llama_nos.gif" width="400">
 
 <table>
 <tr>
@@ -78,7 +78,7 @@ curl \
 ---
 Build MidJourney discord bots in seconds.
 
-<img src="docs/assets/fox_jumped_over_the_moon.png" width="400">
+<img src="docs/assets/hippo_with_glasses_sdxl.jpg" width="400">
 
 <table>
 <tr>
@@ -94,7 +94,7 @@ from nos.client import Client
 client = Client("[::]:50051")
 
 sdxl = client.Module("stabilityai/stable-diffusion-xl-base-1-0")
-image, = sdxl(prompts=["fox jumped over the moon"],
+image, = sdxl(prompts=["hippo with glasses in a library, cartoon styling"],
               width=1024, height=1024, num_images=1)
 ```
 
@@ -109,7 +109,7 @@ curl \
 -d '{
     "model_id": "stabilityai/stable-diffusion-xl-base-1-0",
     "inputs": {
-        "prompts": ["fox jumped over the moon"],
+        "prompts": ["hippo with glasses in a library, cartoon styling"],
         "width": 1024,
         "height": 1024,
         "num_images": 1
