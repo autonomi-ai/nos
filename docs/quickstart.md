@@ -97,7 +97,16 @@ response = client.Run(
 img, = response["images"]
 ```
 
-## Troubleshooting
+### Troubleshooting
+
+## MacOS
+
+MacOS isn't yet supported due to resource requirements (coming soon!). You may attempt to 
+init on MacOS but may run into any of the following:
+
+# Resource Requirements
+
+Most Macbook laptops don't meet the resource requirements for running most NOS models. This will cause the server to fail initialization with error messages describing resource constraints.
 
 There is currently an issue causing a dependency import (`grpcio`) to fail on MacOS Darwin: 
 `symbol not found in flat namespace '_kCFStreamPropertySocketNativeHandle'`
