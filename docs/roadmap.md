@@ -3,6 +3,9 @@
 ## Hardware Support
 We currently plan to support the following hardware:
 
+- Platforms
+    * [x] Linux
+    * [ ] MacOS (coming soon!)
 - [x] GPUs
     * [x] NVIDIA (A100, A10G, T4, 4090, 2080)
     * [ ] AMD GPUs (MI250)
