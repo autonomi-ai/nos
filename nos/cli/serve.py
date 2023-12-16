@@ -53,6 +53,9 @@ class ServeOptions:
     http_env: str = field(default=None)
     """Environment to use for the HTTP server (dev/test/prod)."""
 
+    nos_home: str = field(default=None)
+    """Override for NOS home directory."""
+
     logging_level: str = field(default="INFO")
     """Logging level to use for the server."""
 
@@ -99,6 +102,7 @@ def _serve_up(
     http_port: int = typer.Option(8000, "--http-port", help="HTTP port to use.", show_default=True),
     http_workers: int = typer.Option(1, "--http-workers", help="HTTP max workers.", show_default=True),
     logging_level: str = typer.Option("INFO", "--logging-level", help="Logging level.", show_default=True),
+    nos_home: str = typer.Option("~/.nosd", "--nos_home", help="NOS home override.", show_default=True),
     daemon: bool = typer.Option(False, "-d", "--daemon", help="Run in daemon mode.", show_default=True),
     reload: bool = typer.Option(False, "--reload", help="Reload on file changes.", show_default=True),
     build: bool = typer.Option(
@@ -129,6 +133,7 @@ def _serve_up(
         http_port=http_port,
         http_workers=http_workers,
         logging_level=logging_level,
+        nos_home=nos_home,
         daemon=daemon,
         reload=reload,
         build=build,
@@ -148,6 +153,7 @@ def _serve(
     http_port: int = 8000,
     http_workers: int = 1,
     logging_level: str = "INFO",
+    nos_home: str = "~/.nosd",
     daemon: bool = False,
     reload: bool = False,
     build: bool = False,
@@ -346,6 +352,7 @@ def _serve(
         http_port=http_port,
         http_workers=http_workers,
         http_env="prod" if prod else "dev",
+        nos_home=nos_home if nos_home else "~/.nosd",
         logging_level=logging_level,
         daemon=daemon,
         env_file=[str(Path(env_file).absolute())] if env_file is not None else [],
