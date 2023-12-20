@@ -12,6 +12,7 @@ from pydantic.dataclasses import dataclass
 
 from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import InputValidationException
+from nos.common.helpers import memory_bytes
 from nos.common.runtime import RuntimeEnv
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
@@ -194,6 +195,20 @@ class FunctionSignature:
         # TODO (spillai): Validate input types and shapes.
         return inputs
 
+    @validator("init_args", pre=True)
+    def _validate_init_args(cls, init_args: Union[Tuple[Any, ...], Any]) -> Tuple[Any, ...]:
+        """Validate the initialization arguments."""
+        # TODO (spillai): Check the function signature of the func_or_cls class and validate
+        # the init_args against the signature.
+        return init_args
+
+    @validator("init_kwargs", pre=True)
+    def _validate_init_kwargs(cls, init_kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate the initialization keyword arguments."""
+        # TODO (spillai): Check the function signature of the func_or_cls class and validate
+        # the init_kwargs against the signature.
+        return init_kwargs
+
     def _encode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Encode inputs based on defined signature."""
         inputs = FunctionSignature.validate(inputs, self.parameters)
@@ -237,11 +252,11 @@ class FunctionSignature:
 class ModelResources:
     """Model resources (device/host memory etc)."""
 
-    runtime: str
+    runtime: str = field(default="auto")
     """Runtime type (cpu, gpu, trt, etc).
     See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
     """
-    device: str
+    device: str = field(default="auto")
     """Device identifier (nvidia-2080, nvidia-4090, apple-m2, etc)."""
     cpus: float = 0
     """Number of CPUs (defaults to 0 CPUs)."""
@@ -264,24 +279,9 @@ class ModelResources:
         from nos.server._runtime import InferenceServiceRuntime
 
         # Check if runtime is subset of supported runtimes.
-        if runtime not in InferenceServiceRuntime.configs.keys():
+        if runtime not in list(InferenceServiceRuntime.configs.keys()) + ["auto"]:
             raise ValueError(f"Invalid runtime, runtime={runtime}.")
         return runtime
-
-    @validator("device_memory")
-    def _validate_device_memory(cls, device_memory: Union[int, str]) -> int:
-        """Validate the device memory."""
-        if device_memory is None:
-            return
-
-        if isinstance(device_memory, str):
-            raise NotImplementedError()
-
-        if device_memory > 128 * 1024**3:
-            err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        return device_memory
 
     @validator("cpus")
     def _validate_cpus(cls, cpus: Union[float, str]) -> float:
@@ -299,7 +299,7 @@ class ModelResources:
     def _validate_memory(cls, memory: Union[int, str]) -> int:
         """Validate the host memory."""
         if memory is None:
-            return
+            return 0
 
         if isinstance(memory, str):
             raise NotImplementedError()
@@ -309,6 +309,21 @@ class ModelResources:
             logger.error(err_msg)
             raise ValueError(err_msg)
         return memory
+
+    @validator("device_memory")
+    def _validate_device_memory(cls, device_memory: Union[int, str]) -> int:
+        """Validate the device memory."""
+        if device_memory is None:
+            return 0
+
+        if isinstance(device_memory, str):
+            device_memory: int = memory_bytes(device_memory)
+
+        if device_memory > 128 * 1024**3:
+            err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        return device_memory
 
 
 class ModelSpecMetadataCatalog:
@@ -580,6 +595,10 @@ class ModelSpec:
         """
         sig: FunctionSignature = self.default_signature
         return sig.func_or_cls(*init_args, **init_kwargs)
+
+    @classmethod
+    def from_yaml(cls, filename: str) -> "ModelSpec":
+        raise NotImplementedError()
 
     @classmethod
     def from_cls(

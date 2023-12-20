@@ -100,6 +100,7 @@ def test_hub_register_from_yaml():
     # Test valid model configs
     for yaml in [
         NOS_TEST_DATA_DIR / "hub/custom_model/config.yaml",
+        NOS_TEST_DATA_DIR / "hub/custom_model/config-alternate-init-kwargs.yaml",
     ]:
         Hub.register_from_yaml(yaml)
 
@@ -117,13 +118,8 @@ def test_hub_register_from_yaml():
     ]:
 
         with pytest.raises(Exception):
-            try:
-                Hub.register_from_yaml(yaml)
-            except Exception as exc:
-                logger.debug(
-                    f"Successfully raised exception when loading model spec from malformed YAML: {yaml}, e={exc}"
-                )
-                raise exc
+            logger.debug(f"Loading model spec from malformed YAML: {yaml}")
+            Hub.register_from_yaml(yaml)
 
     logger.enable("nos")
 

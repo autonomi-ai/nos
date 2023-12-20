@@ -13,10 +13,11 @@ import torch
 from ray.runtime_env import RuntimeEnv
 from ray.util.queue import Queue
 
-from nos.common import ModelSpec
+from nos.common import ModelResources, ModelSpec, ModelSpecMetadataCatalog
 from nos.logging import logger
 
 
+NOS_MAX_CONCURRENT_MODELS = int(os.getenv("NOS_MAX_CONCURRENT_MODELS", 4))
 NOS_MEMRAY_ENABLED = bool(int(os.getenv("NOS_MEMRAY_ENABLED", "0")))
 NOS_RAY_LOGS_DIR = os.getenv("NOS_RAY_LOGS_DIR", "/tmp/ray/session_latest/logs")
 
@@ -166,7 +167,42 @@ class ModelHandle:
         # if num_cpus is not specified, OMP_NUM_THREADS will default to 1.
         # Instead, for now, we manually set the environment variable in `InferenceServiceRuntime`
         # to the number of CPUs threads available.
-        actor_opts = {"num_gpus": 0.25 if torch.cuda.is_available() else 0}
+        if torch.cuda.is_available():
+            try:
+                # Get the model resources from the catalog
+                catalog = ModelSpecMetadataCatalog.get()
+                resources: ModelResources = catalog._resources_catalog[f"{spec.id}/{spec.default_method}"]
+
+                # TODO (spillai): This needs to be resolved differently for
+                # multi-node clusters.
+                # Determine the current device id by checking the number of GPUs used.
+                total, available = ray.cluster_resources(), ray.available_resources()
+                gpus_used = total["GPU"] - available["GPU"]
+                device_id = int(gpus_used)
+                device_memory = torch.cuda.get_device_properties(device_id).total_memory
+
+                # Fractional GPU memory needed within the current device
+                gpu_frac = resources.device_memory / device_memory
+                gpu_frac = round(gpu_frac * 10) / 10
+                actor_opts = {"num_gpus": gpu_frac}
+
+                # Fractional GPU used for the current device
+                gpu_frac_used = gpus_used - int(gpus_used)
+                gpu_frac_avail = (1 - gpu_frac_used) * device_memory
+
+                if gpu_frac > gpu_frac_avail:
+                    logger.warning(
+                        f"Insufficient GPU memory for model [model={spec.id}, "
+                        f"method={spec.default_method}, gpu_frac={gpu_frac}, "
+                        f"gpu_frac_avail={gpu_frac_avail}, gpu_frac_used={gpu_frac_used}]"
+                    )
+                    if device_id == torch.cuda.device_count() - 1:
+                        # TOFIX (spillai): evict models to make space for the current model
+                        logger.warning("All GPUs are fully utilized, this may result in undesirable behavior.")
+            except Exception:
+                actor_opts = {"num_gpus": 1.0 / NOS_MAX_CONCURRENT_MODELS}
+        else:
+            actor_opts = {"num_gpus": 0}
         if spec.runtime_env is not None:
             logger.debug("Using custom runtime environment, this may take a while to build.")
             actor_opts["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
@@ -399,7 +435,7 @@ class ModelManager:
     policy: EvictionPolicy = EvictionPolicy.FIFO
     """Eviction policy."""
 
-    max_concurrent_models: int = int(os.getenv("NOS_MAX_CONCURRENT_MODELS", 1))
+    max_concurrent_models: int = NOS_MAX_CONCURRENT_MODELS
     """Maximum number of concurrent models."""
 
     handlers: Dict[str, ModelHandle] = field(default_factory=OrderedDict)

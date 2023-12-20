@@ -11,6 +11,7 @@ from pydantic.errors import ConfigError
 from nos.common.metaclass import SingletonMetaclass  # noqa: F401
 from nos.common.spec import (  # noqa: F401
     FunctionSignature,
+    ModelResources,
     ModelSpec,
     ModelSpecMetadata,
     ModelSpecMetadataCatalog,
@@ -101,6 +102,7 @@ class Hub:
         init_kwargs: Dict[str, Any] = {},  # noqa: B006
         inputs: Dict[str, Any] = {},  # noqa: B006
         outputs: Union[Any, Dict[str, Any], None] = None,  # noqa: B006
+        resources: ModelResources = None,
         **kwargs,
     ) -> ModelSpec:
         """Model registry decorator.
@@ -135,6 +137,11 @@ class Hub:
         metadata: ModelSpecMetadata = ModelSpecMetadata(model_id, method, task)
         spec.set_metadata(method, metadata)
         logger.debug(f"Created model spec [id={model_id}, spec={spec}, metadata={metadata}]")
+
+        # Add model resources
+        if resources is not None:
+            catalog = ModelSpecMetadataCatalog.get()
+            catalog._resources_catalog[f"{model_id}/{method}"] = resources
 
         # Get hub instance
         hub = cls.get()
@@ -177,14 +184,20 @@ class Hub:
 
             id: str
             """Model identifier."""
+            runtime_env: str
+            """Runtime environment."""
             model_path: str
             """Model path."""
             model_cls: Callable
             """Model class name."""
             default_method: str
             """Default model method name."""
-            runtime_env: str
-            """Runtime environment."""
+            init_args: Tuple[Any, ...] = field(default_factory=tuple)
+            """Arguments to initialize the model instance."""
+            init_kwargs: Dict[str, Any] = field(default_factory=dict)
+            """Keyword arguments to initialize the model instance."""
+            resources: ModelResources = field(default_factory=ModelResources)
+            """Model resources."""
 
             @root_validator(pre=True, allow_reuse=True)
             def _validate_model_cls_import(cls, values):
@@ -262,6 +275,9 @@ class Hub:
                 TaskType.CUSTOM,
                 mconfig.model_cls,
                 method=mconfig.default_method,
+                init_args=mconfig.init_args,
+                init_kwargs=mconfig.init_kwargs,
+                resources=mconfig.resources,
             )
             logger.debug(f"Registered model [id={model_id}, spec={spec}]")
             specs.append(spec)

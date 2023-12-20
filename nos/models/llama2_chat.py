@@ -89,16 +89,16 @@ class Llama2Chat:
         else:
             self.device_str = "cpu"
         self.device = torch.device(self.device_str)
-        use_auth_token = hf_login() if self.cfg.needs_auth else None
+        token = hf_login() if self.cfg.needs_auth else None
         self.model = AutoModelForCausalLM.from_pretrained(
             self.cfg.model_name,
             torch_dtype=getattr(torch, self.cfg.compute_dtype),
-            use_auth_token=use_auth_token,
+            token=token,
             device_map=self.device_str,
             **(self.cfg.additional_kwargs or {}),
         )
         self.model.eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name, use_auth_token=use_auth_token)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name, token=token)
         self.tokenizer.use_default_system_prompt = False
         self.logger = logger
 

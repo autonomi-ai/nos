@@ -23,6 +23,7 @@ from loguru import logger
 from nos import hub
 from nos.common import ModelSpec, RuntimeEnv, TaskType
 from nos.managers import ModelHandle, ModelManager
+from nos.managers.model import NOS_MAX_CONCURRENT_MODELS
 from nos.test.conftest import model_manager as manager  # noqa: F401, F811
 
 
@@ -79,7 +80,7 @@ def test_model_manager(manager):  # noqa: F811
     assert noop is not None
     assert isinstance(noop, ModelHandle)
     # Test __len__, __contains__, __repr__
-    assert len(manager) == 1, f"Expected 1 model in the manager, got {len(manager)}"
+    assert len(manager) <= NOS_MAX_CONCURRENT_MODELS, f"Expected 1 model in the manager, got {len(manager)}"
     assert spec in manager, f"Expected {spec} to be in the manager."
     assert isinstance(repr(manager), str)
 
@@ -92,15 +93,15 @@ def test_model_manager(manager):  # noqa: F811
     assert len(result) == B
 
     # Maually evict the model from the manager's cache.
+    num_models = len(manager)
     evicted_handle = manager.evict()
+    assert num_models - 1 == len(manager), f"Expected {num_models - 1} models in the manager, got {len(manager)}"
     assert evicted_handle is not None
     assert isinstance(evicted_handle, ModelHandle)
 
     evicted_spec = evicted_handle.spec
     assert evicted_spec is not None
     assert isinstance(evicted_spec, ModelSpec)
-    assert evicted_spec.id == spec.id
-    assert len(manager) == 0, f"Expected 0 models in the manager, got {len(manager)}"
 
 
 def test_model_manager_errors(manager):  # noqa: F811
