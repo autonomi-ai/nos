@@ -8,6 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
+import humanize
 import ray
 import torch
 from ray.runtime_env import RuntimeEnv
@@ -182,30 +183,41 @@ class ModelHandle:
                 device_memory = torch.cuda.get_device_properties(device_id).total_memory
 
                 # Fractional GPU memory needed within the current device
-                gpu_frac = resources.device_memory / device_memory
-                gpu_frac = round(gpu_frac * 10) / 10
-                actor_opts = {"num_gpus": gpu_frac}
+                gpu_frac = float(resources.device_memory) / device_memory
+                gpu_frac = round(gpu_frac * 10) / 10.0
 
                 # Fractional GPU used for the current device
                 gpu_frac_used = gpus_used - int(gpus_used)
                 gpu_frac_avail = (1 - gpu_frac_used) * device_memory
-
+                logger.debug(
+                    f"""actor_opts [model={spec.id}, """
+                    f"""mem={humanize.naturalsize(resources.device_memory, binary=True)}, device={device_id}, device_mem={humanize.naturalsize(device_memory, binary=True)}, """
+                    f"""gpu_frac={gpu_frac}, gpu_frac_avail={gpu_frac_avail}, """
+                    f"""gpu_frac_used={gpu_frac_used}]"""
+                )
                 if gpu_frac > gpu_frac_avail:
-                    logger.warning(
+                    logger.debug(
                         f"Insufficient GPU memory for model [model={spec.id}, "
                         f"method={spec.default_method}, gpu_frac={gpu_frac}, "
                         f"gpu_frac_avail={gpu_frac_avail}, gpu_frac_used={gpu_frac_used}]"
                     )
                     if device_id == torch.cuda.device_count() - 1:
                         # TOFIX (spillai): evict models to make space for the current model
-                        logger.warning("All GPUs are fully utilized, this may result in undesirable behavior.")
-            except Exception:
+                        logger.debug("All GPUs are fully utilized, this may result in undesirable behavior.")
+                actor_opts = {"num_gpus": gpu_frac}
+            except Exception as exc:
+                logger.debug(f"Failed to get GPU memory [e={exc}].")
+                gpu_frac = 0.0
+
+            # Force models to use the GPU if the resource catalog is not set
+            if gpu_frac == 0.0:
                 actor_opts = {"num_gpus": 1.0 / NOS_MAX_CONCURRENT_MODELS}
         else:
             actor_opts = {"num_gpus": 0}
         if spec.runtime_env is not None:
             logger.debug("Using custom runtime environment, this may take a while to build.")
             actor_opts["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
+        logger.debug(f"Actor options [id={spec.id}, opts={actor_opts}]")
         return actor_opts
 
     @classmethod
