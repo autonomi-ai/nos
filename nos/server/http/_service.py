@@ -146,6 +146,14 @@ def app_factory(
         """Get the inference client."""
         return nos_app.client
 
+    def normalize_id(model_id: str) -> str:
+        """Normalize the model identifier."""
+        return model_id.replace("--", "/")
+
+    def unnormalize_id(model_id: str) -> str:
+        """Unnormalize the model identifier."""
+        return model_id.replace("/", "--")
+
     def build_model_table(client: Client) -> Dict[str, ChatModel]:
         """Build the model table."""
         if len(_model_table) > 0:
@@ -157,7 +165,7 @@ def app_factory(
             if spec.task() != TaskType.TEXT_GENERATION:
                 continue
             owned_by, _ = model_id.split("/")
-            _model_table[model_id] = ChatModel(id=model_id.replace("/", "--"), created=0, owned_by=owned_by)
+            _model_table[normalize_id(model_id)] = ChatModel(id=normalize_id(model_id), created=0, owned_by=owned_by)
         return _model_table
 
     @app.get("/")
@@ -196,7 +204,11 @@ def app_factory(
     ) -> StreamingResponse:
         """Perform chat completion on the given input data."""
         logger.debug(f"Received chat request [model={request.model}, messages={request.messages}]")
-        model_id = request.model.replace("--", "/")
+        try:
+            _ = _model_table[request.model]
+        except KeyError:
+            raise HTTPException(status_code=400, detail=f"Invalid model {request.model}")
+        model_id: str = unnormalize_id(request.model)
         model = client.Module(model_id)
 
         if not len(request.messages):

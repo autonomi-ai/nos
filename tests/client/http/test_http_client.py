@@ -267,7 +267,7 @@ def test_http_client_chat(client_with_server, request):  # noqa: F811
             f"/v1/models/{model['id']}",
             headers={"accept": "application/json"},
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, "Failed to get model info: {}".format(model["id"])
 
     model_id = "HuggingFaceH4--tiny-random-LlamaForCausalLM"
     with http_client.stream(
@@ -286,4 +286,4 @@ def test_http_client_chat(client_with_server, request):  # noqa: F811
     ) as response:
         # Parse the text/event-stream response
         for chunk in response.iter_raw():
-            print(chunk.decode("utf-8"))
+            assert len(chunk.decode("utf-8")) > 0
