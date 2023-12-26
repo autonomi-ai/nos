@@ -629,6 +629,8 @@ class ModelSpec:
     def from_cls(
         cls,
         func_or_cls: Callable,
+        init_args: Tuple[Any, ...] = (),
+        init_kwargs: Dict[str, Any] = {},  # noqa: B006
         method: str = "__call__",
         runtime_env: RuntimeEnv = None,
         model_id: str = None,
@@ -638,6 +640,8 @@ class ModelSpec:
 
         Args:
             func_or_cls (Callable): Model function or class. For now, only classes are supported.
+            init_args (Tuple[Any, ...]): Initialization arguments.
+            init_kwargs (Dict[str, Any]): Initialization keyword arguments.
             method (str): Method name to be executed.
             runtime_env (RuntimeEnv): Runtime environment specification.
             model_id (str): Optional model identifier.
@@ -681,6 +685,8 @@ class ModelSpec:
             sig = FunctionSignature(
                 func_or_cls,
                 method=method,
+                init_args=init_args,
+                init_kwargs=init_kwargs,
             )
             signature[method] = sig
             metadata[method] = ModelSpecMetadata(model_id, method, task=None)

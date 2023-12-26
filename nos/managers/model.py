@@ -242,7 +242,11 @@ class ModelHandle:
         actor_cls = ray.remote(**actor_options)(model_cls)
 
         # Check if the model class has the required method
+        logger.debug(
+            f"Creating actor [actor={actor_cls}, opts={actor_options}, cls={model_cls}, init_args={spec.default_signature.init_args}, init_kwargs={spec.default_signature.init_kwargs}]"
+        )
         actor = actor_cls.remote(*spec.default_signature.init_args, **spec.default_signature.init_kwargs)
+
         # Note: Only check if default signature method is implemented
         # even though other methods may be implemented and used.
         if not hasattr(actor, spec.default_method):
