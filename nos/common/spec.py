@@ -16,7 +16,7 @@ from nos.common.helpers import memory_bytes
 from nos.common.runtime import RuntimeEnv
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
-from nos.constants import NOS_METADATA_CATALOG_PATH
+from nos.constants import NOS_PROFILE_CATALOG_PATH
 from nos.logging import logger
 from nos.protoc import import_module
 
@@ -327,59 +327,89 @@ class ModelResources:
 
 
 class ModelSpecMetadataCatalog:
-    """Model specification catalog."""
+    """Model specification catalog.
+
+    This is a singleton class that maintains the metadata for all the models
+    registered with the hub. The metadata includes the model resources (device/host memory etc),
+    and the model profile (memory/cpu usage, batch size, input/output shapes etc).
+
+    Usage:
+        >>> catalog = ModelSpecMetadataCatalog.get()
+        >>> metadata: ModelSpecMetadata = spec.metadata(method)
+        >>> resources: ModelResources = metadata.resources
+        >>> profile: Dict[str, Any] = metadata.profile
+
+    """
 
     _instance: Optional["ModelSpecMetadataCatalog"] = None
     """Singleton instance."""
 
-    _registry: Dict[str, "ModelSpecMetadata"] = {}
+    _metadata_catalog: Dict[str, "ModelSpecMetadata"] = {}
     """Model specification metadata registry."""
 
     _resources_catalog: Dict[str, "ModelResources"] = {}
     """Model resources catalog."""
 
-    _metadata_catalog: Dict[str, Dict[str, Any]] = {}
+    _profile_catalog: Dict[str, Dict[str, Any]] = {}
     """Model metadata catalog of various additional profiling details."""
 
     @classmethod
     def get(cls) -> "ModelSpecMetadataCatalog":
         """Get the singleton instance."""
         if cls._instance is None:
+            from nos.hub import Hub  # noqa: F401
+
             cls._instance = cls()
             try:
-                cls._instance.load_catalog()
+                Hub.get()  # force import models
+                cls._instance.load_profile_catalog()
             except FileNotFoundError:
-                logger.warning(f"Model metadata catalog not found, path={NOS_METADATA_CATALOG_PATH}.")
+                logger.warning(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
         return cls._instance
 
     def __contains__(self, model_method_id: Any) -> bool:
         """Check if the model spec metadata is available."""
-        return model_method_id in self._registry
+        return model_method_id in self._metadata_catalog
+
+    def __getstate__(self) -> Dict[str, Any]:
+        """Return the state of the object."""
+        return {
+            "_metadata_catalog": self._metadata_catalog,
+            "_resources_catalog": self._resources_catalog,
+            "_profile_catalog": self._profile_catalog,
+        }
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        """Set the state of the object."""
+        self._metadata_catalog = state["_metadata_catalog"]
+        self._resources_catalog = state["_resources_catalog"]
+        self._profile_catalog = state["_profile_catalog"]
+        self._instance = self
 
     def __getitem__(self, model_method_id: Any) -> "ModelSpecMetadata":
         """Load the model spec metadata."""
         try:
-            return self._registry[model_method_id]
+            return self._metadata_catalog[model_method_id]
         except KeyError:
             raise KeyError(f"Unavailable model (id={model_method_id}).")
 
     def __setitem__(self, model_method_id: Any, metadata: "ModelSpecMetadata"):
         """Add the model spec metadata."""
-        self._registry[model_method_id] = metadata
+        self._metadata_catalog[model_method_id] = metadata
 
     def load(self, model_method_id: Any) -> "ModelSpec":
         """Load the model spec metadata (identical to __getitem__)."""
         return self[model_method_id]
 
-    def load_catalog(self) -> "ModelSpecMetadataCatalog":
-        """Load the model spec metadata from a JSON catalog."""
+    def load_profile_catalog(self) -> "ModelSpecMetadataCatalog":
+        """Load the model profiles from a JSON catalog."""
         import pandas as pd
 
-        if not NOS_METADATA_CATALOG_PATH.exists():
-            raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_METADATA_CATALOG_PATH}.")
+        if not NOS_PROFILE_CATALOG_PATH.exists():
+            raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
 
         # Read the catalog
-        df = pd.read_json(str(NOS_METADATA_CATALOG_PATH), orient="records")
+        df = pd.read_json(str(NOS_PROFILE_CATALOG_PATH), orient="records")
         columns = df.columns
         # Check if the catalog is valid with the required columns
         for col in [
@@ -395,7 +425,7 @@ class ModelSpecMetadataCatalog:
             "prof.forward::memory_cpu::allocated",
         ]:
             if col not in columns:
-                raise ValueError(f"Invalid model metadata catalog, missing column={col}.")
+                raise ValueError(f"Invalid model profile catalog, missing column={col}.")
         # Update the registry
         for _, row in df.iterrows():
             model_id, method = row["model_id"], row["method"]
@@ -410,7 +440,7 @@ class ModelSpecMetadataCatalog:
                 device=row["device_name"],
                 device_memory=device_memory,
             )
-            self._metadata_catalog[f"{model_id}/{method}"] = row.to_dict()
+            self._profile_catalog[f"{model_id}/{method}"] = row.to_dict()
 
 
 @dataclass
@@ -441,11 +471,11 @@ class ModelSpecMetadata:
             return None
 
     @property
-    def metadata(self) -> Dict[str, Any]:
-        """Return the model metadata."""
+    def profile(self) -> Dict[str, Any]:
+        """Return the model profile."""
         catalog = ModelSpecMetadataCatalog.get()
         try:
-            return catalog._metadata_catalog[f"{self.id}/{self.method}"]
+            return catalog._profile_catalog[f"{self.id}/{self.method}"]
         except KeyError:
             logger.debug(f"Model metadata not found in catalog, id={self.id}, method={self.method}.")
             return {}
@@ -523,18 +553,13 @@ class ModelSpec:
             logger.debug(f"Model metadata not found, id={self.id}.")
             return None
 
-    def set_metadata(self, method: str, metadata: ModelSpecMetadata) -> None:
-        """Set the model spec metadata."""
-        catalog = ModelSpecMetadataCatalog.get()
-        catalog[f"{self.id}/{method}"] = metadata
-
     def metadata(self, method: str = None) -> ModelSpecMetadata:
         """Return the model spec metadata for a given method (or defaults to default method)."""
         if method is None:
             method = self.default_method
         catalog = ModelSpecMetadataCatalog.get()
         try:
-            metadata: ModelSpecMetadata = catalog[f"{self.id}/{method}"]
+            metadata: ModelSpecMetadata = catalog._metadata_catalog[f"{self.id}/{method}"]
         except KeyError:
             logger.debug(f"Model metadata not found in catalog, id={self.id}, method={method}.")
             return ModelSpecMetadata(id=self.id, method=method)

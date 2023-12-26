@@ -12,7 +12,7 @@ import rich.status
 from google.protobuf import empty_pb2, wrappers_pb2
 
 from nos import hub
-from nos.common import FunctionSignature, ModelSpec, dumps, loads
+from nos.common import FunctionSignature, ModelSpec, ModelSpecMetadataCatalog, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTransportManager
 from nos.constants import (  # noqa F401
     DEFAULT_GRPC_PORT,  # noqa F401
@@ -176,6 +176,12 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         models = list(hub.list())
         logger.debug(f"ListModels() [models={len(models)}]")
         return nos_service_pb2.GenericResponse(response_bytes=dumps(models))
+
+    def GetModelCatalog(self, _: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.GenericResponse:
+        """Get the model catalog."""
+        catalog = ModelSpecMetadataCatalog.get()
+        logger.debug(f"GetModelCatalog() [catalog={catalog._metadata_catalog}]")
+        return nos_service_pb2.GenericResponse(response_bytes=dumps(catalog))
 
     def GetModelInfo(
         self, request: wrappers_pb2.StringValue, context: grpc.ServicerContext

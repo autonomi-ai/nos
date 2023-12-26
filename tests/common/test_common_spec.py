@@ -376,3 +376,25 @@ def test_common_spec_from_custom_model():
 
     result = model.forward2(images)
     assert result is images
+
+
+def test_model_spec_metadata():
+    from nos.common import ModelResources, ModelSpecMetadata, ModelSpecMetadataCatalog
+
+    catalog = ModelSpecMetadataCatalog.get()
+    assert catalog is not None
+
+    assert len(catalog._resources_catalog) > 0, "Resources catalog must not be empty"
+    assert len(catalog._metadata_catalog) > 0, "Metadata catalog must not be empty"
+    assert len(catalog._profile_catalog) > 0, "Profile catalog must not be empty"
+
+    for k in catalog._metadata_catalog:
+        metadata: ModelSpecMetadata = catalog._metadata_catalog[k]
+        assert isinstance(metadata, ModelSpecMetadata)
+        assert metadata.id is not None
+        assert metadata.method is not None
+        assert metadata.task is not None
+
+        assert isinstance(metadata.resources, (type(None), ModelResources))
+        assert metadata.profile is not None
+        assert isinstance(metadata.profile, dict)

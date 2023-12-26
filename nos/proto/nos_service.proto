@@ -39,6 +39,7 @@ service InferenceService {
   rpc ListModels(google.protobuf.Empty) returns (GenericResponse) {};
 
   // Get model information from the deployment
+  rpc GetModelCatalog(google.protobuf.Empty) returns (GenericResponse) {};
   rpc GetModelInfo(google.protobuf.StringValue) returns (GenericResponse) {};
 
   // Run the inference request

@@ -18,8 +18,8 @@ from nos.common import ModelResources, ModelSpec, ModelSpecMetadataCatalog
 from nos.logging import logger
 
 
-NOS_MAX_CONCURRENT_MODELS = int(os.getenv("NOS_MAX_CONCURRENT_MODELS", 4))
-NOS_MEMRAY_ENABLED = bool(int(os.getenv("NOS_MEMRAY_ENABLED", "0")))
+NOS_MAX_CONCURRENT_MODELS = int(os.getenv("NOS_MAX_CONCURRENT_MODELS", 2))
+NOS_MEMRAY_ENABLED = bool(int(os.getenv("NOS_MEMRAY_ENABLED", 0)))
 NOS_RAY_LOGS_DIR = os.getenv("NOS_RAY_LOGS_DIR", "/tmp/ray/session_latest/logs")
 
 if NOS_MEMRAY_ENABLED:
