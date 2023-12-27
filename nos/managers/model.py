@@ -8,16 +8,18 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
+import humanize
 import ray
 import torch
 from ray.runtime_env import RuntimeEnv
 from ray.util.queue import Queue
 
-from nos.common import ModelSpec
+from nos.common import ModelResources, ModelSpec, ModelSpecMetadataCatalog
 from nos.logging import logger
 
 
-NOS_MEMRAY_ENABLED = bool(int(os.getenv("NOS_MEMRAY_ENABLED", "0")))
+NOS_MAX_CONCURRENT_MODELS = int(os.getenv("NOS_MAX_CONCURRENT_MODELS", 2))
+NOS_MEMRAY_ENABLED = bool(int(os.getenv("NOS_MEMRAY_ENABLED", 0)))
 NOS_RAY_LOGS_DIR = os.getenv("NOS_RAY_LOGS_DIR", "/tmp/ray/session_latest/logs")
 
 if NOS_MEMRAY_ENABLED:
@@ -166,10 +168,56 @@ class ModelHandle:
         # if num_cpus is not specified, OMP_NUM_THREADS will default to 1.
         # Instead, for now, we manually set the environment variable in `InferenceServiceRuntime`
         # to the number of CPUs threads available.
-        actor_opts = {"num_gpus": 0.25 if torch.cuda.is_available() else 0}
+        if torch.cuda.is_available():
+            try:
+                # Get the model resources from the catalog
+                catalog = ModelSpecMetadataCatalog.get()
+                resources: ModelResources = catalog._resources_catalog[f"{spec.id}/{spec.default_method}"]
+
+                # TODO (spillai): This needs to be resolved differently for
+                # multi-node clusters.
+                # Determine the current device id by checking the number of GPUs used.
+                total, available = ray.cluster_resources(), ray.available_resources()
+                gpus_used = total["GPU"] - available["GPU"]
+                device_id = int(gpus_used)
+                device_memory = torch.cuda.get_device_properties(device_id).total_memory
+
+                # Fractional GPU memory needed within the current device
+                gpu_frac = float(resources.device_memory) / device_memory
+                gpu_frac = round(gpu_frac * 10) / 10.0
+
+                # Fractional GPU used for the current device
+                gpu_frac_used = gpus_used - int(gpus_used)
+                gpu_frac_avail = (1 - gpu_frac_used) * device_memory
+                logger.debug(
+                    f"""actor_opts [model={spec.id}, """
+                    f"""mem={humanize.naturalsize(resources.device_memory, binary=True)}, device={device_id}, device_mem={humanize.naturalsize(device_memory, binary=True)}, """
+                    f"""gpu_frac={gpu_frac}, gpu_frac_avail={gpu_frac_avail}, """
+                    f"""gpu_frac_used={gpu_frac_used}]"""
+                )
+                if gpu_frac > gpu_frac_avail:
+                    logger.debug(
+                        f"Insufficient GPU memory for model [model={spec.id}, "
+                        f"method={spec.default_method}, gpu_frac={gpu_frac}, "
+                        f"gpu_frac_avail={gpu_frac_avail}, gpu_frac_used={gpu_frac_used}]"
+                    )
+                    if device_id == torch.cuda.device_count() - 1:
+                        # TOFIX (spillai): evict models to make space for the current model
+                        logger.debug("All GPUs are fully utilized, this may result in undesirable behavior.")
+                actor_opts = {"num_gpus": gpu_frac}
+            except Exception as exc:
+                logger.debug(f"Failed to get GPU memory [e={exc}].")
+                gpu_frac = 0.0
+
+            # Force models to use the GPU if the resource catalog is not set
+            if gpu_frac == 0.0:
+                actor_opts = {"num_gpus": 1.0 / NOS_MAX_CONCURRENT_MODELS}
+        else:
+            actor_opts = {"num_gpus": 0}
         if spec.runtime_env is not None:
             logger.debug("Using custom runtime environment, this may take a while to build.")
             actor_opts["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
+        logger.debug(f"Actor options [id={spec.id}, opts={actor_opts}]")
         return actor_opts
 
     @classmethod
@@ -194,7 +242,11 @@ class ModelHandle:
         actor_cls = ray.remote(**actor_options)(model_cls)
 
         # Check if the model class has the required method
+        logger.debug(
+            f"Creating actor [actor={actor_cls}, opts={actor_options}, cls={model_cls}, init_args={spec.default_signature.init_args}, init_kwargs={spec.default_signature.init_kwargs}]"
+        )
         actor = actor_cls.remote(*spec.default_signature.init_args, **spec.default_signature.init_kwargs)
+
         # Note: Only check if default signature method is implemented
         # even though other methods may be implemented and used.
         if not hasattr(actor, spec.default_method):
@@ -399,7 +451,7 @@ class ModelManager:
     policy: EvictionPolicy = EvictionPolicy.FIFO
     """Eviction policy."""
 
-    max_concurrent_models: int = int(os.getenv("NOS_MAX_CONCURRENT_MODELS", 1))
+    max_concurrent_models: int = NOS_MAX_CONCURRENT_MODELS
     """Maximum number of concurrent models."""
 
     handlers: Dict[str, ModelHandle] = field(default_factory=OrderedDict)

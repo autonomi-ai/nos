@@ -11,6 +11,7 @@ from pydantic.errors import ConfigError
 from nos.common.metaclass import SingletonMetaclass  # noqa: F401
 from nos.common.spec import (  # noqa: F401
     FunctionSignature,
+    ModelResources,
     ModelSpec,
     ModelSpecMetadata,
     ModelSpecMetadataCatalog,
@@ -96,11 +97,12 @@ class Hub:
         model_id: str,
         task: TaskType,
         func_or_cls: Callable,
-        method: str = "__call__",
         init_args: Tuple[Any] = (),
         init_kwargs: Dict[str, Any] = {},  # noqa: B006
+        method: str = "__call__",
         inputs: Dict[str, Any] = {},  # noqa: B006
         outputs: Union[Any, Dict[str, Any], None] = None,  # noqa: B006
+        resources: ModelResources = None,
         **kwargs,
     ) -> ModelSpec:
         """Model registry decorator.
@@ -130,14 +132,23 @@ class Hub:
                 output_annotations=outputs,
             ),
         }
-        # Add metadata for the model
-        spec = ModelSpec(model_id, signature=signature)
-        metadata: ModelSpecMetadata = ModelSpecMetadata(model_id, method, task)
-        spec.set_metadata(method, metadata)
-        logger.debug(f"Created model spec [id={model_id}, spec={spec}, metadata={metadata}]")
 
         # Get hub instance
         hub = cls.get()
+
+        # Add metadata for the model
+        catalog = ModelSpecMetadataCatalog.get()
+        spec = ModelSpec(model_id, signature=signature)
+        logger.debug(f"Created model spec [id={model_id}, spec={spec}]")
+
+        # Add task metadata for the model
+        if task is not None:
+            metadata = ModelSpecMetadata(model_id, method, task)
+            catalog._metadata_catalog[f"{model_id}/{method}"] = metadata
+
+        # Add model resources
+        if resources is not None:
+            catalog._resources_catalog[f"{model_id}/{method}"] = resources
 
         # Register model id to model spec registry
         if model_id not in hub._registry:
@@ -152,13 +163,47 @@ class Hub:
                     f"Adding task signature [model={model_id}, task={task}, method={method}, sig={spec.signature}]"
                 )
                 _spec.signature[method] = spec.signature[method]
-                _spec.set_metadata(method, spec.metadata(method))
+                catalog._metadata_catalog[f"{model_id}/{method}"] = spec.metadata(method)
             else:
                 logger.debug(
                     f"Task signature already registered [model={model_id}, task={task}, method={method}, sig={spec.signature}]"
                 )
 
         logger.debug(f"Registered model [id={model_id}, spec={spec}]")
+        return spec
+
+    @classmethod
+    def register_spec(cls, spec: ModelSpec, task: TaskType = None, resources: ModelResources = None) -> ModelSpec:
+        """Register model spec to the registry.
+
+        Args:
+            spec (ModelSpec): Model specification.
+            task (TaskType): Task type (e.g. `TaskType.OBJECT_DETECTION_2D`).
+            resources (ModelResources): Model resources.
+        Returns:
+            ModelSpec: Model specification.
+        """
+        logger.debug(f"Registering model spec [id={spec.id}, spec={spec}]")
+
+        # Get hub instance
+        hub = cls.get()
+
+        # Add metadata for the model
+        catalog = ModelSpecMetadataCatalog.get()
+
+        # Add task metadata for the model
+        if task is not None:
+            metadata = ModelSpecMetadata(spec.id, spec.default_method, task)
+            catalog._metadata_catalog[f"{spec.id}/{spec.default_method}"] = metadata
+
+        # Add model resources
+        if resources is not None:
+            catalog._resources_catalog[f"{spec.id}/{spec.default_method}"] = resources
+
+        # Register model id to model spec registry
+        if spec.id not in hub._registry:
+            hub._registry[spec.id] = spec
+            logger.debug(f"Registered model spec [id={spec.id}, spec={spec}]")
         return spec
 
     @classmethod
@@ -177,14 +222,20 @@ class Hub:
 
             id: str
             """Model identifier."""
+            runtime_env: str
+            """Runtime environment."""
             model_path: str
             """Model path."""
             model_cls: Callable
             """Model class name."""
             default_method: str
             """Default model method name."""
-            runtime_env: str
-            """Runtime environment."""
+            init_args: Tuple[Any, ...] = field(default_factory=tuple)
+            """Arguments to initialize the model instance."""
+            init_kwargs: Dict[str, Any] = field(default_factory=dict)
+            """Keyword arguments to initialize the model instance."""
+            resources: ModelResources = field(default_factory=ModelResources)
+            """Model resources."""
 
             @root_validator(pre=True, allow_reuse=True)
             def _validate_model_cls_import(cls, values):
@@ -257,12 +308,15 @@ class Hub:
                 raise ValueError(f"Invalid model config provided, filename={filename}, e={e}")
 
             # Register the model as a custom model
-            spec: ModelSpec = cls.register(
-                mconfig.id,
-                TaskType.CUSTOM,
+            spec = ModelSpec.from_cls(
                 mconfig.model_cls,
                 method=mconfig.default_method,
+                init_args=mconfig.init_args,
+                init_kwargs=mconfig.init_kwargs,
+                resources=mconfig.resources,
+                model_id=mconfig.id,
             )
+            cls.register_spec(spec, task=TaskType.CUSTOM, resources=mconfig.resources)
             logger.debug(f"Registered model [id={model_id}, spec={spec}]")
             specs.append(spec)
         return specs

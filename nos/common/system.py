@@ -3,7 +3,7 @@ import platform
 import subprocess
 from functools import lru_cache
 from io import StringIO
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 from cpuinfo import get_cpu_info
@@ -239,3 +239,21 @@ def get_system_info(docker: bool = False, gpu: bool = False) -> Dict[str, Any]:
         else:
             info["gpu"] = None
     return info
+
+
+def check_runtime_dependencies(deps: Union[str, List[str]]) -> bool:
+    """Check if runtime dependencies are installed."""
+    if isinstance(deps, str):
+        deps = [deps]
+
+    # Check if all dependencies are installed
+    dependency_table = {"docker": has_docker, "docker-compose": has_docker_compose, "nvidia-docker": has_nvidia_docker}
+
+    satisfied = True
+    for dep in deps:
+        if dep not in dependency_table:
+            raise ValueError(f"Invalid dependency: {dep}, available dependencies: {dependency_table.keys()}")
+        satisfied &= dependency_table[dep]()
+        if not satisfied:
+            return False
+    return satisfied

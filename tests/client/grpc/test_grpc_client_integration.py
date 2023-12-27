@@ -51,7 +51,7 @@ def test_grpc_client_inference(client_with_server, request):  # noqa: F811
 
 
 def _test_grpc_client_inference_spec(client):  # noqa: F811
-    from nos.common import ImageSpec, ModelSpec, ObjectTypeInfo, TaskType, TensorSpec
+    from nos.common import ImageSpec, ModelSpec, ModelSpecMetadataCatalog, ObjectTypeInfo, TaskType, TensorSpec
 
     # List models
     models: List[str] = client.ListModels()
@@ -61,6 +61,15 @@ def _test_grpc_client_inference_spec(client):  # noqa: F811
     # Check GetModelInfo for all models registered
     for model_id in models:
         spec: ModelSpec = client.GetModelInfo(model_id)
+
+        # Tests the internal model catalog serialization to ensure
+        # that the metadata, profile and resource catalogs are relayed
+        # to the client correctly.
+        catalog: ModelSpecMetadataCatalog = client._get_model_catalog()
+        assert catalog is not None
+        assert isinstance(catalog, ModelSpecMetadataCatalog)
+
+        # Check that the model spec is valid
         assert spec.task() and spec.name
         assert spec.signature is not None
         assert len(spec.signature) > 0

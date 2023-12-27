@@ -7,7 +7,19 @@ from nos.test.conftest import (  # noqa: F401, E402
 )
 
 
-@pytest.mark.skipif(pytest.importorskip("openai") is None, reason="openai is not installed")
+def openai_v1_available():
+    try:
+        import openai
+
+        version = openai.__version__.split(".")
+        return version[0] >= "1"
+    except ImportError:
+        return False
+
+
+pytestmark = pytest.mark.skipif(not openai_v1_available(), reason="openai version >= 1.x.x")
+
+
 @pytest.mark.client
 def test_openai_client_chat_completion(http_server_with_gpu_backend):  # noqa: F811
     import time

@@ -267,6 +267,8 @@ def _serve(
             image_config.env["NOS_HUB_CATALOG_PATH"] = f"$NOS_HUB_CATALOG_PATH:{str(container_config_path)}"
 
         # Render the dockerfiles
+        # agipack is responsible for the "images" sections
+        # which are rendered into Dockerfiles and docker-compose files.
         builder = AGIPack(config)
         dockerfiles: Dict[str, Path] = builder.render(
             filename=str(NOS_SERVE_TMP_DIR / f"Dockerfile.{sandbox_name}"),
@@ -308,11 +310,14 @@ def _serve(
         # Copy the dockerfiles to the current working directory if debug is enabled.
         for _docker_target, filename in dockerfiles.items():
             if debug:
-                shutil.copyfile(filename, Path.cwd() / filename.name)
+                shutil.copyfile(filename, Path.cwd() / Path(filename).name)
 
         # Check if the image was built
         if image_name is None:
             raise ValueError(f"Failed to build target={target}, cannot proceed.")
+
+    # If no config file is provided, then we can use the default
+    # docker image for the runtime environment.
     else:
         container_sandbox_path: Path = None
         container_config_path: Path = None
