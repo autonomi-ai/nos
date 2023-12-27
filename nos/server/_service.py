@@ -320,7 +320,9 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
 
-def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = GRPC_MAX_WORKER_THREADS) -> None:
+def serve(
+    address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = GRPC_MAX_WORKER_THREADS, wait_for_termination: bool = True
+) -> grpc.Server:
     """Start the gRPC server."""
     from concurrent import futures
 
@@ -340,8 +342,11 @@ def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = GRPC_MA
     console.print(
         f"[bold green] ✓ InferenceService :: Deployment complete (elapsed={time.time() - start_t:.1f}s) [/bold green]",  # noqa
     )
+    if not wait_for_termination:
+        return server
     server.wait_for_termination()
     console.print("Server stopped")
+    return server
 
 
 def main():

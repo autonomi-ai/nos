@@ -1,6 +1,3 @@
-from concurrent import futures
-
-import grpc
 import pytest
 from loguru import logger
 
@@ -52,18 +49,11 @@ def grpc_server(ray_executor):
     """Test gRPC server (Port: 50052)."""
     from loguru import logger
 
-    from nos.server._service import InferenceServiceImpl
+    from nos.server._service import serve
 
     logger.info(f"Starting gRPC test server on port: {GRPC_TEST_PORT}")
-    options = [
-        ("grpc.max_message_length", 512 * 1024 * 1024),
-        ("grpc.max_send_message_length", 512 * 1024 * 1024),
-        ("grpc.max_receive_message_length", 512 * 1024 * 1024),
-    ]
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1), options=options)
-    nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)
-    server.add_insecure_port(f"[::]:{GRPC_TEST_PORT}")
-    server.start()
+    server = serve(address=f"[::]:{GRPC_TEST_PORT}", max_workers=1, wait_for_termination=False)
+    assert server is not None
     yield server
     server.stop(grace=None)
 
@@ -265,16 +255,16 @@ def http_client_with_gpu_backend(grpc_server_docker_runtime_gpu):  # noqa: F811
 
 # Needed for referencing relevant pytest fixtures
 HTTP_CLIENT_SERVER_CONFIGURATIONS = [
-    # HTTP_CLIENT_WITH_LOCAL,
+    HTTP_CLIENT_WITH_LOCAL,
     # HTTP_CLIENT_WITH_CPU,
-    HTTP_CLIENT_WITH_GPU
+    # HTTP_CLIENT_WITH_GPU
 ]
 
 # Needed for referencing relevant pytest fixtures
 GRPC_CLIENT_SERVER_CONFIGURATIONS = [
-    # GRPC_CLIENT_WITH_LOCAL,
+    GRPC_CLIENT_WITH_LOCAL,
     # GRPC_CLIENT_WITH_CPU,
-    GRPC_CLIENT_WITH_GPU
+    # GRPC_CLIENT_WITH_GPU
 ]
 
 
