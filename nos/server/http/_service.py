@@ -3,6 +3,7 @@ import dataclasses
 import os
 import time
 from dataclasses import field
+from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
 from typing import Any, Dict, List, Optional
@@ -146,14 +147,15 @@ def app_factory(
         """Get the inference client."""
         return nos_app.client
 
-    def normalize_id(model_id: str) -> str:
-        """Normalize the model identifier."""
+    def unnormalize_id(model_id: str) -> str:
+        """Un-normalize the model identifier."""
         return model_id.replace("--", "/")
 
-    def unnormalize_id(model_id: str) -> str:
-        """Unnormalize the model identifier."""
+    def normalize_id(model_id: str) -> str:
+        """Normalize the model identifier."""
         return model_id.replace("/", "--")
 
+    @lru_cache(maxsize=1)
     def build_model_table(client: Client) -> Dict[str, ChatModel]:
         """Build the model table."""
         if len(_model_table) > 0:
@@ -204,6 +206,7 @@ def app_factory(
     ) -> StreamingResponse:
         """Perform chat completion on the given input data."""
         logger.debug(f"Received chat request [model={request.model}, messages={request.messages}]")
+        _model_table = build_model_table(client)
         try:
             _ = _model_table[request.model]
         except KeyError:
