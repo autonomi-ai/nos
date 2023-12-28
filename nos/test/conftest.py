@@ -1,6 +1,4 @@
-import asyncio
 import pytest
-import pytest_asyncio
 from loguru import logger
 
 from nos.constants import DEFAULT_GRPC_PORT
@@ -46,9 +44,6 @@ def model_manager(ray_executor):  # noqa: F811
     yield manager
 
 
-
-# @pytest.mark.asyncio
-# @pytest_asyncio.fixture(scope="session")
 @pytest.fixture(scope="session")
 async def grpc_server(ray_executor):
     """Test gRPC server (Port: 50052)."""

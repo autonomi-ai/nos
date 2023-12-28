@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 
 from nos import hub
-from nos.common import ImageSpec, TaskType
+from nos.common import ImageSpec, ModelResources, TaskType
 from nos.common.types import Batch, ImageT
 
 
@@ -37,6 +37,7 @@ class NoOp:
 
 
 # Register noop model separately for each method
+resources = ModelResources(cpu=1, memory="100Mi", device="cpu")
 hub.register(
     "noop/process-images",
     TaskType.CUSTOM,
@@ -49,6 +50,7 @@ hub.register(
     },
     outputs=List[int],
     method="process_images",
+    resources=resources,
 )
 hub.register(
     "noop/process-texts",
@@ -59,18 +61,21 @@ hub.register(
     },
     outputs=List[int],
     method="process_texts",
+    resources=resources,
 )
 hub.register(
     "noop/process-file",
     TaskType.CUSTOM,
     NoOp,
     method="process_file",
+    resources=resources,
 )
 hub.register(
     "noop/process-sleep",
     TaskType.CUSTOM,
     NoOp,
     method="process_sleep",
+    resources=resources,
 )
 hub.register(
     "noop/stream-texts",
@@ -78,6 +83,7 @@ hub.register(
     NoOp,
     outputs=Iterable[str],
     method="stream_texts",
+    resources=resources,
 )
 
 # Register model with multiple methods under the same name
@@ -92,6 +98,7 @@ hub.register(
         ]
     },
     method="process_images",
+    resources=resources,
 )
 hub.register(
     "noop/process",
@@ -101,12 +108,14 @@ hub.register(
         "texts": Batch[str, 1],
     },
     method="process_texts",
+    resources=resources,
 )
 hub.register(
     "noop/process",
     TaskType.CUSTOM,
     NoOp,
     method="process_file",
+    resources=resources,
 )
 hub.register(
     "noop/process",
@@ -119,4 +128,5 @@ hub.register(
     TaskType.CUSTOM,
     NoOp,
     method="stream_texts",
+    resources=resources,
 )

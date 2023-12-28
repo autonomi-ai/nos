@@ -17,6 +17,7 @@ from ray.util.queue import Queue
 
 from nos.common import ModelResources, ModelSpec, ModelSpecMetadataCatalog
 from nos.logging import logger
+from nos.managers.pool import ActorPool
 
 
 NOS_MAX_CONCURRENT_MODELS = int(os.getenv("NOS_MAX_CONCURRENT_MODELS", 2))
@@ -145,20 +146,13 @@ class ModelHandle:
     """Number of replicas."""
     _actors: List[Union[ray.remote, ray.actor.ActorHandle]] = field(init=False, default=None)
     """Ray actor handle."""
-    _actor_pool: ray.util.ActorPool = field(init=False, default=None)
+    _actor_pool: ActorPool = field(init=False, default=None)
     """Ray actor pool."""
-    _results_queue: ModelResultQueue = field(init=False, default_factory=ModelResultQueue)
-    """Queue to fetch results from the actor pool."""
-    _actor_profile: Dict[str, Any] = field(init=False, default=None)
-    """Actor profile."""
-    _future_to_index: Dict[str, int] = field(init=False, default_factory=dict)
-    """Future to index mapping."""
 
     def __post_init__(self):
         """Initialize the actor handles."""
         self._actors = [self._actor(self.spec) for _ in range(self.num_replicas)]
-        self._actor_pool = ray.util.ActorPool(self._actors)
-        self._results_queue.resize(self.num_replicas * 2)
+        self._actor_pool = ActorPool(self._actors)
 
         # Patch the model handle with methods from the model spec signature
         for method in self.spec.signature:
@@ -188,56 +182,69 @@ class ModelHandle:
         # if num_cpus is not specified, OMP_NUM_THREADS will default to 1.
         # Instead, for now, we manually set the environment variable in `InferenceServiceRuntime`
         # to the number of CPUs threads available.
-        if torch.cuda.is_available():
-            try:
-                # Get the model resources from the catalog
-                catalog = ModelSpecMetadataCatalog.get()
-                resources: ModelResources = catalog._resources_catalog[f"{spec.id}/{spec.default_method}"]
+        # Get the model resources from the catalog
+        try:
+            catalog = ModelSpecMetadataCatalog.get()
+            resources: ModelResources = catalog._resources_catalog[f"{spec.id}/{spec.default_method}"]
+        except Exception:
+            resources = ModelResources()
+            logger.debug(f"Failed to get model resources [model={spec.id}, method={spec.default_method}]")
 
+        # For GPU models, we need to set the number of fractional GPUs to use
+        if (resources.device == "auto" or resources.device == "gpu") and torch.cuda.is_available():
+            try:
                 # TODO (spillai): This needs to be resolved differently for
                 # multi-node clusters.
                 # Determine the current device id by checking the number of GPUs used.
                 total, available = ray.cluster_resources(), ray.available_resources()
                 gpus_used = total["GPU"] - available["GPU"]
                 device_id = int(gpus_used)
-                device_memory = torch.cuda.get_device_properties(device_id).total_memory
 
-                # Fractional GPU memory needed within the current device
-                gpu_frac = float(resources.device_memory) / device_memory
-                gpu_frac = round(gpu_frac * 10) / 10.0
+                if isinstance(resources.device_memory, str) and resources.device_memory == "auto":
+                    gpu_frac = 1.0 / NOS_MAX_CONCURRENT_MODELS
+                    actor_opts = {"num_gpus": gpu_frac}
+                elif isinstance(resources.device_memory, int):
+                    # Fractional GPU memory needed within the current device
+                    device_memory = torch.cuda.get_device_properties(device_id).total_memory
+                    gpu_frac = float(resources.device_memory) / device_memory
+                    gpu_frac = round(gpu_frac * 10) / 10.0
 
-                # Fractional GPU used for the current device
-                gpu_frac_used = gpus_used - int(gpus_used)
-                gpu_frac_avail = (1 - gpu_frac_used) * device_memory
-                logger.debug(
-                    f"""actor_opts [model={spec.id}, """
-                    f"""mem={humanize.naturalsize(resources.device_memory, binary=True)}, device={device_id}, device_mem={humanize.naturalsize(device_memory, binary=True)}, """
-                    f"""gpu_frac={gpu_frac}, gpu_frac_avail={gpu_frac_avail}, """
-                    f"""gpu_frac_used={gpu_frac_used}]"""
-                )
-                if gpu_frac > gpu_frac_avail:
+                    # Fractional GPU used for the current device
+                    gpu_frac_used = gpus_used - int(gpus_used)
+                    gpu_frac_avail = (1 - gpu_frac_used) * device_memory
                     logger.debug(
-                        f"Insufficient GPU memory for model [model={spec.id}, "
-                        f"method={spec.default_method}, gpu_frac={gpu_frac}, "
-                        f"gpu_frac_avail={gpu_frac_avail}, gpu_frac_used={gpu_frac_used}]"
+                        f"""actor_opts [model={spec.id}, """
+                        f"""mem={humanize.naturalsize(resources.device_memory, binary=True)}, device={device_id}, device_mem={humanize.naturalsize(device_memory, binary=True)}, """
+                        f"""gpu_frac={gpu_frac}, gpu_frac_avail={gpu_frac_avail}, """
+                        f"""gpu_frac_used={gpu_frac_used}]"""
                     )
-                    if device_id == torch.cuda.device_count() - 1:
-                        # TOFIX (spillai): evict models to make space for the current model
-                        logger.debug("All GPUs are fully utilized, this may result in undesirable behavior.")
-                actor_opts = {"num_gpus": gpu_frac}
+                    if gpu_frac > gpu_frac_avail:
+                        logger.debug(
+                            f"Insufficient GPU memory for model [model={spec.id}, "
+                            f"method={spec.default_method}, gpu_frac={gpu_frac}, "
+                            f"gpu_frac_avail={gpu_frac_avail}, gpu_frac_used={gpu_frac_used}]"
+                        )
+                        if device_id == torch.cuda.device_count() - 1:
+                            # TOFIX (spillai): evict models to make space for the current model
+                            logger.debug("All GPUs are fully utilized, this may result in undesirable behavior.")
+                    actor_opts = {"num_gpus": gpu_frac}
+                else:
+                    raise ValueError(f"Invalid device memory: {resources.device_memory}")
             except Exception as exc:
                 logger.debug(f"Failed to get GPU memory [e={exc}].")
-                gpu_frac = 0.0
-
-            # Force models to use the GPU if the resource catalog is not set
-            if gpu_frac == 0.0:
                 actor_opts = {"num_gpus": 1.0 / NOS_MAX_CONCURRENT_MODELS}
+
+        elif resources.device == "cpu":
+            actor_opts = {"num_cpus": resources.cpus, "memory": resources.memory}
+
         else:
-            actor_opts = {"num_gpus": 0}
+            actor_opts = {"num_cpus": resources.cpus, "memory": resources.memory}
+
         if spec.runtime_env is not None:
             logger.debug("Using custom runtime environment, this may take a while to build.")
             actor_opts["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
         logger.debug(f"Actor options [id={spec.id}, opts={actor_opts}]")
+
         return actor_opts
 
     @classmethod
@@ -327,14 +334,10 @@ class ModelHandle:
         if not isinstance(replicas, int):
             raise ValueError(f"Invalid replicas: {replicas}")
 
-        # Check if there are any pending submits
-        # on the actor pool, and wait until they are complete / added
-        # to the results queue.
-        if self._actor_pool.has_next() or len(self._actor_pool._pending_submits):
+        # Check if there are any pending futures
+        if self._actor_pool.has_next():
             logger.warning(f"Pending futures detected, this may result in dropped queue items [name={self.spec.name}]")
         logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")
-        while self._actor_pool.has_next():
-            self._fetch_next()
         logger.debug(f"Scaling model [name={self.spec.name}].")
 
         if replicas == len(self._actors):
@@ -353,7 +356,6 @@ class ModelHandle:
 
         # Update repicas and queue size
         self.num_replicas = replicas
-        self._results_queue.resize(self.num_replicas * 2)
 
         # Re-create the actor pool
         logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
@@ -362,12 +364,12 @@ class ModelHandle:
 
         # Re-create the actor pool
         logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
-        self._actor_pool = ray.util.ActorPool(self._actors)
+        self._actor_pool = ActorPool(self._actors)
         assert len(self._actors) == replicas, "Model scaling failed."
         gc.collect()
         return self
 
-    def submit(self, *args: Any, **kwargs: Any) -> str:
+    def submit(self, *args: Any, **kwargs: Any) -> ray.ObjectRef:
         """Submit a task to the actor pool.
 
         Note (spillai): Caveats for `.submit()` with custom methods:
@@ -387,10 +389,8 @@ class ModelHandle:
                 used to call different class methods).
 
         Returns:
-            str: Ray object reference as a string.
+            ray.ObjectRef: Ray object reference as a string.
         """
-        # assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
-
         # Submit the task to the actor pool, leveraging all replicas
         method: str = kwargs.pop("_method", self.spec.default_method)
         # TODO (spillai): We should be able to determine if the output
@@ -399,19 +399,10 @@ class ModelHandle:
         remote_opts = {"num_returns": "streaming"} if stream else {}
         if not self._actor_pool._idle_actors:
             logger.warning(f"Actor pool is full, this may result in dropped queue items [name={self.spec.name}]")
-        self._actor_pool.submit(lambda a, v: getattr(a, method).options(**remote_opts).remote(**v), kwargs)
+        future_ref = self._actor_pool.submit(
+            lambda a, v: getattr(a, method).options(**remote_opts).remote(**v), kwargs
+        )
         logger.info(f"Submitted task [name={self.spec.name}, method={method}, kwargs={kwargs}]")
-
-        # If there are pending submissions due to the actor pool being fully utilized,
-        # fetch the next result from the actor pool and put it in the queue.
-        # if len(self._actor_pool._pending_submits):
-        #     self._fetch_next()
-        # assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
-
-        # Get the future object reference for the last task submitted
-        future_ref: ray.ObjectRef = self._actor_pool._index_to_future[self._actor_pool._next_task_index - 1]
-        self._future_to_index[future_ref.hex()] = self._actor_pool._next_task_index - 1
-
         return future_ref
 
     def cleanup(self) -> None:
@@ -423,58 +414,11 @@ class ModelHandle:
 
     def get(self, future_ref: ray.ObjectRef = None, timeout: int = None) -> Any:
         """Get the result future."""
-        if future_ref is not None:
-            result = ray.get(future_ref)
-            index = self._future_to_index.pop(future_ref.hex())
-            future = self._actor_pool._index_to_future[index]
-            del self._actor_pool._index_to_future[index]
-            future_key = tuple(future) if isinstance(future, list) else future
-            i, a = self._actor_pool._future_to_actor.pop(future_key)
-            self._actor_pool._return_actor(a)
-            return result
-        else:
-            return self._actor_pool.get_next()
+        return self._actor_pool.get(future_ref)
 
     async def async_get(self, future_ref: ray.ObjectRef = None, timeout: int = None) -> Any:
         """Get the result future asynchronously."""
-        if future_ref is not None:
-            result = await future_ref
-            index = self._future_to_index.pop(future_ref.hex())
-            future = self._actor_pool._index_to_future[index]
-            del self._actor_pool._index_to_future[index]
-            future_key = tuple(future) if isinstance(future, list) else future
-            i, a = self._actor_pool._future_to_actor.pop(future_key)
-            self._actor_pool._return_actor(a)
-            return result
-        else:
-            return self._actor_pool.get_next()
-
-    def has_next(self) -> bool:
-        """Check if the handle has a result in the queue."""
-        return self._actor_pool.has_next() or len(self._results_queue)
-
-    def get_next(self) -> Any:
-        """Get the next result from the actor pool queue or by the object reference."""
-        if not len(self._results_queue):
-            self._results_queue.put(self._actor_pool.get_next())
-        return self._results_queue.get()
-
-    def _fetch_next(self) -> None:
-        """Fetch results from the actor pool."""
-        self._results_queue.put(self._actor_pool.get_next())
-        if len(self._results_queue) > self._results_queue._size:
-            logger.warning("Results queue full, dropping results. Use `.get()` to get results.")
-            self._results_queue.get()
-
-    @property
-    def pending(self) -> List[ray.ObjectRef]:
-        """Get the pending submisions."""
-        return self._actor_pool._pending_submits
-
-    @property
-    def results(self) -> ModelResultQueue:
-        """Get the results queue."""
-        return self._results_queue
+        return await self._actor_pool.async_get(future_ref)
 
 
 @dataclass(frozen=True)
