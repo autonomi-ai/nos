@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, Iterator, Union
+from typing import Any, Dict, Iterator, List, Union
 
 import grpc
 import rich.console
@@ -65,14 +65,25 @@ class InferenceService:
     """
 
     def __init__(self):
+        # Ray executor to execute models
         self.executor = RayExecutor.get()
-        if not self.executor.is_initialized():
-            raise RuntimeError("Ray executor is not initialized")
+        try:
+            self.executor.init()
+        except Exception as e:
+            err_msg = f"Failed to initialize executor [e={e}]"
+            logger.info(err_msg)
+            raise RuntimeError(err_msg)
+        # Model manager to manage model loading / unloading
         self.model_manager = ModelManager()
+        # Shared memory transport manager for faster IPC
         if NOS_SHM_ENABLED:
             self.shm_manager = SharedMemoryTransportManager()
         else:
             self.shm_manager = None
+
+    def load_model_spec(self, model_spec: str, num_replicas: int = 1) -> ModelHandle:
+        """Load the model by spec."""
+        return self.model_manager.load(model_spec, num_replicas=num_replicas)
 
     def load_model(self, model_name: str, num_replicas: int = 1) -> ModelHandle:
         """Load the model."""
@@ -81,7 +92,7 @@ class InferenceService:
             model_spec: ModelSpec = load_spec(model_name)
         except Exception as e:
             raise ModelNotFoundError(f"Failed to load model spec [model_name={model_name}, e={e}]")
-        return self.model_manager.load(model_spec, num_replicas=num_replicas)
+        return self.load_model_spec(model_spec, num_replicas=num_replicas)
 
     async def execute_model(
         self, model_name: str, method: str = None, inputs: Dict[str, Any] = None, stream: bool = False
@@ -176,16 +187,22 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
     https://docs.ray.io/en/master/serve/direct-ingress.html?highlight=grpc#bring-your-own-schema
     """
 
-    def __init__(self, *args, **kwargs):
-        self.executor = RayExecutor.get()
-        try:
-            self.executor.init()
-        except Exception as e:
-            err_msg = f"Failed to initialize executor [e={e}]"
-            logger.info(err_msg)
-            raise RuntimeError(err_msg)
+    def __init__(self, catalog_filename: str = None):
+        super().__init__()
         self._tmp_files = {}
-        super().__init__(*args, **kwargs)
+
+        if catalog_filename is None:
+            return
+
+        if not Path(catalog_filename).exists():
+            raise ValueError(f"Model catalog not found [catalog={catalog_filename}]")
+
+        # Register models from the catalog
+        services: List[Any] = hub.register_from_yaml(catalog_filename)
+        for svc in services:
+            logger.debug(f"Servicing model [svc={svc}, replicas={svc.deployment.num_replicas}]")
+            self.load_model_spec(svc.model, num_replicas=svc.deployment.num_replicas)
+            logger.debug(f"Deployed model [svc={svc}]. \n{self.model_manager}")
 
     def Ping(self, _: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.PingResponse:
         """Health check."""
@@ -368,6 +385,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
 async def async_serve_impl(
     address: str = f"[::]:{DEFAULT_GRPC_PORT}",
     wait_for_termination: bool = True,
+    catalog: str = None,
 ):
     from grpc import aio
 
@@ -377,7 +395,7 @@ async def async_serve_impl(
         ("grpc.max_receive_message_length", GRPC_MAX_MESSAGE_LENGTH),
     ]
     server = aio.server(options=options)
-    nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)
+    nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(catalog), server)
     server.add_insecure_port(address)
 
     console = rich.console.Console()
@@ -406,18 +424,27 @@ def async_serve(
     address: str = f"[::]:{DEFAULT_GRPC_PORT}",
     max_workers: int = GRPC_MAX_WORKER_THREADS,
     wait_for_termination: bool = True,
+    catalog: str = None,
 ):
     """Start the gRPC server."""
     import asyncio
 
     loop = asyncio.new_event_loop()
-    task = loop.create_task(async_serve_impl(address, wait_for_termination))
+    task = loop.create_task(async_serve_impl(address, wait_for_termination, catalog))
     loop.run_until_complete(task)
     return task.result()
 
 
 def main():
-    async_serve()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Inference service")
+    parser.add_argument("-a", "--address", type=str, default=f"[::]:{DEFAULT_GRPC_PORT}", help="gRPC server address")
+    parser.add_argument("-c", "--catalog", type=str, default=None, help="Model catalog")
+    args = parser.parse_args()
+    logger.debug(f"args={args}")
+
+    async_serve(address=args.address, catalog=args.catalog)
 
 
 if __name__ == "__main__":

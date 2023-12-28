@@ -11,6 +11,7 @@ from pydantic.errors import ConfigError
 from nos.common.metaclass import SingletonMetaclass  # noqa: F401
 from nos.common.spec import (  # noqa: F401
     FunctionSignature,
+    ModelDeploymentSpec,
     ModelResources,
     ModelSpec,
     ModelSpecMetadata,
@@ -210,7 +211,7 @@ class Hub:
         return spec
 
     @classmethod
-    def register_from_yaml(cls, filename: str) -> List["ModelSpec"]:
+    def register_from_yaml(cls, filename: str) -> List[Any]:
         """Register models from a catalog YAML.
 
         Args:
@@ -218,6 +219,17 @@ class Hub:
         Returns:
             List[ModelSpec]: List of model specifications.
         """
+
+        @dataclass
+        class ModelServiceSpec:
+            """Model service that captures spec, deployment and service."""
+
+            model: ModelSpec
+            """Model specification."""
+            deployment: ModelDeploymentSpec
+            """Model deployment specification."""
+            service: Any = None
+            """Model service."""
 
         @dataclass
         class _ModelImportConfig:
@@ -237,8 +249,8 @@ class Hub:
             """Arguments to initialize the model instance."""
             init_kwargs: Dict[str, Any] = field(default_factory=dict)
             """Keyword arguments to initialize the model instance."""
-            resources: ModelResources = field(default_factory=ModelResources)
-            """Model resources."""
+            deployment: ModelDeploymentSpec = field(default_factory=ModelDeploymentSpec)
+            """Model deployment specification."""
 
             @root_validator(pre=True, allow_reuse=True)
             def _validate_model_cls_import(cls, values):
@@ -299,8 +311,8 @@ class Hub:
         if "models" not in data:
             raise ValueError("Missing `models` specification in the YAML file")
 
-        # Register the models
-        specs: List[ModelSpec] = []
+        # Service the models
+        services: List[ModelServiceSpec] = []
         for model_id, mconfig in data["models"].items():
             # Add the model id to the config
             mconfig.update({"id": model_id})
@@ -316,13 +328,12 @@ class Hub:
                 method=mconfig.default_method,
                 init_args=mconfig.init_args,
                 init_kwargs=mconfig.init_kwargs,
-                resources=mconfig.resources,
                 model_id=mconfig.id,
             )
-            cls.register_spec(spec, task=TaskType.CUSTOM, resources=mconfig.resources)
-            logger.debug(f"Registered model [id={model_id}, spec={spec}]")
-            specs.append(spec)
-        return specs
+            cls.register_spec(spec, task=TaskType.CUSTOM, resources=mconfig.deployment.resources)
+            services.append(ModelServiceSpec(model=spec, deployment=mconfig.deployment))
+            logger.debug(f"Registered service [id={model_id}, svc={services[-1]}]")
+        return services
 
     @classmethod
     def register_from_catalog(cls):
@@ -368,4 +379,6 @@ class Hub:
 list = Hub.list
 load = Hub.load
 register = Hub.register
+register_from_yaml = Hub.register_from_yaml
+register_from_catalog = Hub.register_from_catalog
 load_spec = Hub.load_spec
