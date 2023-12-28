@@ -180,7 +180,7 @@ def _test_grpc_client_inference_noop(client):  # noqa: F811
     num_replicas, num_iters = 8, 5
     model.Load(num_replicas=num_replicas)
 
-    # Spin up 4 replicas to execute 5 inferences each
+    # Spin up 8 replicas to execute 5 inferences each
     st = time.time()
     with ThreadPool(processes=num_replicas) as pool:
         # Execute 5 inferences per thread
@@ -202,7 +202,9 @@ def _test_grpc_client_inference_noop(client):  # noqa: F811
     # fixed overhead (2 seconds) + 5 iterations * 1.2 (20% overhead)
     total_time = end - st
     assert total_time < 2 + num_iters * 1.2
-    logger.debug(f"Total time taken for replicas={num_replicas}, iterations={num_iters * num_replicas}: {total_time:.2f} seconds.")
+    logger.debug(
+        f"Total time taken for replicas={num_replicas}, iterations={num_iters * num_replicas}: {total_time:.2f} seconds."
+    )
 
 
 def _test_grpc_client_inference_models(client):  # noqa: F811

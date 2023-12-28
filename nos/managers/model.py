@@ -5,7 +5,7 @@ import re
 from collections import OrderedDict
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from functools import lru_cache
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
@@ -88,23 +88,6 @@ class _StreamingModelHandleResponse:
         return ray.get(next(self.iterable))
 
 
-@lru_cache(maxsize=32)
-def load_spec(model_id: str) -> ModelSpec:
-    """Get the model spec cache."""
-    from nos import hub
-
-    model_spec: ModelSpec = hub.load_spec(model_id)
-    logger.info(f"Loaded model spec [name={model_spec.name}]")
-    return model_spec
-
-
-@lru_cache(maxsize=32)
-def load_actor_options(model_id: str):
-    """Get actor options from model specification."""
-    spec: ModelSpec = load_spec(model_id)
-    return ModelHandle._actor_options(spec)
-
-
 @dataclass
 class ModelHandle:
     """Model handles for distributed model execution.
@@ -151,7 +134,7 @@ class ModelHandle:
 
     def __post_init__(self):
         """Initialize the actor handles."""
-        self._actors = [self._actor(self.spec) for _ in range(self.num_replicas)]
+        self._actors = [self._get_actor() for _ in range(self.num_replicas)]
         self._actor_pool = ActorPool(self._actors)
 
         # Patch the model handle with methods from the model spec signature
@@ -170,12 +153,17 @@ class ModelHandle:
 
     def __repr__(self) -> str:
         assert len(self._actors) == self.num_replicas
-        opts = load_actor_options(self.spec.id)
+        opts = self.actor_options
         opts_str = ", ".join([f"{k}={v}" for k, v in opts.items()])
         return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, opts=({opts_str}))"
 
+    @cached_property
+    def actor_options(self):
+        """Get actor options from model specification."""
+        return self._get_actor_options(self.spec)
+
     @classmethod
-    def _actor_options(cls, spec: ModelSpec) -> Dict[str, Any]:
+    def _get_actor_options(cls, spec: ModelSpec) -> Dict[str, Any]:
         """Get actor options from model specification."""
         # TOFIX (spillai): When considering CPU-only models with num_cpus specified,
         # OMP_NUM_THREADS will be set to the number of CPUs requested. Otherwise,
@@ -247,12 +235,9 @@ class ModelHandle:
 
         return actor_opts
 
-    @classmethod
-    def _actor(cls, spec: ModelSpec) -> Union[ray.remote, ray.actor.ActorHandle]:
+    def _get_actor(self) -> Union[ray.remote, ray.actor.ActorHandle]:
         """Get an actor handle from model specification.
 
-        Args:
-            spec (ModelSpec): Model specification.
         Returns:
             Union[ray.remote, ray.actor.ActorHandle]: Ray actor handle.
         """
@@ -262,22 +247,22 @@ class ModelHandle:
         # (i.e. 0.5 on A100 vs. T4 are different).
         # NOTE (spillai): Using default signature here is OK, since
         # all the signatures for a model spec have the same `func_or_cls`.
-        model_cls = spec.default_signature.func_or_cls
+        model_cls = self.spec.default_signature.func_or_cls
 
         # Get the actor options from the model spec
-        actor_options = load_actor_options(spec.id)
+        actor_options = self.actor_options
         actor_cls = ray.remote(**actor_options)(model_cls)
 
         # Check if the model class has the required method
         logger.debug(
-            f"Creating actor [actor={actor_cls}, opts={actor_options}, cls={model_cls}, init_args={spec.default_signature.init_args}, init_kwargs={spec.default_signature.init_kwargs}]"
+            f"Creating actor [actor={actor_cls}, opts={actor_options}, cls={model_cls}, init_args={self.spec.default_signature.init_args}, init_kwargs={self.spec.default_signature.init_kwargs}]"
         )
-        actor = actor_cls.remote(*spec.default_signature.init_args, **spec.default_signature.init_kwargs)
+        actor = actor_cls.remote(*self.spec.default_signature.init_args, **self.spec.default_signature.init_kwargs)
 
         # Note: Only check if default signature method is implemented
         # even though other methods may be implemented and used.
-        if not hasattr(actor, spec.default_method):
-            raise NotImplementedError(f"Model class {model_cls} does not have {spec.default_method} implemented.")
+        if not hasattr(actor, self.spec.default_method):
+            raise NotImplementedError(f"Model class {model_cls} does not have {self.spec.default_method} implemented.")
         logger.debug(f"Creating actor [actor={actor}, opts={actor_options}, cls={model_cls}]")
 
         # Add some memory logs to this actor
@@ -344,7 +329,7 @@ class ModelHandle:
             logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={replicas}].")
             return self
         elif replicas > len(self._actors):
-            self._actors += [self._actor(self.spec) for _ in range(replicas - len(self._actors))]
+            self._actors += [self._get_actor() for _ in range(replicas - len(self._actors))]
             logger.debug(f"Scaling up model [name={self.spec.name}, replicas={replicas}].")
         else:
             actors_to_remove = self._actors[replicas:]

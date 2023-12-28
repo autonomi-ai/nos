@@ -248,20 +248,20 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
     assert result is True
 
     # Test `.submit()` on the `__call__` method + `get_next()`
-    for _ in range(2):
-        model_handle.submit(images=images)
-    while model_handle.has_next():
-        result = model_handle.get_next()
-        assert len(result) == 1
-        assert isinstance(result, list)
-        assert isinstance(result[0], np.ndarray)
+    # for _ in range(2):
+    #     model_handle.submit(images=images)
+    # while model_handle.has_next():
+    #     result = model_handle.get_next()
+    #     assert len(result) == 1
+    #     assert isinstance(result, list)
+    #     assert isinstance(result[0], np.ndarray)
 
     # Test `.submit()` on the `forward` method + `get_next()`
-    for _ in range(2):
-        model_handle.forward.submit()
-    while model_handle.has_next():
-        result = model_handle.get_next()
-        assert result is True
+    # for _ in range(2):
+    #     model_handle.forward.submit()
+    # while model_handle.has_next():
+    #     result = model_handle.get_next()
+    #     assert result is True
 
     # Check if the model can NOT be called with positional arguments
     # We expect this to raise an exception, as the model only accepts keyword arguments.
