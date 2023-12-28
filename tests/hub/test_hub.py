@@ -85,7 +85,15 @@ def test_hub_catalog():
 
     pvalue = os.getenv("NOS_HUB_CATALOG_PATH", "")
     nmodels = len(Hub.list())
-    os.environ["NOS_HUB_CATALOG_PATH"] = str(NOS_TEST_DATA_DIR / "hub/custom_model/config.yaml")
+    os.environ["NOS_HUB_CATALOG_PATH"] = ":".join(
+        [
+            str(yaml)
+            for yaml in [
+                NOS_TEST_DATA_DIR / "hub/custom_model/config.yaml",
+                NOS_TEST_DATA_DIR / "hub/custom_model/config-with-replicas.yaml",
+            ]
+        ]
+    )
     Hub.register_from_catalog()
     os.environ["NOS_HUB_CATALOG_PATH"] = pvalue
     assert (
