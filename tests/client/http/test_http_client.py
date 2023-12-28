@@ -24,6 +24,84 @@ def test_http_client(client_with_server, request):  # noqa: F811
 
 
 @pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
+def test_http_client_noop(client_with_server, request):
+    http_client = request.getfixturevalue(client_with_server)
+    assert http_client is not None
+
+    from PIL import Image
+
+    from nos.server.http._utils import encode_dict
+
+    # Test image inference with JSON encoding
+    model_id = "noop/process"
+    data = {
+        "model_id": model_id,
+        "method": "process_images",
+        "inputs": {
+            "images": Image.open(NOS_TEST_IMAGE),
+        },
+    }
+    response = http_client.post(
+        "/v1/infer",
+        headers={"Content-Type": "application/json"},
+        json=encode_dict(data),
+    )
+    assert response.status_code == 201, response.text
+    predictions = response.json()
+    assert isinstance(predictions, list)
+
+    # Test text inference with JSON encoding
+    data = {
+        "model_id": model_id,
+        "method": "process_texts",
+        "inputs": {
+            "texts": ["A photo of a cat"],
+        },
+    }
+    response = http_client.post(
+        "/v1/infer",
+        headers={"Content-Type": "application/json"},
+        json=encode_dict(data),
+    )
+    assert response.status_code == 201, response.text
+    predictions = response.json()
+    assert isinstance(predictions, list)
+
+    # Test text inference with JSON encoding
+    data = {
+        "model_id": model_id,
+        "method": "process_sleep",
+        "inputs": {
+            "seconds": 1.0,
+        },
+    }
+    response = http_client.post(
+        "/v1/infer",
+        headers={"Content-Type": "application/json"},
+        json=encode_dict(data),
+    )
+    assert response.status_code == 201, response.text
+
+    # Test streaming text inference with JSON encoding
+    data = {
+        "model_id": model_id,
+        "method": "stream_texts",
+        "stream": True,
+        "inputs": {
+            "texts": ["A photo of a cat", "A photo of a dog"],
+        },
+    }
+    response = http_client.post(
+        "/v1/infer",
+        headers={"Content-Type": "application/json"},
+        json=encode_dict(data),
+    )
+    assert response.status_code >= 200 <= 299, response.text
+    for line in response.iter_lines():
+        assert len(line) > 0
+
+
+@pytest.mark.parametrize("client_with_server", HTTP_CLIENT_SERVER_CONFIGURATIONS)
 def test_http_client_inference_object_detection_2d(client_with_server, request):
     http_client = request.getfixturevalue(client_with_server)
     assert http_client is not None

@@ -225,6 +225,22 @@ class Client:
         except grpc.RpcError as e:
             raise ClientException(f"Failed to list models (details={e.details()})", e)
 
+    def LoadModel(self, model_id: str, num_replicas: int = 1) -> None:
+        """Load a model.
+
+        Args:
+            model_id (str): Name of the model to load.
+            num_replicas (int, optional): Number of replicas to load. Defaults to 1.
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            self.stub.LoadModel(
+                nos_service_pb2.GenericRequest(request_bytes=dumps({"id": model_id, "num_replicas": num_replicas}))
+            )
+        except grpc.RpcError as e:
+            raise ClientException(f"Failed to load model (details={e.details()})", e)
+
     @lru_cache()  # noqa: B019
     def _get_model_catalog(self) -> ModelSpecMetadataCatalog:
         """Get the model catalog and cache.
@@ -549,6 +565,10 @@ class Module:
     def GetModelInfo(self) -> ModelSpec:
         """Get the relevant model information from the model name."""
         return self._spec
+
+    def Load(self, num_replicas: int = 1) -> None:
+        """Load the model."""
+        return self._client.LoadModel(self.id, num_replicas=num_replicas)
 
     def RegisterSystemSharedMemory(self, inputs: Dict[str, Any]) -> None:
         """Register system shared memory for inputs.

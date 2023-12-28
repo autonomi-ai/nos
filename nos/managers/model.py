@@ -5,6 +5,7 @@ import re
 from collections import OrderedDict
 from dataclasses import asdict, dataclass, field
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
@@ -86,6 +87,23 @@ class _StreamingModelHandleResponse:
         return ray.get(next(self.iterable))
 
 
+@lru_cache(maxsize=32)
+def load_spec(model_id: str) -> ModelSpec:
+    """Get the model spec cache."""
+    from nos import hub
+
+    model_spec: ModelSpec = hub.load_spec(model_id)
+    logger.info(f"Loaded model spec [name={model_spec.name}]")
+    return model_spec
+
+
+@lru_cache(maxsize=32)
+def load_actor_options(model_id: str):
+    """Get actor options from model specification."""
+    spec: ModelSpec = load_spec(model_id)
+    return ModelHandle._actor_options(spec)
+
+
 @dataclass
 class ModelHandle:
     """Model handles for distributed model execution.
@@ -133,10 +151,12 @@ class ModelHandle:
     """Queue to fetch results from the actor pool."""
     _actor_profile: Dict[str, Any] = field(init=False, default=None)
     """Actor profile."""
+    _future_to_index: Dict[str, int] = field(init=False, default_factory=dict)
+    """Future to index mapping."""
 
     def __post_init__(self):
         """Initialize the actor handles."""
-        self._actors = [self._get_actor(self.spec) for _ in range(self.num_replicas)]
+        self._actors = [self._actor(self.spec) for _ in range(self.num_replicas)]
         self._actor_pool = ray.util.ActorPool(self._actors)
         self._results_queue.resize(self.num_replicas * 2)
 
@@ -156,9 +176,9 @@ class ModelHandle:
 
     def __repr__(self) -> str:
         assert len(self._actors) == self.num_replicas
-        opts = self._actor_options(self.spec)
+        opts = load_actor_options(self.spec.id)
         opts_str = ", ".join([f"{k}={v}" for k, v in opts.items()])
-        return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, qsize={self.results._size}, opts=({opts_str}))"
+        return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, opts=({opts_str}))"
 
     @classmethod
     def _actor_options(cls, spec: ModelSpec) -> Dict[str, Any]:
@@ -221,7 +241,7 @@ class ModelHandle:
         return actor_opts
 
     @classmethod
-    def _get_actor(cls, spec: ModelSpec) -> Union[ray.remote, ray.actor.ActorHandle]:
+    def _actor(cls, spec: ModelSpec) -> Union[ray.remote, ray.actor.ActorHandle]:
         """Get an actor handle from model specification.
 
         Args:
@@ -238,7 +258,7 @@ class ModelHandle:
         model_cls = spec.default_signature.func_or_cls
 
         # Get the actor options from the model spec
-        actor_options = cls._actor_options(spec)
+        actor_options = load_actor_options(spec.id)
         actor_cls = ray.remote(**actor_options)(model_cls)
 
         # Check if the model class has the required method
@@ -321,7 +341,7 @@ class ModelHandle:
             logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={replicas}].")
             return self
         elif replicas > len(self._actors):
-            self._actors += [self._get_actor(self.spec) for _ in range(replicas - len(self._actors))]
+            self._actors += [self._actor(self.spec) for _ in range(replicas - len(self._actors))]
             logger.debug(f"Scaling up model [name={self.spec.name}, replicas={replicas}].")
         else:
             actors_to_remove = self._actors[replicas:]
@@ -369,21 +389,30 @@ class ModelHandle:
         Returns:
             str: Ray object reference as a string.
         """
-        assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
+        # assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
 
         # Submit the task to the actor pool, leveraging all replicas
         method: str = kwargs.pop("_method", self.spec.default_method)
-        self._actor_pool.submit(lambda a, v: getattr(a, method).remote(**v), kwargs)
+        # TODO (spillai): We should be able to determine if the output
+        # is an iterable or not from the signature, and set the default
+        stream: bool = kwargs.pop("_stream", False)
+        remote_opts = {"num_returns": "streaming"} if stream else {}
+        if not self._actor_pool._idle_actors:
+            logger.warning(f"Actor pool is full, this may result in dropped queue items [name={self.spec.name}]")
+        self._actor_pool.submit(lambda a, v: getattr(a, method).options(**remote_opts).remote(**v), kwargs)
+        logger.info(f"Submitted task [name={self.spec.name}, method={method}, kwargs={kwargs}]")
 
         # If there are pending submissions due to the actor pool being fully utilized,
         # fetch the next result from the actor pool and put it in the queue.
-        if len(self._actor_pool._pending_submits):
-            self._fetch_next()
-        assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
+        # if len(self._actor_pool._pending_submits):
+        #     self._fetch_next()
+        # assert not len(self._actor_pool._pending_submits), "Pending submits should be empty."
 
         # Get the future object reference for the last task submitted
         future_ref: ray.ObjectRef = self._actor_pool._index_to_future[self._actor_pool._next_task_index - 1]
-        return future_ref.hex()
+        self._future_to_index[future_ref.hex()] = self._actor_pool._next_task_index - 1
+
+        return future_ref
 
     def cleanup(self) -> None:
         """Kill all the actor handles and garbage collect."""
@@ -392,10 +421,31 @@ class ModelHandle:
         self._actors = []
         gc.collect()
 
-    def get(self, future_ref: str = None) -> Any:
+    def get(self, future_ref: ray.ObjectRef = None, timeout: int = None) -> Any:
         """Get the result future."""
         if future_ref is not None:
-            return ray.get(ray.ObjectRef(future_ref))
+            result = ray.get(future_ref)
+            index = self._future_to_index.pop(future_ref.hex())
+            future = self._actor_pool._index_to_future[index]
+            del self._actor_pool._index_to_future[index]
+            future_key = tuple(future) if isinstance(future, list) else future
+            i, a = self._actor_pool._future_to_actor.pop(future_key)
+            self._actor_pool._return_actor(a)
+            return result
+        else:
+            return self._actor_pool.get_next()
+
+    async def async_get(self, future_ref: ray.ObjectRef = None, timeout: int = None) -> Any:
+        """Get the result future asynchronously."""
+        if future_ref is not None:
+            result = await future_ref
+            index = self._future_to_index.pop(future_ref.hex())
+            future = self._actor_pool._index_to_future[index]
+            del self._actor_pool._index_to_future[index]
+            future_key = tuple(future) if isinstance(future, list) else future
+            i, a = self._actor_pool._future_to_actor.pop(future_key)
+            self._actor_pool._return_actor(a)
+            return result
         else:
             return self._actor_pool.get_next()
 
@@ -487,11 +537,31 @@ class ModelManager:
         """
         return spec.id in self.handlers
 
-    def load(self, model_spec: ModelSpec) -> ModelHandle:
+    def load(self, model_spec: ModelSpec, num_replicas: int = None) -> ModelHandle:
         """Load a model handle from the manager using the model specification.
 
         Create a new model handle if it does not exist,
         else return an existing handle.
+
+        Args:
+            model_spec (ModelSpec): Model specification.
+            num_replicas (int): Number of replicas.
+        Returns:
+            ModelHandle: Model handle.
+        """
+        model_id: str = model_spec.id
+        if model_id not in self.handlers:
+            num_replicas = num_replicas or 1
+            return self.add(model_spec, num_replicas=num_replicas)
+        else:
+            # Only scale the model if the number of replicas is specified,
+            # otherwise treat it as a get without modifying the number of replicas.
+            if num_replicas is not None and num_replicas != self.handlers[model_id].num_replicas:
+                self.handlers[model_id].scale(num_replicas)
+            return self.handlers[model_id]
+
+    def get(self, model_spec: ModelSpec) -> ModelHandle:
+        """Get a model handle from the manager using the model identifier.
 
         Args:
             model_spec (ModelSpec): Model specification.
@@ -500,15 +570,16 @@ class ModelManager:
         """
         model_id: str = model_spec.id
         if model_id not in self.handlers:
-            return self.add(model_spec)
+            return self.add(model_spec, num_replicas=1)
         else:
             return self.handlers[model_id]
 
-    def add(self, spec: ModelSpec) -> ModelHandle:
+    def add(self, spec: ModelSpec, num_replicas: int = 1) -> ModelHandle:
         """Add a model to the manager.
 
         Args:
             spec (ModelSpec): Model specification.
+            num_replicas (int): Number of replicas.
         Raises:
             ValueError: If the model already exists.
         Returns:
@@ -525,7 +596,7 @@ class ModelManager:
 
         # Create the serve deployment from the model handle
         # Note: Currently one model per (model-name, task) is supported.
-        self.handlers[model_id] = ModelHandle(spec)
+        self.handlers[model_id] = ModelHandle(spec, num_replicas=num_replicas)
         logger.debug(f"Added model [{self.handlers[model_id]}]")
         logger.debug(self)
         return self.handlers[model_id]

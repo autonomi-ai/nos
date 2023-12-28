@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Iterable, List, Union
 
@@ -22,6 +23,10 @@ class NoOp:
 
     def process_file(self, path: Path) -> bool:
         assert path.exists(), f"File not found: {path}"
+        return True
+
+    def process_sleep(self, seconds: float) -> bool:
+        time.sleep(seconds)
         return True
 
     def stream_texts(self, texts: List[str]) -> Iterable[str]:
@@ -62,6 +67,12 @@ hub.register(
     method="process_file",
 )
 hub.register(
+    "noop/process-sleep",
+    TaskType.CUSTOM,
+    NoOp,
+    method="process_sleep",
+)
+hub.register(
     "noop/stream-texts",
     TaskType.CUSTOM,
     NoOp,
@@ -96,6 +107,12 @@ hub.register(
     TaskType.CUSTOM,
     NoOp,
     method="process_file",
+)
+hub.register(
+    "noop/process",
+    TaskType.CUSTOM,
+    NoOp,
+    method="process_sleep",
 )
 hub.register(
     "noop/process",

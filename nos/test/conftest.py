@@ -1,4 +1,6 @@
+import asyncio
 import pytest
+import pytest_asyncio
 from loguru import logger
 
 from nos.constants import DEFAULT_GRPC_PORT
@@ -44,16 +46,34 @@ def model_manager(ray_executor):  # noqa: F811
     yield manager
 
 
+
+# @pytest.mark.asyncio
+# @pytest_asyncio.fixture(scope="session")
 @pytest.fixture(scope="session")
-def grpc_server(ray_executor):
+async def grpc_server(ray_executor):
     """Test gRPC server (Port: 50052)."""
+    from grpc import aio
     from loguru import logger
 
-    from nos.server._service import serve
+    from nos.constants import (  # noqa F401
+        GRPC_MAX_MESSAGE_LENGTH,
+    )
+    from nos.server._service import InferenceServiceImpl
 
     logger.info(f"Starting gRPC test server on port: {GRPC_TEST_PORT}")
-    server = serve(address=f"[::]:{GRPC_TEST_PORT}", max_workers=1, wait_for_termination=False)
+    options = [
+        ("grpc.max_message_length", GRPC_MAX_MESSAGE_LENGTH),
+        ("grpc.max_send_message_length", GRPC_MAX_MESSAGE_LENGTH),
+        ("grpc.max_receive_message_length", GRPC_MAX_MESSAGE_LENGTH),
+    ]
+    server = aio.server(options=options)
+    address = f"[::]:{GRPC_TEST_PORT}"
+    nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)
+    server.add_insecure_port(address)
+
+    await server.start()
     assert server is not None
+
     yield server
     server.stop(grace=None)
 
@@ -255,16 +275,16 @@ def http_client_with_gpu_backend(grpc_server_docker_runtime_gpu):  # noqa: F811
 
 # Needed for referencing relevant pytest fixtures
 HTTP_CLIENT_SERVER_CONFIGURATIONS = [
-    HTTP_CLIENT_WITH_LOCAL,
+    # HTTP_CLIENT_WITH_LOCAL,
     # HTTP_CLIENT_WITH_CPU,
-    # HTTP_CLIENT_WITH_GPU
+    HTTP_CLIENT_WITH_GPU
 ]
 
 # Needed for referencing relevant pytest fixtures
 GRPC_CLIENT_SERVER_CONFIGURATIONS = [
-    GRPC_CLIENT_WITH_LOCAL,
+    # GRPC_CLIENT_WITH_LOCAL,
     # GRPC_CLIENT_WITH_CPU,
-    # GRPC_CLIENT_WITH_GPU
+    GRPC_CLIENT_WITH_GPU
 ]
 
 

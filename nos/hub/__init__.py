@@ -22,6 +22,9 @@ from nos.hub.hf import hf_login  # noqa: F401
 from nos.logging import logger
 
 
+logger.disable(__name__)
+
+
 class Hub:
     """Registry for models."""
 

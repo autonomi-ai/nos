@@ -51,6 +51,8 @@ class InferenceRequest:
     """Input data for inference"""
     method: str = field(default=None)
     """Inference method"""
+    stream: bool = field(default=False)
+    """Whether to stream the response"""
 
 
 @dataclasses.dataclass
@@ -293,8 +295,21 @@ def app_factory(
                 }
             }'
 
+        $ curl -X "POST" \
+            "http://localhost:8000/v1/infer" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "model_id": "noop/process",
+                "method": "stream_texts",
+                "stream": true,
+                "inputs": {
+                    "texts": ["fox jumped over the moon"]
+                }
+            }'
         """
-        logger.debug(f"Decoding input dictionary [model={request.model_id}, method={request.method}]")
+        logger.debug(
+            f"Decoding input dictionary [model={request.model_id}, method={request.method}, stream={request.stream}]"
+        )
         request.inputs = decode_item(request.inputs)
         return _infer(request, client)
 
@@ -426,17 +441,24 @@ def app_factory(
 
         # Perform inference
         logger.debug(f"Inference [model={request.model_id}, keys={inputs.keys()}]")
-        response = model(**inputs, _method=request.method)
+        response = model(**inputs, _method=request.method, _stream=request.stream)
         logger.debug(
-            f"Inference [model={request.model_id}, , method={request.method}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            f"Inference [model={request.model_id}, , method={request.method}, stream={request.stream}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
         )
 
         # Handle response types
-        try:
-            return JSONResponse(content=encode_item(response), status_code=status.HTTP_201_CREATED)
-        except Exception as e:
-            logger.exception(f"Failed to encode response [type={type(response)}, e={e}]")
-            raise HTTPException(status_code=500, detail="Image generation failed")
+        if request.stream:
+
+            def streaming_gen():
+                yield from response
+
+            return StreamingResponse(streaming_gen(), media_type="text/event-stream")
+        else:
+            try:
+                return JSONResponse(content=encode_item(response), status_code=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.exception(f"Failed to encode response [type={type(response)}, e={e}]")
+                raise HTTPException(status_code=500, detail="Image generation failed")
 
     return app
 

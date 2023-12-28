@@ -108,6 +108,8 @@ def _test_grpc_client_inference_spec(client):  # noqa: F811
 
 
 def _test_grpc_client_inference_noop(client):  # noqa: F811
+    from multiprocessing.pool import ThreadPool
+
     from nos.common import tqdm
 
     # Get service info
@@ -170,6 +172,37 @@ def _test_grpc_client_inference_noop(client):  # noqa: F811
             assert isinstance(resp, str)
             idx += 1
         assert idx > len(texts)
+
+    # noop/process scaling
+    model_id = "noop/process"
+    model = client.Module(model_id)
+
+    num_replicas, num_iters = 2, 5
+    model.Load(num_replicas=num_replicas)
+
+    # Spin up 2 replicas to execute 5 inferences each
+    st = time.time()
+    with ThreadPool(processes=num_replicas) as pool:
+        # Execute 5 inferences per thread
+        responses = []
+        for _ in tqdm(range(num_replicas * num_iters), desc=f"Test [model={model_id}]"):
+            response = pool.apply_async(
+                func=model.process_sleep,
+                kwds={"seconds": 1.0},
+            )
+            responses.append(response)
+
+        # Wait for all threads to complete
+        for response in responses:
+            assert response.get()
+            assert isinstance(response.get(), bool)
+    end = time.time()
+
+    # Check that the total time taken is less than some
+    # fixed overhead (2 seconds) + 5 iterations * 1.2 (20% overhead)
+    total_time = end - st
+    assert total_time < 2 + num_iters * 1.2
+    logger.debug(f"Total time taken for {num_replicas} replicas: {total_time:.2f} seconds.")
 
 
 def _test_grpc_client_inference_models(client):  # noqa: F811
