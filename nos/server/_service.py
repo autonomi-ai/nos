@@ -74,7 +74,18 @@ class InferenceService:
         else:
             self.shm_manager = None
 
-    def execute(self, model_name: str, method: str = None, inputs: Dict[str, Any] = None, stream: bool = False) -> Any:
+    def load_model(self, model_name: str, num_replicas: int = 1) -> ModelHandle:
+        """Load the model."""
+        # Load the model spec (with caching to avoid repeated loading)
+        try:
+            model_spec: ModelSpec = load_spec(model_name)
+        except Exception as e:
+            raise ModelNotFoundError(f"Failed to load model spec [model_name={model_name}, e={e}]")
+        return self.model_manager.load(model_spec, num_replicas=num_replicas)
+
+    async def execute_model(
+        self, model_name: str, method: str = None, inputs: Dict[str, Any] = None, stream: bool = False
+    ) -> Any:
         """Execute the model.
 
         Args:
@@ -116,12 +127,26 @@ class InferenceService:
         # Initialize the model (if not already initialized)
         # This call should also evict models and garbage collect if
         # too many models are loaded are loaded simultaneously.
-        model_handle: ModelHandle = self.model_manager.load(model_spec)
+        # Note: if the model hasn't been loaded yet, then this call will
+        # block until the model is loaded (num_replicas=1).
+        model_handle: ModelHandle = self.model_manager.get(model_spec)
 
         st = time.perf_counter()
         if not stream:
             # Get the model handle and call it remotely (with model spec, actor handle)
-            response: Union[Any, Dict[str, Any]] = model_handle(**model_inputs, _method=method)
+            if model_handle.num_replicas > 1:
+                # If the model has multiple replicas, then call the submit method
+                response_ref = model_handle.submit(**model_inputs, _method=method)
+                logger.debug(
+                    f"Submitted model request, awaiting response [handle={model_handle}, response_ref={response_ref}]"
+                )
+                st = time.time()
+                response: Union[Any, Dict[str, Any]] = await model_handle.async_get(response_ref)
+                logger.debug(
+                    f"Response awaited [handle={model_handle}, response={response}, elapsed={(time.time() - st) * 1e3:.1f}ms]"
+                )
+            else:
+                response: Union[Any, Dict[str, Any]] = model_handle(**model_inputs, _method=method)
             if NOS_PROFILING_ENABLED:
                 logger.debug(
                     f"Executed model [name={model_spec.name}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
@@ -132,7 +157,12 @@ class InferenceService:
                 response = {k: response for k in sig.output_annotations}
             return response
         else:
-            response: Iterator[Any] = model_handle(**model_inputs, _method=method, _stream=True)
+            if model_handle.num_replicas > 1:
+                # If the model has multiple replicas, then call the submit method
+                response_ref: Iterator[Any] = model_handle.submit(**model_inputs, _method=method, _stream=True)
+                response: Iterator[Any] = await model_handle.async_get(response_ref)
+            else:
+                response: Iterator[Any] = model_handle(**model_inputs, _method=method, _stream=True)
             return _StreamingInferenceServiceResponse(response)
 
 
@@ -195,6 +225,20 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             logger.error(f"Failed to load spec [request={request}, e={e}]")
             context.abort(grpc.StatusCode.NOT_FOUND, str(e))
         return spec._to_proto()
+
+    def LoadModel(self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext) -> empty_pb2.Empty:
+        """Load / scale the model to the specified number of replicas."""
+        request: Dict[str, Any] = loads(request.request_bytes)
+        logger.debug(f"ScaleModel() [request={request}]")
+        try:
+            model_id = request["id"]
+            num_replicas = request.get("num_replicas", 1)
+            self.load_model(model_id, num_replicas=num_replicas)
+            return empty_pb2.Empty()
+        except Exception as e:
+            err_msg = f"Failed to scale model [model_id={model_id}, num_replicas={num_replicas}, e={e}]"
+            logger.error(err_msg)
+            context.abort(grpc.StatusCode.INTERNAL, err_msg)
 
     def RegisterSystemSharedMemory(
         self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
@@ -282,7 +326,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         del self._tmp_files[str(filename)]
         return empty_pb2.Empty()
 
-    def Run(
+    async def Run(
         self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
     ) -> nos_service_pb2.GenericResponse:
         """Main model prediction interface."""
@@ -290,9 +334,9 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         try:
             st = time.perf_counter()
             logger.info(f"Executing request [model={request['id']}, method={request['method']}]")
-            response = self.execute(request["id"], method=request["method"], inputs=request["inputs"])
+            response = await self.execute_model(request["id"], method=request["method"], inputs=request["inputs"])
             logger.info(
-                f"Executed request [model={request['id']}, method={request['method']}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                f"Executed request [model={request['id']}, method={request['method']}, response={response}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )
             return nos_service_pb2.GenericResponse(response_bytes=dumps(response))
         except (grpc.RpcError, Exception) as e:
@@ -301,16 +345,17 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             logger.error(f"{msg}, e={e}")
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
-    def Stream(
+    async def Stream(
         self, request: nos_service_pb2.GenericRequest, context: grpc.ServicerContext
     ) -> Iterator[nos_service_pb2.GenericResponse]:
         """Main streaming model prediction interface."""
         request: Dict[str, Any] = loads(request.request_bytes)
         try:
             logger.info(f"Executing request [model={request['id']}, method={request['method']}]")
-            for response in self.execute(
+            response_stream = await self.execute_model(
                 request["id"], method=request["method"], inputs=request["inputs"], stream=True
-            ):
+            )
+            for response in response_stream:
                 yield nos_service_pb2.GenericResponse(response_bytes=dumps(response))
             logger.info(f"Executed request [model={request['id']}, method={request['method']}]")
         except (grpc.RpcError, Exception) as e:
@@ -320,32 +365,59 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             context.abort(grpc.StatusCode.INTERNAL, "Internal Server Error")
 
 
-def serve(address: str = f"[::]:{DEFAULT_GRPC_PORT}", max_workers: int = GRPC_MAX_WORKER_THREADS) -> None:
-    """Start the gRPC server."""
-    from concurrent import futures
+async def async_serve_impl(
+    address: str = f"[::]:{DEFAULT_GRPC_PORT}",
+    wait_for_termination: bool = True,
+):
+    from grpc import aio
 
     options = [
         ("grpc.max_message_length", GRPC_MAX_MESSAGE_LENGTH),
         ("grpc.max_send_message_length", GRPC_MAX_MESSAGE_LENGTH),
         ("grpc.max_receive_message_length", GRPC_MAX_MESSAGE_LENGTH),
     ]
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers), options=options)
+    server = aio.server(options=options)
     nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)
     server.add_insecure_port(address)
 
     console = rich.console.Console()
     console.print(f"[bold green] ✓ Starting gRPC server on {address}[/bold green]")
+
     start_t = time.time()
-    server.start()
+    logger.info(f"Starting gRPC server on {address}")
+    await server.start()
     console.print(
         f"[bold green] ✓ InferenceService :: Deployment complete (elapsed={time.time() - start_t:.1f}s) [/bold green]",  # noqa
     )
-    server.wait_for_termination()
-    console.print("Server stopped")
+    if not wait_for_termination:
+        return server
+    try:
+        logger.info("Waiting for server termination")
+        await server.wait_for_termination()
+    except KeyboardInterrupt:
+        logger.info("Received KeyboardInterrupt, stopping server")
+        await server.stop(0)
+        logger.info("Server stopped")
+        console.print("[bold green] ✓ InferenceService :: Server stopped. [/bold green]")
+    return server
+
+
+def async_serve(
+    address: str = f"[::]:{DEFAULT_GRPC_PORT}",
+    max_workers: int = GRPC_MAX_WORKER_THREADS,
+    wait_for_termination: bool = True,
+):
+    """Start the gRPC server."""
+    import asyncio
+
+    loop = asyncio.new_event_loop()
+    task = loop.create_task(async_serve_impl(address, wait_for_termination))
+    loop.run_until_complete(task)
+    return task.result()
 
 
 def main():
-    serve()
+    async_serve()
 
 
 if __name__ == "__main__":

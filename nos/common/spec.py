@@ -4,7 +4,7 @@ import math
 import re
 from dataclasses import asdict, field
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, get_args, get_origin
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, get_args, get_origin
 
 import humanize
 from pydantic import validator
@@ -21,6 +21,7 @@ from nos.logging import logger
 from nos.protoc import import_module
 
 
+logger.disable(__name__)
 nos_service_pb2 = import_module("nos_service_pb2")
 
 
@@ -256,18 +257,21 @@ class ModelResources:
     """Runtime type (cpu, gpu, trt, etc).
     See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
     """
-    device: str = field(default="auto")
-    """Device identifier (nvidia-2080, nvidia-4090, apple-m2, etc)."""
     cpus: float = 0
     """Number of CPUs (defaults to 0 CPUs)."""
     memory: Union[None, int, str] = field(default=0)
     """Host / CPU memory"""
-    device_memory: Union[None, int, str] = field(default=0)
+    device: str = field(default="auto")
+    """Device identifier (nvidia-2080, nvidia-4090, apple-m2, etc)."""
+    device_memory: Union[int, str] = field(default="auto")
     """Device / GPU memory."""
 
     def __repr__(self) -> str:
         memory = humanize.naturalsize(self.memory, binary=True) if self.memory else None
-        device_memory = humanize.naturalsize(self.device_memory, binary=True) if self.device_memory else None
+        device_memory = self.device_memory
+        if isinstance(device_memory, int):
+            device_memory = humanize.naturalsize(self.device_memory, binary=True) if self.device_memory else None
+        assert device_memory is None or isinstance(device_memory, str)
         return (
             f"""ModelResources(runtime={self.runtime}, device={self.device}, cpus={self.cpus}, """
             f"""memory={memory}, device_memory={device_memory})"""
@@ -302,7 +306,7 @@ class ModelResources:
             return 0
 
         if isinstance(memory, str):
-            raise NotImplementedError()
+            memory: int = memory_bytes(memory)
 
         if memory > 128 * 1024**3:
             err_msg = f"Invalid device memory provided, memory={memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
@@ -310,16 +314,22 @@ class ModelResources:
             raise ValueError(err_msg)
         return memory
 
-    @validator("device_memory")
-    def _validate_device_memory(cls, device_memory: Union[int, str]) -> int:
-        """Validate the device memory."""
-        if device_memory is None:
-            return 0
+    @validator("device")
+    def _validate_device(cls, device: str) -> str:
+        """Validate the device."""
+        if device.startswith("nvidia-"):
+            device = "gpu"  # for now, we re-map all nvidia devices to gpu
+        if device not in ["auto", "cpu", "gpu"]:
+            raise ValueError(f"Invalid device, device={device}.")
+        return device
 
-        if isinstance(device_memory, str):
+    @validator("device_memory")
+    def _validate_device_memory(cls, device_memory: Union[int, str]) -> Union[int, Literal["auto"]]:
+        """Validate the device memory."""
+        if isinstance(device_memory, str) and device_memory != "auto":
             device_memory: int = memory_bytes(device_memory)
 
-        if device_memory > 128 * 1024**3:
+        if isinstance(device_memory, int) and device_memory > 128 * 1024**3:
             err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
             logger.error(err_msg)
             raise ValueError(err_msg)
@@ -429,16 +439,16 @@ class ModelSpecMetadataCatalog:
         # Update the registry
         for _, row in df.iterrows():
             model_id, method = row["model_id"], row["method"]
+            additional_kwargs = {}
             try:
                 device_memory = (
                     math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500) * 500 * 1024**2
                 )
+                additional_kwargs["device_memory"] = device_memory
             except Exception:
-                device_memory = None
+                logger.debug(f"Unable to parse device memory, model_id={model_id}, method={method}.")
             self._resources_catalog[f"{model_id}/{method}"] = ModelResources(
-                runtime=row["runtime"],
-                device=row["device_name"],
-                device_memory=device_memory,
+                runtime=row["runtime"], device=row["device_name"], **additional_kwargs
             )
             self._profile_catalog[f"{model_id}/{method}"] = row.to_dict()
 

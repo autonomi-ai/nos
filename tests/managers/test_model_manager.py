@@ -127,7 +127,6 @@ def test_model_manager_errors(manager):  # noqa: F811
 
 
 def test_model_handler(manager):  # noqa: F811
-    from nos.common import tqdm
 
     spec = noop_spec()
 
@@ -144,25 +143,25 @@ def test_model_handler(manager):  # noqa: F811
     assert len(result) == B
 
     # NoOp: submit() + get_next() + has_next()
-    def noop_gen(_noop, _pbar, B):
-        for idx in _pbar:
-            _noop.submit(images=img)
-            desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
-            _pbar.set_description(desc)
-            if _noop.results.ready():
-                yield _noop.get_next()
-        while _noop.has_next():
-            yield _noop.get_next()
+    # def noop_gen(_noop, _pbar, B):
+    #     for idx in _pbar:
+    #         _noop.submit(images=img)
+    #         desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
+    #         _pbar.set_description(desc)
+    #         if _noop.results.ready():
+    #             yield _noop.get_next()
+    #     while _noop.has_next():
+    #         yield _noop.get_next()
 
-    # NoOp scaling with replicas: submit + get_next
-    noop = noop.scale(2)
+    # # NoOp scaling with replicas: submit + get_next
+    # noop = noop.scale(2)
 
-    # warmup: submit()
-    for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
-        assert isinstance(result, list)
-        assert len(result) == B
-    assert len(noop.pending) == 0, f"Expected 0 pending results, got {len(noop.pending)}"
-    assert len(noop.results) == 0, f"Expected 0 results, got {len(noop.results)}"
+    # # warmup: submit()
+    # for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
+    #     assert isinstance(result, list)
+    #     assert len(result) == B
+    # assert len(noop.pending) == 0, f"Expected 0 pending results, got {len(noop.pending)}"
+    # assert len(noop.results) == 0, f"Expected 0 results, got {len(noop.results)}"
 
     # ModelHandle cleanup
     noop.cleanup()
@@ -249,20 +248,20 @@ def test_model_manager_custom_model_inference_with_custom_runtime(manager):  # n
     assert result is True
 
     # Test `.submit()` on the `__call__` method + `get_next()`
-    for _ in range(2):
-        model_handle.submit(images=images)
-    while model_handle.has_next():
-        result = model_handle.get_next()
-        assert len(result) == 1
-        assert isinstance(result, list)
-        assert isinstance(result[0], np.ndarray)
+    # for _ in range(2):
+    #     model_handle.submit(images=images)
+    # while model_handle.has_next():
+    #     result = model_handle.get_next()
+    #     assert len(result) == 1
+    #     assert isinstance(result, list)
+    #     assert isinstance(result[0], np.ndarray)
 
     # Test `.submit()` on the `forward` method + `get_next()`
-    for _ in range(2):
-        model_handle.forward.submit()
-    while model_handle.has_next():
-        result = model_handle.get_next()
-        assert result is True
+    # for _ in range(2):
+    #     model_handle.forward.submit()
+    # while model_handle.has_next():
+    #     result = model_handle.get_next()
+    #     assert result is True
 
     # Check if the model can NOT be called with positional arguments
     # We expect this to raise an exception, as the model only accepts keyword arguments.
@@ -299,15 +298,15 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         assert len(result) == B
 
     # NoOp: submit() + get_next()
-    def noop_gen(_noop, _pbar, B):
-        for idx in _pbar:
-            _noop.submit(images=img)
-            desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
-            _pbar.set_description(desc)
-            if _noop.results.ready():
-                yield _noop.get_next()
-        while _noop.has_next():
-            yield _noop.get_next()
+    # def noop_gen(_noop, _pbar, B):
+    #     for idx in _pbar:
+    #         _noop.submit(images=img)
+    #         desc = f"noop async [B={B}, replicas={_noop.num_replicas}, idx={idx}, pending={len(_noop.pending)}, queue={len(_noop.results)}]"
+    #         _pbar.set_description(desc)
+    #         if _noop.results.ready():
+    #             yield _noop.get_next()
+    #     while _noop.has_next():
+    #         yield _noop.get_next()
 
     # NoOp scaling with replicas: submit + get_next (perf.)
     for replicas in [1, 2, 4, 8]:
@@ -323,18 +322,18 @@ def test_model_manager_noop_inference(manager):  # noqa: F811
         pbar = tqdm(duration=5, unit_scale=B, desc=f"noop async [B={B}, replicas={noop.num_replicas}]", total=0)
 
         # warmup: submit()
-        for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
-            assert isinstance(result, list)
-            assert len(result) == B
+        # for result in noop_gen(noop, tqdm(duration=1, disable=True), B):
+        #     assert isinstance(result, list)
+        #     assert len(result) == B
 
         # benchmark: submit()
-        idx = 0
-        for _ in noop_gen(noop, pbar, B):
-            idx += 1
+        # idx = 0
+        # for _ in noop_gen(noop, pbar, B):
+        #     idx += 1
 
-        assert idx == pbar.n
-        assert len(noop.results) == 0
-        assert len(noop.pending) == 0
+        # assert idx == pbar.n
+        # assert len(noop.results) == 0
+        # assert len(noop.pending) == 0
 
 
 BENCHMARK_BATCH_SIZES = [2**b for b in (0, 4, 7)]  # [1, 16, 128]

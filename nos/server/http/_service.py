@@ -3,6 +3,7 @@ import dataclasses
 import os
 import time
 from dataclasses import field
+from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
 from typing import Any, Dict, List, Optional
@@ -50,6 +51,8 @@ class InferenceRequest:
     """Input data for inference"""
     method: str = field(default=None)
     """Inference method"""
+    stream: bool = field(default=False)
+    """Whether to stream the response"""
 
 
 @dataclasses.dataclass
@@ -146,14 +149,15 @@ def app_factory(
         """Get the inference client."""
         return nos_app.client
 
-    def normalize_id(model_id: str) -> str:
-        """Normalize the model identifier."""
+    def unnormalize_id(model_id: str) -> str:
+        """Un-normalize the model identifier."""
         return model_id.replace("--", "/")
 
-    def unnormalize_id(model_id: str) -> str:
-        """Unnormalize the model identifier."""
+    def normalize_id(model_id: str) -> str:
+        """Normalize the model identifier."""
         return model_id.replace("/", "--")
 
+    @lru_cache(maxsize=1)
     def build_model_table(client: Client) -> Dict[str, ChatModel]:
         """Build the model table."""
         if len(_model_table) > 0:
@@ -204,6 +208,7 @@ def app_factory(
     ) -> StreamingResponse:
         """Perform chat completion on the given input data."""
         logger.debug(f"Received chat request [model={request.model}, messages={request.messages}]")
+        _model_table = build_model_table(client)
         try:
             _ = _model_table[request.model]
         except KeyError:
@@ -290,8 +295,21 @@ def app_factory(
                 }
             }'
 
+        $ curl -X "POST" \
+            "http://localhost:8000/v1/infer" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "model_id": "noop/process",
+                "method": "stream_texts",
+                "stream": true,
+                "inputs": {
+                    "texts": ["fox jumped over the moon"]
+                }
+            }'
         """
-        logger.debug(f"Decoding input dictionary [model={request.model_id}, method={request.method}]")
+        logger.debug(
+            f"Decoding input dictionary [model={request.model_id}, method={request.method}, stream={request.stream}]"
+        )
         request.inputs = decode_item(request.inputs)
         return _infer(request, client)
 
@@ -423,17 +441,24 @@ def app_factory(
 
         # Perform inference
         logger.debug(f"Inference [model={request.model_id}, keys={inputs.keys()}]")
-        response = model(**inputs, _method=request.method)
+        response = model(**inputs, _method=request.method, _stream=request.stream)
         logger.debug(
-            f"Inference [model={request.model_id}, , method={request.method}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            f"Inference [model={request.model_id}, , method={request.method}, stream={request.stream}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
         )
 
         # Handle response types
-        try:
-            return JSONResponse(content=encode_item(response), status_code=status.HTTP_201_CREATED)
-        except Exception as e:
-            logger.exception(f"Failed to encode response [type={type(response)}, e={e}]")
-            raise HTTPException(status_code=500, detail="Image generation failed")
+        if request.stream:
+
+            def streaming_gen():
+                yield from response
+
+            return StreamingResponse(streaming_gen(), media_type="text/event-stream")
+        else:
+            try:
+                return JSONResponse(content=encode_item(response), status_code=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.exception(f"Failed to encode response [type={type(response)}, e={e}]")
+                raise HTTPException(status_code=500, detail="Image generation failed")
 
     return app
 
