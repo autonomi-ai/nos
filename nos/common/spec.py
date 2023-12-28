@@ -730,3 +730,13 @@ class ModelSpec:
     def _from_proto(minfo: nos_service_pb2.GenericResponse) -> "ModelSpec":
         """Convert the generic response back to the spec."""
         return loads(minfo.response_bytes)
+
+
+@dataclass
+class ModelDeploymentSpec:
+    """Model deployment specification."""
+
+    num_replicas: int = 1
+    """Number of replicas."""
+    resources: ModelResources = field(default_factory=ModelResources)
+    """Model resources."""

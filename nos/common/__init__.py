@@ -10,6 +10,7 @@ from .runtime import RuntimeEnv
 from .shm import SharedMemoryDataDict, SharedMemoryNumpyObject, SharedMemoryTransportManager  # noqa: F401
 from .spec import (
     FunctionSignature,
+    ModelDeploymentSpec,
     ModelResources,
     ModelSpec,
     ModelSpecMetadata,
