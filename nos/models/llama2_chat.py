@@ -118,7 +118,7 @@ class Llama2Chat:
         num_beams: int = 1,
     ) -> Iterable[str]:
         """Chat with the model."""
-        self.logger.info(f"Conversation: {messages}")
+        self.logger.debug(f"Conversation: {messages}")
         input_ids = self.tokenizer.apply_chat_template(
             messages, chat_template=self.cfg.chat_template, return_tensors="pt"
         )

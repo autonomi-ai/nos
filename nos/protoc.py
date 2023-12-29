@@ -13,6 +13,7 @@ from nos.logging import logger
 
 
 PROTO_PATHS = [NOS_PATH / "proto"]
+logger.disable(__name__)
 
 
 @dataclass
