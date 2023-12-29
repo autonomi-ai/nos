@@ -170,6 +170,7 @@ def app_factory(
                 continue
             owned_by, _ = model_id.split("/")
             _model_table[normalize_id(model_id)] = ChatModel(id=normalize_id(model_id), created=0, owned_by=owned_by)
+            logger.debug(f"Registered model [model={model_id}, m={_model_table[normalize_id(model_id)]}, spec={spec}]")
         return _model_table
 
     @app.get("/")
@@ -222,15 +223,8 @@ def app_factory(
         if len(request.messages) > 0 and request.messages[-1].role != "user":
             raise HTTPException(status_code=400, detail="Invalid chat request, last message must be from the user")
 
-        messages = [message.dict() for message in request.messages]
-        if len(request.messages) > 1 and request.messages[0].role == "system":
-            system_prompt = request.messages[0].content
-        else:
-            system_prompt = "You are NOS chat, a Llama 2 large language model (LLM) agent hosted by Autonomi AI."
-            messages.insert(0, {"role": "system", "content": system_prompt})
-        logger.debug(f"Chat [model={request.model}, message={messages}, system_prompt={system_prompt}]")
-
         # Perform chat completion (streaming)
+        messages = [message.dict() for message in request.messages]
         if request.stream:
 
             def openai_streaming_generator():

@@ -74,6 +74,10 @@ class Llama2Chat:
             compute_dtype="float16",
             additional_kwargs={"use_flashattention_2": True, "trust_remote_code": True},
         ),
+        "mistralai/Mistral-7B-Instruct-v0.2": Llama2ChatConfig(
+            model_name="mistralai/Mistral-7B-Instruct-v0.2",
+            compute_dtype="float16",
+        ),
     }
 
     def __init__(self, model_name: str = "HuggingFaceH4/zephyr-7b-beta"):
