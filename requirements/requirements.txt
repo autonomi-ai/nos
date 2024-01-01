@@ -1,6 +1,7 @@
 agi-pack>=0.1.19
 cloudpickle>=2.2.1
 docker>=6.0.0
+filelock
 gitpython
 grpcio-tools<=1.49.1
 humanize
