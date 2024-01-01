@@ -84,7 +84,10 @@ class InferenceService:
         self.client = Client(self.address)
         logger.debug(f"Connecting to gRPC server (address={self.client.address})")
 
-        self.client.WaitForServer(timeout=60)
+        if not self.client.WaitForServer(timeout=60, retry_interval=5):
+            raise RuntimeError("Failed to connect to gRPC server")
+        if not self.client.IsHealthy():
+            raise RuntimeError("gRPC server is not healthy")
         runtime = self.client.GetServiceRuntime()
         version = self.client.GetServiceVersion()
         logger.debug(f"Connected to gRPC server (address={self.client.address}, runtime={runtime}, version={version})")
@@ -166,10 +169,14 @@ def app_factory(
         models: List[str] = client.ListModels()
         for model_id in models:
             spec = client.GetModelInfo(model_id)
-            if spec.task() != TaskType.TEXT_GENERATION:
+            if not (spec.task() == TaskType.TEXT_GENERATION or spec.task() == TaskType.CUSTOM):
                 continue
-            owned_by, _ = model_id.split("/")
+            try:
+                owned_by, _ = model_id.split("/")
+            except ValueError:
+                owned_by = "unknown-org"
             _model_table[normalize_id(model_id)] = ChatModel(id=normalize_id(model_id), created=0, owned_by=owned_by)
+            logger.debug(f"Registered model [model={model_id}, m={_model_table[normalize_id(model_id)]}, spec={spec}]")
         return _model_table
 
     @app.get("/")
@@ -222,15 +229,8 @@ def app_factory(
         if len(request.messages) > 0 and request.messages[-1].role != "user":
             raise HTTPException(status_code=400, detail="Invalid chat request, last message must be from the user")
 
-        messages = [message.dict() for message in request.messages]
-        if len(request.messages) > 1 and request.messages[0].role == "system":
-            system_prompt = request.messages[0].content
-        else:
-            system_prompt = "You are NOS chat, a Llama 2 large language model (LLM) agent hosted by Autonomi AI."
-            messages.insert(0, {"role": "system", "content": system_prompt})
-        logger.debug(f"Chat [model={request.model}, message={messages}, system_prompt={system_prompt}]")
-
         # Perform chat completion (streaming)
+        messages = [message.dict() for message in request.messages]
         if request.stream:
 
             def openai_streaming_generator():
@@ -469,8 +469,7 @@ def main():
 
     import uvicorn
 
-    from nos.client import Client
-    from nos.constants import DEFAULT_GRPC_PORT, DEFAULT_HTTP_PORT
+    from nos.constants import DEFAULT_HTTP_PORT
     from nos.logging import logger
 
     parser = argparse.ArgumentParser(description="NOS REST API Service")
@@ -489,15 +488,6 @@ def main():
     parser.add_argument("--log-level", type=str, default="info", help="Logging level")
     args = parser.parse_args()
     logger.debug(f"args={args}")
-
-    # Wait for the gRPC server to be ready
-    logger.debug(f"Initializing gRPC client (port={DEFAULT_GRPC_PORT})")
-    client = Client(f"[::]:{DEFAULT_GRPC_PORT}")
-    logger.debug(f"Initialized gRPC client, connecting to gRPC server (address={client.address})")
-    if not client.WaitForServer(timeout=180, retry_interval=5):
-        raise RuntimeError("Failed to connect to gRPC server")
-    if not client.IsHealthy():
-        raise RuntimeError("gRPC server is not healthy")
 
     # Start the NOS REST API service
     logger.debug(

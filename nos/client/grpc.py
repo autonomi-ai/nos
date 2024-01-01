@@ -161,7 +161,9 @@ class Client:
             try:
                 return self.IsHealthy()
             except Exception:
-                logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
+                elapsed = time.time() - st
+                if int(elapsed) > 10:
+                    logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
                 time.sleep(retry_interval)
         raise ServerReadyException("Failed to ping server.")
 

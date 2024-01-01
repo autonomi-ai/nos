@@ -31,6 +31,7 @@ from nos.logging import LOGGING_LEVEL
 
 
 logger = logging.getLogger(__name__)
+logging.getLogger("ray").setLevel(logging.ERROR)
 
 
 @dataclass
@@ -96,6 +97,7 @@ class RayExecutor(metaclass=SingletonMetaclass):
                         address="auto",
                         namespace=self.spec.namespace,
                         ignore_reinit_error=True,
+                        logging_level="error",
                     )
                     status.stop()
                     console.print("[bold green] ✓ InferenceExecutor :: Connected to backend. [/bold green]")

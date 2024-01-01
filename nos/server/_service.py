@@ -36,7 +36,7 @@ nos_service_pb2_grpc = import_module("nos_service_pb2_grpc")
 def load_spec(model_id: str) -> ModelSpec:
     """Get the model spec cache."""
     model_spec: ModelSpec = hub.load_spec(model_id)
-    logger.info(f"Loaded model spec [name={model_spec.name}]")
+    logger.debug(f"Loaded model spec [name={model_spec.name}]")
     return model_spec
 
 
@@ -71,7 +71,7 @@ class InferenceService:
             self.executor.init()
         except Exception as e:
             err_msg = f"Failed to initialize executor [e={e}]"
-            logger.info(err_msg)
+            logger.error(err_msg)
             raise RuntimeError(err_msg)
         # Model manager to manage model loading / unloading
         self.model_manager = ModelManager()
@@ -237,7 +237,6 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         try:
             model_id = request.value
             spec: ModelSpec = hub.load_spec(model_id)
-            logger.debug(f"GetModelInfo() [spec={spec}]")
         except KeyError as e:
             logger.error(f"Failed to load spec [request={request}, e={e}]")
             context.abort(grpc.StatusCode.NOT_FOUND, str(e))
@@ -353,7 +352,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             logger.info(f"Executing request [model={request['id']}, method={request['method']}]")
             response = await self.execute_model(request["id"], method=request["method"], inputs=request["inputs"])
             logger.info(
-                f"Executed request [model={request['id']}, method={request['method']}, response={response}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+                f"Executed request [model={request['id']}, method={request['method']}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
             )
             return nos_service_pb2.GenericResponse(response_bytes=dumps(response))
         except (grpc.RpcError, Exception) as e:
@@ -402,7 +401,7 @@ async def async_serve_impl(
     console.print(f"[bold green] ✓ Starting gRPC server on {address}[/bold green]")
 
     start_t = time.time()
-    logger.info(f"Starting gRPC server on {address}")
+    logger.debug(f"Starting gRPC server on {address}")
     await server.start()
     console.print(
         f"[bold green] ✓ InferenceService :: Deployment complete (elapsed={time.time() - start_t:.1f}s) [/bold green]",  # noqa
@@ -410,12 +409,12 @@ async def async_serve_impl(
     if not wait_for_termination:
         return server
     try:
-        logger.info("Waiting for server termination")
+        logger.debug("Waiting for server termination")
         await server.wait_for_termination()
     except KeyboardInterrupt:
-        logger.info("Received KeyboardInterrupt, stopping server")
+        logger.debug("Received KeyboardInterrupt, stopping server")
         await server.stop(0)
-        logger.info("Server stopped")
+        logger.debug("Server stopped")
         console.print("[bold green] ✓ InferenceService :: Server stopped. [/bold green]")
     return server
 
