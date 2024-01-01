@@ -10,7 +10,7 @@ import docker.models.containers
 import docker.models.images
 import docker.models.volumes
 import docker.types
-from nos.exceptions import NosServerException
+from nos.exceptions import ServerException
 from nos.logging import logger
 
 
@@ -136,9 +136,8 @@ class DockerRuntime:
             logger.debug(f"Started container [name={name}, image={container.image}, id={container.id[:12]}]")
             logger.debug(f"Get logs using `docker logs -f {container.id[:12]}`")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
-            logger.error(f"Failed to start container, cleaning up container: {exc}")
             self.stop(name)
-            raise NosServerException(f"Failed to start container [image={image}]")
+            raise ServerException(f"Failed to start container [image={image}]", exc=exc)
         return container
 
     def stop(self, name: str, timeout: int = 30) -> docker.models.containers.Container:
@@ -152,7 +151,7 @@ class DockerRuntime:
             container.remove(force=True)
             logger.debug(f"Removed container: [name={name}, image={container.image}, id={container.id[:12]}]")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
-            logger.error(f"Failed to stop container: {exc}")
+            raise ServerException(f"Failed to stop container [name={name}]", exc=exc)
         return container
 
     def get_container_id(self, name: str) -> Optional[str]:
@@ -183,4 +182,4 @@ class DockerRuntime:
                 yield line.decode("utf-8")
         except (docker.errors.APIError, docker.errors.DockerException) as exc:
             logger.error(f"Failed to get container logs: {exc}")
-            raise NosServerException("Failed to get container logs")
+            raise ServerException("Failed to get container logs [name={name}]", exc=exc)

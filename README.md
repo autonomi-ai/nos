@@ -288,6 +288,10 @@ model_id: str = "mv-dream"
 
 This project is licensed under the [Apache-2.0 License](LICENSE).
 
+## 📡 Telemetry
+
+NOS collects anonymous usage data using [Sentry](https://sentry.io/). This is used to help us understand how the community is using NOS and to help us prioritize features. You can opt-out of telemetry by setting `NOS_TELEMETRY_ENABLED=0`.
+
 ## 🤝 Contributing
 We welcome contributions! Please see our [contributing guide](CONTRIBUTING.md) for more information.
 
