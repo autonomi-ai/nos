@@ -53,16 +53,8 @@ conda activate nos
 
 ## ⚡️ Start the NOS backend server
 
-You can start the nos server programmatically via the NOS SDK or via the CLI:
+You can start the nos server programmatically via either the CLI or SDK:
 
-=== "Via SDK"
-
-    You can start the nos server programmatically via the NOS SDK:
-    ```python
-    import nos
-
-    nos.init(runtime="auto")
-    ```
 === "Via CLI"
 
     You can start the nos server (in daemon mode) via the NOS `serve` CLI:
@@ -73,6 +65,14 @@ You can start the nos server programmatically via the NOS SDK or via the CLI:
     Optionally, to use the REST API, you can start an HTTP gateway proxy alongside the gRPC server:
     ```bash
     nos serve up -d --http
+    ```
+=== "Via SDK"
+
+    You can start the nos server programmatically via the NOS SDK:
+    ```python
+    import nos
+
+    nos.init(runtime="auto")
     ```
 
 We're now ready to issue our first inference request with NOS!
