@@ -88,11 +88,9 @@ class Llama2Chat:
         except KeyError:
             raise ValueError(f"Invalid model_name: {model_name}, available models: {Llama2ChatConfig.configs.keys()}")
 
-        if torch.cuda.is_available():
-            self.device_str = "cuda"
-        else:
-            self.device_str = "cpu"
+        self.device_str = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(self.device_str)
+
         token = hf_login() if self.cfg.needs_auth else None
         self.model = AutoModelForCausalLM.from_pretrained(
             self.cfg.model_name,
