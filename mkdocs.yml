@@ -7,7 +7,7 @@ repo_name: autonomi-ai/nos
 use_directory_urls: false
 
 copyright: >
-  Copyright &copy; 2022 - 2023 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
+  Copyright &copy; 2022 - 2024 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
 
 docs_dir: .
 site_dir: site
@@ -46,6 +46,7 @@ nav:
   - 🔌 Integrations:
     - Deploying NOS with SkyPilot: docs/integrations/skypilot.md
   - ❓ Support / FAQ: docs/support.md
+  - ✍️ Blog: docs/blog
 
 plugins:
 - include-markdown
@@ -54,6 +55,9 @@ plugins:
     enabled: !ENV [ENABLE_BLOG, true]
     blog_dir: docs/blog
     blog_toc: true
+    post_date_format: medium
+    post_url_format: "{slug}"
+
 
 - mkdocstrings:
     enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
@@ -81,6 +85,7 @@ plugins:
 - tags
 - same-dir
 - search
+- social
 - table-reader
 - exclude:
     glob:
@@ -99,6 +104,7 @@ markdown_extensions:
 - admonition
 - mkdocs-typer
 - pymdownx.betterem
+- pymdownx.details
 - pymdownx.superfences
 - markdown.extensions.footnotes
 - markdown.extensions.attr_list
