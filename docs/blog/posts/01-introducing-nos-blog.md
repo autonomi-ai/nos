@@ -14,14 +14,9 @@ links:
 
 # Introducing NOS Blog!
 
-At [Autonomi AI](https://autonomi.ai), we build infrastructure tools to make AI *fast*, *easy* and *affordable*. 
+At [Autonomi AI](https://autonomi.ai), we build infrastructure tools to make AI *fast*, *easy* and *affordable*. We’re in the early development years of the “Linux OS for AI”, where the commoditization of open-source models and tools will be the critical to the safe and ubiquitous use of AI. Needless to say, it’s the most exciting and ambitious infrastructure project our generation is going to witness in the coming decade. 
 
-A few weeks back, we released [NOS](https://github.com/autonomi-ai/nos) - a fast and flexible inference server for [PyTorch](https://pytorch.org/) that can run a whole host of open-source AI models (LLMs, Stable Diffusion, CLIP, Whisper, Object Detection etc) all under one-roof. 
-
-**Today, we’re finally excited to launch the NOS blog**.
-
-We’ve been big believers of *multi-modal* from the very beginning, and you can do all of it with NOS today. Give us a 🌟 on [Github](https://github.com/autonomi-ai/nos) if you're stoked -- NOS can run locally on your Linux desktop (with a gaming GPU), in any cloud GPU (NVIDIA L4, A100s, etc) and even on CPUs (without any acceleration). Very soon, we'll support running models on [Apple Silicon](https://www.apple.com/newsroom/2023/10/apple-unveils-m3-m3-pro-and-m3-max-the-most-advanced-chips-for-a-personal-computer/) and custom AI accelerators such as [Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) from Amazon Web Services (AWS).
-
+A few weeks back, we open-sourced [**NOS**](https://github.com/autonomi-ai/nos) - a fast and flexible inference server for [PyTorch](https://pytorch.org/) that can run a whole host of open-source AI models (LLMs, Stable Diffusion, CLIP, Whisper, Object Detection etc) all under one-roof. **Today, we’re finally excited to launch the NOS blog**.
 
 ## 🎯 Why are we building yet another AI inference server?
 
@@ -29,6 +24,7 @@ Most inference API implementations today deeply couple the API framework ([FastA
 
 We’ve made it very easy for developers to host new PyTorch models as APIs and take them to production without having to worry about any of the backend infrastructure concerns. We build on some awesome projects like [FastAPI](https://fastapi.tiangolo.com/), [Ray](https://ray.io/), [Hugging Face](https://www.huggingface.co), [transformers](https://github.com/huggingface/transformers) and [diffusers](https://github.com/huggingface/transformers).
 
+We’ve been big believers of *multi-modal* from the very beginning, and you can do all of it with NOS today. Give us a 🌟 on [Github](https://github.com/autonomi-ai/nos) if you're stoked -- NOS can run locally on your Linux desktop (with a gaming GPU), in any cloud GPU (NVIDIA L4, A100s, etc) and even on CPUs. Very soon, we'll support running models on [Apple Silicon](https://www.apple.com/newsroom/2023/10/apple-unveils-m3-m3-pro-and-m3-max-the-most-advanced-chips-for-a-personal-computer/) and custom AI accelerators such as [Inferentia2](https://aws.amazon.com/ec2/instance-types/inf2/) from Amazon Web Services (AWS).
 
 !!! info "What's coming?"
     Over the coming weeks, we’ll be announcing some *awesome features* that we believe will make the power of large foundation models more accessible, cheaper and easy-to-use than ever before. 
@@ -39,10 +35,10 @@ NOS was built from the ground-up, with developers in mind. Here are a few things
 
 - 🥷 **Flexible**: Support for OSS models with custom runtimes with pip, conda and cuda/driver dependencies.
 - 🔌 **Pluggable:** Simple API over a high-performance gRPC or REST API that supports batched requests, and streaming.
-- 📦 **Extensible**: Written entirely in Python so it’s easily hackable and extensible with an Apache-2.0 License for commercial use.
 - 🚀 **Scalable**: Serve multiple custom models simultaneously on a single or multi-GPU instance, without having to worry about memory management and model scaling.
 - 🏛️ **Local**: Local execution means that you control your data, and you’re free to build NOS for domains that are more restrictive with data-privacy.
 - ☁️ **Cloud-agnostic:** Fully containerized means that you can develop, test and deploy NOS locally, on-prem, on any cloud or AI CSP.
+- 📦 **Extensible**: Written entirely in Python so it’s easily hackable and extensible with an Apache-2.0 License for commercial use.
 
 Go ahead and check out our [playground](https://github.com/autonomi-ai/nos-playground), and try out some of the more recent models with NOS.
 
