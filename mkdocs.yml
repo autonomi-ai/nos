@@ -24,11 +24,13 @@ nav:
     - Starting the server: docs/guides/starting-the-server.md
     - Running inference: docs/guides/running-inference.md
     - Serving custom models: docs/guides/serving-custom-models.md
-    - Running custom models: docs/guides/running-custom-models.md
   - 🤖 Demos:
     - Build a Discord image-generation bot: docs/demos/discord-bot.md
     - Build a video search engine: docs/demos/video-search.md
   - 👩‍💻 API Reference:
+    - CLI:
+      - <kbd>nos serve</kbd>: docs/cli/serve.md
+      - <kbd>nos system</kbd>: docs/cli/system.md
     - nos.common:
       - nos.common.exceptions: docs/api/common/exceptions.md
       - nos.common.metaclass: docs/api/common/metaclass.md
@@ -112,9 +114,6 @@ markdown_extensions:
 - markdown.extensions.abbr
 - markdown.extensions.md_in_html
 - pymdownx.details
-- pymdownx.emoji:
-    emoji_index: !!python/name:materialx.emoji.twemoji
-    emoji_generator: !!python/name:materialx.emoji.to_svg
 - pymdownx.extra
 - pymdownx.highlight:
     anchor_linenums: true

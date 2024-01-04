@@ -66,6 +66,10 @@ You can start the nos server programmatically via either the CLI or SDK:
     ```bash
     nos serve up -d --http
     ```
+    
+    !!!note
+        You can look at the full list of `serve` CLI options [here](./cli/serve.md). 
+
 === "Via SDK"
 
     You can start the nos server programmatically via the NOS SDK:
