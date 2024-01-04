@@ -132,7 +132,7 @@ $ sky stop nos-server-gcp
 Alternatively, you can terminate your server with the following command:
 
 ```bash
-$ sky terminate nos-server-gcp
+$ sky down nos-server-gcp
 ```
 
 This will terminate the server and all associated resources (e.g. VMs, disks, etc.).

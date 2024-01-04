@@ -623,8 +623,8 @@ class ModelSpec:
             ```
 
         Args:
-            *args: Positional arguments.
-            **kwargs: Keyword arguments.
+            *init_args: Positional arguments.
+            **init_kwargs: Keyword arguments.
         Returns:
             Any: Model instance.
         """

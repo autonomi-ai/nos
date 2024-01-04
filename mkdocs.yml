@@ -1,16 +1,15 @@
 site_name: NOS Docs
 site_url: https://docs.nos.run
 site_author: Sudeep Pillai
-
+site_dir: site
+site_description: >-
+  NOS -- A fast, and flexible AI inference server.
 repo_url: https://github.com/autonomi-ai/nos
 repo_name: autonomi-ai/nos
-use_directory_urls: false
-
-copyright: >
-  Copyright &copy; 2022 - 2023 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
-
 docs_dir: .
-site_dir: site
+use_directory_urls: false
+copyright: >
+  Copyright &copy; 2022 - 2024 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
 
 nav:
   - 🏠 Home: README.md
@@ -45,6 +44,7 @@ nav:
     - nos.executors: docs/api/executors.md
   - 🔌 Integrations:
     - Deploying NOS with SkyPilot: docs/integrations/skypilot.md
+  - ✍️ Blog: docs/blog
   - ❓ Support / FAQ: docs/support.md
 
 plugins:
@@ -54,6 +54,9 @@ plugins:
     enabled: !ENV [ENABLE_BLOG, true]
     blog_dir: docs/blog
     blog_toc: true
+    post_date_format: medium
+    post_url_format: "{slug}"
+
 
 - mkdocstrings:
     enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
@@ -81,6 +84,7 @@ plugins:
 - tags
 - same-dir
 - search
+- social
 - table-reader
 - exclude:
     glob:
@@ -99,6 +103,7 @@ markdown_extensions:
 - admonition
 - mkdocs-typer
 - pymdownx.betterem
+- pymdownx.details
 - pymdownx.superfences
 - markdown.extensions.footnotes
 - markdown.extensions.attr_list

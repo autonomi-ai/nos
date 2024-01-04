@@ -9,7 +9,7 @@
 <a href="https://twitter.com/autonomi_ai"><img alt="PyPi Version" src="https://img.shields.io/twitter/follow/autonomi_ai.svg?style=social&logo=twitter"></a>
 </p>
 <p align="center">
-<a href="https://docs.nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
+<a href="https://docs.nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> | <a href="https://docs.nos.run/docs/blog"><b>Blog</b></a> |    <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
 </p>
 
 ## What is NOS?
@@ -257,24 +257,6 @@ curl \
 ### ⚒️ Custom models
 ---
 Want to run models not supported by NOS? You can easily add your own models following the examples in the [NOS Playground](https://github.com/autonomi-ai/nos-playground/tree/main/examples).
-
-### Text to video
-```python
-model_id: str = "animate-diff"
-```
-<img src="docs/assets/animatediff-puppy.gif" width="150">
-
-### Image to video
-```python
-model_id: str = "stable-video-diffusion"
-```
-<img src="docs/assets/exp_img2vid_in.png" width="150"><img src="docs/assets/exp_img2vid_out.gif" width="150">
-
-### Text to 360-view images
-```python
-model_id: str = "mv-dream"
-```
-<img src="docs/assets/mvdream_example.png" width="600">
 
 
 ## 📚 Documentation
