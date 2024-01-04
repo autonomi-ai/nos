@@ -33,6 +33,8 @@ agi-build-py38-cpu:
 		-p 3.8.15 \
 		-b debian:buster-slim \
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py38'
+	docker tag \
+		${DOCKER_IMAGE_NAME}:latest-cpu-py38
 
 agi-build-py38-cu118:
 	agi-pack build ${AGIPACK_ARGS} \
@@ -42,6 +44,8 @@ agi-build-py38-cu118:
 		-p 3.8.15 \
 		-b nvidia/cuda:11.8.0-base-ubuntu22.04 \
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py38-cu118'
+	docker tag \
+		${DOCKER_IMAGE_NAME}:latest-gpu-py38-cu118
 
 agi-build-py39-cu118:
 	agi-pack build ${AGIPACK_ARGS} \
@@ -51,6 +55,8 @@ agi-build-py39-cu118:
 		-p 3.9.13 \
 		-b nvidia/cuda:11.8.0-base-ubuntu22.04 \
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py39-cu118'
+	docker tag \
+		${DOCKER_IMAGE_NAME}:latest-gpu-py39-cu118
 
 agi-build-py310-cu118:
 	agi-pack build ${AGIPACK_ARGS} \
@@ -60,6 +66,8 @@ agi-build-py310-cu118:
 		-p 3.10.11 \
 		-b nvidia/cuda:11.8.0-base-ubuntu22.04 \
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py310-cu118'
+	docker tag \
+		${DOCKER_IMAGE_NAME}:latest-gpu-py310-cu118
 
 agi-build-py311-cu118:
 	agi-pack build ${AGIPACK_ARGS} \
@@ -69,6 +77,8 @@ agi-build-py311-cu118:
 		-p 3.11.4 \
 		-b nvidia/cuda:11.8.0-base-ubuntu22.04 \
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py311-cu118'
+	docker tag \
+		${DOCKER_IMAGE_NAME}:latest-gpu-py311-cu118
 
 
 agi-build-cu118: \
