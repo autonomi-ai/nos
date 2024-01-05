@@ -1,0 +1,15 @@
+images:
+  custom-cpu:
+    base: autonomi/nos:latest-cpu
+
+models:
+  custom/custom-model:
+    runtime_env: custom-cpu
+    model_cls: CustomModel
+    model_path: models/model.py
+    default_method: __call__
+    init_kwargs:
+      model_name: custom/custom-model
+    deployment:
+      resources:
+        device: cpu
