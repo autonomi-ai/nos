@@ -103,7 +103,7 @@ def _serve_up(
     http_workers: int = typer.Option(1, "--http-workers", help="HTTP max workers.", show_default=True),
     logging_level: str = typer.Option("INFO", "--logging-level", help="Logging level.", show_default=True),
     home_directory: str = typer.Option(
-        "~/.nosd", "--home_directory", help="Override the NOS_HOME variable with a custom location.", show_default=True
+        "~/.nosd", "--home-directory", help="Override the NOS_HOME variable with a custom location.", show_default=True
     ),
     daemon: bool = typer.Option(False, "-d", "--daemon", help="Run in daemon mode.", show_default=True),
     reload: bool = typer.Option(False, "--reload", help="Reload on file changes.", show_default=True),

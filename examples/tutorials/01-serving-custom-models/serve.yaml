@@ -1,0 +1,26 @@
+# See docs/cli/serve.spec.yaml for the full specification
+# of the serve.yaml file.
+images:
+  custom-gpu:
+    base: autonomi/nos:latest-gpu
+    system:
+      - git
+    pip:
+      - accelerate>=0.23.0
+      - transformers>=4.35.1
+    env:
+      NOS_LOGGING_LEVEL: INFO
+    run:
+      - python -c 'import torch; print(torch.__version__)'
+
+models:
+  custom/custom-model:
+    runtime_env: custom-gpu
+    model_cls: CustomModel
+    model_path: models/model.py
+    default_method: __call__
+    init_kwargs:
+      model_name: custom/custom-model-a
+    deployment:
+      resources:
+        device: gpu
