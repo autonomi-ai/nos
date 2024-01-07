@@ -7,11 +7,13 @@
 
 ### Serve YAML Specification
 
-The `serve` CLI takes a YAML specification file that defines the server configuration. 
+The `serve` CLI uses a YAML specification file to fully configure the runtime and the models that need to be served. The full specification is available [here](./serve.spec.yaml). 
 
 ```yaml title="serve.yaml"
 {% include './serve.spec.yaml' %}
 ```
+
+Check out our custom model serving tutorial [here](../../examples/tutorials/01-define-custom-models/) to learn more about how to use the `serve.yaml` file to serve custom models with NOS.
 
 ### Debugging the server
 

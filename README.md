@@ -52,7 +52,7 @@ from nos.client import Client
 client = Client("[::]:50051")
 
 model = client.Module("meta-llama/Llama-2-7b-chat-hf")
-response = model.chat(message="Tell me a story of 1000 words with emojis")
+response = model.chat(message="Tell me a story of 1000 words with emojis", _stream=True)
 ```
 
 </td>
@@ -261,6 +261,7 @@ Want to run models not supported by NOS? You can easily add your own models foll
 
 ## 📚 Documentation
 
+- [Tutorials](./examples/tutorials/)
 - [Quickstart](https://docs.nos.run/docs/quickstart.html)
 - [Models](https://docs.nos.run/docs/models/supported-models.html)
 - **Concepts**: [Architecture Overview](https://docs.nos.run/docs/concepts/architecture-overview.html), [ModelSpec](https://docs.nos.run/docs/concepts/model-spec.html), [ModelManager](https://docs.nos.run/docs/concepts/model-manager.html), [Runtime Environments](https://docs.nos.run/docs/concepts/runtime-environments.html)

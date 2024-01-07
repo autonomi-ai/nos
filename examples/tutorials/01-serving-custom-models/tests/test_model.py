@@ -9,7 +9,7 @@ def test_lcm():
     assert client.WaitForServer()
     assert client.IsHealthy()
 
-    model_id = "custom/custom-model-a"
+    model_id = "custom/custom-model"
     models: List[str] = client.ListModels()
     assert model_id in models
 

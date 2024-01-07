@@ -30,7 +30,7 @@ help:
 	@echo "  clean-pyc           Remove Python file artifacts"
 	@echo "  clean-test          Remove test and coverage artifacts"
 	@echo "  post-install-check  Post-install checks (check version, etc)"
-	@echo "  develop             Install GPU dependencies and package in developer/editable-mode"
+	@echo "  develop-gpu         Install GPU dependencies and package in developer/editable-mode"
 	@echo "  develop-cpu         Install CPU dependencies and package in developer/editable-mode"
 	@echo "  install             Install wheel package"
 	@echo "  lint                Format source code automatically"
