@@ -87,15 +87,13 @@ Try out an inference request via the [Python SDK](https://pypi.org/project/torch
 
 ```python
 from nos.client import Client, TaskType
-
 client = Client()
-response = client.Run(
-    "stabilityai/stable-diffusion-2",
-    inputs={
-        "texts"=["astronaut on the moon"],
-        "num_images": 1, "width": 512, "height": 512
-    })
-img, = response["images"]
+client.WaitForServer()
+client.IsHealthy()
+
+sdv2 = client.Module("stabilityai/stable-diffusion-2-1")
+sdv2(prompts=["fox jumped over the moon"],
+     width=512, height=512, num_images=1)
 ```
 
 # Troubleshooting
