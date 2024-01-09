@@ -53,16 +53,8 @@ conda activate nos
 
 ## ⚡️ Start the NOS backend server
 
-You can start the nos server programmatically via the NOS SDK or via the CLI:
+You can start the nos server programmatically via either the CLI or SDK:
 
-=== "Via SDK"
-
-    You can start the nos server programmatically via the NOS SDK:
-    ```python
-    import nos
-
-    nos.init(runtime="auto")
-    ```
 === "Via CLI"
 
     You can start the nos server (in daemon mode) via the NOS `serve` CLI:
@@ -74,6 +66,18 @@ You can start the nos server programmatically via the NOS SDK or via the CLI:
     ```bash
     nos serve up -d --http
     ```
+    
+    !!!note
+        You can look at the full list of `serve` CLI options [here](./cli/serve.md). 
+
+=== "Via SDK"
+
+    You can start the nos server programmatically via the NOS SDK:
+    ```python
+    import nos
+
+    nos.init(runtime="auto")
+    ```
 
 We're now ready to issue our first inference request with NOS!
 
@@ -83,15 +87,13 @@ Try out an inference request via the [Python SDK](https://pypi.org/project/torch
 
 ```python
 from nos.client import Client, TaskType
-
 client = Client()
-response = client.Run(
-    "stabilityai/stable-diffusion-2",
-    inputs={
-        "texts"=["astronaut on the moon"],
-        "num_images": 1, "width": 512, "height": 512
-    })
-img, = response["images"]
+client.WaitForServer()
+client.IsHealthy()
+
+sdv2 = client.Module("stabilityai/stable-diffusion-2-1")
+sdv2(prompts=["fox jumped over the moon"],
+     width=512, height=512, num_images=1)
 ```
 
 # Troubleshooting

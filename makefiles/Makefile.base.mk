@@ -51,6 +51,7 @@ docker-build-gpu-prod:
 	make agi-build-gpu AGIPACK_ARGS=--prod
 
 docker-build-cu118: agi-build-cu118
+docker-build-cu121: agi-build-cu121
 
 docker-build-and-push-multiplatform-cpu:
 	agi-pack generate ${AGIPACK_ARGS} \
@@ -76,6 +77,7 @@ docker-push-gpu:
 	TARGET=gpu
 
 docker-push-cu118: agi-push-cu118
+docker-push-cu121: agi-push-cu121
 
 docker-push-all: \
 	docker-push-cpu docker-push-gpu docker-push-cu118
