@@ -61,18 +61,6 @@ agi-build-py310-cu118:
 		${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-py310-cu118 \
 		${DOCKER_IMAGE_NAME}:latest-py310-cu118
 
-agi-build-py311-cu118:
-	agi-pack build ${AGIPACK_ARGS} \
-		--target gpu \
-		-c docker/agibuild.gpu.yaml \
-		-o docker/Dockerfile.py310-cu118 \
-		-p 3.11.4 \
-		-b nvidia/cuda:11.8.0-base-ubuntu22.04 \
-		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}-py311-cu118'
-	docker tag \
-		${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-py311-cu118 \
-		${DOCKER_IMAGE_NAME}:latest-py311-cu118
-
 agi-build-py38-cu121:
 	agi-pack build ${AGIPACK_ARGS} \
 		--target gpu \
@@ -100,11 +88,9 @@ agi-build-py310-cu121:
 agi-build-cu118: \
 	agi-build-py38-cu118 \
 	agi-build-py39-cu118 \
-	agi-build-py310-cu118 \
-	agi-build-py311-cu118
+	agi-build-py310-cu118
 
 agi-build-cu121: \
-	agi-build-py38-cu121 \
 	agi-build-py310-cu121
 
 agi-push-cu118:
@@ -114,11 +100,7 @@ agi-push-cu118:
 	docker push ${DOCKER_IMAGE_NAME}:latest-py39-cu118
 	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-py310-cu118
 	docker push ${DOCKER_IMAGE_NAME}:latest-py310-cu118
-	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-py311-cu118
-	docker push ${DOCKER_IMAGE_NAME}:latest-py311-cu118
 
 agi-push-cu121:
-	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-py38-cu121
-	docker push ${DOCKER_IMAGE_NAME}:latest-py38-cu121
 	docker push ${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-py310-cu121
 	docker push ${DOCKER_IMAGE_NAME}:latest-py310-cu121
