@@ -200,7 +200,7 @@ def _profile_model(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
 ):
     """Profile a specific model by its identifier."""
-    profile_models(model_id, device_id=device_id, save=False, verbose=verbose)
+    profile_models(model_id, device_id=device_id, save=True, verbose=verbose)
 
 
 @profile_cli.command(name="all")
@@ -245,13 +245,15 @@ def _profile_list():
         for method in spec.signature:
             metadata = spec.metadata(method)
             try:
-                runtime = metadata.resources.runtime
-                device = "-".join(metadata.resources.device.split("-")[-2:])
-                it_s = f'{metadata.metadata["prof.forward::execution.num_iterations"] * 1e3 / metadata.metadata["prof.forward::execution.total_ms"]:.1f}'
-                cpu_util = f'{metadata.metadata["prof.forward::execution.cpu_utilization"]:0.2f}'
-                gpu_util = f'{metadata.metadata["prof.forward::execution.gpu_utilization"]:0.2f}'
-                cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
-                gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
+                if hasattr(metadata, "resources"):
+                    runtime = metadata.resources.runtime
+                    device = "-".join(metadata.resources.device.split("-")[-2:])
+                    cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
+                    gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
+                if hasattr(metadata, "metadata"):
+                    it_s = f'{metadata.metadata["prof.forward::execution.num_iterations"] * 1e3 / metadata.metadata["prof.forward::execution.total_ms"]:.1f}'
+                    cpu_util = f'{metadata.metadata["prof.forward::execution.cpu_utilization"]:0.2f}'
+                    gpu_util = f'{metadata.metadata["prof.forward::execution.gpu_utilization"]:0.2f}'
             except Exception:
                 it_s = "-"
                 cpu_util = "-"
