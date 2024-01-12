@@ -67,7 +67,7 @@ def _model_methods(model_id: str = None) -> Iterator[Tuple[str, str, ModelSpec]]
             yield _model_id, method, spec
 
 
-def profile_models(model_id: str = None, device_id: int = 0, save: bool = False, verbose: bool = False) -> Profiler:
+def profile_models(model_id: str = None, device_id: int = 0, save: bool = False, verbose: bool = False, catalog_path: str = None) -> Profiler:
     """Main entrypoint for profiling all models."""
     import torch
 
@@ -189,7 +189,7 @@ def profile_models(model_id: str = None, device_id: int = 0, save: bool = False,
     # Run the profiler, and optionally save the catalog
     profiler.run()
     if save:
-        profiler.save()
+        profiler.save(catalog_path=catalog_path)
     return profiler
 
 
@@ -198,31 +198,36 @@ def _profile_model(
     model_id: str = typer.Option(..., "-m", "--model-id", help="Model identifier."),
     device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Export path for the catalog json."),
 ):
     """Profile a specific model by its identifier."""
-    profile_models(model_id, device_id=device_id, save=True, verbose=verbose)
+    profile_models(model_id, device_id=device_id, save=True, verbose=verbose, catalog_path=catalog_path)
 
 
 @profile_cli.command(name="all")
 def _profile_all_models(
     device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Export path for the catalog json."),
 ):
     """Profile all models."""
-    profile_models(device_id=device_id, verbose=verbose)
+    profile_models(device_id=device_id, verbose=verbose, catalog_path=catalog_path)
 
 
 @profile_cli.command(name="rebuild-catalog")
 def _profile_rebuild_catalog(
     device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Export path for the catalog json."),
 ):
     """Profile all models and save the catalog."""
-    profile_models(device_id=device_id, save=True, verbose=verbose)
+    profile_models(device_id=device_id, save=True, verbose=verbose, catalog_path=catalog_path)
 
 
 @profile_cli.command(name="list")
-def _profile_list():
+def _profile_list(
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Load a preexisiting catalog."),
+):
     """List all models and their methods."""
     from rich.table import Table
 

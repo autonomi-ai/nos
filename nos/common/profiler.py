@@ -447,9 +447,11 @@ class ModelProfiler:
                     continue
         print(f"[bold green] ✅ Benchmarks completed (elapsed={time.time() - st_t:.1f}s) [/bold green]")
 
-    def save(self) -> str:
+    def save(self, catalog_path: str = None) -> str:
         """Save profiled results to JSON."""
-        from nos.constants import NOS_PROFILE_CATALOG_PATH
+        if catalog_path is None:
+            from nos.constants import NOS_PROFILE_CATALOG_PATH
+            catalog_path = str(NOS_PROFILE_CATALOG_PATH)
 
         NOS_PROFILE_DIR = NOS_CACHE_DIR / "profile"
         NOS_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
@@ -463,6 +465,6 @@ class ModelProfiler:
         self.prof.save(profile_path)
 
         # Copy the profile to the metadata catalog
-        shutil.copyfile(str(profile_path), str(NOS_PROFILE_CATALOG_PATH))
+        shutil.copyfile(str(profile_path), catalog_path)
 
         return str(profile_path)
