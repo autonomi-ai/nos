@@ -250,10 +250,12 @@ def _profile_list():
                     device = "-".join(metadata.resources.device.split("-")[-2:])
                     cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
                     gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
-                if hasattr(metadata, "metadata"):
-                    it_s = f'{metadata.metadata["prof.forward::execution.num_iterations"] * 1e3 / metadata.metadata["prof.forward::execution.total_ms"]:.1f}'
-                    cpu_util = f'{metadata.metadata["prof.forward::execution.cpu_utilization"]:0.2f}'
-                    gpu_util = f'{metadata.metadata["prof.forward::execution.gpu_utilization"]:0.2f}'
+                if hasattr(metadata, "profile"):
+                    it_s = f'{metadata.profile["prof.forward::execution.num_iterations"] * 1e3 / metadata.profile["prof.forward::execution.total_ms"]:.1f}'
+                    cpu_util = f'{metadata.profile["prof.forward::execution.cpu_utilization"]:0.2f}'
+                    gpu_util = f'{metadata.profile["prof.forward::execution.gpu_utilization"]:0.2f}'
+                else:
+                    print("no metadata")
             except Exception:
                 it_s = "-"
                 cpu_util = "-"
