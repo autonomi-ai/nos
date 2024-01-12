@@ -435,7 +435,7 @@ class ModelSpecMetadataCatalog:
             "prof.forward::memory_cpu::allocated",
         ]:
             if col not in columns:
-                raise ValueError(f"Invalid model profile catalog, missing column={col}.")
+                print('Missing: ', col)
         # Update the registry
         for _, row in df.iterrows():
             model_id, method = row["model_id"], row["method"]
