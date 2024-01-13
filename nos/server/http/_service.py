@@ -15,8 +15,9 @@ from PIL import Image
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from nos.client import DEFAULT_GRPC_PORT, Client
+from nos.client import Client
 from nos.common.tasks import TaskType
+from nos.constants import DEFAULT_GRPC_ADDRESS
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -62,7 +63,7 @@ class InferenceService:
     version: str = field(default="v1")
     """NOS version."""
 
-    address: str = field(default=f"[::]:{DEFAULT_GRPC_PORT}")
+    address: str = field(default=DEFAULT_GRPC_ADDRESS)
     """gRPC address."""
 
     env: str = field(default=HTTP_ENV)
@@ -132,9 +133,7 @@ def as_path(file: SpooledTemporaryFile, suffix: str, chunk_size_mb: int = 4 * 10
 _model_table: Dict[str, ChatModel] = {}
 
 
-def app_factory(
-    version: str = HTTP_API_VERSION, address: str = f"[::]:{DEFAULT_GRPC_PORT}", env: str = HTTP_ENV
-) -> FastAPI:
+def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADDRESS, env: str = HTTP_ENV) -> FastAPI:
     """Create a FastAPI factory application for the NOS REST API gateway.
 
     Args:
@@ -469,11 +468,11 @@ def main():
 
     import uvicorn
 
-    from nos.constants import DEFAULT_HTTP_PORT
+    from nos.constants import DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT
     from nos.logging import logger
 
     parser = argparse.ArgumentParser(description="NOS REST API Service")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host address")
+    parser.add_argument("--host", type=str, default=DEFAULT_HTTP_HOST, help="Host address")
     parser.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT, help="Port number")
     parser.add_argument("--workers", type=int, default=1, help="Number of workers")
     parser.add_argument(

@@ -18,7 +18,7 @@ from rich import print
 from rich.console import Console
 from rich.tree import Tree
 
-from nos.constants import NOS_TMP_DIR
+from nos.constants import DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT, NOS_TMP_DIR
 
 
 NOS_SERVE_TMP_DIR = NOS_TMP_DIR / "serve"
@@ -44,7 +44,10 @@ class ServeOptions:
     http: bool = field(default=False)
     """Whether to use HTTP for the server."""
 
-    http_port: int = field(default=8000)
+    http_host: str = field(default=DEFAULT_HTTP_HOST)
+    """HTTP host to use for the server."""
+
+    http_port: int = field(default=DEFAULT_HTTP_PORT)
     """HTTP port to use for the server."""
 
     http_workers: int = field(default=1)
@@ -75,6 +78,23 @@ class ServeOptions:
     """Environment file to use for the server."""
 
 
+@serve_cli.command("generate", help="Generate the NOS server Dockerfiles, without building it.")
+def _serve_generate(
+    config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
+    target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=False),
+    tag: str = typer.Option("autonomi/nos:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
+    prod: bool = typer.Option(
+        False,
+        "-p",
+        "--prod",
+        help="Run with production flags (slimmer images, no dev. dependencies).",
+        show_default=False,
+    ),
+) -> None:
+    """Main entrypoint for custom NOS runtime Dockerfile generation."""
+    _serve(config_filename=config_filename, runtime="auto", target=target, tag=tag, generate=True, prod=prod)
+
+
 @serve_cli.command("build", help="Build the NOS server locally.")
 def _serve_build(
     config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
@@ -99,7 +119,8 @@ def _serve_up(
     target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=True),
     tag: str = typer.Option("autonomi/nos:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
     http: bool = typer.Option(False, "--http", help="Serve with HTTP gateway.", show_default=True),
-    http_port: int = typer.Option(8000, "--http-port", help="HTTP port to use.", show_default=True),
+    http_host: str = typer.Option("0.0.0.0", "--http-host", help="HTTP host to use.", show_default=True),
+    http_port: int = typer.Option(DEFAULT_HTTP_PORT, "--http-port", help="HTTP port to use.", show_default=True),
     http_workers: int = typer.Option(1, "--http-workers", help="HTTP max workers.", show_default=True),
     logging_level: str = typer.Option("INFO", "--logging-level", help="Logging level.", show_default=True),
     home_directory: str = typer.Option(
@@ -132,6 +153,7 @@ def _serve_up(
         target=target,
         tag=tag,
         http=http,
+        http_host=http_host,
         http_port=http_port,
         http_workers=http_workers,
         logging_level=logging_level,
@@ -152,12 +174,14 @@ def _serve(
     target: str = None,
     tag: str = "autonomi/nos:{target}",
     http: bool = False,
-    http_port: int = 8000,
+    http_host: str = DEFAULT_HTTP_HOST,
+    http_port: int = DEFAULT_HTTP_PORT,
     http_workers: int = 1,
     logging_level: str = "INFO",
     home_directory: str = "~/.nosd",
     daemon: bool = False,
     reload: bool = False,
+    generate: bool = False,
     build: bool = False,
     prod: bool = False,
     env_file: str = None,
@@ -303,14 +327,21 @@ def _serve(
                 f"[bold green]✓[/bold green] Successfully generated Dockerfile (target=[bold white]{docker_target}[/bold white], filename=[bold white]{filename}[/bold white])."
             ).add(f"[green]`{cmd}`[/green]")
             print(tree)
-            with redirect_stdout_to_logger(level="DEBUG"):
-                builder.build(filename=filename, target=docker_target, tags=[image_name])
+
+            # If the `--generate` flag is specified, then we do not build the image
+            if not generate:
+                with redirect_stdout_to_logger(level="DEBUG"):
+                    builder.build(filename=filename, target=docker_target, tags=[image_name])
             print(f"[green]✓[/green] Successfully built Docker image (image=[bold white]{image_name}[/bold white]).")
 
         # Copy the dockerfiles to the current working directory if debug is enabled.
         for _docker_target, filename in dockerfiles.items():
-            if debug:
+            if debug or generate:
                 shutil.copyfile(filename, Path.cwd() / Path(filename).name)
+
+        # If the `--generate` flag is specified, then we can stop here
+        if generate:
+            return
 
         # Check if the image was built
         if image_name is None:
@@ -356,6 +387,7 @@ def _serve(
         image=image_name,
         gpu=runtime == "gpu",
         http=http,
+        http_host=http_host,
         http_port=http_port,
         http_workers=http_workers,
         http_env="prod" if prod else "dev",

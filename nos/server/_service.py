@@ -15,7 +15,7 @@ from nos import hub
 from nos.common import FunctionSignature, ModelSpec, ModelSpecMetadataCatalog, dumps, loads
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTransportManager
 from nos.constants import (  # noqa F401
-    DEFAULT_GRPC_PORT,  # noqa F401
+    DEFAULT_GRPC_ADDRESS,
     GRPC_MAX_MESSAGE_LENGTH,
     GRPC_MAX_WORKER_THREADS,
     NOS_PROFILING_ENABLED,
@@ -382,7 +382,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
 
 
 async def async_serve_impl(
-    address: str = f"[::]:{DEFAULT_GRPC_PORT}",
+    address: str = DEFAULT_GRPC_ADDRESS,
     wait_for_termination: bool = True,
     catalog: str = None,
 ):
@@ -420,7 +420,7 @@ async def async_serve_impl(
 
 
 def async_serve(
-    address: str = f"[::]:{DEFAULT_GRPC_PORT}",
+    address: str = DEFAULT_GRPC_ADDRESS,
     max_workers: int = GRPC_MAX_WORKER_THREADS,
     wait_for_termination: bool = True,
     catalog: str = None,
@@ -438,7 +438,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Inference service")
-    parser.add_argument("-a", "--address", type=str, default=f"[::]:{DEFAULT_GRPC_PORT}", help="gRPC server address")
+    parser.add_argument("-a", "--address", type=str, default=DEFAULT_GRPC_ADDRESS, help="gRPC server address")
     parser.add_argument("-c", "--catalog", type=str, default=None, help="Model catalog")
     args = parser.parse_args()
     logger.debug(f"args={args}")
