@@ -7,6 +7,8 @@ images:
 models:
   TinyLlama/TinyLlama-1.1B-Chat-v1.0:
     runtime_env: custom-gpu
+    # TOFIX (spillai): Currently, pre-defined models cannot
+    # be deployed with overridden resource specification.
     deployment:
       resources:
         device: auto
@@ -14,6 +16,8 @@ models:
 
   distil-whisper/distil-small.en:
     runtime_env: custom-gpu
+    # TOFIX (spillai): Currently, pre-defined models cannot
+    # be deployed with overridden resource specification.
     deployment:
       resources:
         device: auto
