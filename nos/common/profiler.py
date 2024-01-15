@@ -215,8 +215,6 @@ class Profiler:
 
     def add(self, namespace: str, **kwargs) -> profiler_record:
         """Add a profiler record."""
-        if len(self.records) > 0 and self.records[0].kwargs.keys() != kwargs.keys():
-            raise ValueError("Adding a new record with different kwargs is not supported.")
         self.records.append(profiler_record(namespace, **kwargs))
         return self.records[-1]
 
