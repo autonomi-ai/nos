@@ -228,6 +228,22 @@ class Profiler:
         )
         return df
 
+    def from_df(self, df: pd.DataFrame) -> None:
+        """Load profiled results from dataframe."""
+        self.records = []
+        for _idx, row in df.iterrows():
+            namespace = row["namespace"]
+            kwargs = row.drop("namespace").to_dict()
+            record = profiler_record(namespace, **kwargs)
+            for key, value in row.items():
+                record.update(key, value)
+            self.records.append(record)
+
+    def from_json_path(self, filename: Union[Path, str]) -> None:
+        """Load profiled results from JSON."""
+        df = pd.read_json(str(filename), orient="records")
+        self.from_df(df)
+
     def __repr__(self) -> str:
         """Return a string representation of the profiler."""
         return f"""{self.__class__.__name__}\n{self.as_df()}"""
@@ -294,6 +310,15 @@ class ModelProfiler:
 
     def __post_init__(self) -> None:
         """Setup the device and profiler."""
+
+        # Check if we have a previous catalog and load it
+        from nos.constants import NOS_PROFILE_CATALOG_PATH
+
+        if NOS_PROFILE_CATALOG_PATH.exists():
+            self.prof = Profiler()
+            self.prof.from_json_path(NOS_PROFILE_CATALOG_PATH)
+        else:
+            logger.debug("No prof catalog found")
 
         # Get system info
         sysinfo = get_system_info(docker=True, gpu=True)
@@ -403,9 +428,12 @@ class ModelProfiler:
         failed = {}
         st_t = time.time()
 
-        print()
         print(f"[white]{self}[/white]")
-        with Profiler() as self.prof, torch.inference_mode():
+        from nos.constants import NOS_PROFILE_CATALOG_PATH
+
+        self.prof = Profiler()
+        self.prof.from_json_path(NOS_PROFILE_CATALOG_PATH)
+        with torch.inference_mode():
             for _idx, request in enumerate(self.requests):
                 # Skip subsequent benchmarks with same name if previous runs failed
                 # Note: This is to avoid running benchmarks that previously failed
