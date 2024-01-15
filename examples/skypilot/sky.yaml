@@ -17,6 +17,9 @@ resources:
 setup: |
   # Install docker compose plugin
   sudo apt-get install -y docker-compose-plugin
+  # Install torch-nos
+  pip install torch-nos
 
 run: |
-  cd /app && docker compose -f docker-compose.gpu.yml up
+  # Run the server
+  nos serve up --http

@@ -20,24 +20,20 @@ Run `sky check` for more details and installation instructions.
 
 ### 1. Define your SkyPilot deployment YAML
 
-First, let's create a `serve.yaml` YAML file with the following configuration. 
+First, let's create a `sky.yaml` YAML file with the following configuration. 
 
 ```yaml
-{% include '../../examples/skypilot/serve.yaml' %}
+{% include '../../examples/skypilot/sky.yaml' %}
 ```
 
-Here, we are going to provision a single GPU server on GCP (`us-west1`) with an NVIDIA T4 GPU and expose ports `8000` and `50051` for the NOS server. The `docker-compose.gpu.yml` also exposes these ports, so we can access the NOS server from our local machine. We also mount the current directory `.` to `/app` in the container so that we can access the `docker-compose.gpu.yml` file from within the container.
-
-```yaml
-{% include '../../examples/skypilot/app/docker-compose.gpu.yml' %}
-```
+Here, we are going to provision a single GPU server on GCP (`us-west1`) with an NVIDIA T4 GPU and expose ports `8000` and `50051` for the NOS server. 
 
 ### 🚀 2. Launch your NOS server
 
 Now, we can launch our NOS server on GCP with the following command:
 
 ```bash
-$ sky launch -c nos-server-gcp server.yaml
+$ sky launch -c nos-server sky.yaml
 ```
 
 That's it! You should see the following output:

@@ -10,4 +10,5 @@ services:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
     ipc: host
-    network_mode: host
+    ports:
+      - 50051:50051
