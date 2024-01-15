@@ -23,6 +23,10 @@ def test_hub_list():
     assert isinstance(model_names[0], str)
     assert len(model_names) > 0, "No models found in the registry."
 
+    for model_name in model_names:
+        hub_instance: Hub = Hub.get()
+        assert model_name in hub_instance
+
 
 def test_hub_load_spec_all():
     """Load all model specs from the hub."""
@@ -109,6 +113,7 @@ def test_hub_register_from_yaml():
     for yaml in [
         NOS_TEST_DATA_DIR / "hub/custom_model/config.yaml",
         NOS_TEST_DATA_DIR / "hub/custom_model/config-alternate-init-kwargs.yaml",
+        NOS_TEST_DATA_DIR / "hub/custom_model/config-with-existing-model-id.yaml",
     ]:
         Hub.register_from_yaml(yaml)
 
@@ -124,9 +129,8 @@ def test_hub_register_from_yaml():
         NOS_TEST_DATA_DIR / "hub/custom_model/config-malformed-model-path.yaml",
         NOS_TEST_DATA_DIR / "hub/custom_model/config-malformed-model-method.yaml",
     ]:
-
+        logger.debug(f"Loading model spec from malformed YAML: {yaml}")
         with pytest.raises(Exception):
-            logger.debug(f"Loading model spec from malformed YAML: {yaml}")
             Hub.register_from_yaml(yaml)
 
     logger.enable("nos")

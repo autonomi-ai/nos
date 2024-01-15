@@ -45,10 +45,10 @@ class Hub:
             cls._instance = cls()
             # Register models / Populate the registry
             import nos.models  # noqa: F401, E402
-
-            # Register models from the catalog dynamically
-            cls.register_from_catalog()
         return cls._instance
+
+    def __contains__(self, model_id: str) -> bool:
+        return model_id in self.get()._registry
 
     @classmethod
     def list(cls, private: bool = False) -> List[str]:
@@ -314,8 +314,22 @@ class Hub:
         # Service the models
         services: List[ModelServiceSpec] = []
         for model_id, mconfig in data["models"].items():
+            # Check if the model is already registered
+            logger.debug(f"Checking if model is already registered [id={model_id}].")
+            try:
+                spec: ModelSpec = cls.load_spec(model_id)
+                deployment: ModelDeploymentSpec = ModelDeploymentSpec(**mconfig.get("deployment", {}))
+                logger.debug(f"Model already registered [id={model_id}, spec={spec}, deployment={deployment}]")
+                services.append(ModelServiceSpec(model=spec, deployment=deployment))
+                logger.debug(f"Registered service [id={model_id}, svc={services[-1]}]")
+                continue
+            except KeyError as e:
+                logger.error(f"Failed to load model spec, model_id={model_id}, e={e}")
+
+            # If the model_id is not previously registered, register it
             # Add the model id to the config
             mconfig.update({"id": model_id})
+
             # Generate the model spec from the config
             try:
                 mconfig = _ModelImportConfig(**mconfig)
@@ -351,7 +365,8 @@ class Hub:
         """
         import os
 
-        # from nos.common.config import DeploymentConfig
+        warn_msg = "register_from_catalog will be deprecated soon, use register_from_yaml instead."
+        logger.warning(warn_msg)
 
         NOS_HUB_CATALOG_PATH = os.getenv("NOS_HUB_CATALOG_PATH", "")
         if not isinstance(NOS_HUB_CATALOG_PATH, str):

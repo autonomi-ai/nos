@@ -277,8 +277,6 @@ def _serve(
         config = AGIPackConfig.load_yaml(config_filename)
 
         # Add the current working directory to the config `add`
-        # and include the NOS_HUB_CATALOG_PATH environment variable
-        # to the config `env`.
         # Note (spillai): The current working directory is added to /app/serve/<basedir>
         config_basename: Path = Path(config_filename).name
         container_config_path: Path = container_sandbox_path / config_basename
@@ -288,7 +286,6 @@ def _serve(
             # Add the sandbox directory to the PYTHONPATH so that
             # we can import the models via "from <sandbox_name>.models.model import X"
             image_config.env["PYTHONPATH"] = f"$PYTHONPATH:{SANDBOX_DIR}"
-            image_config.env["NOS_HUB_CATALOG_PATH"] = f"$NOS_HUB_CATALOG_PATH:{str(container_config_path)}"
 
         # Render the dockerfiles
         # agipack is responsible for the "images" sections

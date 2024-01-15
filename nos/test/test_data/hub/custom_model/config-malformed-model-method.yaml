@@ -1,5 +1,5 @@
 models:
-  custom-model:
+  custom-model-with-malformed-model-method:
     model_path: models/model.py
     model_cls: CustomModel
     default_method: ___call__

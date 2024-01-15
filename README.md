@@ -177,7 +177,6 @@ Perform real-time audio transcription using Whisper.
 
 <table>
 <tr>
-<td> Preview </td>
 <td> gRPC API ⚡ </td>
 <td> REST API </td>
 </tr>
@@ -190,7 +189,7 @@ from nos.client import Client
 
 client = Client("[::]:50051")
 
-model = client.Module("openai/whisper-large-v2")
+model = client.Module("openai/whisper-small.en")
 with client.UploadFile(Path("audio.wav")) as remote_path:
   response = model(path=remote_path)
 # {"chunks": ...}
@@ -204,7 +203,7 @@ curl \
 -X POST http://localhost:8000/v1/infer/file \
 -H 'accept: application/json' \
 -H 'Content-Type: multipart/form-data' \
--F 'model_id=openai/whisper-large-v2' \
+-F 'model_id=openai/whisper-small.en' \
 -F 'file=@audio.wav'
 ```
 
