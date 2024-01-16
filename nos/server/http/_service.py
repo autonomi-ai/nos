@@ -174,8 +174,8 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
                 owned_by, _ = model_id.split("/")
             except ValueError:
                 owned_by = "unknown-org"
-            _model_table[normalize_id(model_id)] = ChatModel(id=normalize_id(model_id), created=0, owned_by=owned_by)
-            logger.debug(f"Registered model [model={model_id}, m={_model_table[normalize_id(model_id)]}, spec={spec}]")
+            _model_table[model_id] = ChatModel(id=normalize_id(model_id), created=0, owned_by=owned_by)
+            logger.debug(f"Registered model [model={model_id}, m={_model_table[model_id]}, spec={spec}]")
         return _model_table
 
     @app.get("/")
@@ -203,7 +203,7 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
         """Get model information."""
         _model_table = build_model_table(client)
         try:
-            return _model_table[model]
+            return _model_table[unnormalize_id(model)]
         except KeyError:
             raise HTTPException(status_code=400, detail=f"Invalid model {model}")
 
@@ -215,11 +215,11 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
         """Perform chat completion on the given input data."""
         logger.debug(f"Received chat request [model={request.model}, messages={request.messages}]")
         _model_table = build_model_table(client)
+        model_id: str = unnormalize_id(request.model)
         try:
-            _ = _model_table[request.model]
+            _ = _model_table[model_id]
         except KeyError:
             raise HTTPException(status_code=400, detail=f"Invalid model {request.model}")
-        model_id: str = unnormalize_id(request.model)
         model = client.Module(model_id)
 
         if not len(request.messages):
