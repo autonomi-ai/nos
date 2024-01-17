@@ -3,9 +3,9 @@
 The following tutorials give a brief overview of how to use NOS to serve models.
 
 - [x] [`01-serving-custom-models`](./01-serving-custom-models): Serve a custom GPU model with NOS.
-- [x] [`02-serving-custom-methods`](./02-serving-custom-methods): Expose several custom methods of a model for serving purposes.
+- [x] [`02-serving-multiple-methods`](./02-serving-multiple-methods): Expose several custom methods of a model for serving purposes.
 - [x] [`03-llm-streaming-chat`](./03-llm-streaming-chat): Serve an LLM with *streaming* support ([`TinyLlama/TinyLlama-1.1B-Chat-v0.1`](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v0.1)).
-- [x] [`04-multiple-models`](./04-multiple-models): Serve multiple models such as [`TinyLlama/TinyLlama-1.1B-Chat-v0.1`](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) and [distil-whisper/distil-small.en](https://huggingface.co/distil-whisper/distil-small.en) on the same GPU with custom model resources -- enable multi-modal applications like [audio transcription + summarization](./04-multiple-models/summarize_audio.py) on the same device.
+- [x] [`04-serving-multiple-models`](./04-serving-multiple-models): Serve multiple models such as [`TinyLlama/TinyLlama-1.1B-Chat-v0.1`](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) and [distil-whisper/distil-small.en](https://huggingface.co/distil-whisper/distil-small.en) on the same GPU with custom model resources -- enable multi-modal applications like [audio transcription + summarization](./04-serving-multiple-models/summarize_audio.py) on the same device.
 - [x] [`05-serving-with-docker`](./05-serving-with-docker): Use NOS in a production environment with Docker and Docker Compose.
 
 ## 🏃‍♂️ Running the examples

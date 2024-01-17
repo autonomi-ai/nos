@@ -3,24 +3,19 @@
 images:
   custom-gpu:
     base: autonomi/nos:latest-gpu
-    system:
-      - git
     pip:
-      - accelerate>=0.23.0
       - transformers>=4.35.1
     env:
       NOS_LOGGING_LEVEL: INFO
-    run:
-      - python -c 'import torch; print(torch.__version__)'
 
 models:
-  custom/custom-model:
+  custom/clip-model:
     runtime_env: custom-gpu
-    model_cls: CustomModel
+    model_cls: CustomCLIPModel
     model_path: models/model.py
     default_method: __call__
     init_kwargs:
-      model_name: custom/custom-model-a
+      model_name: "openai/clip-vit-base-patch32"
     deployment:
       resources:
         device: gpu

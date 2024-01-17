@@ -3,7 +3,7 @@ images:
     base: autonomi/nos:latest-gpu
 
 models:
-  TinyLlama/TinyLlama-1.1B-Chat-v1.0:
+  tinyllama-1.1b-chat:
     model_cls: StreamingChat
     model_path: models/chat.py
     init_kwargs:
@@ -13,4 +13,4 @@ models:
     deployment:
       resources:
         device: auto
-        device_memory: 3Gi
+        device_memory: 4Gi
