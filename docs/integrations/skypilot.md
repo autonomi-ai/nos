@@ -1,3 +1,12 @@
+<style>
+  .md-typeset h1,
+  .md-content__button {
+    display: none;
+  }
+</style>
+
+<img src="../assets/nos-skypilot-integration.png" width="100%">
+
 In this guide we'll show you how you can deploy the NOS inference server using [SkyPilot](https://skypilot.readthedocs.io/) on any of the popular Cloud Service Providers (CSPs) such as AWS, GCP or Azure. We'll use GCP as an example, but the steps are similar for other CSPs.
 
 !!!quote "What is SkyPilot?"
@@ -119,18 +128,42 @@ You should see the following output:
 
 ### 💬 4. Chat with your hosted LLM endpoint
 
-You can now chat with your hosted LLM endpoint using the following command:
+You can now chat with your hosted LLM endpoint. Since NOS exposes an OpenAI compatible API via it's `/v1/chat/completions` route, you can use any OpenAI compatible client to chat with your hosted LLM endpoint. 
 
-```bash
-curl \
--X POST http://$(sky status --ip nos-server):8000/v1/chat/completions \
--H "Content-Type: application/json" \
--d '{
-    "model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    "messages": [{"role": "user", "content": "Tell me a story of 1000 words with emojis"}],
-    "temperature": 0.7, "stream": true
-  }'
-```
+=== "Using an OpenAI compatible client"
+
+    Below, we show how you can use any OpenAI API compatible client to chat with your hosted LLM endpoint. We will use the popular [llm](https://github.com/simonw/llm) CLI tool from [Simon Willison](https://simonwillison.net/) to chat with our hosted LLM endpoint.
+
+    ```bash
+    # Install the llm CLI tool
+    $ pip install llm
+
+    # Install the llm-nosrun plugin to talk to your service
+    $ llm install llm-nosrun
+
+    # List the models
+    $ llm models list
+
+    # Chat with your endpoint
+    $ NOSRUN_API_BASE=http://$(sky status --ip nos-server):8000/v1 llm -m TinyLlama/TinyLlama-1.1B-Chat-v1.0 "Tell me a joke in 300 words."
+    ```
+
+    Note: You can also change the `NOSRUN_API_BASE` to `http://localhost:8000/v1` to talk to your local NOS server.
+
+=== "Using the OpenAI Python client"
+
+    Below, we show how you can use the [OpenAI Python Client](https://github.com/openai/openai-python) to chat with your hosted LLM endpoint.
+
+    ```python
+    {% include '../../examples/skypilot/tests/test_openai_client.py' %}
+    ```
+
+
+=== "Using cURL"
+  
+    ```bash
+    {% include '../../examples/skypilot/tests/test_http_request.sh' %}
+    ```
 
 On the first call to the server, the server will download the model from Huggingface, cache it locally and load it onto the GPU. Subsequent calls will not have any of this overhead as the GPU memory for the models will be pinned.
 

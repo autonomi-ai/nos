@@ -46,7 +46,7 @@ nav:
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
   - 🔌 Integrations:
-    - Deploying NOS with SkyPilot: docs/integrations/skypilot.md
+    - SkyPilot: docs/integrations/skypilot.md
   - ✍️ Blog: docs/blog
   - ❓ Support / FAQ: docs/support.md
 

@@ -1,5 +1,5 @@
 # NOS GPU server deployment on T4
-# Usage: sky launch -c nos-server server.yaml
+# Usage: sky launch -c nos-server sky.yaml
 
 name: nos-server
 
@@ -8,14 +8,22 @@ resources:
   cloud: gcp
   ports:
     - 8000
-    - 50051
 
 setup: |
+  # Setup conda environment
+  conda init bash
+  conda create -n nos python=3.8 -y
+  conda activate nos
+
   # Install docker compose plugin
   sudo apt-get install -y docker-compose-plugin
+
   # Install torch-nos
   pip install torch-nos
 
 run: |
-  # Run the server
+  # Activate conda environment
+  conda activate nos
+
+  # Run the server (gRPC + HTTP)
   nos serve up --http
