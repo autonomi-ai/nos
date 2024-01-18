@@ -347,7 +347,7 @@ class ModelHandle:
             logger.debug(f"Scaling down model [name={self.spec.name}, replicas={num_replicas}].")
 
         # Update repicas and queue size
-        self.num_replicas = num_replicas
+        self.deployment.num_replicas = num_replicas
 
         # Re-create the actor pool
         logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
