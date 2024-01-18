@@ -13,6 +13,7 @@ from nos.common.spec import (  # noqa: F401
     FunctionSignature,
     ModelDeploymentSpec,
     ModelResources,
+    ModelServiceSpec,
     ModelSpec,
     ModelSpecMetadata,
     ModelSpecMetadataCatalog,
@@ -219,17 +220,6 @@ class Hub:
         Returns:
             List[ModelSpec]: List of model specifications.
         """
-
-        @dataclass
-        class ModelServiceSpec:
-            """Model service that captures spec, deployment and service."""
-
-            model: ModelSpec
-            """Model specification."""
-            deployment: ModelDeploymentSpec
-            """Model deployment specification."""
-            service: Any = None
-            """Model service."""
 
         @dataclass
         class _ModelImportConfig:

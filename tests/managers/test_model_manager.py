@@ -21,7 +21,7 @@ import pytest
 from loguru import logger
 
 from nos import hub
-from nos.common import ModelSpec, RuntimeEnv, TaskType
+from nos.common import ModelDeploymentSpec, ModelSpec, RuntimeEnv, TaskType
 from nos.managers import ModelHandle, ModelManager
 from nos.managers.model import NOS_MAX_CONCURRENT_MODELS
 from nos.test.conftest import model_manager as manager  # noqa: F401, F811
@@ -115,7 +115,7 @@ def test_model_manager_errors(manager):  # noqa: F811
         manager.add(spec)
 
     # Creating a model with num_replicas > 1
-    ModelHandle(spec, num_replicas=2)
+    ModelHandle(spec, ModelDeploymentSpec(num_replicas=2))
 
     # Creating a model with an invalid eviction policy should raise a `NotImplementedError`.
     with pytest.raises(NotImplementedError):

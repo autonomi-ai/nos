@@ -12,7 +12,15 @@ import rich.status
 from google.protobuf import empty_pb2, wrappers_pb2
 
 from nos import hub
-from nos.common import FunctionSignature, ModelSpec, ModelSpecMetadataCatalog, dumps, loads
+from nos.common import (
+    FunctionSignature,
+    ModelDeploymentSpec,
+    ModelServiceSpec,
+    ModelSpec,
+    ModelSpecMetadataCatalog,
+    dumps,
+    loads,
+)
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryDataDict, SharedMemoryTransportManager
 from nos.constants import (  # noqa F401
     DEFAULT_GRPC_ADDRESS,
@@ -81,18 +89,18 @@ class InferenceService:
         else:
             self.shm_manager = None
 
-    def load_model_spec(self, model_spec: str, num_replicas: int = 1) -> ModelHandle:
+    def load_model_spec(self, spec: ModelSpec, deployment: ModelDeploymentSpec) -> ModelHandle:
         """Load the model by spec."""
-        return self.model_manager.load(model_spec, num_replicas=num_replicas)
+        return self.model_manager.load(spec, deployment)
 
     def load_model(self, model_name: str, num_replicas: int = 1) -> ModelHandle:
-        """Load the model."""
+        """Load the model by model name."""
         # Load the model spec (with caching to avoid repeated loading)
         try:
-            model_spec: ModelSpec = load_spec(model_name)
+            spec: ModelSpec = load_spec(model_name)
         except Exception as e:
             raise ModelNotFoundError(f"Failed to load model spec [model_name={model_name}, e={e}]")
-        return self.load_model_spec(model_spec, num_replicas=num_replicas)
+        return self.load_model_spec(spec, ModelDeploymentSpec(num_replicas=num_replicas))
 
     async def execute_model(
         self, model_name: str, method: str = None, inputs: Dict[str, Any] = None, stream: bool = False
@@ -198,10 +206,10 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             raise ValueError(f"Model catalog not found [catalog={catalog_filename}]")
 
         # Register models from the catalog
-        services: List[Any] = hub.register_from_yaml(catalog_filename)
+        services: List[ModelServiceSpec] = hub.register_from_yaml(catalog_filename)
         for svc in services:
             logger.debug(f"Servicing model [svc={svc}, replicas={svc.deployment.num_replicas}]")
-            self.load_model_spec(svc.model, num_replicas=svc.deployment.num_replicas)
+            self.load_model_spec(svc.model, svc.deployment)
             logger.debug(f"Deployed model [svc={svc}]. \n{self.model_manager}")
 
     def Ping(self, _: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.PingResponse:
