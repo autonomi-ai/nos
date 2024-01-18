@@ -314,17 +314,17 @@ class ModelHandle:
             )
             return _StreamingModelHandleResponse(response_refs)
 
-    def scale(self, replicas: Union[int, str] = 1) -> "ModelHandle":
+    def scale(self, num_replicas: Union[int, str] = 1) -> "ModelHandle":
         """Scale the model handle to a new number of replicas.
 
         Args:
-            replicas (int or str): Number of replicas, or set to "auto" to
+            num_replicas (int or str): Number of replicas, or set to "auto" to
                 automatically scale the model to the number of GPUs available.
         """
-        if isinstance(replicas, str) and replicas == "auto":
+        if isinstance(num_replicas, str) and num_replicas == "auto":
             raise NotImplementedError("Automatic scaling not implemented.")
-        if not isinstance(replicas, int):
-            raise ValueError(f"Invalid replicas: {replicas}")
+        if not isinstance(num_replicas, int):
+            raise ValueError(f"Invalid replicas: {num_replicas}")
 
         # Check if there are any pending futures
         if self._actor_pool.has_next():
@@ -332,22 +332,22 @@ class ModelHandle:
         logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")
         logger.debug(f"Scaling model [name={self.spec.name}].")
 
-        if replicas == len(self._actors):
-            logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={replicas}].")
+        if num_replicas == len(self._actors):
+            logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={num_replicas}].")
             return self
-        elif replicas > len(self._actors):
-            self._actors += [self._get_actor() for _ in range(replicas - len(self._actors))]
-            logger.debug(f"Scaling up model [name={self.spec.name}, replicas={replicas}].")
+        elif num_replicas > len(self._actors):
+            self._actors += [self._get_actor() for _ in range(num_replicas - len(self._actors))]
+            logger.debug(f"Scaling up model [name={self.spec.name}, replicas={num_replicas}].")
         else:
-            actors_to_remove = self._actors[replicas:]
+            actors_to_remove = self._actors[num_replicas:]
             for actor in actors_to_remove:
                 ray.kill(actor)
-            self._actors = self._actors[:replicas]
+            self._actors = self._actors[:num_replicas]
 
-            logger.debug(f"Scaling down model [name={self.spec.name}, replicas={replicas}].")
+            logger.debug(f"Scaling down model [name={self.spec.name}, replicas={num_replicas}].")
 
         # Update repicas and queue size
-        self.num_replicas = replicas
+        self.num_replicas = num_replicas
 
         # Re-create the actor pool
         logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
@@ -355,9 +355,9 @@ class ModelHandle:
         self._actor_pool = None
 
         # Re-create the actor pool
-        logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
+        logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={num_replicas}].")
         self._actor_pool = ActorPool(self._actors)
-        assert len(self._actors) == replicas, "Model scaling failed."
+        assert len(self._actors) == num_replicas, "Model scaling failed."
         gc.collect()
         return self
 
@@ -505,7 +505,7 @@ class ModelManager:
         """
         model_id: str = spec.id
         if model_id not in self.handlers:
-            return self.add(spec, num_replicas=1)
+            return self.add(spec, ModelDeploymentSpec(num_replicas=1))
         else:
             return self.handlers[model_id]
 
