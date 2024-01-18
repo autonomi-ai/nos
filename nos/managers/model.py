@@ -5,7 +5,6 @@ import re
 from collections import OrderedDict
 from dataclasses import asdict, dataclass, field
 from enum import Enum
-from functools import cached_property
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
 
@@ -15,7 +14,7 @@ import torch
 from ray.runtime_env import RuntimeEnv
 from ray.util.queue import Queue
 
-from nos.common import ModelResources, ModelSpec, ModelSpecMetadataCatalog
+from nos.common import ModelDeploymentSpec, ModelResources, ModelSpec, ModelSpecMetadataCatalog
 from nos.logging import logger
 from nos.managers.pool import ActorPool
 
@@ -125,16 +124,19 @@ class ModelHandle:
 
     spec: ModelSpec
     """Model specification."""
-    num_replicas: Union[int, str] = field(default=1)
+    deployment: ModelDeploymentSpec = field(default_factory=ModelDeploymentSpec)
     """Number of replicas."""
     _actors: List[Union[ray.remote, ray.actor.ActorHandle]] = field(init=False, default=None)
     """Ray actor handle."""
     _actor_pool: ActorPool = field(init=False, default=None)
     """Ray actor pool."""
+    _actor_options: Dict[str, Any] = field(init=False, default=None)
+    """Ray actor options."""
 
     def __post_init__(self):
         """Initialize the actor handles."""
-        self._actors = [self._get_actor() for _ in range(self.num_replicas)]
+        self._actor_options = self._get_actor_options(self.spec, self.deployment)
+        self._actors = [self._get_actor() for _ in range(self.deployment.num_replicas)]
         self._actor_pool = ActorPool(self._actors)
 
         # Patch the model handle with methods from the model spec signature
@@ -153,30 +155,35 @@ class ModelHandle:
 
     def __repr__(self) -> str:
         assert len(self._actors) == self.num_replicas
-        opts = self.actor_options
-        opts_str = ", ".join([f"{k}={v}" for k, v in opts.items()])
+        opts_str = ", ".join([f"{k}={v}" for k, v in self._actor_options.items()])
         return f"ModelHandle(name={self.spec.name}, replicas={len(self._actors)}, opts=({opts_str}))"
 
-    @cached_property
-    def actor_options(self):
-        """Get actor options from model specification."""
-        return self._get_actor_options(self.spec)
+    @property
+    def num_replicas(self) -> int:
+        """Get the number of replicas."""
+        return self.deployment.num_replicas
 
     @classmethod
-    def _get_actor_options(cls, spec: ModelSpec) -> Dict[str, Any]:
+    def _get_actor_options(cls, spec: ModelSpec, deployment: ModelDeploymentSpec) -> Dict[str, Any]:
         """Get actor options from model specification."""
         # TOFIX (spillai): When considering CPU-only models with num_cpus specified,
         # OMP_NUM_THREADS will be set to the number of CPUs requested. Otherwise,
         # if num_cpus is not specified, OMP_NUM_THREADS will default to 1.
         # Instead, for now, we manually set the environment variable in `InferenceServiceRuntime`
         # to the number of CPUs threads available.
-        # Get the model resources from the catalog
-        try:
-            catalog = ModelSpecMetadataCatalog.get()
-            resources: ModelResources = catalog._resources_catalog[f"{spec.id}/{spec.default_method}"]
-        except Exception:
-            resources = ModelResources()
-            logger.debug(f"Failed to get model resources [model={spec.id}, method={spec.default_method}]")
+
+        # If deployment resources are not specified, get the model resources from the catalog
+        if deployment.resources is None:
+            try:
+                catalog = ModelSpecMetadataCatalog.get()
+                resources: ModelResources = catalog._resources_catalog[f"{spec.id}/{spec.default_method}"]
+            except Exception:
+                resources = ModelResources()
+                logger.debug(f"Failed to get model resources [model={spec.id}, method={spec.default_method}]")
+
+        # Otherwise, use the deployment resources provided
+        else:
+            resources = deployment.resources
 
         # For GPU models, we need to set the number of fractional GPUs to use
         if (resources.device == "auto" or resources.device == "gpu") and torch.cuda.is_available():
@@ -250,7 +257,7 @@ class ModelHandle:
         model_cls = self.spec.default_signature.func_or_cls
 
         # Get the actor options from the model spec
-        actor_options = self.actor_options
+        actor_options = self._actor_options
         actor_cls = ray.remote(**actor_options)(model_cls)
 
         # Check if the model class has the required method
@@ -307,17 +314,17 @@ class ModelHandle:
             )
             return _StreamingModelHandleResponse(response_refs)
 
-    def scale(self, replicas: Union[int, str] = 1) -> "ModelHandle":
+    def scale(self, num_replicas: Union[int, str] = 1) -> "ModelHandle":
         """Scale the model handle to a new number of replicas.
 
         Args:
-            replicas (int or str): Number of replicas, or set to "auto" to
+            num_replicas (int or str): Number of replicas, or set to "auto" to
                 automatically scale the model to the number of GPUs available.
         """
-        if isinstance(replicas, str) and replicas == "auto":
+        if isinstance(num_replicas, str) and num_replicas == "auto":
             raise NotImplementedError("Automatic scaling not implemented.")
-        if not isinstance(replicas, int):
-            raise ValueError(f"Invalid replicas: {replicas}")
+        if not isinstance(num_replicas, int):
+            raise ValueError(f"Invalid replicas: {num_replicas}")
 
         # Check if there are any pending futures
         if self._actor_pool.has_next():
@@ -325,22 +332,22 @@ class ModelHandle:
         logger.debug(f"Waiting for pending futures to complete before scaling [name={self.spec.name}].")
         logger.debug(f"Scaling model [name={self.spec.name}].")
 
-        if replicas == len(self._actors):
-            logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={replicas}].")
+        if num_replicas == len(self._actors):
+            logger.debug(f"Model already scaled appropriately [name={self.spec.name}, replicas={num_replicas}].")
             return self
-        elif replicas > len(self._actors):
-            self._actors += [self._get_actor() for _ in range(replicas - len(self._actors))]
-            logger.debug(f"Scaling up model [name={self.spec.name}, replicas={replicas}].")
+        elif num_replicas > len(self._actors):
+            self._actors += [self._get_actor() for _ in range(num_replicas - len(self._actors))]
+            logger.debug(f"Scaling up model [name={self.spec.name}, replicas={num_replicas}].")
         else:
-            actors_to_remove = self._actors[replicas:]
+            actors_to_remove = self._actors[num_replicas:]
             for actor in actors_to_remove:
                 ray.kill(actor)
-            self._actors = self._actors[:replicas]
+            self._actors = self._actors[:num_replicas]
 
-            logger.debug(f"Scaling down model [name={self.spec.name}, replicas={replicas}].")
+            logger.debug(f"Scaling down model [name={self.spec.name}, replicas={num_replicas}].")
 
         # Update repicas and queue size
-        self.num_replicas = replicas
+        self.num_replicas = num_replicas
 
         # Re-create the actor pool
         logger.debug(f"Removing actor pool [replicas={len(self._actors)}].")
@@ -348,9 +355,9 @@ class ModelHandle:
         self._actor_pool = None
 
         # Re-create the actor pool
-        logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={replicas}].")
+        logger.debug(f"Re-creating actor pool [name={self.spec.name}, replicas={num_replicas}].")
         self._actor_pool = ActorPool(self._actors)
-        assert len(self._actors) == replicas, "Model scaling failed."
+        assert len(self._actors) == num_replicas, "Model scaling failed."
         gc.collect()
         return self
 
@@ -466,49 +473,48 @@ class ModelManager:
         """
         return spec.id in self.handlers
 
-    def load(self, model_spec: ModelSpec, num_replicas: int = None) -> ModelHandle:
+    def load(self, spec: ModelSpec, deployment: ModelDeploymentSpec = ModelDeploymentSpec()) -> ModelHandle:
         """Load a model handle from the manager using the model specification.
 
         Create a new model handle if it does not exist,
         else return an existing handle.
 
         Args:
-            model_spec (ModelSpec): Model specification.
-            num_replicas (int): Number of replicas.
+            spec (ModelSpec): Model specification.
+            deployment (ModelDeploymentSpec): Model deployment specification.
         Returns:
             ModelHandle: Model handle.
         """
-        model_id: str = model_spec.id
+        model_id: str = spec.id
         if model_id not in self.handlers:
-            num_replicas = num_replicas or 1
-            return self.add(model_spec, num_replicas=num_replicas)
+            return self.add(spec, deployment)
         else:
             # Only scale the model if the number of replicas is specified,
             # otherwise treat it as a get without modifying the number of replicas.
-            if num_replicas is not None and num_replicas != self.handlers[model_id].num_replicas:
-                self.handlers[model_id].scale(num_replicas)
+            if deployment.num_replicas is not None and deployment.num_replicas != self.handlers[model_id].num_replicas:
+                self.handlers[model_id].scale(deployment.num_replicas)
             return self.handlers[model_id]
 
-    def get(self, model_spec: ModelSpec) -> ModelHandle:
+    def get(self, spec: ModelSpec) -> ModelHandle:
         """Get a model handle from the manager using the model identifier.
 
         Args:
-            model_spec (ModelSpec): Model specification.
+            spec (ModelSpec): Model specification.
         Returns:
             ModelHandle: Model handle.
         """
-        model_id: str = model_spec.id
+        model_id: str = spec.id
         if model_id not in self.handlers:
-            return self.add(model_spec, num_replicas=1)
+            return self.add(spec, ModelDeploymentSpec(num_replicas=1))
         else:
             return self.handlers[model_id]
 
-    def add(self, spec: ModelSpec, num_replicas: int = 1) -> ModelHandle:
+    def add(self, spec: ModelSpec, deployment: ModelDeploymentSpec = ModelDeploymentSpec()) -> ModelHandle:
         """Add a model to the manager.
 
         Args:
             spec (ModelSpec): Model specification.
-            num_replicas (int): Number of replicas.
+            deployment (ModelDeploymentSpec): Model deployment specification.
         Raises:
             ValueError: If the model already exists.
         Returns:
@@ -525,7 +531,7 @@ class ModelManager:
 
         # Create the serve deployment from the model handle
         # Note: Currently one model per (model-name, task) is supported.
-        self.handlers[model_id] = ModelHandle(spec, num_replicas=num_replicas)
+        self.handlers[model_id] = ModelHandle(spec, deployment)
         logger.debug(f"Added model [{self.handlers[model_id]}]")
         logger.debug(self)
         return self.handlers[model_id]

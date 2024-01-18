@@ -12,6 +12,7 @@ from .spec import (
     FunctionSignature,
     ModelDeploymentSpec,
     ModelResources,
+    ModelServiceSpec,
     ModelSpec,
     ModelSpecMetadata,
     ModelSpecMetadataCatalog,

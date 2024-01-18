@@ -738,5 +738,17 @@ class ModelDeploymentSpec:
 
     num_replicas: int = 1
     """Number of replicas."""
-    resources: ModelResources = field(default_factory=ModelResources)
+    resources: ModelResources = None
     """Model resources."""
+
+
+@dataclass
+class ModelServiceSpec:
+    """Model service that captures the model, deployment and service specifications."""
+
+    model: ModelSpec
+    """Model specification."""
+    deployment: ModelDeploymentSpec
+    """Model deployment specification."""
+    service: Any = None
+    """Model service."""
