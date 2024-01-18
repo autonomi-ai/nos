@@ -212,7 +212,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
             self.load_model_spec(svc.model, svc.deployment)
             logger.debug(f"Deployed model [svc={svc}]. \n{self.model_manager}")
 
-    def Ping(self, _: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.PingResponse:
+    async def Ping(self, _: empty_pb2.Empty, context: grpc.ServicerContext) -> nos_service_pb2.PingResponse:
         """Health check."""
         return nos_service_pb2.PingResponse(status="ok")
 
