@@ -142,6 +142,7 @@ class LLM:
             temperature=temperature,
             num_beams=num_beams,
             repetition_penalty=repetition_penalty,
+            use_cache=True,
         )
         t = Thread(target=self.model.generate, kwargs=generate_kwargs)
         t.start()
