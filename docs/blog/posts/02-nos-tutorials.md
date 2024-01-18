@@ -27,15 +27,15 @@ Over the next few weeks, we'll walk you through the process of using NOS to serv
 The NOS Tutorials encompass a wide range of topics, each focusing on different facets of model serving. Here's a sneak peek into what you can expect:
 
 ### 1. Serving custom models: [`01-serving-custom-models`](https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/01-serving-custom-models)
-Dive into the world of custom GPU models with NOS. This tutorial shows you how easy it is to wrap your Pytorch code with NOS, and serve them via a REST / gRPC API.
+Dive into the world of custom GPU models with NOS. This tutorial shows you how easy it is to wrap your [PyTorch](https://pytorch.org/) code with NOS, and serve them via a REST / gRPC API.
 
-### 2. Serving custom methods: [`02-serving-custom-methods`](https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/02-serving-custom-methods)
+### 2. Serving multiple methods: [`02-serving-multiple-methods`](https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/02-serving-multiple-methods)
 Learn how to expose several custom methods of a model for serving. This tutorial is perfect for those looking to tailor their model's functionality to specific requirements, enhancing its utility and performance.
 
 ### 3. Serve LLMs with streaming support: [`03-llm-streaming-chat`](https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/03-llm-streaming-chat)
 Get hands-on with serving an LLM with streaming support. This tutorial focuses on using [`TinyLlama/TinyLlama-1.1B-Chat-v0.1`](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0), showcasing how to implement streaming capabilities with NOS for smoother, more efficient language model interactions.
 
-### 4. Serve multiple models on the same GPU: [`04-multiple-models`](https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/04-multiple-models)
+### 4. Serve multiple models on the same GPU: [`04-serving-multiple-models`](https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/04-serving-multiple-models)
 Step up your game by serving multiple models on the same GPU. This tutorial explores the integration of models like [`TinyLlama/TinyLlama-1.1B-Chat-v0.1`](https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0) and [distil-whisper/distil-small.en](https://huggingface.co/distil-whisper/distil-small.en), enabling multi-modal applications such as audio transcription combined with summarization on a single GPU.
 
 ### 5. Serving models in production with Docker [`05-serving-with-docker`](https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/05-serving-with-docker)
