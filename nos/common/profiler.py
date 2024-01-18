@@ -449,10 +449,6 @@ class ModelProfiler:
 
     def save(self, catalog_path: str = None) -> str:
         """Save profiled results to JSON."""
-        if catalog_path is None:
-            from nos.constants import NOS_PROFILE_CATALOG_PATH
-            catalog_path = str(NOS_PROFILE_CATALOG_PATH)
-
         NOS_PROFILE_DIR = NOS_CACHE_DIR / "profile"
         NOS_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -464,7 +460,10 @@ class ModelProfiler:
         )
         self.prof.save(profile_path)
 
-        # Copy the profile to the metadata catalog
-        shutil.copyfile(str(profile_path), catalog_path)
+        if catalog_path is not None:
+            # Copy the profile to the metadata catalog
+            Path(catalog_path).mkdir(parents=True, exist_ok=True)
+            full_catalog_path = Path(catalog_path) / profile_path.name
+            shutil.copyfile(str(profile_path), str(Path(full_catalog_path)))
 
         return str(profile_path)
