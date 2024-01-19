@@ -433,6 +433,9 @@ class ModelSpecMetadataCatalog:
             "prof.batch_size",
             "prof.shape",
             "prof.forward::memory_cpu::allocated",
+            "prof.forward::execution.num_iterations",
+            "prof.forward::execution.cpu_utilization",
+            "prof.forward::execution.gpu_utilization",
         ]:
             if col not in columns:
                 print("Missing: ", col)
