@@ -103,6 +103,8 @@ plugins:
       - '.*\.(tmp|bin|tar)$'
 
 markdown_extensions:
+- attr_list
+- md_in_html
 - admonition
 - mkdocs-typer
 - pymdownx.betterem
@@ -138,9 +140,9 @@ theme:
   custom_dir: docs/overrides
   features:
     - content.code.copy
+    - content.code.annotate
     - navigation.instant
     - navigation.tracking
-    - content.code.annotate
     - toc.follow
 
 extra:

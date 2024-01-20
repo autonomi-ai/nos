@@ -42,7 +42,7 @@ conda activate nos
 
     If you plan to run the NOS server locally (i.e. outside docker), you will also need to install the `server` extra dependencies:
     ```sh
-    pip install torch-nos[server]"
+    pip install 'torch-nos[server]'
     ```
 
     !!!note
