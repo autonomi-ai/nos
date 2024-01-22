@@ -469,7 +469,7 @@ class ModelProfiler:
         # self.profiler = Profiler()
         # self.profiler.from_json_path(NOS_PROFILE_CATALOG_PATH)
         with Profiler() as self.profiling_data, torch.inference_mode():
-            # self.profiling_data.from_json_path(NOS_PROFILE_CATALOG_PATH)
+            self.profiling_data.from_json_path(NOS_PROFILE_CATALOG_PATH)
             for _idx, request in enumerate(self.requests):
                 # Skip subsequent benchmarks with same name if previous runs failed
                 # Note: This is to avoid running benchmarks that previously failed
