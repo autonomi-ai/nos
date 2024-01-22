@@ -99,7 +99,7 @@ class profile_execution:
         try:
             # TOFIX (spillai): This will be fixed with torch 2.1
             gpu_util = torch.cuda.utilization(int(os.getenv("CUDA_VISIBLE_DEVICES", None)))
-        except Exception as e:
+        except Exception:
             gpu_util = None
         self.execution_stats = ExecutionStats(
             self.iterator.n, (end_t - self.iterator.start_t) * 1e3, cpu_util, gpu_util
@@ -156,8 +156,7 @@ class profiler_record:
     def __init__(self, namespace: str, **kwargs):
         self.namespace = namespace
         self.kwargs = kwargs
-        # the meetadata associated with this profiling record (e.g. wall time, utilization, etc.)
-        self.profiling_data = {}
+        self.profiling_data = {}  # The actual metadata collected inside this profiling record.
 
     @contextlib.contextmanager
     def profile_execution(self, name: str = None, iterations: int = None, duration: float = None) -> profile_execution:
@@ -180,7 +179,7 @@ class profiler_record:
         self.profiling_data.update(prof_ctx_mgr.memory_usage())
 
     def update(self, key: str, value: Any) -> None:
-        """ Helper function to place any updates to profiling results in the data dict."""
+        """Helper function to place any updates to profiling results in the data dict."""
         self.profiling_data[key] = value
 
     def as_dict(self) -> Dict[str, Any]:
@@ -197,9 +196,9 @@ class Profiler:
     """NOS profiler as a context manager."""
 
     records: List[profiler_record] = field(default_factory=list)
-    """List of profiler records. These will be added to the catalog then 
-       populated as a context manager when running the model. They map to 
-       methods on a particular model, and we try not to duplicate them for 
+    """List of profiler records. These will be added to the catalog then
+       populated as a context manager when running the model. They map to
+       methods on a particular model, and we try not to duplicate them for
        a single method (i.e. you can add multiple entries with the same
        namespace for e.g. CLIP, but when dumping the profiling results
        we only retrieve the first hit for each function signature).
@@ -243,21 +242,25 @@ class Profiler:
         )
         return df
 
-    def from_df(self, df: pd.DataFrame) -> None:
+    @classmethod
+    def from_df(cls, df: pd.DataFrame) -> "Profiler":
         """Load profiled results from dataframe."""
-        self.records = []
+        records = []
         for _idx, row in df.iterrows():
             namespace = row["namespace"]
             kwargs = row.drop("namespace").to_dict()
             record = profiler_record(namespace, **kwargs)
             for key, value in row.items():
                 record.update(key, value)
-            self.records.append(record)
+            records.append(record)
 
-    def from_json_path(self, filename: Union[Path, str]) -> None:
+        return cls(records)
+
+    @classmethod
+    def from_json_path(cls, filename: Union[Path, str]) -> "Profiler":
         """Load profiled results from JSON."""
         df = pd.read_json(str(filename), orient="records")
-        self.from_df(df)
+        cls.from_df(df)
 
     def __repr__(self) -> str:
         """Return a string representation of the profiler."""
@@ -329,15 +332,13 @@ class ModelProfiler:
         # Check if we have a previous catalog and load it
         from nos.constants import NOS_PROFILE_CATALOG_PATH
 
-        logger.info("NOS profile catalog path: %s", NOS_PROFILE_CATALOG_PATH)
+        logger.debug("NOS profile catalog path: %s", NOS_PROFILE_CATALOG_PATH)
 
-        """
         if NOS_PROFILE_CATALOG_PATH.exists():
             self.profiler = Profiler()
             self.profiler.from_json_path(NOS_PROFILE_CATALOG_PATH)
         else:
-            logger.debug("No prof catalog found")
-        """
+            logger.debug(f"Profile catalog not found (filename={NOS_PROFILE_CATALOG_PATH}).")
 
         # Get system info
         sysinfo = get_system_info(docker=True, gpu=True)
@@ -374,7 +375,7 @@ class ModelProfiler:
 
     def _benchmark(self, request: ModelProfileRequest) -> None:
         """Benchmark / profile a specific model."""
-        print()
+
         tree = Tree(
             f"🔥 [bold white]Profiling (name={request.model_id}, device={self.device_name}, kwargs={request.kwargs})[/bold white]"
         )
@@ -390,7 +391,7 @@ class ModelProfiler:
                 record = existing_record
                 logger.debug("Found existing record for %s, updating it.", request.model_id)
                 break
-        
+
         if record is None:
             # Otherwise create a new one
             logger.debug("Creating new record for %s")
@@ -454,8 +455,12 @@ class ModelProfiler:
             record.update(key, value)
         record.update("forward::memory_gpu::allocated", record.profiling_data["forward::memory_gpu::post"])
         record.update("forward::memory_cpu::allocated", record.profiling_data["forward::memory_cpu::post"])
-        record.update("forward::execution.gpu_utilization", record.profiling_data["forward::execution"]["gpu_utilization"])
-        record.update("forward::execution.cpu_utilization", record.profiling_data["forward::execution"]["cpu_utilization"])
+        record.update(
+            "forward::execution.gpu_utilization", record.profiling_data["forward::execution"]["gpu_utilization"]
+        )
+        record.update(
+            "forward::execution.cpu_utilization", record.profiling_data["forward::execution"]["cpu_utilization"]
+        )
         print(tree)
 
     def run(self) -> None:
@@ -466,8 +471,6 @@ class ModelProfiler:
         print(f"[white]{self}[/white]")
         from nos.constants import NOS_PROFILE_CATALOG_PATH
 
-        # self.profiler = Profiler()
-        # self.profiler.from_json_path(NOS_PROFILE_CATALOG_PATH)
         with Profiler() as self.profiling_data, torch.inference_mode():
             self.profiling_data.from_json_path(NOS_PROFILE_CATALOG_PATH)
             for _idx, request in enumerate(self.requests):
@@ -499,10 +502,11 @@ class ModelProfiler:
         self.profiling_data.save(profile_path)
 
         from nos.constants import NOS_PROFILE_CATALOG_PATH
+
         shutil.copyfile(str(profile_path), str(NOS_PROFILE_CATALOG_PATH))
 
         # This is a WIP to allow us to map the profiling catalog to a
-        # different location.
+        # filemount when running in GCP etc.
         if catalog_path is not None:
             # Copy the profile to the metadata catalog
             Path(catalog_path).mkdir(parents=True, exist_ok=True)

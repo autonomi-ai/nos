@@ -368,6 +368,7 @@ class ModelSpecMetadataCatalog:
         """Get the singleton instance."""
         if cls._instance is None:
             from nos.hub import Hub  # noqa: F401
+
             cls._instance = cls()
             try:
                 Hub.get()  # force import models
@@ -375,8 +376,6 @@ class ModelSpecMetadataCatalog:
             except FileNotFoundError:
                 logger.warning(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
 
-        # cls._instance.load_profile_catalog()
-        # import pdb; pdb.set_trace()
         return cls._instance
 
     def __contains__(self, model_method_id: Any) -> bool:
@@ -419,11 +418,9 @@ class ModelSpecMetadataCatalog:
 
         if not NOS_PROFILE_CATALOG_PATH.exists():
             raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
-        
-        # TODO: each reinstall seems to regenerate the profiling catalog in the default location
 
-        print("Loading profiling catalog from ", NOS_PROFILE_CATALOG_PATH, "...")
-        
+        logger.debug("Loading profiling catalog from ", NOS_PROFILE_CATALOG_PATH, "...")
+
         # Read the catalog
         df = pd.read_json(str(NOS_PROFILE_CATALOG_PATH), orient="records")
         columns = df.columns

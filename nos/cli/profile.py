@@ -67,7 +67,9 @@ def _model_methods(model_id: str = None) -> Iterator[Tuple[str, str, ModelSpec]]
             yield _model_id, method, spec
 
 
-def profile_models(model_id: str = None, device_id: int = 0, save: bool = False, verbose: bool = False, catalog_path: str = None) -> Profiler:
+def profile_models(
+    model_id: str = None, device_id: int = 0, save: bool = False, verbose: bool = False, catalog_path: str = None
+) -> Profiler:
     """Main entrypoint for profiling all models."""
     import torch
 
@@ -266,7 +268,7 @@ def _profile_list(
                 else:
                     print("no metadata")
             except Exception as e:
-                print("Failed to load metadata: ", e)
+                logger.debug("Failed to load metadata: ", e)
                 it_s = "-"
                 cpu_util = "-"
                 gpu_util = "-"
