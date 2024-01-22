@@ -382,15 +382,18 @@ class ModelProfiler:
         # Needs to be set for utilization stats to work
         assert os.getenv("CUDA_VISIBLE_DEVICES", None) is not None, "CUDA_VISIBLE_DEVICES is not set."
 
+        # We need to create a profiling record for this request, or udpate an existing one.
         # Check if we already have a record for this request in the catalog and remove it:
         record = None
         for existing_record in self.profiling_data.records:
             if existing_record.namespace == f"nos::{request.model_id}":
                 record = existing_record
+                logger.debug("Found existing record for %s, updating it.", request.model_id)
                 break
         
         if record is None:
             # Otherwise create a new one
+            logger.debug("Creating new record for %s")
             record = self.profiling_data.add(
                 namespace=f"nos::{request.model_id}",
                 model_id=request.model_id,
@@ -453,7 +456,6 @@ class ModelProfiler:
         record.update("forward::memory_cpu::allocated", record.profiling_data["forward::memory_cpu::post"])
         record.update("forward::execution.gpu_utilization", record.profiling_data["forward::execution"]["gpu_utilization"])
         record.update("forward::execution.cpu_utilization", record.profiling_data["forward::execution"]["cpu_utilization"])
-        import pdb; pdb.set_trace()
         print(tree)
 
     def run(self) -> None:
@@ -467,7 +469,7 @@ class ModelProfiler:
         # self.profiler = Profiler()
         # self.profiler.from_json_path(NOS_PROFILE_CATALOG_PATH)
         with Profiler() as self.profiling_data, torch.inference_mode():
-            self.profiling_data.from_json_path(NOS_PROFILE_CATALOG_PATH)
+            # self.profiling_data.from_json_path(NOS_PROFILE_CATALOG_PATH)
             for _idx, request in enumerate(self.requests):
                 # Skip subsequent benchmarks with same name if previous runs failed
                 # Note: This is to avoid running benchmarks that previously failed
@@ -496,6 +498,11 @@ class ModelProfiler:
         )
         self.profiling_data.save(profile_path)
 
+        from nos.constants import NOS_PROFILE_CATALOG_PATH
+        shutil.copyfile(str(profile_path), str(NOS_PROFILE_CATALOG_PATH))
+
+        # This is a WIP to allow us to map the profiling catalog to a
+        # different location.
         if catalog_path is not None:
             # Copy the profile to the metadata catalog
             Path(catalog_path).mkdir(parents=True, exist_ok=True)

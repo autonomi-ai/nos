@@ -246,24 +246,27 @@ def _profile_list(
     table.add_column("gpu_util")
 
     for model in hub.list(private=False):
-        # if model == "openai/clip-vit-base-patch32":
-        #     import pdb; pdb.set_trace()
         spec: ModelSpec = hub.load_spec(model)
         for method in spec.signature:
             metadata = spec.metadata(method)
             try:
-                if hasattr(metadata, "resources"):
+                if hasattr(metadata, "resources") and metadata.resources is not None:
                     runtime = metadata.resources.runtime
                     device = "-".join(metadata.resources.device.split("-")[-2:])
-                    cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
-                    gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
-                if hasattr(metadata, "profile"):
-                    it_s = f'{metadata.profile["prof.forward::execution.num_iterations"] * 1e3 / metadata.profile["prof.forward::execution.total_ms"]:.1f}'
-                    cpu_util = f'{metadata.profile["prof.forward::execution.cpu_utilization"]:0.2f}'
-                    gpu_util = f'{metadata.profile["prof.forward::execution.gpu_utilization"]:0.2f}'
+                    cpu_memory = metadata.resources.memory
+                    if type(cpu_memory) != str:
+                        cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
+                    gpu_memory = metadata.resources.device_memory
+                    if type(gpu_memory) != str:
+                        gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
+                if hasattr(metadata, "profile") and metadata.profile is not None:
+                    it_s = f'{metadata.profile["profiling_data.forward::execution.num_iterations"] * 1e3 / metadata.profile["profiling_data.forward::execution.total_ms"]:.1f}'
+                    cpu_util = f'{metadata.profile["profiling_data.forward::execution.cpu_utilization"]:0.2f}'
+                    gpu_util = f'{metadata.profile["profiling_data.forward::execution.gpu_utilization"]:0.2f}'
                 else:
                     print("no metadata")
-            except Exception:
+            except Exception as e:
+                print("Failed to load metadata: ", e)
                 it_s = "-"
                 cpu_util = "-"
                 gpu_util = "-"
