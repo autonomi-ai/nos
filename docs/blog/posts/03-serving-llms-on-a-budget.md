@@ -11,10 +11,10 @@ categories:
 authors:
  - spillai
 links:
-  - posts/03-deploy-llms-on-a-budget.md
+  - posts/03-serving-llms-on-a-budget.md
 ---
 
-# Serving LLMs for less than $160 / month
+# Serving LLMs on a budget
 
 <img src="/docs/blog/assets/nos-phixtral.jpg" width="100%">
 
