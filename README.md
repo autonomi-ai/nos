@@ -30,6 +30,12 @@
 > **NOS** inherits its name from **N**itrous **O**xide **S**ystem, the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
 <br>
 
+## 🔥 What's New
+
+* **[Jan 2024]** ☁️ [blog] [Deploy LLMs on a budget](https://docs.nos.run/docs/blog/posts/03-deploy-llms-on-a-budget.md) with [SkyServe](https://skypilot.readthedocs.io/en/latest/serving/sky-serve.html).
+* **[Jan 2024]** 📚 [blog] [Getting started with NOS tutorials](https://docs.nos.run/docs/blog/posts/02-nos-tutorials.md) is available [here](./examples/tutorials/)!
+* **[Dec 2023]** 🛝 [repo] We open-sourced the [NOS Playground](https://github.com/autonomi-ai/nos-playground) to help you get started with more examples built on NOS!
+
 ## **What can NOS do?**
 
 ### 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
