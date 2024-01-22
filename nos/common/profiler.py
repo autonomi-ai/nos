@@ -98,6 +98,9 @@ class profile_execution:
         cpu_util = psutil.cpu_percent(interval=None)
         try:
             # TOFIX (spillai): This will be fixed with torch 2.1
+            # check if CUDA_VISIBLE_DEVICES is set and default to 0:
+            if os.getenv("CUDA_VISIBLE_DEVICES", None) is None:
+                os.environ["CUDA_VISIBLE_DEVICES"] = "0"
             gpu_util = torch.cuda.utilization(int(os.getenv("CUDA_VISIBLE_DEVICES", None)))
         except Exception:
             gpu_util = None
