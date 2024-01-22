@@ -32,9 +32,10 @@
 
 ## 🔥 What's New
 
-* **[Jan 2024]** ☁️ [blog] [Deploy LLMs on a budget](https://docs.nos.run/docs/blog/posts/03-deploy-llms-on-a-budget.md) with [SkyServe](https://skypilot.readthedocs.io/en/latest/serving/sky-serve.html).
-* **[Jan 2024]** 📚 [blog] [Getting started with NOS tutorials](https://docs.nos.run/docs/blog/posts/02-nos-tutorials.md) is available [here](./examples/tutorials/)!
-* **[Dec 2023]** 🛝 [repo] We open-sourced the [NOS Playground](https://github.com/autonomi-ai/nos-playground) to help you get started with more examples built on NOS!
+* **[Jan 2024]** ✍️ [blog] [Serving LLMs on a budget](https://docs.nos.run/docs/blog/serving-llms-on-a-budget.html) with [SkyServe](https://skypilot.readthedocs.io/en/latest/serving/sky-serve.html).
+* **[Jan 2024]** 📚 [docs] [NOS x SkyPilot Integration](https://docs.nos.run/docs/integrations/skypilot.html) page!
+* **[Jan 2024]** ✍️ [blog] [Getting started with NOS tutorials](https://docs.nos.run/docs/blog/-getting-started-with-nos-tutorials.html) is available [here](./examples/tutorials/)!
+* **[Dec 2023]** 🛝 [repo] We open-sourced the [NOS playground](https://github.com/autonomi-ai/nos-playground) to help you get started with more examples built on NOS!
 
 ## **What can NOS do?**
 
