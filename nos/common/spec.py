@@ -368,13 +368,16 @@ class ModelSpecMetadataCatalog:
         """Get the singleton instance."""
         if cls._instance is None:
             from nos.hub import Hub  # noqa: F401
-
             cls._instance = cls()
             try:
                 Hub.get()  # force import models
                 cls._instance.load_profile_catalog()
+                # import pdb; pdb.set_trace()
             except FileNotFoundError:
                 logger.warning(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
+
+        cls._instance.load_profile_catalog()
+        # import pdb; pdb.set_trace()
         return cls._instance
 
     def __contains__(self, model_method_id: Any) -> bool:

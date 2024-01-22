@@ -99,7 +99,7 @@ class profile_execution:
         try:
             # TOFIX (spillai): This will be fixed with torch 2.1
             gpu_util = torch.cuda.utilization(int(os.getenv("CUDA_VISIBLE_DEVICES", None)))
-        except Exception:
+        except Exception as e:
             gpu_util = None
         self.execution_stats = ExecutionStats(
             self.iterator.n, (end_t - self.iterator.start_t) * 1e3, cpu_util, gpu_util
@@ -312,11 +312,15 @@ class ModelProfiler:
         # Check if we have a previous catalog and load it
         from nos.constants import NOS_PROFILE_CATALOG_PATH
 
+        logger.info("NOS profile catalog path: %s", NOS_PROFILE_CATALOG_PATH)
+
+        """
         if NOS_PROFILE_CATALOG_PATH.exists():
             self.prof = Profiler()
             self.prof.from_json_path(NOS_PROFILE_CATALOG_PATH)
         else:
             logger.debug("No prof catalog found")
+        """
 
         # Get system info
         sysinfo = get_system_info(docker=True, gpu=True)
@@ -353,22 +357,30 @@ class ModelProfiler:
 
     def _benchmark(self, request: ModelProfileRequest) -> None:
         """Benchmark / profile a specific model."""
-
         print()
         tree = Tree(
             f"🔥 [bold white]Profiling (name={request.model_id}, device={self.device_name}, kwargs={request.kwargs})[/bold white]"
         )
 
-        # Add a new record to profile
-        record = self.prof.add(
-            namespace=f"nos::{request.model_id}",
-            model_id=request.model_id,
-            method=request.method,
-            runtime=self.runtime,
-            device_name=self.device_name,
-            device_type=self.device.type,
-            device_index=self.device.index,
-        )
+        # Check if we already have a record for this request in the catalog and remove it:
+        record = None
+        for existing_record in self.prof.records:
+            if existing_record.namespace == f"nos::{request.model_id}":
+                record = existing_record
+                break
+        
+        if record is None:
+            # Otherwise create a new one
+            record = self.prof.add(
+                namespace=f"nos::{request.model_id}",
+                model_id=request.model_id,
+                method=request.method,
+                runtime=self.runtime,
+                device_name=self.device_name,
+                device_type=self.device.type,
+                device_index=self.device.index,
+            )
+
         with record.profile_memory("wrap"):
             try:
                 # Initialize (profile memory)
@@ -419,6 +431,8 @@ class ModelProfiler:
             record.update(key, value)
         record.update("forward::memory_gpu::allocated", record.prof["forward::memory_gpu::post"])
         record.update("forward::memory_cpu::allocated", record.prof["forward::memory_cpu::post"])
+        record.update("forward::execution.gpu_utilization", record.prof["forward::execution"]["gpu_utilization"])
+        record.update("forward::execution.cpu_utilization", record.prof["forward::execution"]["cpu_utilization"])
         print(tree)
 
     def run(self) -> None:
@@ -429,9 +443,10 @@ class ModelProfiler:
         print(f"[white]{self}[/white]")
         from nos.constants import NOS_PROFILE_CATALOG_PATH
 
-        self.prof = Profiler()
-        self.prof.from_json_path(NOS_PROFILE_CATALOG_PATH)
-        with torch.inference_mode():
+        # self.prof = Profiler()
+        # self.prof.from_json_path(NOS_PROFILE_CATALOG_PATH)
+        with Profiler() as self.prof, torch.inference_mode():
+            # self.prof.from_json_path(NOS_PROFILE_CATALOG_PATH)
             for _idx, request in enumerate(self.requests):
                 # Skip subsequent benchmarks with same name if previous runs failed
                 # Note: This is to avoid running benchmarks that previously failed
@@ -446,6 +461,8 @@ class ModelProfiler:
                     failed[request.model_id] = request
                     continue
         print(f"[bold green] ✅ Benchmarks completed (elapsed={time.time() - st_t:.1f}s) [/bold green]")
+
+        import pdb; pdb.set_trace()
 
     def save(self, catalog_path: str = None) -> str:
         """Save profiled results to JSON."""

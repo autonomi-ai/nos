@@ -246,6 +246,8 @@ def _profile_list(
     table.add_column("gpu_util")
 
     for model in hub.list(private=False):
+        # if model == "openai/clip-vit-base-patch32":
+        #     import pdb; pdb.set_trace()
         spec: ModelSpec = hub.load_spec(model)
         for method in spec.signature:
             metadata = spec.metadata(method)
