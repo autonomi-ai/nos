@@ -437,12 +437,12 @@ class ModelSpecMetadataCatalog:
             "device_type",
             "device_index",
             "version",
-            "prof.batch_size",
-            "prof.shape",
-            "prof.forward::memory_cpu::allocated",
-            "prof.forward::execution.num_iterations",
-            "prof.forward::execution.cpu_utilization",
-            "prof.forward::execution.gpu_utilization",
+            "profiling_data.batch_size",
+            "profiling_data.shape",
+            "profiling_data.forward::memory_cpu::allocated",
+            "profiling_data.forward::execution.num_iterations",
+            "profiling_data.forward::execution.cpu_utilization",
+            "profiling_data.forward::execution.gpu_utilization",
         ]:
             if col not in columns:
                 print("Missing: ", col)
@@ -452,7 +452,7 @@ class ModelSpecMetadataCatalog:
             additional_kwargs = {}
             try:
                 device_memory = (
-                    math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500) * 500 * 1024**2
+                    math.ceil(row["profiling_data.forward::memory_gpu::allocated"] / 1024**2 / 500) * 500 * 1024**2
                 )
                 additional_kwargs["device_memory"] = device_memory
             except Exception:
