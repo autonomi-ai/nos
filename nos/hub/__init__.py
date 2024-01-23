@@ -4,9 +4,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import yaml
-from pydantic import ValidationError, root_validator
+from pydantic import PydanticUserError, ValidationError, model_validator
 from pydantic.dataclasses import dataclass
-from pydantic.errors import ConfigError
 
 from nos.common.metaclass import SingletonMetaclass  # noqa: F401
 from nos.common.spec import (  # noqa: F401
@@ -242,15 +241,16 @@ class Hub:
             deployment: ModelDeploymentSpec = field(default_factory=ModelDeploymentSpec)
             """Model deployment specification."""
 
-            @root_validator(pre=True, allow_reuse=True)
+            @model_validator(mode="before")
+            @classmethod
             def _validate_model_cls_import(cls, values):
                 """Validate the model."""
                 import importlib
                 import importlib.util
                 import sys
 
-                model_cls_name = values.get("model_cls")
-                model_path = values.get("model_path")
+                model_cls_name = values.kwargs.get("model_cls")
+                model_path = values.kwargs.get("model_path")
 
                 # Check if model_path is a valid path relative to the directory containing
                 # the catalog.yaml file.
@@ -284,7 +284,7 @@ class Hub:
                         f"Invalid model class provided, model_cls={model_cls_name}, model_path={model_path}, e={e}\n\n{tback_str}."
                     )
 
-                values.update(model_cls=model_cls)
+                values.kwargs.update(model_cls=model_cls)
                 return values
 
         # Check if the file exists and has a YAML extension
@@ -323,7 +323,7 @@ class Hub:
             # Generate the model spec from the config
             try:
                 mconfig = _ModelImportConfig(**mconfig)
-            except (ValidationError, ConfigError) as e:
+            except (ValidationError, PydanticUserError) as e:
                 raise ValueError(f"Invalid model config provided, filename={filename}, e={e}")
 
             # Register the model as a custom model
