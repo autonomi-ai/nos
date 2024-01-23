@@ -319,7 +319,11 @@ class ModelResources:
         """Validate the device."""
         if device.startswith("nvidia-"):
             device = "gpu"  # for now, we re-map all nvidia devices to gpu
-        if device not in ["auto", "cpu", "gpu"]:
+        from nos.constants import SKYPILOT_DEVICES
+
+        available_devices = ["auto", "cpu", "gpu"]
+        available_devices.extend(SKYPILOT_DEVICES)
+        if device not in available_devices:
             raise ValueError(f"Invalid device, device={device}.")
         return device
 

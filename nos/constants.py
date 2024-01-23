@@ -36,3 +36,6 @@ NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1
 NOS_RAY_JOB_CLIENT_ADDRESS = "http://127.0.0.1:8265"
 
 NOS_PROFILE_CATALOG_PATH = NOS_PATH / "catalogs/model_profile_catalog.json"
+
+# For validating device types: generate with `sky show-gpus`
+SKYPILOT_DEVICES = ["A10", "A10G", "A100", "A100-80GB", "H100", "K80", "L4", "M60", "P100", "T4", "V100", "V100-32GB"]
