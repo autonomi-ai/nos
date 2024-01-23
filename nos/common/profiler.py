@@ -263,7 +263,7 @@ class Profiler:
     def from_json_path(cls, filename: Union[Path, str]) -> "Profiler":
         """Load profiled results from JSON."""
         df = pd.read_json(str(filename), orient="records")
-        cls.from_df(df)
+        return cls.from_df(df)
 
     def __repr__(self) -> str:
         """Return a string representation of the profiler."""
@@ -474,8 +474,7 @@ class ModelProfiler:
         print(f"[white]{self}[/white]")
         from nos.constants import NOS_PROFILE_CATALOG_PATH
 
-        with Profiler() as self.profiling_data, torch.inference_mode():
-            self.profiling_data.from_json_path(NOS_PROFILE_CATALOG_PATH)
+        with Profiler.from_json_path(NOS_PROFILE_CATALOG_PATH) as self.profiling_data, torch.inference_mode():
             for _idx, request in enumerate(self.requests):
                 # Skip subsequent benchmarks with same name if previous runs failed
                 # Note: This is to avoid running benchmarks that previously failed
@@ -504,8 +503,8 @@ class ModelProfiler:
         )
         self.profiling_data.save(profile_path)
 
+        # Still need to copy to the default catalog path for now
         from nos.constants import NOS_PROFILE_CATALOG_PATH
-
         shutil.copyfile(str(profile_path), str(NOS_PROFILE_CATALOG_PATH))
 
         # This is a WIP to allow us to map the profiling catalog to a
