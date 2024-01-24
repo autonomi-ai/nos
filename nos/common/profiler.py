@@ -509,6 +509,7 @@ class ModelProfiler:
 
         # Still need to copy to the default catalog path for now
         from nos.constants import NOS_PROFILE_CATALOG_PATH
+
         shutil.copyfile(str(profile_path), str(NOS_PROFILE_CATALOG_PATH))
 
         # This is a WIP to allow us to map the profiling catalog to a

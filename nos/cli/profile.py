@@ -195,6 +195,14 @@ def profile_models(
     return profiler
 
 
+def profile_models_with_method(
+    method_name: str, device_id: int = 0, save: bool = False, verbose: bool = False, catalog_path: str = None
+) -> Profiler:
+    for model_id, method, _spec in _model_methods(None):
+        if method == method_name:
+            profile_models(model_id, device_id, save, verbose, catalog_path)
+
+
 @profile_cli.command(name="model")
 def _profile_model(
     model_id: str = typer.Option(..., "-m", "--model-id", help="Model identifier."),
@@ -204,6 +212,19 @@ def _profile_model(
 ):
     """Profile a specific model by its identifier."""
     profile_models(model_id, device_id=device_id, save=True, verbose=verbose, catalog_path=catalog_path)
+
+
+@profile_cli.command(name="method")
+def _profile_method(
+    method_name: str = typer.Option(..., "-m", "--method-name", help="Method name."),
+    device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Export path for the catalog json."),
+):
+    """Profile a specific model by its identifier."""
+    profile_models_with_method(
+        method_name=method_name, device_id=device_id, save=True, verbose=verbose, catalog_path=catalog_path
+    )
 
 
 @profile_cli.command(name="all")

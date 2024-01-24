@@ -1,9 +1,10 @@
+import shutil
+
 import pytest
 from typer.testing import CliRunner
 
 from nos.cli.cli import app_cli
 from nos.test.utils import PyTestGroup, skip_if_no_torch_cuda
-import shutil
 
 
 runner = CliRunner()
@@ -22,31 +23,29 @@ def test_cli_profile_model():
 
 @skip_if_no_torch_cuda
 def test_catalog_path():
-    result = runner.invoke(
-        app_cli, ["profile", "model", "-m", "openai/clip", "--catalog-path", "./test-catalog/"]
-    )
+    result = runner.invoke(app_cli, ["profile", "model", "-m", "openai/clip", "--catalog-path", "./test-catalog/"])
     assert result.exit_code == 0
     import os
+
     assert len(os.listdir("./test-catalog/")) > 0
     shutil.rmtree("./test-catalog/")
 
 
 @skip_if_no_torch_cuda
 def test_gpu_util():
-    result = runner.invoke(
-        app_cli, ["profile", "model", "-m", "openai/clip", "--catalog-path", "./test-catalog/"]
-    )
+    result = runner.invoke(app_cli, ["profile", "model", "-m", "openai/clip", "--catalog-path", "./test-catalog/"])
     assert result.exit_code == 0
     import os
 
     assert os.path.exists("./test-catalog/")
     # load the json manually and check the field is not 'nan':
     import json
+
     # open the first file in the tests/ dir:
     # open the absolute path:
     with open(os.path.join("./test-catalog/", os.listdir("./test-catalog/")[0])) as f:
         catalog = json.load(f)
-    assert catalog["openai/clip"]["gpu_util"] is not "nan"
+    assert catalog["openai/clip"]["gpu_util"] != "nan"
     shutil.rmtree("./test-catalog/")
 
 
