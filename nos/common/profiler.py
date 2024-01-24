@@ -262,8 +262,12 @@ class Profiler:
     @classmethod
     def from_json_path(cls, filename: Union[Path, str]) -> "Profiler":
         """Load profiled results from JSON."""
-        df = pd.read_json(str(filename), orient="records")
-        return cls.from_df(df)
+        # if the filename doesn't exist, initialize an empty profiler:
+        if not Path(filename).exists():
+            return cls()
+        else:
+            df = pd.read_json(str(filename), orient="records")
+            return cls.from_df(df)
 
     def __repr__(self) -> str:
         """Return a string representation of the profiler."""
