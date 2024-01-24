@@ -240,9 +240,7 @@ class Profiler:
     def as_df(self) -> pd.DataFrame:
         """Return a dataframe representation of the profiled result."""
         metadata = ProfilerMetadata()
-        df = pd.json_normalize([r.as_dict() for r in self.records]).assign(
-            date=metadata.date, version=metadata.version
-        )
+        df = pd.DataFrame([r.as_dict() for r in self.records]).assign(date=metadata.date, version=metadata.version)
         return df
 
     @classmethod
@@ -478,7 +476,9 @@ class ModelProfiler:
         print(f"[white]{self}[/white]")
         from nos.constants import NOS_PROFILE_CATALOG_PATH
 
-        with Profiler.from_json_path(NOS_PROFILE_CATALOG_PATH) as self.profiling_data, torch.inference_mode():
+        # import pdb; pdb.set_trace()
+        self.profiling_data = Profiler.from_json_path(NOS_PROFILE_CATALOG_PATH)
+        with torch.inference_mode():
             for _idx, request in enumerate(self.requests):
                 # Skip subsequent benchmarks with same name if previous runs failed
                 # Note: This is to avoid running benchmarks that previously failed

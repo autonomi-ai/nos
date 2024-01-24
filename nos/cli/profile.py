@@ -272,6 +272,7 @@ def _profile_list(
         spec: ModelSpec = hub.load_spec(model)
         for method in spec.signature:
             metadata = spec.metadata(method)
+            profile = metadata.profile
             try:
                 if hasattr(metadata, "resources") and metadata.resources is not None:
                     runtime = metadata.resources.runtime
@@ -282,12 +283,9 @@ def _profile_list(
                     gpu_memory = metadata.resources.device_memory
                     if type(gpu_memory) != str:
                         gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
-                if hasattr(metadata, "profile") and metadata.profile is not None:
-                    it_s = f'{metadata.profile["profiling_data.forward::execution.num_iterations"] * 1e3 / metadata.profile["profiling_data.forward::execution.total_ms"]:.1f}'
-                    cpu_util = f'{metadata.profile["profiling_data.forward::execution.cpu_utilization"]:0.2f}'
-                    gpu_util = f'{metadata.profile["profiling_data.forward::execution.gpu_utilization"]:0.2f}'
-                else:
-                    print("no metadata")
+                it_s = f'{profile["profiling_data"]["forward::execution"]["num_iterations"] * 1e3 / profile["profiling_data"]["forward::execution"]["total_ms"]:.1f}'
+                cpu_util = f'{profile["profiling_data"]["forward::execution"]["cpu_utilization"]:0.2f}'
+                gpu_util = f'{profile["profiling_data"]["forward::execution"]["gpu_utilization"]:0.2f}'
             except Exception as e:
                 logger.debug("Failed to load metadata: ", e)
                 it_s = "-"
