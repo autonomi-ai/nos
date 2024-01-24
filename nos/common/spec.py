@@ -423,7 +423,11 @@ class ModelSpecMetadataCatalog:
         if not NOS_PROFILE_CATALOG_PATH.exists():
             raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
 
-        print("Loading profiling catalog from ", NOS_PROFILE_CATALOG_PATH, "...")
+        import logging
+
+        logger = logging.getLogger(__name__)
+        debug_str = "Loading profiling catalog from " + str(NOS_PROFILE_CATALOG_PATH)
+        logger.info(debug_str)
 
         # Read the catalog
         df = pd.read_json(str(NOS_PROFILE_CATALOG_PATH), orient="records")
