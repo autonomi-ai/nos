@@ -4,7 +4,7 @@ import math
 import re
 from dataclasses import asdict, field
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, get_args, get_origin
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, get_args, get_origin
 
 import humanize
 from pydantic import validator
@@ -12,14 +12,16 @@ from pydantic.dataclasses import dataclass
 
 from nos.common.cloudpickle import dumps, loads
 from nos.common.exceptions import InputValidationException
+from nos.common.helpers import memory_bytes
 from nos.common.runtime import RuntimeEnv
 from nos.common.tasks import TaskType
 from nos.common.types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT  # noqa: F401
-from nos.constants import NOS_METADATA_CATALOG_PATH
+from nos.constants import NOS_PROFILE_CATALOG_PATH
 from nos.logging import logger
 from nos.protoc import import_module
 
 
+logger.disable(__name__)
 nos_service_pb2 = import_module("nos_service_pb2")
 
 
@@ -194,6 +196,20 @@ class FunctionSignature:
         # TODO (spillai): Validate input types and shapes.
         return inputs
 
+    @validator("init_args", pre=True)
+    def _validate_init_args(cls, init_args: Union[Tuple[Any, ...], Any]) -> Tuple[Any, ...]:
+        """Validate the initialization arguments."""
+        # TODO (spillai): Check the function signature of the func_or_cls class and validate
+        # the init_args against the signature.
+        return init_args
+
+    @validator("init_kwargs", pre=True)
+    def _validate_init_kwargs(cls, init_kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate the initialization keyword arguments."""
+        # TODO (spillai): Check the function signature of the func_or_cls class and validate
+        # the init_kwargs against the signature.
+        return init_kwargs
+
     def _encode_inputs(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """Encode inputs based on defined signature."""
         inputs = FunctionSignature.validate(inputs, self.parameters)
@@ -237,22 +253,25 @@ class FunctionSignature:
 class ModelResources:
     """Model resources (device/host memory etc)."""
 
-    runtime: str
+    runtime: str = field(default="auto")
     """Runtime type (cpu, gpu, trt, etc).
     See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
     """
-    device: str
-    """Device identifier (nvidia-2080, nvidia-4090, apple-m2, etc)."""
     cpus: float = 0
     """Number of CPUs (defaults to 0 CPUs)."""
     memory: Union[None, int, str] = field(default=0)
     """Host / CPU memory"""
-    device_memory: Union[None, int, str] = field(default=0)
+    device: str = field(default="auto")
+    """Device identifier (nvidia-2080, nvidia-4090, apple-m2, etc)."""
+    device_memory: Union[int, str] = field(default="auto")
     """Device / GPU memory."""
 
     def __repr__(self) -> str:
         memory = humanize.naturalsize(self.memory, binary=True) if self.memory else None
-        device_memory = humanize.naturalsize(self.device_memory, binary=True) if self.device_memory else None
+        device_memory = self.device_memory
+        if isinstance(device_memory, int):
+            device_memory = humanize.naturalsize(self.device_memory, binary=True) if self.device_memory else None
+        assert device_memory is None or isinstance(device_memory, str)
         return (
             f"""ModelResources(runtime={self.runtime}, device={self.device}, cpus={self.cpus}, """
             f"""memory={memory}, device_memory={device_memory})"""
@@ -264,24 +283,9 @@ class ModelResources:
         from nos.server._runtime import InferenceServiceRuntime
 
         # Check if runtime is subset of supported runtimes.
-        if runtime not in InferenceServiceRuntime.configs.keys():
+        if runtime not in list(InferenceServiceRuntime.configs.keys()) + ["auto"]:
             raise ValueError(f"Invalid runtime, runtime={runtime}.")
         return runtime
-
-    @validator("device_memory")
-    def _validate_device_memory(cls, device_memory: Union[int, str]) -> int:
-        """Validate the device memory."""
-        if device_memory is None:
-            return
-
-        if isinstance(device_memory, str):
-            raise NotImplementedError()
-
-        if device_memory > 128 * 1024**3:
-            err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
-            logger.error(err_msg)
-            raise ValueError(err_msg)
-        return device_memory
 
     @validator("cpus")
     def _validate_cpus(cls, cpus: Union[float, str]) -> float:
@@ -299,10 +303,10 @@ class ModelResources:
     def _validate_memory(cls, memory: Union[int, str]) -> int:
         """Validate the host memory."""
         if memory is None:
-            return
+            return 0
 
         if isinstance(memory, str):
-            raise NotImplementedError()
+            memory: int = memory_bytes(memory)
 
         if memory > 128 * 1024**3:
             err_msg = f"Invalid device memory provided, memory={memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
@@ -310,61 +314,112 @@ class ModelResources:
             raise ValueError(err_msg)
         return memory
 
+    @validator("device")
+    def _validate_device(cls, device: str) -> str:
+        """Validate the device."""
+        if device.startswith("nvidia-"):
+            device = "gpu"  # for now, we re-map all nvidia devices to gpu
+        if device not in ["auto", "cpu", "gpu"]:
+            raise ValueError(f"Invalid device, device={device}.")
+        return device
+
+    @validator("device_memory")
+    def _validate_device_memory(cls, device_memory: Union[int, str]) -> Union[int, Literal["auto"]]:
+        """Validate the device memory."""
+        if isinstance(device_memory, str) and device_memory != "auto":
+            device_memory: int = memory_bytes(device_memory)
+
+        if isinstance(device_memory, int) and device_memory > 128 * 1024**3:
+            err_msg = f"Invalid device memory provided, device_memory={device_memory / 1024**2} MB. Provide a value between 256 MB and 128 GB."
+            logger.error(err_msg)
+            raise ValueError(err_msg)
+        return device_memory
+
 
 class ModelSpecMetadataCatalog:
-    """Model specification catalog."""
+    """Model specification catalog.
+
+    This is a singleton class that maintains the metadata for all the models
+    registered with the hub. The metadata includes the model resources (device/host memory etc),
+    and the model profile (memory/cpu usage, batch size, input/output shapes etc).
+
+    Usage:
+        >>> catalog = ModelSpecMetadataCatalog.get()
+        >>> metadata: ModelSpecMetadata = spec.metadata(method)
+        >>> resources: ModelResources = metadata.resources
+        >>> profile: Dict[str, Any] = metadata.profile
+
+    """
 
     _instance: Optional["ModelSpecMetadataCatalog"] = None
     """Singleton instance."""
 
-    _registry: Dict[str, "ModelSpecMetadata"] = {}
+    _metadata_catalog: Dict[str, "ModelSpecMetadata"] = {}
     """Model specification metadata registry."""
 
     _resources_catalog: Dict[str, "ModelResources"] = {}
     """Model resources catalog."""
 
-    _metadata_catalog: Dict[str, Dict[str, Any]] = {}
+    _profile_catalog: Dict[str, Dict[str, Any]] = {}
     """Model metadata catalog of various additional profiling details."""
 
     @classmethod
     def get(cls) -> "ModelSpecMetadataCatalog":
         """Get the singleton instance."""
         if cls._instance is None:
+            from nos.hub import Hub  # noqa: F401
+
             cls._instance = cls()
             try:
-                cls._instance.load_catalog()
+                Hub.get()  # force import models
+                cls._instance.load_profile_catalog()
             except FileNotFoundError:
-                logger.warning(f"Model metadata catalog not found, path={NOS_METADATA_CATALOG_PATH}.")
+                logger.warning(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
         return cls._instance
 
     def __contains__(self, model_method_id: Any) -> bool:
         """Check if the model spec metadata is available."""
-        return model_method_id in self._registry
+        return model_method_id in self._metadata_catalog
+
+    def __getstate__(self) -> Dict[str, Any]:
+        """Return the state of the object."""
+        return {
+            "_metadata_catalog": self._metadata_catalog,
+            "_resources_catalog": self._resources_catalog,
+            "_profile_catalog": self._profile_catalog,
+        }
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        """Set the state of the object."""
+        self._metadata_catalog = state["_metadata_catalog"]
+        self._resources_catalog = state["_resources_catalog"]
+        self._profile_catalog = state["_profile_catalog"]
+        self._instance = self
 
     def __getitem__(self, model_method_id: Any) -> "ModelSpecMetadata":
         """Load the model spec metadata."""
         try:
-            return self._registry[model_method_id]
+            return self._metadata_catalog[model_method_id]
         except KeyError:
             raise KeyError(f"Unavailable model (id={model_method_id}).")
 
     def __setitem__(self, model_method_id: Any, metadata: "ModelSpecMetadata"):
         """Add the model spec metadata."""
-        self._registry[model_method_id] = metadata
+        self._metadata_catalog[model_method_id] = metadata
 
     def load(self, model_method_id: Any) -> "ModelSpec":
         """Load the model spec metadata (identical to __getitem__)."""
         return self[model_method_id]
 
-    def load_catalog(self) -> "ModelSpecMetadataCatalog":
-        """Load the model spec metadata from a JSON catalog."""
+    def load_profile_catalog(self) -> "ModelSpecMetadataCatalog":
+        """Load the model profiles from a JSON catalog."""
         import pandas as pd
 
-        if not NOS_METADATA_CATALOG_PATH.exists():
-            raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_METADATA_CATALOG_PATH}.")
+        if not NOS_PROFILE_CATALOG_PATH.exists():
+            raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
 
         # Read the catalog
-        df = pd.read_json(str(NOS_METADATA_CATALOG_PATH), orient="records")
+        df = pd.read_json(str(NOS_PROFILE_CATALOG_PATH), orient="records")
         columns = df.columns
         # Check if the catalog is valid with the required columns
         for col in [
@@ -380,22 +435,22 @@ class ModelSpecMetadataCatalog:
             "prof.forward::memory_cpu::allocated",
         ]:
             if col not in columns:
-                raise ValueError(f"Invalid model metadata catalog, missing column={col}.")
+                raise ValueError(f"Invalid model profile catalog, missing column={col}.")
         # Update the registry
         for _, row in df.iterrows():
             model_id, method = row["model_id"], row["method"]
+            additional_kwargs = {}
             try:
                 device_memory = (
                     math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500) * 500 * 1024**2
                 )
+                additional_kwargs["device_memory"] = device_memory
             except Exception:
-                device_memory = None
+                logger.debug(f"Unable to parse device memory, model_id={model_id}, method={method}.")
             self._resources_catalog[f"{model_id}/{method}"] = ModelResources(
-                runtime=row["runtime"],
-                device=row["device_name"],
-                device_memory=device_memory,
+                runtime=row["runtime"], device=row["device_name"], **additional_kwargs
             )
-            self._metadata_catalog[f"{model_id}/{method}"] = row.to_dict()
+            self._profile_catalog[f"{model_id}/{method}"] = row.to_dict()
 
 
 @dataclass
@@ -426,11 +481,11 @@ class ModelSpecMetadata:
             return None
 
     @property
-    def metadata(self) -> Dict[str, Any]:
-        """Return the model metadata."""
+    def profile(self) -> Dict[str, Any]:
+        """Return the model profile."""
         catalog = ModelSpecMetadataCatalog.get()
         try:
-            return catalog._metadata_catalog[f"{self.id}/{self.method}"]
+            return catalog._profile_catalog[f"{self.id}/{self.method}"]
         except KeyError:
             logger.debug(f"Model metadata not found in catalog, id={self.id}, method={self.method}.")
             return {}
@@ -508,18 +563,13 @@ class ModelSpec:
             logger.debug(f"Model metadata not found, id={self.id}.")
             return None
 
-    def set_metadata(self, method: str, metadata: ModelSpecMetadata) -> None:
-        """Set the model spec metadata."""
-        catalog = ModelSpecMetadataCatalog.get()
-        catalog[f"{self.id}/{method}"] = metadata
-
     def metadata(self, method: str = None) -> ModelSpecMetadata:
         """Return the model spec metadata for a given method (or defaults to default method)."""
         if method is None:
             method = self.default_method
         catalog = ModelSpecMetadataCatalog.get()
         try:
-            metadata: ModelSpecMetadata = catalog[f"{self.id}/{method}"]
+            metadata: ModelSpecMetadata = catalog._metadata_catalog[f"{self.id}/{method}"]
         except KeyError:
             logger.debug(f"Model metadata not found in catalog, id={self.id}, method={method}.")
             return ModelSpecMetadata(id=self.id, method=method)
@@ -573,8 +623,8 @@ class ModelSpec:
             ```
 
         Args:
-            *args: Positional arguments.
-            **kwargs: Keyword arguments.
+            *init_args: Positional arguments.
+            **init_kwargs: Keyword arguments.
         Returns:
             Any: Model instance.
         """
@@ -582,9 +632,15 @@ class ModelSpec:
         return sig.func_or_cls(*init_args, **init_kwargs)
 
     @classmethod
+    def from_yaml(cls, filename: str) -> "ModelSpec":
+        raise NotImplementedError()
+
+    @classmethod
     def from_cls(
         cls,
         func_or_cls: Callable,
+        init_args: Tuple[Any, ...] = (),
+        init_kwargs: Dict[str, Any] = {},  # noqa: B006
         method: str = "__call__",
         runtime_env: RuntimeEnv = None,
         model_id: str = None,
@@ -594,6 +650,8 @@ class ModelSpec:
 
         Args:
             func_or_cls (Callable): Model function or class. For now, only classes are supported.
+            init_args (Tuple[Any, ...]): Initialization arguments.
+            init_kwargs (Dict[str, Any]): Initialization keyword arguments.
             method (str): Method name to be executed.
             runtime_env (RuntimeEnv): Runtime environment specification.
             model_id (str): Optional model identifier.
@@ -637,6 +695,8 @@ class ModelSpec:
             sig = FunctionSignature(
                 func_or_cls,
                 method=method,
+                init_args=init_args,
+                init_kwargs=init_kwargs,
             )
             signature[method] = sig
             metadata[method] = ModelSpecMetadata(model_id, method, task=None)
@@ -670,3 +730,25 @@ class ModelSpec:
     def _from_proto(minfo: nos_service_pb2.GenericResponse) -> "ModelSpec":
         """Convert the generic response back to the spec."""
         return loads(minfo.response_bytes)
+
+
+@dataclass
+class ModelDeploymentSpec:
+    """Model deployment specification."""
+
+    num_replicas: int = 1
+    """Number of replicas."""
+    resources: ModelResources = None
+    """Model resources."""
+
+
+@dataclass
+class ModelServiceSpec:
+    """Model service that captures the model, deployment and service specifications."""
+
+    model: ModelSpec
+    """Model specification."""
+    deployment: ModelDeploymentSpec
+    """Model deployment specification."""
+    service: Any = None
+    """Model service."""

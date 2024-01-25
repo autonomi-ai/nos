@@ -19,7 +19,7 @@ LLAMA2_CHAT_TEMPLATE = "{% if messages[0]['role'] == 'system' %}{% set loop_mess
 
 
 @dataclass(frozen=True)
-class Llama2ChatConfig(HuggingFaceHubConfig):
+class LLMConfig(HuggingFaceHubConfig):
     """Llama2 chat model configuration."""
 
     max_new_tokens: int = 2048
@@ -41,38 +41,46 @@ class Llama2ChatConfig(HuggingFaceHubConfig):
     """Chat template to use for the model."""
 
 
-class Llama2Chat:
+class LLM:
     configs = {
-        "meta-llama/Llama-2-7b-chat-hf": Llama2ChatConfig(
+        "meta-llama/Llama-2-7b-chat-hf": LLMConfig(
             model_name="meta-llama/Llama-2-7b-chat-hf",
             compute_dtype="float16",
             needs_auth=True,
             chat_template=LLAMA2_CHAT_TEMPLATE,
         ),
-        "meta-llama/Llama-2-13b-chat-hf": Llama2ChatConfig(
+        "meta-llama/Llama-2-13b-chat-hf": LLMConfig(
             model_name="meta-llama/Llama-2-13b-chat-hf",
             compute_dtype="float16",
             needs_auth=True,
             chat_template=LLAMA2_CHAT_TEMPLATE,
         ),
-        "meta-llama/Llama-2-70b-chat-hf": Llama2ChatConfig(
+        "meta-llama/Llama-2-70b-chat-hf": LLMConfig(
             model_name="meta-llama/Llama-2-70b-chat-hf",
             compute_dtype="float16",
             needs_auth=True,
             chat_template=LLAMA2_CHAT_TEMPLATE,
         ),
-        "HuggingFaceH4/zephyr-7b-beta": Llama2ChatConfig(
+        "HuggingFaceH4/zephyr-7b-beta": LLMConfig(
             model_name="HuggingFaceH4/zephyr-7b-beta",
             compute_dtype="float16",
         ),
-        "HuggingFaceH4/tiny-random-LlamaForCausalLM": Llama2ChatConfig(
+        "HuggingFaceH4/tiny-random-LlamaForCausalLM": LLMConfig(
             model_name="HuggingFaceH4/tiny-random-LlamaForCausalLM",
             compute_dtype="float16",
         ),
-        "NousResearch/Yarn-Mistral-7b-128k": Llama2ChatConfig(
+        "NousResearch/Yarn-Mistral-7b-128k": LLMConfig(
             model_name="NousResearch/Yarn-Mistral-7b-128k",
             compute_dtype="float16",
             additional_kwargs={"use_flashattention_2": True, "trust_remote_code": True},
+        ),
+        "mistralai/Mistral-7B-Instruct-v0.2": LLMConfig(
+            model_name="mistralai/Mistral-7B-Instruct-v0.2",
+            compute_dtype="float16",
+        ),
+        "TinyLlama/TinyLlama-1.1B-Chat-v1.0": LLMConfig(
+            model_name="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+            compute_dtype="float16",
         ),
     }
 
@@ -80,25 +88,23 @@ class Llama2Chat:
         from nos.logging import logger
 
         try:
-            self.cfg = Llama2Chat.configs[model_name]
+            self.cfg = LLM.configs[model_name]
         except KeyError:
-            raise ValueError(f"Invalid model_name: {model_name}, available models: {Llama2ChatConfig.configs.keys()}")
+            raise ValueError(f"Invalid model_name: {model_name}, available models: {LLMConfig.configs.keys()}")
 
-        if torch.cuda.is_available():
-            self.device_str = "cuda"
-        else:
-            self.device_str = "cpu"
+        self.device_str = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = torch.device(self.device_str)
-        use_auth_token = hf_login() if self.cfg.needs_auth else None
+
+        token = hf_login() if self.cfg.needs_auth else None
         self.model = AutoModelForCausalLM.from_pretrained(
             self.cfg.model_name,
             torch_dtype=getattr(torch, self.cfg.compute_dtype),
-            use_auth_token=use_auth_token,
+            token=token,
             device_map=self.device_str,
             **(self.cfg.additional_kwargs or {}),
         )
         self.model.eval()
-        self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name, use_auth_token=use_auth_token)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.cfg.model_name, token=token)
         self.tokenizer.use_default_system_prompt = False
         self.logger = logger
 
@@ -114,7 +120,7 @@ class Llama2Chat:
         num_beams: int = 1,
     ) -> Iterable[str]:
         """Chat with the model."""
-        self.logger.info(f"Conversation: {messages}")
+        self.logger.debug(f"Conversation: {messages}")
         input_ids = self.tokenizer.apply_chat_template(
             messages, chat_template=self.cfg.chat_template, return_tensors="pt"
         )
@@ -136,6 +142,7 @@ class Llama2Chat:
             temperature=temperature,
             num_beams=num_beams,
             repetition_penalty=repetition_penalty,
+            use_cache=True,
         )
         t = Thread(target=self.model.generate, kwargs=generate_kwargs)
         t.start()
@@ -148,19 +155,19 @@ class Llama2Chat:
                 start_t = time.perf_counter()
             if idx > 0:
                 self.logger.debug(
-                    f"""tok/s={idx / (time.perf_counter() - start_t):.2f}, """
-                    f"""memory={torch.cuda.memory_allocated(device=self.model.device) / 1024 ** 2:.2f} MB, """
-                    f"""allocated={torch.cuda.max_memory_allocated(device=self.model.device) / 1024 ** 2:.2f} MB, """
-                    f"""peak={torch.cuda.max_memory_reserved(device=self.model.device) / 1024 ** 2:.2f} MB, """
+                    f"""tok/s={idx / (time.perf_counter() - start_t):.1f}, """
+                    f"""memory={torch.cuda.memory_allocated(device=self.model.device) / 1024 ** 2:.1f} MB, """
+                    f"""allocated={torch.cuda.max_memory_allocated(device=self.model.device) / 1024 ** 2:.1f} MB, """
+                    f"""peak={torch.cuda.max_memory_reserved(device=self.model.device) / 1024 ** 2:.1f} MB, """
                 )
 
 
-for model_name in Llama2Chat.configs:
-    cfg = Llama2Chat.configs[model_name]
+for model_name in LLM.configs:
+    cfg = LLM.configs[model_name]
     hub.register(
         model_name,
         TaskType.TEXT_GENERATION,
-        Llama2Chat,
+        LLM,
         init_args=(model_name,),
         method="chat",
     )

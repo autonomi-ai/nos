@@ -15,8 +15,14 @@ NOS_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 NOS_LOG_DIR.mkdir(parents=True, exist_ok=True)
 NOS_TMP_DIR.mkdir(parents=True, exist_ok=True)
 
+DEFAULT_HTTP_HOST = os.getenv("NOS_HTTP_HOST", "127.0.0.1")
 DEFAULT_HTTP_PORT = int(os.getenv("NOS_HTTP_PORT", 8000))
+DEFAULT_HTTP_ADDRESS = f"{DEFAULT_HTTP_HOST}:{DEFAULT_HTTP_PORT}"
+
+DEFAULT_GRPC_HOST = os.getenv("NOS_GRPC_HOST", "[::]")
 DEFAULT_GRPC_PORT = int(os.getenv("NOS_GRPC_PORT", 50051))
+DEFAULT_GRPC_ADDRESS = f"{DEFAULT_GRPC_HOST}:{DEFAULT_GRPC_PORT}"
+
 GRPC_MAX_MESSAGE_LENGTH = 32 * 1024 * 1024  # 32 MB
 GRPC_MAX_WORKER_THREADS = int(os.getenv("NOS_GRPC_MAX_WORKER_THREADS", 4))
 
@@ -29,4 +35,4 @@ NOS_RAY_DASHBOARD_ENABLED = bool(int(os.getenv("NOS_RAY_DASHBOARD_ENABLED", "0")
 NOS_RAY_OBJECT_STORE_MEMORY = int(os.getenv("NOS_RAY_OBJECT_STORE_MEMORY", 2 * 1024 * 1024 * 1024))  # 2GB
 NOS_RAY_JOB_CLIENT_ADDRESS = "http://127.0.0.1:8265"
 
-NOS_METADATA_CATALOG_PATH = NOS_PATH / "catalogs/model_metadata_catalog.json"
+NOS_PROFILE_CATALOG_PATH = NOS_PATH / "catalogs/model_profile_catalog.json"

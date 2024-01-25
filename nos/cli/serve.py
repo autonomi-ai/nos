@@ -18,7 +18,7 @@ from rich import print
 from rich.console import Console
 from rich.tree import Tree
 
-from nos.constants import NOS_TMP_DIR
+from nos.constants import DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT, NOS_TMP_DIR
 
 
 NOS_SERVE_TMP_DIR = NOS_TMP_DIR / "serve"
@@ -44,7 +44,10 @@ class ServeOptions:
     http: bool = field(default=False)
     """Whether to use HTTP for the server."""
 
-    http_port: int = field(default=8000)
+    http_host: str = field(default=DEFAULT_HTTP_HOST)
+    """HTTP host to use for the server."""
+
+    http_port: int = field(default=DEFAULT_HTTP_PORT)
     """HTTP port to use for the server."""
 
     http_workers: int = field(default=1)
@@ -52,6 +55,9 @@ class ServeOptions:
 
     http_env: str = field(default=None)
     """Environment to use for the HTTP server (dev/test/prod)."""
+
+    home_directory: str = field(default=None)
+    """Override for NOS home directory."""
 
     logging_level: str = field(default="INFO")
     """Logging level to use for the server."""
@@ -70,6 +76,23 @@ class ServeOptions:
 
     env_file: List[str] = field(default=list)
     """Environment file to use for the server."""
+
+
+@serve_cli.command("generate", help="Generate the NOS server Dockerfiles, without building it.")
+def _serve_generate(
+    config_filename: str = typer.Option(None, "-c", "--config", help="Serve configuration filename."),
+    target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=False),
+    tag: str = typer.Option("autonomi/nos:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
+    prod: bool = typer.Option(
+        False,
+        "-p",
+        "--prod",
+        help="Run with production flags (slimmer images, no dev. dependencies).",
+        show_default=False,
+    ),
+) -> None:
+    """Main entrypoint for custom NOS runtime Dockerfile generation."""
+    _serve(config_filename=config_filename, runtime="auto", target=target, tag=tag, generate=True, prod=prod)
 
 
 @serve_cli.command("build", help="Build the NOS server locally.")
@@ -96,9 +119,13 @@ def _serve_up(
     target: str = typer.Option(None, "--target", help="Serve a specific target.", show_default=True),
     tag: str = typer.Option("autonomi/nos:{target}", "--tag", "-t", help="Image tag f-string.", show_default=True),
     http: bool = typer.Option(False, "--http", help="Serve with HTTP gateway.", show_default=True),
-    http_port: int = typer.Option(8000, "--http-port", help="HTTP port to use.", show_default=True),
+    http_host: str = typer.Option("0.0.0.0", "--http-host", help="HTTP host to use.", show_default=True),
+    http_port: int = typer.Option(DEFAULT_HTTP_PORT, "--http-port", help="HTTP port to use.", show_default=True),
     http_workers: int = typer.Option(1, "--http-workers", help="HTTP max workers.", show_default=True),
     logging_level: str = typer.Option("INFO", "--logging-level", help="Logging level.", show_default=True),
+    home_directory: str = typer.Option(
+        "~/.nosd", "--home-directory", help="Override the NOS_HOME variable with a custom location.", show_default=True
+    ),
     daemon: bool = typer.Option(False, "-d", "--daemon", help="Run in daemon mode.", show_default=True),
     reload: bool = typer.Option(False, "--reload", help="Reload on file changes.", show_default=True),
     build: bool = typer.Option(
@@ -126,9 +153,11 @@ def _serve_up(
         target=target,
         tag=tag,
         http=http,
+        http_host=http_host,
         http_port=http_port,
         http_workers=http_workers,
         logging_level=logging_level,
+        home_directory=home_directory,
         daemon=daemon,
         reload=reload,
         build=build,
@@ -145,11 +174,14 @@ def _serve(
     target: str = None,
     tag: str = "autonomi/nos:{target}",
     http: bool = False,
-    http_port: int = 8000,
+    http_host: str = DEFAULT_HTTP_HOST,
+    http_port: int = DEFAULT_HTTP_PORT,
     http_workers: int = 1,
     logging_level: str = "INFO",
+    home_directory: str = "~/.nosd",
     daemon: bool = False,
     reload: bool = False,
+    generate: bool = False,
     build: bool = False,
     prod: bool = False,
     env_file: str = None,
@@ -245,8 +277,6 @@ def _serve(
         config = AGIPackConfig.load_yaml(config_filename)
 
         # Add the current working directory to the config `add`
-        # and include the NOS_HUB_CATALOG_PATH environment variable
-        # to the config `env`.
         # Note (spillai): The current working directory is added to /app/serve/<basedir>
         config_basename: Path = Path(config_filename).name
         container_config_path: Path = container_sandbox_path / config_basename
@@ -256,9 +286,10 @@ def _serve(
             # Add the sandbox directory to the PYTHONPATH so that
             # we can import the models via "from <sandbox_name>.models.model import X"
             image_config.env["PYTHONPATH"] = f"$PYTHONPATH:{SANDBOX_DIR}"
-            image_config.env["NOS_HUB_CATALOG_PATH"] = f"$NOS_HUB_CATALOG_PATH:{str(container_config_path)}"
 
         # Render the dockerfiles
+        # agipack is responsible for the "images" sections
+        # which are rendered into Dockerfiles and docker-compose files.
         builder = AGIPack(config)
         dockerfiles: Dict[str, Path] = builder.render(
             filename=str(NOS_SERVE_TMP_DIR / f"Dockerfile.{sandbox_name}"),
@@ -293,18 +324,28 @@ def _serve(
                 f"[bold green]✓[/bold green] Successfully generated Dockerfile (target=[bold white]{docker_target}[/bold white], filename=[bold white]{filename}[/bold white])."
             ).add(f"[green]`{cmd}`[/green]")
             print(tree)
-            with redirect_stdout_to_logger(level="DEBUG"):
-                builder.build(filename=filename, target=docker_target, tags=[image_name])
+
+            # If the `--generate` flag is specified, then we do not build the image
+            if not generate:
+                with redirect_stdout_to_logger(level="DEBUG"):
+                    builder.build(filename=filename, target=docker_target, tags=[image_name])
             print(f"[green]✓[/green] Successfully built Docker image (image=[bold white]{image_name}[/bold white]).")
 
         # Copy the dockerfiles to the current working directory if debug is enabled.
         for _docker_target, filename in dockerfiles.items():
-            if debug:
-                shutil.copyfile(filename, Path.cwd() / filename.name)
+            if debug or generate:
+                shutil.copyfile(filename, Path.cwd() / Path(filename).name)
+
+        # If the `--generate` flag is specified, then we can stop here
+        if generate:
+            return
 
         # Check if the image was built
         if image_name is None:
             raise ValueError(f"Failed to build target={target}, cannot proceed.")
+
+    # If no config file is provided, then we can use the default
+    # docker image for the runtime environment.
     else:
         container_sandbox_path: Path = None
         container_config_path: Path = None
@@ -343,9 +384,11 @@ def _serve(
         image=image_name,
         gpu=runtime == "gpu",
         http=http,
+        http_host=http_host,
         http_port=http_port,
         http_workers=http_workers,
         http_env="prod" if prod else "dev",
+        home_directory=home_directory if home_directory else "~/.nosd",
         logging_level=logging_level,
         daemon=daemon,
         env_file=[str(Path(env_file).absolute())] if env_file is not None else [],

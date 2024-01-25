@@ -1,6 +1,3 @@
-from concurrent import futures
-
-import grpc
 import pytest
 from loguru import logger
 
@@ -48,22 +45,30 @@ def model_manager(ray_executor):  # noqa: F811
 
 
 @pytest.fixture(scope="session")
-def grpc_server(ray_executor):
+async def grpc_server(ray_executor):
     """Test gRPC server (Port: 50052)."""
+    from grpc import aio
     from loguru import logger
 
+    from nos.constants import (  # noqa F401
+        GRPC_MAX_MESSAGE_LENGTH,
+    )
     from nos.server._service import InferenceServiceImpl
 
     logger.info(f"Starting gRPC test server on port: {GRPC_TEST_PORT}")
     options = [
-        ("grpc.max_message_length", 512 * 1024 * 1024),
-        ("grpc.max_send_message_length", 512 * 1024 * 1024),
-        ("grpc.max_receive_message_length", 512 * 1024 * 1024),
+        ("grpc.max_message_length", GRPC_MAX_MESSAGE_LENGTH),
+        ("grpc.max_send_message_length", GRPC_MAX_MESSAGE_LENGTH),
+        ("grpc.max_receive_message_length", GRPC_MAX_MESSAGE_LENGTH),
     ]
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=1), options=options)
+    server = aio.server(options=options)
+    address = f"[::]:{GRPC_TEST_PORT}"
     nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)
-    server.add_insecure_port(f"[::]:{GRPC_TEST_PORT}")
-    server.start()
+    server.add_insecure_port(address)
+
+    await server.start()
+    assert server is not None
+
     yield server
     server.stop(grace=None)
 

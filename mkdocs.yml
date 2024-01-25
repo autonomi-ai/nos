@@ -1,16 +1,15 @@
 site_name: NOS Docs
 site_url: https://docs.nos.run
 site_author: Sudeep Pillai
-
+site_dir: site
+site_description: >-
+  NOS -- A fast, and flexible AI inference server.
 repo_url: https://github.com/autonomi-ai/nos
 repo_name: autonomi-ai/nos
-use_directory_urls: false
-
-copyright: >
-  Copyright &copy; 2022 - 2023 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
-
 docs_dir: .
-site_dir: site
+use_directory_urls: false
+copyright: >
+  Copyright &copy; 2022 - 2024 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
 
 nav:
   - 🏠 Home: README.md
@@ -25,11 +24,14 @@ nav:
     - Starting the server: docs/guides/starting-the-server.md
     - Running inference: docs/guides/running-inference.md
     - Serving custom models: docs/guides/serving-custom-models.md
-    - Running custom models: docs/guides/running-custom-models.md
+  # - 🧑‍🏫 Tutorials: docs/blog/-getting-started-with-nos-tutorials.html
   - 🤖 Demos:
     - Build a Discord image-generation bot: docs/demos/discord-bot.md
     - Build a video search engine: docs/demos/video-search.md
   - 👩‍💻 API Reference:
+    - CLI:
+      - <kbd>nos serve</kbd>: docs/cli/serve.md
+      - <kbd>nos system</kbd>: docs/cli/system.md
     - nos.common:
       - nos.common.exceptions: docs/api/common/exceptions.md
       - nos.common.metaclass: docs/api/common/metaclass.md
@@ -44,7 +46,8 @@ nav:
     - nos.managers: docs/api/managers.md
     - nos.executors: docs/api/executors.md
   - 🔌 Integrations:
-    - Deploying NOS with SkyPilot: docs/integrations/skypilot.md
+    - SkyPilot: docs/integrations/skypilot.md
+  - ✍️ Blog: docs/blog
   - ❓ Support / FAQ: docs/support.md
 
 plugins:
@@ -54,6 +57,9 @@ plugins:
     enabled: !ENV [ENABLE_BLOG, true]
     blog_dir: docs/blog
     blog_toc: true
+    post_date_format: medium
+    post_url_format: "{slug}"
+
 
 - mkdocstrings:
     enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
@@ -81,6 +87,7 @@ plugins:
 - tags
 - same-dir
 - search
+- social
 - table-reader
 - exclude:
     glob:
@@ -96,9 +103,12 @@ plugins:
       - '.*\.(tmp|bin|tar)$'
 
 markdown_extensions:
+- attr_list
+- md_in_html
 - admonition
 - mkdocs-typer
 - pymdownx.betterem
+- pymdownx.details
 - pymdownx.superfences
 - markdown.extensions.footnotes
 - markdown.extensions.attr_list
@@ -107,9 +117,6 @@ markdown_extensions:
 - markdown.extensions.abbr
 - markdown.extensions.md_in_html
 - pymdownx.details
-- pymdownx.emoji:
-    emoji_index: !!python/name:materialx.emoji.twemoji
-    emoji_generator: !!python/name:materialx.emoji.to_svg
 - pymdownx.extra
 - pymdownx.highlight:
     anchor_linenums: true
@@ -133,9 +140,9 @@ theme:
   custom_dir: docs/overrides
   features:
     - content.code.copy
+    - content.code.annotate
     - navigation.instant
     - navigation.tracking
-    - content.code.annotate
     - toc.follow
 
 extra:

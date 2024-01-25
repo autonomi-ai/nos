@@ -1,38 +1,38 @@
 version: "3.8"
 
 services:
-  nos-http-proxy:
-    image: autonomi/nos:0.1.0rc1-gpu
-    command: nos-http-server --port 80
-    ports:
-      - 8000:80
+  nos-http-gateway:
+    image: autonomi/nos:latest-gpu
+    command: nos-http-server --host 0.0.0.0 --port 8000 --workers 1
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL=INFO
-      - NOS_HTTP_PORT=8000
-      - NOS_HTTP_MAX_WORKER_THREADS=4
+      - NOS_GRPC_HOST=nos-grpc-server
+      - NOS_HTTP_ENV=dev
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
-    network_mode: host
+    ports:
+      - 8000:8000
     ipc: host
     depends_on:
-      - nos-server-gpu
+      - nos-grpc-server
 
-  nos-server-gpu:
-    image: autonomi/nos:0.1.0rc1-gpu
-    ports:
-      - 50051:50051
+  nos-grpc-server:
+    image: autonomi/nos:latest-gpu
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL=INFO
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
-    network_mode: host
+    ports:
+      - 50051:50051
     ipc: host
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
+        limits:
+          memory: 12G

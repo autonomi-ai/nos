@@ -4,8 +4,9 @@ import time
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import ClassVar, List
 
+from filelock import FileLock
 from grpc_tools import protoc
 
 from nos.constants import NOS_CACHE_DIR, NOS_PATH
@@ -13,13 +14,14 @@ from nos.logging import logger
 
 
 PROTO_PATHS = [NOS_PATH / "proto"]
+logger.disable(__name__)
 
 
 @dataclass
 class DynamicProtobufCompiler:
     _instance = None
     """Singleton instance."""
-    cache_dir = NOS_CACHE_DIR / "protobuf"
+    cache_dir: ClassVar[str] = NOS_CACHE_DIR / "protobuf"
     """Cache directory for compiled protobuf modules."""
 
     def __init__(self) -> None:
@@ -82,5 +84,6 @@ class DynamicProtobufCompiler:
 @lru_cache(maxsize=None)
 def import_module(module_name: str):
     """Import the specified module and return the imported module object."""
-    compiler = DynamicProtobufCompiler.get()
-    return compiler.import_module(module_name)
+    with FileLock(str(Path(str(DynamicProtobufCompiler.cache_dir)) / "protoc.lock")):
+        compiler = DynamicProtobufCompiler.get()
+        return compiler.import_module(module_name)

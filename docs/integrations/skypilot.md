@@ -1,12 +1,22 @@
+<style>
+  .md-typeset h1,
+  .md-content__button {
+    display: none;
+  }
+</style>
+
+<img src="../assets/nos-skypilot-integration.png" width="100%">
+
 In this guide we'll show you how you can deploy the NOS inference server using [SkyPilot](https://skypilot.readthedocs.io/) on any of the popular Cloud Service Providers (CSPs) such as AWS, GCP or Azure. We'll use GCP as an example, but the steps are similar for other CSPs.
+
+!!!quote "What is SkyPilot?"
+    [SkyPilot](https://skypilot.readthedocs.io/) is a framework for running LLMs, AI, and batch jobs on any cloud, offering maximum cost savings, highest GPU availability, and managed execution. - [SkyPilot Documentation](https://skypilot.readthedocs.io/).
 
 ## 👩‍💻 Prerequisites
 
-You'll first need to install [SkyPilot](https://skypilot.readthedocs.io/) in your virtual environment / conda environment before getting started. Before getting started, we recommend you go through their [quickstart](https://skypilot.readthedocs.io/en/latest/getting-started/quickstart.html) to familiarize yourself with SkyPilot.
+You'll first need to install [SkyPilot](https://skypilot.readthedocs.io/) in your virtual environment / conda environment before getting started. Before getting started, we recommend you go through their [quickstart](https://skypilot.readthedocs.io/en/latest/getting-started/quickstart.html) to familiarize yourself with the SkyPilot tool.
 
 ```bash
-$ conda env create -n nos python=3.8
-$ conda activate nos
 $ pip install skypilot[gcp]
 ```
 
@@ -20,88 +30,73 @@ Run `sky check` for more details and installation instructions.
 
 ### 1. Define your SkyPilot deployment YAML
 
-First, let's create a `serve.yaml` YAML file with the following configuration. 
+First, let's create a `sky.yaml` YAML file with the following configuration. 
 
 ```yaml
-{% include '../../examples/skypilot/serve.yaml' %}
+{% include '../../examples/skypilot/sky.yaml' %}
 ```
 
-Here, we are going to provision a single GPU server on GCP (`us-west1`) with an NVIDIA T4 GPU and expose ports `8000` and `50051` for the NOS server. The `docker-compose.gpu.yml` also exposes these ports, so we can access the NOS server from our local machine. We also mount the current directory `.` to `/app` in the container so that we can access the `docker-compose.gpu.yml` file from within the container.
-
-```yaml
-{% include '../../examples/skypilot/app/docker-compose.gpu.yml' %}
-```
+Here, we are going to provision a single GPU server on GCP with an NVIDIA T4 GPU and expose ports `8000` (REST) and `50051` (gRPC) for the NOS server. 
 
 ### 🚀 2. Launch your NOS server
 
 Now, we can launch our NOS server on GCP with the following command:
 
 ```bash
-$ sky launch -c nos-server-gcp server.yaml
+$ sky launch -c nos-server sky.yaml
 ```
 
 That's it! You should see the following output:
 
 ```bash
-Task from YAML spec: server.yaml
-I 10-18 15:55:05 optimizer.py:652] == Optimizer ==
-I 10-18 15:55:05 optimizer.py:663] Target: minimizing cost
-I 10-18 15:55:05 optimizer.py:675] Estimated cost: $0.6 / hour
-I 10-18 15:55:05 optimizer.py:675]
-I 10-18 15:55:05 optimizer.py:748] Considered resources (1 node):
-I 10-18 15:55:05 optimizer.py:797] -------------------------------------------------------------------------------------------
-I 10-18 15:55:05 optimizer.py:797]  CLOUD   INSTANCE       vCPUs   Mem(GB)   ACCELERATORS   REGION/ZONE   COST ($)   CHOSEN
-I 10-18 15:55:05 optimizer.py:797] -------------------------------------------------------------------------------------------
-I 10-18 15:55:05 optimizer.py:797]  GCP     n1-highmem-4   4       26        T4:1           us-west1-a    0.59          ✔
-I 10-18 15:55:05 optimizer.py:797] -------------------------------------------------------------------------------------------
-I 10-18 15:55:05 optimizer.py:797]
-Launching a new cluster 'nos-server-gcp'. Proceed? [Y/n]: y
-I 10-18 15:56:38 cloud_vm_ray_backend.py:4172] Creating a new cluster: "nos-server-gcp" [1x GCP(n1-highmem-4, {'T4': 1}, ports=[8000, 50051])].
-I 10-18 15:56:38 cloud_vm_ray_backend.py:4172] Tip: to reuse an existing cluster, specify --cluster (-c). Run `sky status` to see existing clusters.
-I 10-18 15:56:39 cloud_vm_ray_backend.py:1427] To view detailed progress: tail -n100 -f /home/spillai/sky_logs/sky-2023-10-18-15-55-03-683434/provision.log
-I 10-18 15:56:42 cloud_vm_ray_backend.py:1807] Launching on GCP us-west1 (us-west1-a)
-I 10-18 16:00:11 log_utils.py:89] Head node is up.
-I 10-18 16:01:17 cloud_vm_ray_backend.py:1616] Successfully provisioned or found existing VM.
-I 10-18 16:01:22 cloud_vm_ray_backend.py:4222] Processing file mounts.
-I 10-18 16:01:22 cloud_vm_ray_backend.py:4254] To view detailed progress: tail -n100 -f ~/sky_logs/sky-2023-10-18-15-55-03-683434/file_mounts.log
-I 10-18 16:01:22 backend_utils.py:1424] Syncing (to 1 node): . -> ~/.sky/file_mounts/app
-I 10-18 16:01:26 cloud_vm_ray_backend.py:3063] Running setup on 1 node.
+(nos-infra-py38) examples/skypilot spillai-desktop [ sky launch -c nos-server sky.yaml --cloud gcp
+Task from YAML spec: sky.yaml
+I 01-16 09:41:18 optimizer.py:694] == Optimizer ==
+I 01-16 09:41:18 optimizer.py:705] Target: minimizing cost
+I 01-16 09:41:18 optimizer.py:717] Estimated cost: $0.6 / hour
+I 01-16 09:41:18 optimizer.py:717]
+I 01-16 09:41:18 optimizer.py:840] Considered resources (1 node):
+I 01-16 09:41:18 optimizer.py:910] ---------------------------------------------------------------------------------------------
+I 01-16 09:41:18 optimizer.py:910]  CLOUD   INSTANCE       vCPUs   Mem(GB)   ACCELERATORS   REGION/ZONE     COST ($)   CHOSEN
+I 01-16 09:41:18 optimizer.py:910] ---------------------------------------------------------------------------------------------
+I 01-16 09:41:18 optimizer.py:910]  GCP     n1-highmem-4   4       26        T4:1           us-central1-a   0.59          ✔
+I 01-16 09:41:18 optimizer.py:910] ---------------------------------------------------------------------------------------------
+I 01-16 09:41:18 optimizer.py:910]
+Launching a new cluster 'nos-server'. Proceed? [Y/n]: y
+I 01-16 09:41:25 cloud_vm_ray_backend.py:4508] Creating a new cluster: 'nos-server' [1x GCP(n1-highmem-4, {'T4': 1}, ports=['8000', '50051'])].
+I 01-16 09:41:25 cloud_vm_ray_backend.py:4508] Tip: to reuse an existing cluster, specify --cluster (-c). Run `sky status` to see existing clusters.
+I 01-16 09:41:26 cloud_vm_ray_backend.py:1474] To view detailed progress: tail -n100 -f /home/spillai/sky_logs/sky-2024-01-16-09-41-16-157615/provision.log
+I 01-16 09:41:29 cloud_vm_ray_backend.py:1912] Launching on GCP us-central1 (us-central1-a)
+I 01-16 09:44:36 log_utils.py:45] Head node is up.
+I 01-16 09:45:43 cloud_vm_ray_backend.py:1717] Successfully provisioned or found existing VM.
+I 01-16 09:46:00 cloud_vm_ray_backend.py:4558] Processing file mounts.
+I 01-16 09:46:00 cloud_vm_ray_backend.py:4590] To view detailed progress: tail -n100 -f ~/sky_logs/sky-2024-01-16-09-41-16-157615/file_mounts.log
+I 01-16 09:46:00 backend_utils.py:1459] Syncing (to 1 node): ./app -> ~/.sky/file_mounts/app
+I 01-16 09:46:05 cloud_vm_ray_backend.py:3315] Running setup on 1 node.
 ...
-Attaching to app-nos-server-1
-app-nos-server-1  | + nproc --all
-app-nos-server-1  | + NCORES=4
-app-nos-server-1  | + echo Starting Ray server with OMP_NUM_THREADS=4...
-app-nos-server-1  | + OMP_NUM_THREADS=4 ray start --head
-app-nos-server-1  | Starting Ray server with OMP_NUM_THREADS=4...
-app-nos-server-1  | 2023-10-18 16:08:38,064     INFO usage_lib.py:381 -- Usage stats collection is disabled.
-app-nos-server-1  | 2023-10-18 16:08:38,065     INFO scripts.py:722 -- Local node IP: 172.18.0.2
-app-nos-server-1  | 2023-10-18 16:08:41,967     SUCC scripts.py:759 -- --------------------
-app-nos-server-1  | 2023-10-18 16:08:41,968     SUCC scripts.py:760 -- Ray runtime started.
-app-nos-server-1  | 2023-10-18 16:08:41,968     SUCC scripts.py:761 -- --------------------                                                                                        app-nos-server-1  | 2023-10-18 16:08:41,969     INFO scripts.py:763 -- Next steps
-app-nos-server-1  | 2023-10-18 16:08:41,970     INFO scripts.py:766 -- To add another node to this Ray cluster, run
-app-nos-server-1  | 2023-10-18 16:08:41,970     INFO scripts.py:769 --   ray start --address='172.18.0.2:6379'
-app-nos-server-1  | 2023-10-18 16:08:41,970     INFO scripts.py:778 -- To connect to this Ray cluster:
-app-nos-server-1  | 2023-10-18 16:08:41,971     INFO scripts.py:780 -- import ray
-app-nos-server-1  | 2023-10-18 16:08:41,971     INFO scripts.py:781 -- ray.init()
-app-nos-server-1  | 2023-10-18 16:08:41,972     INFO scripts.py:793 -- To submit a Ray job using the Ray Jobs CLI:
-app-nos-server-1  | 2023-10-18 16:08:41,972     INFO scripts.py:794 --   RAY_ADDRESS='http://127.0.0.1:8265' ray job submit --working-dir . -- python my_script.py
-app-nos-server-1  | 2023-10-18 16:08:41,973     INFO scripts.py:803 -- See https://docs.ray.io/en/latest/cluster/running-applications/job-submission/index.html
-app-nos-server-1  | 2023-10-18 16:08:41,973     INFO scripts.py:807 -- for more information on submitting Ray jobs to the Ray cluster.
-app-nos-server-1  | 2023-10-18 16:08:41,974     INFO scripts.py:812 -- To terminate the Ray runtime, run
-app-nos-server-1  | 2023-10-18 16:08:41,974     INFO scripts.py:813 --   ray stop
-app-nos-server-1  | 2023-10-18 16:08:41,975     INFO scripts.py:816 -- To view the status of the cluster, use
-app-nos-server-1  | 2023-10-18 16:08:41,975     INFO scripts.py:817 --   ray status
-app-nos-server-1  | 2023-10-18 16:08:41,976     INFO scripts.py:821 -- To monitor and debug Ray, view the dashboard at
-app-nos-server-1  | 2023-10-18 16:08:41,976     INFO scripts.py:822 --   127.0.0.1:8265
-app-nos-server-1  | 2023-10-18 16:08:41,976     INFO scripts.py:829 -- If connection to the dashboard fails, check your firewall settings and network configuration.
-app-nos-server-1  | + echo Starting NOS server...
-app-nos-server-1  | + nos-grpc-server
-app-nos-server-1  | Starting NOS server...
-app-nos-server-1  | 2023-10-18 16:08:53,364     INFO worker.py:1431 -- Connecting to existing Ray cluster at address: 172.18.0.2:6379...
-app-nos-server-1  | 2023-10-18 16:08:53,372     INFO worker.py:1612 -- Connected to Ray cluster. View the dashboard at http://127.0.0.1:8265
-app-nos-server-1  |  ✓ InferenceExecutor :: Connected to backend.
-app-nos-server-1  |  Starting server on [::]:50051
-app-nos-server-1  |  ✓ InferenceService :: Deployment complete (elapsed=0.0s)
+...
+...
+(nos-server, pid=12112) Status: Downloaded newer image for autonomi/nos:0.1.4-gpu
+(nos-server, pid=12112) docker.io/autonomi/nos:0.1.4-gpu
+(nos-server, pid=12112) 2024-01-16 17:49:09.415 | INFO     | nos.server:_pull_image:235 - Pulled new server image: autonomi/nos:0.1.4-gpu
+(nos-server, pid=12112) ✓ Successfully generated docker-compose file
+(nos-server, pid=12112) (filename=docker-compose.sky_workdir.yml).
+(nos-server, pid=12112) ✓ Launching docker compose with command: docker compose -f
+(nos-server, pid=12112) /home/gcpuser/.nos/tmp/serve/docker-compose.sky_workdir.yml up
+(nos-server, pid=12112)  Container serve-nos-server-1  Creating
+(nos-server, pid=12112)  Container serve-nos-server-1  Created
+(nos-server, pid=12112)  Container serve-nos-http-gateway-1  Creating
+(nos-server, pid=12112)  Container serve-nos-http-gateway-1  Created
+(nos-server, pid=12112) Attaching to serve-nos-http-gateway-1, serve-nos-server-1
+(nos-server, pid=12112) serve-nos-server-1        | Starting server with OMP_NUM_THREADS=4...
+(nos-server, pid=12112) serve-nos-http-gateway-1  | WARNING:  Current configuration will not reload as not all conditions are met, please refer to documentation.
+(nos-server, pid=12112) serve-nos-server-1        |  ✓ InferenceExecutor :: Connected to backend.
+(nos-server, pid=12112) serve-nos-server-1        |  ✓ Starting gRPC server on [::]:50051
+(nos-server, pid=12112) serve-nos-server-1        |  ✓ InferenceService :: Deployment complete (elapsed=0.0s)
+(nos-server, pid=12112) serve-nos-http-gateway-1  | INFO:     Started server process [1]
+(nos-server, pid=12112) serve-nos-http-gateway-1  | INFO:     Waiting for application startup.
+(nos-server, pid=12112) serve-nos-http-gateway-1  | INFO:     Application startup complete.
+(nos-server, pid=12112) serve-nos-http-gateway-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
 
 ### 🔋 3. Check the status of your NOS server
@@ -116,12 +111,65 @@ You should see the following output:
 
 ```bash
 NAME                            LAUNCHED     RESOURCES                                                                  STATUS   AUTOSTOP  COMMAND
-nos-server-gcp                  1 min ago    1x GCP(n1-highmem-4, {'T4': 1}, ports=[8000, 50051])                       UP       -         sky launch -c nos-server-...
+nos-server                      1 min ago    1x GCP(n1-highmem-4, {'T4': 1}, ports=[8000, 50051])                       UP       -         sky launch -c nos-server-...
 ```
 
-Congratulations! You've successfully deployed your NOS server on GCP. You can now access the NOS server from your local machine at `<ip>:8000` or `<ip>:50051`.
+Congratulations! You've successfully deployed your NOS server on GCP. You can now access the NOS server from your local machine at `<ip>:8000` or `<ip>:50051`. In a new terminal, let's check the health of our NOS server with the following command:
 
-### 🛑 4. Stop / Terminate your NOS server
+```bash
+$ curl http://$(sky status --ip nos-server):8000/v1/health
+```
+
+You should see the following output:
+
+```bash
+{"status": "ok"}
+```
+
+### 💬 4. Chat with your hosted LLM endpoint
+
+You can now chat with your hosted LLM endpoint. Since NOS exposes an OpenAI compatible API via it's `/v1/chat/completions` route, you can use any OpenAI compatible client to chat with your hosted LLM endpoint. 
+
+
+=== "Using cURL"
+  
+    ```bash
+    {% include '../../examples/skypilot/tests/test_http_request.sh' %}
+    ```
+
+=== "Using an OpenAI compatible client"
+
+    Below, we show how you can use any OpenAI API compatible client to chat with your hosted LLM endpoint. We will use the popular [llm](https://github.com/simonw/llm) CLI tool from [Simon Willison](https://simonwillison.net/) to chat with our hosted LLM endpoint.
+
+    ```bash
+    # Install the llm CLI tool
+    $ pip install llm
+
+    # Install the llm-nosrun plugin to talk to your service
+    $ llm install llm-nosrun
+
+    # List the models
+    $ llm models list
+
+    # Chat with your endpoint
+    $ NOSRUN_API_BASE=http://$(sky status --ip nos-server):8000/v1 llm -m TinyLlama/TinyLlama-1.1B-Chat-v1.0 "Tell me a joke in 300 words."
+    ```
+
+    Note: You can also change the `NOSRUN_API_BASE` to `http://localhost:8000/v1` to talk to your local NOS server.
+
+=== "Using the OpenAI Python client"
+
+    Below, we show how you can use the [OpenAI Python Client](https://github.com/openai/openai-python) to chat with your hosted LLM endpoint.
+
+    ```python
+    {% include '../../examples/skypilot/tests/test_openai_client.py' %}
+    ```
+
+
+On the first call to the server, the server will download the model from Huggingface, cache it locally and load it onto the GPU. Subsequent calls will not have any of this overhead as the GPU memory for the models will be pinned.
+
+
+### 🛑 5. Stop / Terminate your NOS server
 
 Once you're done using your server, you can stop it with the following command:
 
@@ -132,7 +180,7 @@ $ sky stop nos-server-gcp
 Alternatively, you can terminate your server with the following command:
 
 ```bash
-$ sky terminate nos-server-gcp
+$ sky down nos-server-gcp
 ```
 
 This will terminate the server and all associated resources (e.g. VMs, disks, etc.).

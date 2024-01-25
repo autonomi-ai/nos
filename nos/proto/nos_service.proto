@@ -38,7 +38,11 @@ service InferenceService {
   // List available models from Hugging Face Hub
   rpc ListModels(google.protobuf.Empty) returns (GenericResponse) {};
 
+  /// Pre-load a model for inference
+  rpc LoadModel(GenericRequest) returns (GenericResponse) {};
+
   // Get model information from the deployment
+  rpc GetModelCatalog(google.protobuf.Empty) returns (GenericResponse) {};
   rpc GetModelInfo(google.protobuf.StringValue) returns (GenericResponse) {};
 
   // Run the inference request

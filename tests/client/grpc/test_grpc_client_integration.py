@@ -51,7 +51,7 @@ def test_grpc_client_inference(client_with_server, request):  # noqa: F811
 
 
 def _test_grpc_client_inference_spec(client):  # noqa: F811
-    from nos.common import ImageSpec, ModelSpec, ObjectTypeInfo, TaskType, TensorSpec
+    from nos.common import ImageSpec, ModelSpec, ModelSpecMetadataCatalog, ObjectTypeInfo, TaskType, TensorSpec
 
     # List models
     models: List[str] = client.ListModels()
@@ -61,6 +61,15 @@ def _test_grpc_client_inference_spec(client):  # noqa: F811
     # Check GetModelInfo for all models registered
     for model_id in models:
         spec: ModelSpec = client.GetModelInfo(model_id)
+
+        # Tests the internal model catalog serialization to ensure
+        # that the metadata, profile and resource catalogs are relayed
+        # to the client correctly.
+        catalog: ModelSpecMetadataCatalog = client._get_model_catalog()
+        assert catalog is not None
+        assert isinstance(catalog, ModelSpecMetadataCatalog)
+
+        # Check that the model spec is valid
         assert spec.task() and spec.name
         assert spec.signature is not None
         assert len(spec.signature) > 0
@@ -99,6 +108,8 @@ def _test_grpc_client_inference_spec(client):  # noqa: F811
 
 
 def _test_grpc_client_inference_noop(client):  # noqa: F811
+    from multiprocessing.pool import ThreadPool
+
     from nos.common import tqdm
 
     # Get service info
@@ -161,6 +172,39 @@ def _test_grpc_client_inference_noop(client):  # noqa: F811
             assert isinstance(resp, str)
             idx += 1
         assert idx > len(texts)
+
+    # noop/process scaling
+    model_id = "noop/process"
+    model = client.Module(model_id)
+
+    num_replicas, num_iters = 8, 5
+    model.Load(num_replicas=num_replicas)
+
+    # Spin up 8 replicas to execute 5 inferences each
+    st = time.time()
+    with ThreadPool(processes=num_replicas) as pool:
+        # Execute 5 inferences per thread
+        responses = []
+        for _ in tqdm(range(num_replicas * num_iters), desc=f"Test [model={model_id}]"):
+            response = pool.apply_async(
+                func=model.process_sleep,
+                kwds={"seconds": 1.0},
+            )
+            responses.append(response)
+
+        # Wait for all threads to complete
+        for response in responses:
+            assert response.get()
+            assert isinstance(response.get(), bool)
+    end = time.time()
+
+    # Check that the total time taken is less than some
+    # fixed overhead (2 seconds) + 5 iterations * 1.2 (20% overhead)
+    total_time = end - st
+    assert total_time < 2 + num_iters * 1.2
+    logger.debug(
+        f"Total time taken for replicas={num_replicas}, iterations={num_iters * num_replicas}: {total_time:.2f} seconds."
+    )
 
 
 def _test_grpc_client_inference_models(client):  # noqa: F811

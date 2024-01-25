@@ -40,6 +40,10 @@ class Whisper:
         "openai/whisper-large-v3": WhisperConfig(
             model_name="openai/whisper-large-v3",
         ),
+        "distil-whisper/distil-small.en": WhisperConfig(
+            model_name="distil-whisper/distil-small.en",
+            torch_dtype="float16",
+        ),
         "distil-whisper/distil-medium.en": WhisperConfig(
             model_name="distil-whisper/distil-medium.en",
             torch_dtype="float16",

@@ -12,7 +12,7 @@ import numpy as np
 from google.protobuf import empty_pb2, wrappers_pb2
 from PIL import Image
 
-from nos.common import FunctionSignature, ModelSpec, TensorSpec, dumps, loads
+from nos.common import FunctionSignature, ModelSpec, ModelSpecMetadataCatalog, TensorSpec, dumps, loads
 from nos.common.exceptions import (
     ClientException,
     InferenceException,
@@ -161,7 +161,9 @@ class Client:
             try:
                 return self.IsHealthy()
             except Exception:
-                logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
+                elapsed = time.time() - st
+                if int(elapsed) > 10:
+                    logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
                 time.sleep(retry_interval)
         raise ServerReadyException("Failed to ping server.")
 
@@ -225,6 +227,38 @@ class Client:
         except grpc.RpcError as e:
             raise ClientException(f"Failed to list models (details={e.details()})", e)
 
+    def LoadModel(self, model_id: str, num_replicas: int = 1) -> None:
+        """Load a model.
+
+        Args:
+            model_id (str): Name of the model to load.
+            num_replicas (int, optional): Number of replicas to load. Defaults to 1.
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            self.stub.LoadModel(
+                nos_service_pb2.GenericRequest(request_bytes=dumps({"id": model_id, "num_replicas": num_replicas}))
+            )
+        except grpc.RpcError as e:
+            raise ClientException(f"Failed to load model (details={e.details()})", e)
+
+    @lru_cache()  # noqa: B019
+    def _get_model_catalog(self) -> ModelSpecMetadataCatalog:
+        """Get the model catalog and cache.
+
+        Returns:
+            Dict[str, ModelSpec]: Model catalog (name, task).
+        Raises:
+            NosClientException: If the server fails to respond to the request.
+        """
+        try:
+            response: nos_service_pb2.GenericResponse = self.stub.GetModelCatalog(empty_pb2.Empty())
+            ModelSpecMetadataCatalog._instance = loads(response.response_bytes)
+            return ModelSpecMetadataCatalog.get()
+        except grpc.RpcError as e:
+            raise ClientException(f"Failed to get model catalog (details={e.details()})", e)
+
     def GetModelInfo(self, model_id: str) -> ModelSpec:
         """Get the relevant model information from the model name.
 
@@ -235,6 +269,9 @@ class Client:
             spec (ModelSpec): Model information.
         """
         try:
+            # Update the model catalog so that the metadata is cached on the client-side
+            _ = self._get_model_catalog()
+            # Get the model spec separately
             response: nos_service_pb2.GenericResponse = self.stub.GetModelInfo(
                 wrappers_pb2.StringValue(value=model_id)
             )
@@ -530,6 +567,10 @@ class Module:
     def GetModelInfo(self) -> ModelSpec:
         """Get the relevant model information from the model name."""
         return self._spec
+
+    def Load(self, num_replicas: int = 1) -> None:
+        """Load the model."""
+        return self._client.LoadModel(self.id, num_replicas=num_replicas)
 
     def RegisterSystemSharedMemory(self, inputs: Dict[str, Any]) -> None:
         """Register system shared memory for inputs.

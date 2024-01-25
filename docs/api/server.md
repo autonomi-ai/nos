@@ -21,4 +21,4 @@ The `InferenceService` along with the `InferenceServiceImpl` gRPC service implem
 
 ::: nos.server._service.InferenceServiceImpl
 
-::: nos.server._service.serve
+::: nos.server._service.async_serve

@@ -1,0 +1,32 @@
+images:
+  gpu:
+    base: autonomi/nos:latest-gpu
+    workdir: /app/serve
+
+models:
+  custom/custom-model-a-with-replicas:
+    runtime_env: gpu
+    model_cls: CustomModel
+    model_path: models/model.py
+    default_method: __call__
+    init_args:
+      - "arg-a"
+    deployment:
+      resources:
+        device: auto
+        device_memory: 1Gi
+      num_replicas: 2
+
+  custom/custom-model-b-with-replicas:
+    runtime_env: gpu
+    model_cls: CustomModel
+    model_path: models/model.py
+    default_method: __call__
+    init_args:
+      - "arg-b"
+    deployment:
+      resources:
+        cpu: 2
+        memory: 2Gi
+        device: cpu
+      num_replicas: 2

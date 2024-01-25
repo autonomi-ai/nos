@@ -1,0 +1,21 @@
+# See docs/cli/serve.spec.yaml for the full specification
+# of the serve.yaml file.
+images:
+  custom-gpu:
+    base: autonomi/nos:latest-gpu
+    pip:
+      - transformers>=4.35.1
+    env:
+      NOS_LOGGING_LEVEL: INFO
+
+models:
+  custom/clip-model:
+    runtime_env: custom-gpu
+    model_cls: CustomCLIPModel
+    model_path: models/model.py
+    default_method: __call__
+    init_kwargs:
+      model_name: "openai/clip-vit-base-patch32"
+    deployment:
+      resources:
+        device: gpu

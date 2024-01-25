@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from typing import Iterable, List, Union
 
@@ -5,7 +6,7 @@ import numpy as np
 from PIL import Image
 
 from nos import hub
-from nos.common import ImageSpec, TaskType
+from nos.common import ImageSpec, ModelResources, TaskType
 from nos.common.types import Batch, ImageT
 
 
@@ -24,6 +25,10 @@ class NoOp:
         assert path.exists(), f"File not found: {path}"
         return True
 
+    def process_sleep(self, seconds: float) -> bool:
+        time.sleep(seconds)
+        return True
+
     def stream_texts(self, texts: List[str]) -> Iterable[str]:
         for line in texts:
             yield line.rstrip()
@@ -32,6 +37,7 @@ class NoOp:
 
 
 # Register noop model separately for each method
+resources = ModelResources(cpu=1, memory="100Mi", device="cpu")
 hub.register(
     "noop/process-images",
     TaskType.CUSTOM,
@@ -44,6 +50,7 @@ hub.register(
     },
     outputs=List[int],
     method="process_images",
+    resources=resources,
 )
 hub.register(
     "noop/process-texts",
@@ -54,12 +61,21 @@ hub.register(
     },
     outputs=List[int],
     method="process_texts",
+    resources=resources,
 )
 hub.register(
     "noop/process-file",
     TaskType.CUSTOM,
     NoOp,
     method="process_file",
+    resources=resources,
+)
+hub.register(
+    "noop/process-sleep",
+    TaskType.CUSTOM,
+    NoOp,
+    method="process_sleep",
+    resources=resources,
 )
 hub.register(
     "noop/stream-texts",
@@ -67,6 +83,7 @@ hub.register(
     NoOp,
     outputs=Iterable[str],
     method="stream_texts",
+    resources=resources,
 )
 
 # Register model with multiple methods under the same name
@@ -81,6 +98,7 @@ hub.register(
         ]
     },
     method="process_images",
+    resources=resources,
 )
 hub.register(
     "noop/process",
@@ -90,16 +108,25 @@ hub.register(
         "texts": Batch[str, 1],
     },
     method="process_texts",
+    resources=resources,
 )
 hub.register(
     "noop/process",
     TaskType.CUSTOM,
     NoOp,
     method="process_file",
+    resources=resources,
+)
+hub.register(
+    "noop/process",
+    TaskType.CUSTOM,
+    NoOp,
+    method="process_sleep",
 )
 hub.register(
     "noop/process",
     TaskType.CUSTOM,
     NoOp,
     method="stream_texts",
+    resources=resources,
 )

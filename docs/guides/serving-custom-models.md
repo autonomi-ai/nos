@@ -58,6 +58,9 @@ In the `models/whisperx.py` example shown above, we import `whisperx` which is a
 o
 With NOS, you simply define the custom runtime environment as part of the "images" key in a `serve.yaml` file. In the example below, we define a custom runtime environment called `whisperx-gpu` that is based on the `autonomi/nos:0.1.0-gpu` docker image. We then install the `whisperx` package and any other dependencies using the `pip` and `run` sub-commands.
 
+!!!note
+    You can look at the full list of `serve` CLI options [here](./cli/serve.md). The full `serve.yaml` specification is available [here](../cli/serve.md#serve-yaml-specification).
+
 ```yaml linenums="1" title="serve.yaml"
 images:
   whisperx-gpu:

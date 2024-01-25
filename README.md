@@ -9,7 +9,7 @@
 <a href="https://twitter.com/autonomi_ai"><img alt="PyPi Version" src="https://img.shields.io/twitter/follow/autonomi_ai.svg?style=social&logo=twitter"></a>
 </p>
 <p align="center">
-<a href="https://docs.nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> |  <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
+<a href="https://docs.nos.run/"><b>Website</b></a> | <a href="https://docs.nos.run/"><b>Docs</b></a> | <a href="https://docs.nos.run/docs/blog"><b>Blog</b></a> |    <a href="https://discord.gg/QAGgvTuvgg"><b>Discord</b></a>
 </p>
 
 ## What is NOS?
@@ -29,6 +29,13 @@
 
 > **NOS** inherits its name from **N**itrous **O**xide **S**ystem, the performance-enhancing system typically used in racing cars. NOS is designed to be modular and easy to extend.
 <br>
+
+## 🔥 What's New
+
+* **[Jan 2024]** ✍️ [blog] [Serving LLMs on a budget](https://docs.nos.run/docs/blog/serving-llms-on-a-budget.html) with [SkyServe](https://skypilot.readthedocs.io/en/latest/serving/sky-serve.html).
+* **[Jan 2024]** 📚 [docs] [NOS x SkyPilot Integration](https://docs.nos.run/docs/integrations/skypilot.html) page!
+* **[Jan 2024]** ✍️ [blog] [Getting started with NOS tutorials](https://docs.nos.run/docs/blog/-getting-started-with-nos-tutorials.html) is available [here](./examples/tutorials/)!
+* **[Dec 2023]** 🛝 [repo] We open-sourced the [NOS playground](https://github.com/autonomi-ai/nos-playground) to help you get started with more examples built on NOS!
 
 ## **What can NOS do?**
 
@@ -52,7 +59,7 @@ from nos.client import Client
 client = Client("[::]:50051")
 
 model = client.Module("meta-llama/Llama-2-7b-chat-hf")
-response = model.chat(message="Tell me a story of 1000 words with emojis")
+response = model.chat(message="Tell me a story of 1000 words with emojis", _stream=True)
 ```
 
 </td>
@@ -177,7 +184,6 @@ Perform real-time audio transcription using Whisper.
 
 <table>
 <tr>
-<td> Preview </td>
 <td> gRPC API ⚡ </td>
 <td> REST API </td>
 </tr>
@@ -190,7 +196,7 @@ from nos.client import Client
 
 client = Client("[::]:50051")
 
-model = client.Module("openai/whisper-large-v2")
+model = client.Module("openai/whisper-small.en")
 with client.UploadFile(Path("audio.wav")) as remote_path:
   response = model(path=remote_path)
 # {"chunks": ...}
@@ -204,7 +210,7 @@ curl \
 -X POST http://localhost:8000/v1/infer/file \
 -H 'accept: application/json' \
 -H 'Content-Type: multipart/form-data' \
--F 'model_id=openai/whisper-large-v2' \
+-F 'model_id=openai/whisper-small.en' \
 -F 'file=@audio.wav'
 ```
 
@@ -258,27 +264,10 @@ curl \
 ---
 Want to run models not supported by NOS? You can easily add your own models following the examples in the [NOS Playground](https://github.com/autonomi-ai/nos-playground/tree/main/examples).
 
-### Text to video
-```python
-model_id: str = "animate-diff"
-```
-<img src="docs/assets/animatediff-puppy.gif" width="150">
-
-### Image to video
-```python
-model_id: str = "stable-video-diffusion"
-```
-<img src="docs/assets/exp_img2vid_in.png" width="150"><img src="docs/assets/exp_img2vid_out.gif" width="150">
-
-### Text to 360-view images
-```python
-model_id: str = "mv-dream"
-```
-<img src="docs/assets/mvdream_example.png" width="600">
-
 
 ## 📚 Documentation
 
+- [Tutorials](./examples/tutorials/)
 - [Quickstart](https://docs.nos.run/docs/quickstart.html)
 - [Models](https://docs.nos.run/docs/models/supported-models.html)
 - **Concepts**: [Architecture Overview](https://docs.nos.run/docs/concepts/architecture-overview.html), [ModelSpec](https://docs.nos.run/docs/concepts/model-spec.html), [ModelManager](https://docs.nos.run/docs/concepts/model-manager.html), [Runtime Environments](https://docs.nos.run/docs/concepts/runtime-environments.html)
@@ -287,6 +276,10 @@ model_id: str = "mv-dream"
 ## 📄 License
 
 This project is licensed under the [Apache-2.0 License](LICENSE).
+
+## 📡 Telemetry
+
+NOS collects anonymous usage data using [Sentry](https://sentry.io/). This is used to help us understand how the community is using NOS and to help us prioritize features. You can opt-out of telemetry by setting `NOS_TELEMETRY_ENABLED=0`.
 
 ## 🤝 Contributing
 We welcome contributions! Please see our [contributing guide](CONTRIBUTING.md) for more information.

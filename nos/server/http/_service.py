@@ -3,6 +3,7 @@ import dataclasses
 import os
 import time
 from dataclasses import field
+from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
 from typing import Any, Dict, List, Optional
@@ -14,8 +15,9 @@ from PIL import Image
 from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 
-from nos.client import DEFAULT_GRPC_PORT, Client
+from nos.client import Client
 from nos.common.tasks import TaskType
+from nos.constants import DEFAULT_GRPC_ADDRESS
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -50,6 +52,8 @@ class InferenceRequest:
     """Input data for inference"""
     method: str = field(default=None)
     """Inference method"""
+    stream: bool = field(default=False)
+    """Whether to stream the response"""
 
 
 @dataclasses.dataclass
@@ -59,7 +63,7 @@ class InferenceService:
     version: str = field(default="v1")
     """NOS version."""
 
-    address: str = field(default=f"[::]:{DEFAULT_GRPC_PORT}")
+    address: str = field(default=DEFAULT_GRPC_ADDRESS)
     """gRPC address."""
 
     env: str = field(default=HTTP_ENV)
@@ -81,7 +85,10 @@ class InferenceService:
         self.client = Client(self.address)
         logger.debug(f"Connecting to gRPC server (address={self.client.address})")
 
-        self.client.WaitForServer(timeout=60)
+        if not self.client.WaitForServer(timeout=60, retry_interval=5):
+            raise RuntimeError("Failed to connect to gRPC server")
+        if not self.client.IsHealthy():
+            raise RuntimeError("gRPC server is not healthy")
         runtime = self.client.GetServiceRuntime()
         version = self.client.GetServiceVersion()
         logger.debug(f"Connected to gRPC server (address={self.client.address}, runtime={runtime}, version={version})")
@@ -126,9 +133,7 @@ def as_path(file: SpooledTemporaryFile, suffix: str, chunk_size_mb: int = 4 * 10
 _model_table: Dict[str, ChatModel] = {}
 
 
-def app_factory(
-    version: str = HTTP_API_VERSION, address: str = f"[::]:{DEFAULT_GRPC_PORT}", env: str = HTTP_ENV
-) -> FastAPI:
+def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADDRESS, env: str = HTTP_ENV) -> FastAPI:
     """Create a FastAPI factory application for the NOS REST API gateway.
 
     Args:
@@ -146,6 +151,15 @@ def app_factory(
         """Get the inference client."""
         return nos_app.client
 
+    def unnormalize_id(model_id: str) -> str:
+        """Un-normalize the model identifier."""
+        return model_id.replace("--", "/")
+
+    def normalize_id(model_id: str) -> str:
+        """Normalize the model identifier."""
+        return model_id.replace("/", "--")
+
+    @lru_cache(maxsize=1)
     def build_model_table(client: Client) -> Dict[str, ChatModel]:
         """Build the model table."""
         if len(_model_table) > 0:
@@ -154,10 +168,14 @@ def app_factory(
         models: List[str] = client.ListModels()
         for model_id in models:
             spec = client.GetModelInfo(model_id)
-            if spec.task() != TaskType.TEXT_GENERATION:
+            if not (spec.task() == TaskType.TEXT_GENERATION or spec.task() == TaskType.CUSTOM):
                 continue
-            owned_by, _ = model_id.split("/")
-            _model_table[model_id] = ChatModel(id=model_id.replace("/", "--"), created=0, owned_by=owned_by)
+            try:
+                owned_by, _ = model_id.split("/")
+            except ValueError:
+                owned_by = "unknown-org"
+            _model_table[model_id] = ChatModel(id=normalize_id(model_id), created=0, owned_by=owned_by)
+            logger.debug(f"Registered model [model={model_id}, m={_model_table[model_id]}, spec={spec}]")
         return _model_table
 
     @app.get("/")
@@ -185,7 +203,7 @@ def app_factory(
         """Get model information."""
         _model_table = build_model_table(client)
         try:
-            return _model_table[model]
+            return _model_table[unnormalize_id(model)]
         except KeyError:
             raise HTTPException(status_code=400, detail=f"Invalid model {model}")
 
@@ -196,7 +214,12 @@ def app_factory(
     ) -> StreamingResponse:
         """Perform chat completion on the given input data."""
         logger.debug(f"Received chat request [model={request.model}, messages={request.messages}]")
-        model_id = request.model.replace("--", "/")
+        _model_table = build_model_table(client)
+        model_id: str = unnormalize_id(request.model)
+        try:
+            _ = _model_table[model_id]
+        except KeyError:
+            raise HTTPException(status_code=400, detail=f"Invalid model {request.model}")
         model = client.Module(model_id)
 
         if not len(request.messages):
@@ -205,15 +228,8 @@ def app_factory(
         if len(request.messages) > 0 and request.messages[-1].role != "user":
             raise HTTPException(status_code=400, detail="Invalid chat request, last message must be from the user")
 
-        messages = [message.dict() for message in request.messages]
-        if len(request.messages) > 1 and request.messages[0].role == "system":
-            system_prompt = request.messages[0].content
-        else:
-            system_prompt = "You are NOS chat, a Llama 2 large language model (LLM) agent hosted by Autonomi AI."
-            messages.insert(0, {"role": "system", "content": system_prompt})
-        logger.debug(f"Chat [model={request.model}, message={messages}, system_prompt={system_prompt}]")
-
         # Perform chat completion (streaming)
+        messages = [message.dict() for message in request.messages]
         if request.stream:
 
             def openai_streaming_generator():
@@ -278,8 +294,21 @@ def app_factory(
                 }
             }'
 
+        $ curl -X "POST" \
+            "http://localhost:8000/v1/infer" \
+            -H "Content-Type: application/json" \
+            -d '{
+                "model_id": "noop/process",
+                "method": "stream_texts",
+                "stream": true,
+                "inputs": {
+                    "texts": ["fox jumped over the moon"]
+                }
+            }'
         """
-        logger.debug(f"Decoding input dictionary [model={request.model_id}, method={request.method}]")
+        logger.debug(
+            f"Decoding input dictionary [model={request.model_id}, method={request.method}, stream={request.stream}]"
+        )
         request.inputs = decode_item(request.inputs)
         return _infer(request, client)
 
@@ -411,17 +440,24 @@ def app_factory(
 
         # Perform inference
         logger.debug(f"Inference [model={request.model_id}, keys={inputs.keys()}]")
-        response = model(**inputs, _method=request.method)
+        response = model(**inputs, _method=request.method, _stream=request.stream)
         logger.debug(
-            f"Inference [model={request.model_id}, , method={request.method}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
+            f"Inference [model={request.model_id}, , method={request.method}, stream={request.stream}, elapsed={(time.perf_counter() - st) * 1e3:.1f}ms]"
         )
 
         # Handle response types
-        try:
-            return JSONResponse(content=encode_item(response), status_code=status.HTTP_201_CREATED)
-        except Exception as e:
-            logger.exception(f"Failed to encode response [type={type(response)}, e={e}]")
-            raise HTTPException(status_code=500, detail="Image generation failed")
+        if request.stream:
+
+            def streaming_gen():
+                yield from response
+
+            return StreamingResponse(streaming_gen(), media_type="text/event-stream")
+        else:
+            try:
+                return JSONResponse(content=encode_item(response), status_code=status.HTTP_201_CREATED)
+            except Exception as e:
+                logger.exception(f"Failed to encode response [type={type(response)}, e={e}]")
+                raise HTTPException(status_code=500, detail="Image generation failed")
 
     return app
 
@@ -432,12 +468,11 @@ def main():
 
     import uvicorn
 
-    from nos.client import Client
-    from nos.constants import DEFAULT_GRPC_PORT, DEFAULT_HTTP_PORT
+    from nos.constants import DEFAULT_HTTP_HOST, DEFAULT_HTTP_PORT
     from nos.logging import logger
 
     parser = argparse.ArgumentParser(description="NOS REST API Service")
-    parser.add_argument("--host", type=str, default="0.0.0.0", help="Host address")
+    parser.add_argument("--host", type=str, default=DEFAULT_HTTP_HOST, help="Host address")
     parser.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT, help="Port number")
     parser.add_argument("--workers", type=int, default=1, help="Number of workers")
     parser.add_argument(
@@ -452,15 +487,6 @@ def main():
     parser.add_argument("--log-level", type=str, default="info", help="Logging level")
     args = parser.parse_args()
     logger.debug(f"args={args}")
-
-    # Wait for the gRPC server to be ready
-    logger.debug(f"Initializing gRPC client (port={DEFAULT_GRPC_PORT})")
-    client = Client(f"[::]:{DEFAULT_GRPC_PORT}")
-    logger.debug(f"Initialized gRPC client, connecting to gRPC server (address={client.address})")
-    if not client.WaitForServer(timeout=180, retry_interval=5):
-        raise RuntimeError("Failed to connect to gRPC server")
-    if not client.IsHealthy():
-        raise RuntimeError("gRPC server is not healthy")
 
     # Start the NOS REST API service
     logger.debug(

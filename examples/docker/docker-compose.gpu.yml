@@ -9,7 +9,8 @@ services:
     volumes:
       - ~/.nosd:/app/.nos
       - /dev/shm:/dev/shm
-    network_mode: host
+    ports:
+      - 50051:50051
     ipc: host
     deploy:
       resources:

@@ -2,6 +2,7 @@ import pytest
 import torch
 
 from nos.common.system import (
+    check_runtime_dependencies,
     docker_compose_command,
     get_nvidia_smi,
     get_system_info,
@@ -77,3 +78,11 @@ def test_system_utilities_gpu():
 
     assert get_torch_info() is not None, "torch unavailable."
     assert get_torch_cuda_info() is not None, "No GPU detected via torch.cuda."
+
+
+@skip_if_no_torch_cuda
+def test_system_dependencies():
+    assert has_docker(), "Docker not installed."
+    assert has_docker_compose(), "Docker Compose not installed."
+    assert has_nvidia_docker(), "NVIDIA Docker not installed."
+    assert check_runtime_dependencies(["docker", "docker-compose", "nvidia-docker"])

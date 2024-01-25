@@ -62,7 +62,6 @@ RUN --mount=type=cache,target=${CONDA_PKGS_DIRS}  \
     torchvision \
     pytorch-cuda=11.8 \
     cudatoolkit=11.8 \
-    cudnn=8.2.1 \
     -c pytorch -c nvidia \
     && echo "conda/mamba install complete"
 
