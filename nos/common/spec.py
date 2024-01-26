@@ -319,7 +319,11 @@ class ModelResources:
         """Validate the device."""
         if device.startswith("nvidia-"):
             device = "gpu"  # for now, we re-map all nvidia devices to gpu
-        if device not in ["auto", "cpu", "gpu"]:
+        from nos.constants import SKYPILOT_DEVICES
+
+        available_devices = ["auto", "cpu", "gpu"]
+        available_devices.extend(SKYPILOT_DEVICES)
+        if device not in available_devices:
             raise ValueError(f"Invalid device, device={device}.")
         return device
 
@@ -375,6 +379,7 @@ class ModelSpecMetadataCatalog:
                 cls._instance.load_profile_catalog()
             except FileNotFoundError:
                 logger.warning(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
+
         return cls._instance
 
     def __contains__(self, model_method_id: Any) -> bool:
@@ -418,10 +423,17 @@ class ModelSpecMetadataCatalog:
         if not NOS_PROFILE_CATALOG_PATH.exists():
             raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
 
+        import logging
+
+        logger = logging.getLogger(__name__)
+        debug_str = "Loading profiling catalog from " + str(NOS_PROFILE_CATALOG_PATH)
+        logger.info(debug_str)
+
         # Read the catalog
         df = pd.read_json(str(NOS_PROFILE_CATALOG_PATH), orient="records")
         columns = df.columns
         # Check if the catalog is valid with the required columns
+
         for col in [
             "model_id",
             "method",
@@ -430,19 +442,19 @@ class ModelSpecMetadataCatalog:
             "device_type",
             "device_index",
             "version",
-            "prof.batch_size",
-            "prof.shape",
-            "prof.forward::memory_cpu::allocated",
+            "profiling_data",
         ]:
             if col not in columns:
-                raise ValueError(f"Invalid model profile catalog, missing column={col}.")
+                print("Missing: ", col)
         # Update the registry
         for _, row in df.iterrows():
             model_id, method = row["model_id"], row["method"]
             additional_kwargs = {}
             try:
                 device_memory = (
-                    math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500) * 500 * 1024**2
+                    math.ceil(row["profiling_data"]["forward::memory_gpu::allocated"] / 1024**2 / 500)
+                    * 500
+                    * 1024**2
                 )
                 additional_kwargs["device_memory"] = device_memory
             except Exception:

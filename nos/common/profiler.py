@@ -98,6 +98,9 @@ class profile_execution:
         cpu_util = psutil.cpu_percent(interval=None)
         try:
             # TOFIX (spillai): This will be fixed with torch 2.1
+            # check if CUDA_VISIBLE_DEVICES is set and default to 0:
+            if os.getenv("CUDA_VISIBLE_DEVICES", None) is None:
+                os.environ["CUDA_VISIBLE_DEVICES"] = "0"
             gpu_util = torch.cuda.utilization(int(os.getenv("CUDA_VISIBLE_DEVICES", None)))
         except Exception:
             gpu_util = None
@@ -156,31 +159,37 @@ class profiler_record:
     def __init__(self, namespace: str, **kwargs):
         self.namespace = namespace
         self.kwargs = kwargs
-        self.prof = {}
+        self.profiling_data = {}  # The actual metadata collected inside this profiling record.
 
     @contextlib.contextmanager
     def profile_execution(self, name: str = None, iterations: int = None, duration: float = None) -> profile_execution:
         """Context manager for profiling execution time."""
-        with profile_execution(f"{name}", iterations=iterations, duration=duration) as prof:
-            yield prof
-        self.prof[prof.name] = prof.execution_stats.__dict__
+        with profile_execution(f"{name}", iterations=iterations, duration=duration) as prof_ctx_mgr:
+            yield prof_ctx_mgr
+
+        # Update the profiing data with that collected by the context manager during model execution.
+        if prof_ctx_mgr.name not in self.profiling_data:
+            self.profiling_data[prof_ctx_mgr.name] = prof_ctx_mgr.execution_stats.__dict__
+        else:
+            self.profiling_data[prof_ctx_mgr.name].update(prof_ctx_mgr.execution_stats.__dict__)
 
     @contextlib.contextmanager
     def profile_memory(self, name: str = None) -> profile_memory:
         """Context manager for profiling memory usage."""
-        with profile_memory(f"{name}") as prof:
-            yield prof
+        with profile_memory(f"{name}") as prof_ctx_mgr:
+            yield prof_ctx_mgr
         # TODO (spillai): This is to avoid nested namespaces in the profile data dict.
-        self.prof.update(prof.memory_usage())
+        self.profiling_data.update(prof_ctx_mgr.memory_usage())
 
     def update(self, key: str, value: Any) -> None:
-        self.prof[key] = value
+        """Helper function to place any updates to profiling results in the data dict."""
+        self.profiling_data[key] = value
 
     def as_dict(self) -> Dict[str, Any]:
         """Return a dictionary representation of the profiler record."""
         return {
             "namespace": self.namespace,
-            "prof": self.prof,
+            "profiling_data": self.profiling_data,
             **self.kwargs,
         }
 
@@ -190,7 +199,16 @@ class Profiler:
     """NOS profiler as a context manager."""
 
     records: List[profiler_record] = field(default_factory=list)
-    """List of profiler records."""
+    """List of profiler records. These will be added to the catalog then
+       populated as a context manager when running the model. They map to
+       methods on a particular model, and we try not to duplicate them for
+       a single method (i.e. you can add multiple entries with the same
+       namespace for e.g. CLIP, but when dumping the profiling results
+       we only retrieve the first hit for each function signature).
+
+       TODO: Prevent profiler from storing multiple records for the same
+       function signature.
+    """
 
     def __enter__(self) -> "Profiler":
         """Start profiling benchmarks, clearing all torch.cuda cache/stats ."""
@@ -214,19 +232,40 @@ class Profiler:
         return
 
     def add(self, namespace: str, **kwargs) -> profiler_record:
-        """Add a profiler record."""
-        if len(self.records) > 0 and self.records[0].kwargs.keys() != kwargs.keys():
-            raise ValueError("Adding a new record with different kwargs is not supported.")
+        """Add a profiler record so we can record results for model pass."""
         self.records.append(profiler_record(namespace, **kwargs))
         return self.records[-1]
 
+    # We store everything as json but manipulate as df, need conversions for these.
     def as_df(self) -> pd.DataFrame:
         """Return a dataframe representation of the profiled result."""
         metadata = ProfilerMetadata()
-        df = pd.json_normalize([r.as_dict() for r in self.records]).assign(
-            date=metadata.date, version=metadata.version
-        )
+        df = pd.DataFrame([r.as_dict() for r in self.records]).assign(date=metadata.date, version=metadata.version)
         return df
+
+    @classmethod
+    def from_df(cls, df: pd.DataFrame) -> "Profiler":
+        """Load profiled results from dataframe."""
+        records = []
+        for _idx, row in df.iterrows():
+            namespace = row["namespace"]
+            kwargs = row.drop("namespace").to_dict()
+            record = profiler_record(namespace, **kwargs)
+            for key, value in row.items():
+                record.update(key, value)
+            records.append(record)
+
+        return cls(records)
+
+    @classmethod
+    def from_json_path(cls, filename: Union[Path, str]) -> "Profiler":
+        """Load profiled results from JSON."""
+        # if the filename doesn't exist, initialize an empty profiler:
+        if not Path(filename).exists():
+            return cls()
+        else:
+            df = pd.read_json(str(filename), orient="records")
+            return cls.from_df(df)
 
     def __repr__(self) -> str:
         """Return a string representation of the profiler."""
@@ -268,7 +307,7 @@ class ModelProfiler:
     """Runtime (cpu, gpu)."""
     requests: List[ModelProfileRequest] = field(default_factory=list)
     """Model requests to benchmark."""
-    prof: Profiler = None
+    profiler: Profiler = None
     """Profiler used for benchmarking."""
     device_id: int = -1
     """Device ID."""
@@ -294,6 +333,17 @@ class ModelProfiler:
 
     def __post_init__(self) -> None:
         """Setup the device and profiler."""
+
+        # Check if we have a previous catalog and load it
+        from nos.constants import NOS_PROFILE_CATALOG_PATH
+
+        logger.debug("NOS profile catalog path: %s", NOS_PROFILE_CATALOG_PATH)
+
+        if NOS_PROFILE_CATALOG_PATH.exists():
+            self.profiler = Profiler()
+            self.profiler.from_json_path(NOS_PROFILE_CATALOG_PATH)
+        else:
+            logger.debug(f"Profile catalog not found (filename={NOS_PROFILE_CATALOG_PATH}).")
 
         # Get system info
         sysinfo = get_system_info(docker=True, gpu=True)
@@ -331,48 +381,62 @@ class ModelProfiler:
     def _benchmark(self, request: ModelProfileRequest) -> None:
         """Benchmark / profile a specific model."""
 
-        print()
         tree = Tree(
             f"🔥 [bold white]Profiling (name={request.model_id}, device={self.device_name}, kwargs={request.kwargs})[/bold white]"
         )
 
-        # Add a new record to profile
-        record = self.prof.add(
-            namespace=f"nos::{request.model_id}",
-            model_id=request.model_id,
-            method=request.method,
-            runtime=self.runtime,
-            device_name=self.device_name,
-            device_type=self.device.type,
-            device_index=self.device.index,
-        )
+        # Needs to be set for utilization stats to work
+        assert os.getenv("CUDA_VISIBLE_DEVICES", None) is not None, "CUDA_VISIBLE_DEVICES is not set."
+
+        # We need to create a profiling record for this request, or udpate an existing one.
+        # Check if we already have a record for this request in the catalog and remove it:
+        record = None
+        for existing_record in self.profiling_data.records:
+            if existing_record.namespace == f"nos::{request.model_id}":
+                record = existing_record
+                logger.debug("Found existing record for %s, updating it.", request.model_id)
+                break
+
+        if record is None:
+            # Otherwise create a new one
+            logger.debug("Creating new record for %s")
+            record = self.profiling_data.add(
+                namespace=f"nos::{request.model_id}",
+                model_id=request.model_id,
+                method=request.method,
+                runtime=self.runtime,
+                device_name=self.device_name,
+                device_type=self.device.type,
+                device_index=self.device.index,
+            )
+
         with record.profile_memory("wrap"):
             try:
                 # Initialize (profile memory)
-                with record.profile_memory("init") as prof:
+                with record.profile_memory("init") as prof_ctx_mgr:
                     model = hub.load(request.model_id)
                     predict = getattr(model, request.method)
-                tree.add(f"[bold green]✓[/bold green] {prof}).")
+                tree.add(f"[bold green]✓[/bold green] {prof_ctx_mgr}).")
 
                 batched_inputs = request.get_inputs()
 
                 # Inference (profile memory)
                 if self.mode == "full" or self.mode == "memory":
-                    with record.profile_memory("forward") as prof:
+                    with record.profile_memory("forward") as prof_ctx_mgr:
                         predict(**batched_inputs)
-                    tree.add(f"[bold green]✓[/bold green] {prof}).")
+                    tree.add(f"[bold green]✓[/bold green] {prof_ctx_mgr}).")
 
                 # Inference Warmup
                 if self.mode == "full" or self.mode == "execution":
-                    with record.profile_execution("forward_warmup", duration=2) as prof:
-                        [predict(**batched_inputs) for _ in prof.iterator]
-                    tree.add(f"[bold green]✓[/bold green] {prof}).")
+                    with record.profile_execution("forward_warmup", duration=2) as prof_ctx_mgr:
+                        [predict(**batched_inputs) for _ in prof_ctx_mgr.iterator]
+                    tree.add(f"[bold green]✓[/bold green] {prof_ctx_mgr}).")
 
                 # Inference (profile execution)
                 if self.mode == "full" or self.mode == "execution":
-                    with record.profile_execution("forward", duration=5) as prof:
-                        [predict(**batched_inputs) for _ in prof.iterator]
-                    tree.add(f"[bold green]✓[/bold green] {prof}).")
+                    with record.profile_execution("forward", duration=5) as prof_ctx_mgr:
+                        [predict(**batched_inputs) for _ in prof_ctx_mgr.iterator]
+                    tree.add(f"[bold green]✓[/bold green] {prof_ctx_mgr}).")
 
             except Exception as e:
                 logger.error(f"Failed to profile, e={e}")
@@ -380,7 +444,7 @@ class ModelProfiler:
 
             finally:
                 # Destroy
-                with record.profile_memory("cleanup") as prof:
+                with record.profile_memory("cleanup") as prof_ctx_mgr:
                     try:
                         del model.model
                     except Exception:
@@ -388,14 +452,20 @@ class ModelProfiler:
                     model.model = None
                     gc.collect()
                     torch.cuda.empty_cache()
-                tree.add(f"[bold green]✓[/bold green] {prof}).")
+                tree.add(f"[bold green]✓[/bold green] {prof_ctx_mgr}).")
 
         # Update the record with more metadata
         # key metrics: (prof.forward::execution.*_utilization, prof.forward::memory_*::allocated, prof.wrap::memory_*::allocated)
         for key, value in request.kwargs.items():
             record.update(key, value)
-        record.update("forward::memory_gpu::allocated", record.prof["forward::memory_gpu::post"])
-        record.update("forward::memory_cpu::allocated", record.prof["forward::memory_cpu::post"])
+        record.update("forward::memory_gpu::allocated", record.profiling_data["forward::memory_gpu::post"])
+        record.update("forward::memory_cpu::allocated", record.profiling_data["forward::memory_cpu::post"])
+        record.update(
+            "forward::execution.gpu_utilization", record.profiling_data["forward::execution"]["gpu_utilization"]
+        )
+        record.update(
+            "forward::execution.cpu_utilization", record.profiling_data["forward::execution"]["cpu_utilization"]
+        )
         print(tree)
 
     def run(self) -> None:
@@ -403,9 +473,12 @@ class ModelProfiler:
         failed = {}
         st_t = time.time()
 
-        print()
         print(f"[white]{self}[/white]")
-        with Profiler() as self.prof, torch.inference_mode():
+        from nos.constants import NOS_PROFILE_CATALOG_PATH
+
+        # import pdb; pdb.set_trace()
+        self.profiling_data = Profiler.from_json_path(NOS_PROFILE_CATALOG_PATH)
+        with torch.inference_mode():
             for _idx, request in enumerate(self.requests):
                 # Skip subsequent benchmarks with same name if previous runs failed
                 # Note: This is to avoid running benchmarks that previously failed
@@ -421,10 +494,8 @@ class ModelProfiler:
                     continue
         print(f"[bold green] ✅ Benchmarks completed (elapsed={time.time() - st_t:.1f}s) [/bold green]")
 
-    def save(self) -> str:
+    def save(self, catalog_path: str = None) -> str:
         """Save profiled results to JSON."""
-        from nos.constants import NOS_PROFILE_CATALOG_PATH
-
         NOS_PROFILE_DIR = NOS_CACHE_DIR / "profile"
         NOS_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -432,11 +503,21 @@ class ModelProfiler:
         date_str = datetime.datetime.utcnow().strftime("%Y%m%d")
         profile_path = Path(NOS_PROFILE_DIR) / f"nos-profile--{version_str}--{date_str}--{self.device_name}.json"
         print(
-            f"[bold green] Writing profile results to {profile_path} (records={len(self.prof.records)})[/bold green]"
+            f"[bold green] Writing profile results to {profile_path} (records={len(self.profiling_data.records)})[/bold green]"
         )
-        self.prof.save(profile_path)
+        self.profiling_data.save(profile_path)
 
-        # Copy the profile to the metadata catalog
+        # Still need to copy to the default catalog path for now
+        from nos.constants import NOS_PROFILE_CATALOG_PATH
+
         shutil.copyfile(str(profile_path), str(NOS_PROFILE_CATALOG_PATH))
+
+        # This is a WIP to allow us to map the profiling catalog to a
+        # filemount when running in GCP etc.
+        if catalog_path is not None:
+            # Copy the profile to the metadata catalog
+            Path(catalog_path).mkdir(parents=True, exist_ok=True)
+            full_catalog_path = Path(catalog_path) / profile_path.name
+            shutil.copyfile(str(profile_path), str(Path(full_catalog_path)))
 
         return str(profile_path)
