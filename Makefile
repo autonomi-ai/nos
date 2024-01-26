@@ -92,7 +92,7 @@ test: ## Basic CPU testing with mkdocs-build
 
 test-cpu: ## Basic CPU testing
 	CUDA_VISIBLE_DEVICES="" \
-	pytest --log-cli-level=INFO -sv tests
+	pytest -sv tests
 
 test-gpu: ## Basic GPU testing with single GPU
 	CUDA_VISIBLE_DEVICES="0" \
