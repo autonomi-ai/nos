@@ -33,19 +33,21 @@ def test_catalog_path():
 
 @skip_if_no_torch_cuda
 def test_gpu_util():
+    import os
+
+    if os.path.exists("./test-catalog/"):
+        shutil.rmtree("./test-catalog/")
+
     result = runner.invoke(app_cli, ["profile", "model", "-m", "openai/clip", "--catalog-path", "./test-catalog/"])
     assert result.exit_code == 0
-    import os
 
     assert os.path.exists("./test-catalog/")
     # load the json manually and check the field is not 'nan':
     import json
 
-    # open the first file in the tests/ dir:
-    # open the absolute path:
     with open(os.path.join("./test-catalog/", os.listdir("./test-catalog/")[0])) as f:
         catalog = json.load(f)
-    assert catalog["openai/clip"]["gpu_util"] != "nan"
+    assert catalog[0]["profiling_data"]["forward_warmup::execution"]["gpu_utilization"] != "nan"
     shutil.rmtree("./test-catalog/")
 
 
