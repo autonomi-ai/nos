@@ -36,7 +36,7 @@ repos:
     - id: end-of-file-fixer
       exclude: ^tests/test_data|^docs|^examples/notebook/|^docker|^nos/catalogs
     - id: pretty-format-json
-      exclude: ^tests/test_data|^docs|^examples/notebook/|^catalogs
+      exclude: ^tests/test_data|^docs|^examples/notebook/|^nos/catalogs
     - id: trailing-whitespace
       exclude: ^tests/test_data|^docs|^examples/notebook/
     - id: check-added-large-files
