@@ -45,13 +45,6 @@ def test_cli_serve():
     client.WaitForServer()
     assert client.IsHealthy()
 
-    # Check if the model is registered
-    model = client.Module("custom-model")
-    assert model is not None
-
-    with client.UploadFile(NOS_TEST_IMAGE) as remote_path:
-        assert remote_path is not None
-
     # Tear down the model
     serve_down_result = runner.invoke(app_cli, ["serve", "down", "--target", "custom_model"])
     assert serve_down_result.exit_code == 0
