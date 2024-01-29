@@ -26,11 +26,10 @@ def test_cli_serve_help():
     assert result.exit_code == 0
 
 
-# @pytest.mark.skip
 def test_cli_serve():
 
     from nos.cli.cli import app_cli
-    from nos.test.utils import NOS_TEST_DATA_DIR, NOS_TEST_IMAGE
+    from nos.test.utils import NOS_TEST_DATA_DIR
 
     config_path = NOS_TEST_DATA_DIR / "hub/custom_model/config.yaml"
     # Move to the test data directory
