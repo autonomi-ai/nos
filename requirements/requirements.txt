@@ -1,4 +1,4 @@
-agi-pack>=0.1.19
+agi-pack>=0.2.0
 cloudpickle>=2.2.1
 docker>=6.0.0
 filelock
@@ -11,7 +11,7 @@ pandas
 Pillow
 psutil>=5.9.5
 py-cpuinfo>=9.0.0
-pydantic>=1.10.12,<2.0.0
+pydantic>=2.5.0
 python-multipart
 pyyaml
 rich>=12.5.1

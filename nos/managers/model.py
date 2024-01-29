@@ -3,7 +3,7 @@ import gc
 import os
 import re
 from collections import OrderedDict
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Union
@@ -237,7 +237,7 @@ class ModelHandle:
 
         if spec.runtime_env is not None:
             logger.debug("Using custom runtime environment, this may take a while to build.")
-            actor_opts["runtime_env"] = RuntimeEnv(**asdict(spec.runtime_env))
+            actor_opts["runtime_env"] = RuntimeEnv(**spec.runtime_env.model_dump())
         logger.debug(f"Actor options [id={spec.id}, opts={actor_opts}]")
 
         return actor_opts

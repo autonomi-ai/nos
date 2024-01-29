@@ -1,7 +1,7 @@
 import importlib
 from typing import Any, Dict, List
 
-from pydantic.dataclasses import dataclass
+from pydantic import BaseModel
 
 
 def is_package_available(name: str) -> bool:
@@ -24,8 +24,7 @@ def is_torch_neuronx_available():
     return is_package_available("torch_neuronx")
 
 
-@dataclass
-class RuntimeEnv:
+class RuntimeEnv(BaseModel):
     conda: Dict[str, Any]
     """Conda environment specification."""
 
