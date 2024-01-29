@@ -352,6 +352,7 @@ class Client:
     @contextlib.contextmanager
     def UploadFile(self, path: Path, chunk_size: int = 4 * MB_BYTES) -> Path:
         """Upload a file to the server, and delete it after use."""
+        path = path.absolute()
         if not path.exists():
             raise FileNotFoundError(f"File not found [path={path}]")
         try:

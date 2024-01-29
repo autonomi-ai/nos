@@ -318,7 +318,7 @@ class InferenceServiceImpl(nos_service_pb2_grpc.InferenceServiceServicer, Infere
         for _chunk_idx, chunk_request in enumerate(request_iterator):
             chunk = loads(chunk_request.request_bytes)
             chunk_bytes = chunk["chunk_bytes"]
-            path = Path(chunk["filename"]).absolute()
+            path = Path(chunk["filename"])
             if str(path) not in self._tmp_files:
                 tmp_file = NamedTemporaryFile(delete=False, dir="/tmp", suffix=path.suffix)
                 self._tmp_files[str(path)] = tmp_file
