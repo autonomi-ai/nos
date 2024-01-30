@@ -192,6 +192,18 @@ class InferenceServiceRuntime:
             return "cpu"
 
     @staticmethod
+    def devices() -> List[str]:
+        """Auto-detect devices to use."""
+        from nos.common.system import has_gpu, is_aws_inf2
+
+        if is_aws_inf2():
+            return [str(p) for p in Path("/dev/").glob("neuron*")]
+        elif has_gpu():
+            return []
+        else:
+            return []
+
+    @staticmethod
     def list(**kwargs) -> List[docker.models.containers.Container]:
         """List running docker containers."""
         containers = DockerRuntime.get().list(**kwargs)

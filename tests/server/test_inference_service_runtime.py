@@ -90,6 +90,11 @@ def test_inference_service_runtime_utils():
     assert runtime == "gpu" if has_gpu() else "cpu", "Invalid runtime detected."
     assert InferenceServiceRuntime.list() is not None
 
+    devices = InferenceServiceRuntime.devices()
+    assert devices is not None
+    assert isinstance(devices, list)
+    assert len(devices) >= 0, "Invalid number of devices detected."
+
 
 def test_inference_service_runtime_cpu(inference_service_runtime_cpu):  # noqa: F811
     assert inference_service_runtime_cpu is not None
