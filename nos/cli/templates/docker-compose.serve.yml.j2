@@ -57,10 +57,18 @@ services:
     ports:
       - 50051:50051
     ipc: host
-{%- if gpu %}
+{%- if runtime == 'gpu' %}
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
+{% endif %}
+{%- if runtime == 'inf2' %}
+    {%- if devices|length > 0 %}
+    devices:
+    {%- for device in devices %}
+      - {{ device }}
+    {%- endfor %}
+    {%- endif %}
 {% endif %}
