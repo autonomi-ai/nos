@@ -9,7 +9,7 @@ file_mounts:
 resources:
   cloud: aws
   region: us-west-2
-  instance_type: inf2.xlarge
+  instance_type: inf2.8xlarge
   image_id: ami-096319086cc3d5f23 # us-west-2
   disk_size: 256
   ports:

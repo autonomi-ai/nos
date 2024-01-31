@@ -1,0 +1,14 @@
+images:
+  custom-inf2:
+    base: autonomi/nos:latest-inf2
+    env:
+      NOS_LOGGING_LEVEL: DEBUG
+      NOS_NEURON_CORES: 2
+      NEURON_RT_VISIBLE_CORES: 2
+
+models:
+  stabilityai/stable-diffusion-xl-base-1.0-inf2:
+    model_cls: StableDiffusionXLInf2
+    model_path: models/sdxl_inf2.py
+    default_method: __call__
+    runtime_env: custom-inf2
