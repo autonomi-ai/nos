@@ -1,0 +1,26 @@
+# Usage: sky launch -c <cluster-name> job-inf2.yaml
+# image_id: ami-09c62125a680f0ead # us-east-2
+# image_id: ami-0d4155c8606f16f5b # us-west-1
+# image_id: ami-096319086cc3d5f23 # us-west-2
+
+file_mounts:
+  /app: .
+
+resources:
+  cloud: aws
+  region: us-west-2
+  instance_type: inf2.xlarge
+  image_id: ami-096319086cc3d5f23 # us-west-2
+  disk_size: 256
+  ports:
+    - 8000
+
+setup: |
+  sudo apt-get install -y docker-compose-plugin
+
+  cd /app && python3 -m venv .venv && source .venv/bin/activate
+  pip install git+https://github.com/spillai/nos.git pytest
+
+run: |
+  source /app/.venv/bin/activate
+  cd /app && NOS_LOGGING_LEVEL=DEBUG nos serve up -c serve.yaml --http
