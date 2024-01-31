@@ -433,19 +433,30 @@ class ModelSpecMetadataCatalog:
 
     def load_profile_catalog(self) -> "ModelSpecMetadataCatalog":
         """Load the model profiles from a JSON catalog."""
+        import logging
+        import os
+        from pathlib import Path
+
         import pandas as pd
 
-        if not NOS_PROFILE_CATALOG_PATH.exists():
-            raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
-
-        import logging
-
         logger = logging.getLogger(__name__)
-        debug_str = "Loading profiling catalog from " + str(NOS_PROFILE_CATALOG_PATH)
+
+        catalog_path = NOS_PROFILE_CATALOG_PATH
+
+        # Check if we have NOS_PROFILE_CATALOG_PATH_OVERRIDE in the environment
+        if "NOS_PROFILE_CATALOG_PATH_OVERRIDE" in os.environ:
+            catalog_path = Path(os.environ["NOS_PROFILE_CATALOG_PATH_OVERRIDE"])
+            logger.debug(f"Using custom profile catalog [path={catalog_path}]")
+
+        if not catalog_path.exists():
+            # Make sure the catalog (either default or custom) exists
+            raise FileNotFoundError(f"Model metadata catalog not found, path={catalog_path}.")
+
+        debug_str = "Loading profiling catalog from " + str(catalog_path)
         logger.info(debug_str)
 
         # Read the catalog
-        df = pd.read_json(str(NOS_PROFILE_CATALOG_PATH), orient="records")
+        df = pd.read_json(str(catalog_path), orient="records")
         columns = df.columns
         # Check if the catalog is valid with the required columns
 
