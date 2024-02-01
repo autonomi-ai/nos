@@ -16,7 +16,7 @@
 **NOS (`torch-nos`)** is a fast and flexible Pytorch inference server, specifically designed for optimizing and running inference of popular foundational AI models.
 <br>
 
-## **Why use NOS?**
+## 🛠️ **Why use NOS?**
 
 - 👩‍💻 **Easy-to-use**: Built for [PyTorch](https://pytorch.org/) and designed to optimize, serve and auto-scale Pytorch models in production without compromising on developer experience.
 - 🥷 **Flexible**: Run and serve several foundational AI models ([Stable Diffusion](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0), [CLIP](https://huggingface.co/openai/clip-vit-base-patch32), [Whisper](https://huggingface.co/openai/whisper-large-v2)) in a single place.
@@ -37,7 +37,27 @@
 * **[Jan 2024]** ✍️ [blog] [Getting started with NOS tutorials](https://docs.nos.run/docs/blog/-getting-started-with-nos-tutorials.html) is available [here](./examples/tutorials/)!
 * **[Dec 2023]** 🛝 [repo] We open-sourced the [NOS playground](https://github.com/autonomi-ai/nos-playground) to help you get started with more examples built on NOS!
 
-## **What can NOS do?**
+## 🚀 Quickstart
+
+We highly recommend that you go to our [quickstart guide](https://docs.nos.run/docs/quickstart.html) to get started. To install the NOS client, you can run the following command:
+
+```bash
+conda create -n nos python=3.8
+conda activate nos
+pip install torch-nos
+```
+
+Once the client is installed, you can start the NOS server via the NOS `serve` CLI. This will automatically detect your local environment, download the docker runtime image and spin up the NOS server:
+
+```bash
+nos serve up --http
+```
+
+You are now ready to run your first inference request with NOS! You can run any of the following commands to try things out.
+
+*Note:* For the above quickstart to work out of the box, we expect the user to have [Docker](https://docs.docker.com/get-docker/), [Nvidia Docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker) and [Docker Compose](https://docs.docker.com/compose/install/) pre-installed on their machine. If you run into any issues, please visit our [quickstart](https://docs.nos.run/docs/quickstart.html) page or ping us on [Discord](https://discord.gg/QAGgvTuvgg).
+
+## 👩‍💻 **What can NOS do?**
 
 ### 💬 Chat / LLM Agents (ChatGPT-as-a-Service)
 ---

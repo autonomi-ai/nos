@@ -1,8 +1,6 @@
 import os
 from dataclasses import dataclass
 
-import torch_neuronx
-
 from nos.constants import NOS_CACHE_DIR
 from nos.logging import logger
 
@@ -21,6 +19,8 @@ class NeuronDevice:
 
     @staticmethod
     def device_count() -> int:
+        import torch_neuronx
+
         try:
             return torch_neuronx.xla_impl.data_parallel.device_count()
         except (RuntimeError, AssertionError):

@@ -57,14 +57,14 @@ You can start the nos server programmatically via either the CLI or SDK:
 
 === "Via CLI"
 
-    You can start the nos server (in daemon mode) via the NOS `serve` CLI:
+    You can start the nos server via the NOS `serve` CLI:
     ```bash
-    nos serve up -d
+    nos serve up
     ```
 
     Optionally, to use the REST API, you can start an HTTP gateway proxy alongside the gRPC server:
     ```bash
-    nos serve up -d --http
+    nos serve up --http
     ```
     
     !!!note
