@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def test_embeddings():
+def test_embeddings_inf2():
     from models.embeddings_inf2 import EmbeddingServiceInf2
 
     model = EmbeddingServiceInf2()
