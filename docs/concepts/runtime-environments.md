@@ -1,4 +1,4 @@
-The NOS inference server supports custom runtime environments through the use of the `InferenceServiceRuntime` class and the [configurations](../api/server.md#InferenceServiceRuntime.configs) defined within. This class provides a high-level interfa.ce for defining new custom runtime environments that can be used with NOS.
+The NOS inference server supports custom runtime environments through the use of the `InferenceServiceRuntime` class and the [configurations](../api/server.md#InferenceServiceRuntime.configs) defined within. This class provides a high-level interface for defining new custom runtime environments that can be used with NOS.
 
 ### ⚡️ NOS Inference Runtime
 
