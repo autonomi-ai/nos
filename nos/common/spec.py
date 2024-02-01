@@ -444,7 +444,7 @@ class ModelSpecMetadataCatalog:
         catalog_path = NOS_PROFILE_CATALOG_PATH
 
         # Check if we have NOS_PROFILE_CATALOG_PATH_OVERRIDE in the environment
-        if "NOS_PROFILE_CATALOG_PATH_OVERRIDE" in os.environ:
+        if os.environ.get("NOS_PROFILE_CATALOG_PATH_OVERRIDE"):
             catalog_path = Path(os.environ["NOS_PROFILE_CATALOG_PATH_OVERRIDE"])
             logger.debug(f"Using custom profile catalog [path={catalog_path}]")
 
