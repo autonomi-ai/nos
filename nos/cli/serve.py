@@ -38,8 +38,14 @@ class ServeOptions:
     image: str
     """Image name to use for the server."""
 
-    gpu: bool = field(default=False)
-    """Whether to use GPU for the server."""
+    runtime: str = field(default="cpu")
+    """Runtime environment to use for the server."""
+
+    devices: List[str] = field(default_factory=list)
+    """Devices to use for the server.
+
+    For inf2: ["/dev/neuron0", "/dev/neuron1", ...]
+    """
 
     http: bool = field(default=False)
     """Whether to use HTTP for the server."""
@@ -236,9 +242,10 @@ def _serve(
 
     # Get the runtime environment
     # Determine runtime from system
+    devices = InferenceServiceRuntime.devices()
     if runtime == "auto":
         runtime = InferenceServiceRuntime.detect()
-        logger.debug(f"Auto-detected system runtime: {runtime}")
+        logger.debug(f"Auto-detected system runtime: {runtime}, devices: {devices}")
     else:
         if runtime not in InferenceServiceRuntime.configs:
             raise ValueError(
@@ -382,7 +389,8 @@ def _serve(
     options = ServeOptions(
         config=container_config_path,
         image=image_name,
-        gpu=runtime == "gpu",
+        runtime=runtime,
+        devices=devices,
         http=http,
         http_host=http_host,
         http_port=http_port,
@@ -423,20 +431,28 @@ def _serve(
 
 @serve_cli.command("down", help="Tear down the NOS server.")
 def _serve_down(
+    target: str = typer.Option(None, "--target", help="Tear down a specific target.", show_default=True),
     verbose: bool = typer.Option(False, "-v", "--verbose", help="Verbose output.", show_default=False),
 ) -> None:
     """Main entrypoint for teardown ."""
     from nos.common.system import docker_compose_command
     from nos.logging import logger
 
-    sandbox_name: str = Path.cwd().name
-    compose_path = Path.cwd() / f"docker-compose.{sandbox_name}.yml"
-    if not compose_path.exists():
-        raise FileNotFoundError(f"File {compose_path} not found, cannot tear down.")
+    if target is not None:
+        from nos.constants import NOS_HOME
+
+        compose_path = NOS_HOME / f"tmp/serve/docker-compose.{target}.yml"
+        if not compose_path.exists():
+            raise FileNotFoundError(f"Target {target} compose file not found, cannot tear down.")
+    else:
+        sandbox_name: str = Path.cwd().name
+        compose_path = Path.cwd() / f"docker-compose.{sandbox_name}.yml"
+        if not compose_path.exists():
+            raise FileNotFoundError(f"File {compose_path} not found, cannot tear down.")
 
     # Spin down the docker compose
     print(f"[green]✓[/green] Tearing down docker compose with command: [bold white]{compose_path.name} down")
-    cmd = f"{docker_compose_command} -f {compose_path.name} down"
+    cmd = f"{docker_compose_command()} -f {compose_path} down"
     proc = subprocess.run(cmd, shell=True)
     if proc.returncode != 0:
         logger.error(f"Failed to tear down, e={proc.stderr}")

@@ -150,7 +150,7 @@ def test_common_model_spec(img2vec_signature):
         spec = ModelSpec(
             "openai/clip",
             signature=FunctionSignature(
-                TestImg2VecModel,
+                func_or_cls=TestImg2VecModel,
                 method="predict",
                 input_annotations=img2vec_signature.input_annotations,
                 output_annotations=img2vec_signature.output_annotations,
@@ -164,7 +164,7 @@ def test_common_model_spec(img2vec_signature):
             ModelSpec(
                 name,
                 signature=FunctionSignature(
-                    TestImg2VecModel,
+                    func_or_cls=TestImg2VecModel,
                     method="__call__",
                     input_annotations=img2vec_signature.input_annotations,
                     output_annotations=img2vec_signature.output_annotations,
@@ -207,7 +207,7 @@ def test_common_model_spec_variations():
 
     # Image embedding (img2vec)
     img2vec_signature = FunctionSignature(
-        Custom,
+        func_or_cls=Custom,
         method="embed_images",
         input_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
         output_annotations={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
@@ -216,7 +216,7 @@ def test_common_model_spec_variations():
 
     # Text embedding (txt2vec)
     txt2vec_signature = FunctionSignature(
-        Custom,
+        func_or_cls=Custom,
         method="embed_texts",
         input_annotations={"texts": str},
         output_annotations={"embedding": Batch[TensorT[np.ndarray, EmbeddingSpec(shape=(512,), dtype="float32")]]},
@@ -225,7 +225,7 @@ def test_common_model_spec_variations():
 
     # Object detection (img2bbox)
     img2bbox_signature = FunctionSignature(
-        Custom,
+        func_or_cls=Custom,
         method="img2bbox_dict",
         input_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},
         output_annotations={
@@ -238,7 +238,7 @@ def test_common_model_spec_variations():
 
     # Image generation (txt2img)
     txt2img_signature = FunctionSignature(
-        Custom,
+        func_or_cls=Custom,
         method="txt2img",
         input_annotations={"texts": Batch[str]},
         output_annotations={"images": Batch[ImageT[Image.Image, ImageSpec(shape=(None, None, 3), dtype="uint8")]]},

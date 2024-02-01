@@ -12,8 +12,9 @@ images:
       - git
     conda:
       - accelerate>0.18.0
-      - pytorch==2.0.1
-      - torchvision
+      - pytorch==2.1.1
+      - torchaudio==2.1.1
+      - torchvision==0.16.1
       - pytorch-cuda=11.8
       - cudatoolkit=11.8
       - -c pytorch -c nvidia

@@ -1,13 +1,12 @@
-import copy
 import inspect
 import math
 import re
-from dataclasses import asdict, field
+from dataclasses import field
 from functools import cached_property
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, get_args, get_origin
 
 import humanize
-from pydantic import validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic.dataclasses import dataclass
 
 from nos.common.cloudpickle import dumps, loads
@@ -140,8 +139,7 @@ def AnnotatedParameter(
     return ObjectTypeInfo(annotation, parameter)
 
 
-@dataclass
-class FunctionSignature:
+class FunctionSignature(BaseModel):
     """Function signature that fully describes the remote-model to be executed
     including `inputs`, `outputs`, `func_or_cls` to be executed,
     initialization `args`/`kwargs`."""
@@ -151,22 +149,42 @@ class FunctionSignature:
     method: str
     """Class method name. (e.g. forward, __call__ etc)"""
 
-    init_args: Tuple[Any, ...] = field(default_factory=tuple)
+    init_args: Tuple[Any, ...] = Field(default_factory=tuple)
     """Arguments to initialize the model instance."""
-    init_kwargs: Dict[str, Any] = field(default_factory=dict)
+    init_kwargs: Dict[str, Any] = Field(default_factory=dict)
     """Keyword arguments to initialize the model instance."""
 
-    parameters: Dict[str, Any] = field(init=False)
+    parameters: Dict[str, Any] = Field(init=False, default_factory=dict)
     """Input function signature (as returned by inspect.signature)."""
-    return_annotation: Any = field(init=False)
+    return_annotation: Any = Field(init=False, default=None)
     """Output / return function signature (as returned by inspect.signature)."""
 
-    input_annotations: Dict[str, Any] = field(default_factory=dict)
+    input_annotations: Dict[str, Any] = Field(default_factory=dict)
     """Mapping of input keyword arguments to dtypes."""
-    output_annotations: Union[Any, Dict[str, Any], None] = field(default=None)
+    output_annotations: Union[Any, Dict[str, Any], None] = Field(default=None)
     """Mapping of output names to dtypes."""
 
-    def __post_init__(self):
+    def __init__(
+        self,
+        func_or_cls: Callable,
+        method: str,
+        init_args: Tuple[Any, ...] = (),
+        init_kwargs: Dict[str, Any] = {},  # noqa: B006
+        parameters: Dict[str, Any] = {},  # noqa: B006
+        return_annotation: Any = None,
+        input_annotations: Dict[str, Any] = {},  # noqa: B006
+        output_annotations: Union[Any, Dict[str, Any], None] = None,
+    ):
+        super().__init__(
+            func_or_cls=func_or_cls,
+            method=method,
+            init_args=init_args,
+            init_kwargs=init_kwargs,
+            parameters=parameters,
+            return_annotation=return_annotation,
+            input_annotations=input_annotations,
+            output_annotations=output_annotations,
+        )
         if not callable(self.func_or_cls):
             raise ValueError(f"Invalid function/class provided, func_or_cls={self.func_or_cls}.")
 
@@ -181,10 +199,6 @@ class FunctionSignature:
         self.return_annotation = sig.return_annotation
         logger.debug(f"Function signature [method={self.method}, sig={sig}].")
 
-    def __repr__(self) -> str:
-        """Return the function signature representation."""
-        return f"FunctionSignature({asdict(self)})"
-
     @staticmethod
     def validate(inputs: Dict[str, Any], sig: Dict[str, Any]) -> Dict[str, Any]:
         """Validate the input dict against the defined signature (input or output)."""
@@ -196,14 +210,16 @@ class FunctionSignature:
         # TODO (spillai): Validate input types and shapes.
         return inputs
 
-    @validator("init_args", pre=True)
+    @field_validator("init_args", mode="before")
+    @classmethod
     def _validate_init_args(cls, init_args: Union[Tuple[Any, ...], Any]) -> Tuple[Any, ...]:
         """Validate the initialization arguments."""
         # TODO (spillai): Check the function signature of the func_or_cls class and validate
         # the init_args against the signature.
         return init_args
 
-    @validator("init_kwargs", pre=True)
+    @field_validator("init_kwargs", mode="before")
+    @classmethod
     def _validate_init_kwargs(cls, init_kwargs: Dict[str, Any]) -> Dict[str, Any]:
         """Validate the initialization keyword arguments."""
         # TODO (spillai): Check the function signature of the func_or_cls class and validate
@@ -249,21 +265,20 @@ class FunctionSignature:
             return AnnotatedParameter(self.output_annotations)
 
 
-@dataclass
-class ModelResources:
+class ModelResources(BaseModel):
     """Model resources (device/host memory etc)."""
 
-    runtime: str = field(default="auto")
+    runtime: str = Field(default="auto")
     """Runtime type (cpu, gpu, trt, etc).
     See `nos.server._runtime.InferenceServiceRuntime` for the list of supported runtimes.
     """
-    cpus: float = 0
+    cpus: float = Field(default=0.0)
     """Number of CPUs (defaults to 0 CPUs)."""
-    memory: Union[None, int, str] = field(default=0)
+    memory: Union[None, int, str] = Field(default=0)
     """Host / CPU memory"""
-    device: str = field(default="auto")
+    device: str = Field(default="auto")
     """Device identifier (nvidia-2080, nvidia-4090, apple-m2, etc)."""
-    device_memory: Union[int, str] = field(default="auto")
+    device_memory: Union[int, str] = Field(default="auto")
     """Device / GPU memory."""
 
     def __repr__(self) -> str:
@@ -277,7 +292,7 @@ class ModelResources:
             f"""memory={memory}, device_memory={device_memory})"""
         )
 
-    @validator("runtime")
+    @field_validator("runtime")
     def _validate_runtime(cls, runtime: str) -> str:
         """Validate the runtime."""
         from nos.server._runtime import InferenceServiceRuntime
@@ -287,7 +302,7 @@ class ModelResources:
             raise ValueError(f"Invalid runtime, runtime={runtime}.")
         return runtime
 
-    @validator("cpus")
+    @field_validator("cpus")
     def _validate_cpus(cls, cpus: Union[float, str]) -> float:
         """Validate the number of CPUs."""
         if isinstance(cpus, str):
@@ -299,7 +314,7 @@ class ModelResources:
             raise ValueError(err_msg)
         return cpus
 
-    @validator("memory")
+    @field_validator("memory")
     def _validate_memory(cls, memory: Union[int, str]) -> int:
         """Validate the host memory."""
         if memory is None:
@@ -314,16 +329,20 @@ class ModelResources:
             raise ValueError(err_msg)
         return memory
 
-    @validator("device")
+    @field_validator("device")
     def _validate_device(cls, device: str) -> str:
         """Validate the device."""
         if device.startswith("nvidia-"):
             device = "gpu"  # for now, we re-map all nvidia devices to gpu
-        if device not in ["auto", "cpu", "gpu"]:
+        from nos.constants import SKYPILOT_DEVICES
+
+        available_devices = ["auto", "cpu", "gpu"]
+        available_devices.extend(SKYPILOT_DEVICES)
+        if device not in available_devices:
             raise ValueError(f"Invalid device, device={device}.")
         return device
 
-    @validator("device_memory")
+    @field_validator("device_memory")
     def _validate_device_memory(cls, device_memory: Union[int, str]) -> Union[int, Literal["auto"]]:
         """Validate the device memory."""
         if isinstance(device_memory, str) and device_memory != "auto":
@@ -375,6 +394,7 @@ class ModelSpecMetadataCatalog:
                 cls._instance.load_profile_catalog()
             except FileNotFoundError:
                 logger.warning(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
+
         return cls._instance
 
     def __contains__(self, model_method_id: Any) -> bool:
@@ -413,15 +433,33 @@ class ModelSpecMetadataCatalog:
 
     def load_profile_catalog(self) -> "ModelSpecMetadataCatalog":
         """Load the model profiles from a JSON catalog."""
+        import logging
+        import os
+        from pathlib import Path
+
         import pandas as pd
 
-        if not NOS_PROFILE_CATALOG_PATH.exists():
-            raise FileNotFoundError(f"Model metadata catalog not found, path={NOS_PROFILE_CATALOG_PATH}.")
+        logger = logging.getLogger(__name__)
+
+        catalog_path = NOS_PROFILE_CATALOG_PATH
+
+        # Check if we have NOS_PROFILE_CATALOG_PATH_OVERRIDE in the environment
+        if os.environ.get("NOS_PROFILE_CATALOG_PATH_OVERRIDE"):
+            catalog_path = Path(os.environ["NOS_PROFILE_CATALOG_PATH_OVERRIDE"])
+            logger.debug(f"Using custom profile catalog [path={catalog_path}]")
+
+        if not catalog_path.exists():
+            # Make sure the catalog (either default or custom) exists
+            raise FileNotFoundError(f"Model metadata catalog not found, path={catalog_path}.")
+
+        debug_str = "Loading profiling catalog from " + str(catalog_path)
+        logger.info(debug_str)
 
         # Read the catalog
-        df = pd.read_json(str(NOS_PROFILE_CATALOG_PATH), orient="records")
+        df = pd.read_json(str(catalog_path), orient="records")
         columns = df.columns
         # Check if the catalog is valid with the required columns
+
         for col in [
             "model_id",
             "method",
@@ -430,19 +468,19 @@ class ModelSpecMetadataCatalog:
             "device_type",
             "device_index",
             "version",
-            "prof.batch_size",
-            "prof.shape",
-            "prof.forward::memory_cpu::allocated",
+            "profiling_data",
         ]:
             if col not in columns:
-                raise ValueError(f"Invalid model profile catalog, missing column={col}.")
+                print("Missing: ", col)
         # Update the registry
         for _, row in df.iterrows():
             model_id, method = row["model_id"], row["method"]
             additional_kwargs = {}
             try:
                 device_memory = (
-                    math.ceil(row["prof.forward::memory_gpu::allocated"] / 1024**2 / 500) * 500 * 1024**2
+                    math.ceil(row["profiling_data"]["forward::memory_gpu::allocated"] / 1024**2 / 500)
+                    * 500
+                    * 1024**2
                 )
                 additional_kwargs["device_memory"] = device_memory
             except Exception:
@@ -461,7 +499,7 @@ class ModelSpecMetadata:
     """Model identifier."""
     method: str
     """Model method name."""
-    task: TaskType = None
+    task: Union[TaskType, None] = field(default=None)
     """Task type (e.g. image_embedding, image_generation, object_detection_2d, etc)."""
 
     def __repr__(self) -> str:
@@ -491,8 +529,7 @@ class ModelSpecMetadata:
             return {}
 
 
-@dataclass
-class ModelSpec:
+class ModelSpec(BaseModel):
     """Model specification for the registry.
 
     ModelSpec captures all the relevant information for
@@ -501,15 +538,20 @@ class ModelSpec:
 
     id: str
     """Model identifier."""
-    signature: Dict[str, FunctionSignature] = field(default_factory=dict)
+    signature: Dict[str, FunctionSignature] = Field(default_factory=dict)
     """Model function signatures to export (method -> FunctionSignature)."""
-    runtime_env: RuntimeEnv = None
+    runtime_env: Union[RuntimeEnv, None] = Field(default=None)
     """Runtime environment with custom packages."""
+
+    def __init__(
+        self, id: str, signature: Dict[str, FunctionSignature] = {}, runtime_env: RuntimeEnv = None  # noqa: B006
+    ):
+        super().__init__(id=id, signature=signature, runtime_env=runtime_env)
 
     def __repr__(self):
         return f"""ModelSpec(id={self.id}, methods=({', '.join(list(self.signature.keys()))}), tasks=({', '.join([str(self.task(m)) for m in self.signature])}))"""
 
-    @validator("id", pre=True)
+    @field_validator("id", mode="before")
     def _validate_id(cls, id: str) -> str:
         """Validate the model identifier."""
         regex = re.compile(r"^[a-zA-Z0-9\/._-]+$")  # allow alphanumerics, `/`, `.`, `_`, and `-`
@@ -519,7 +561,7 @@ class ModelSpec:
             )
         return id
 
-    @validator("signature", pre=True)
+    @field_validator("signature", mode="before")
     def _validate_signature(
         cls, signature: Union[FunctionSignature, Dict[str, FunctionSignature]], **kwargs: Dict[str, Any]
     ) -> Dict[str, FunctionSignature]:
@@ -693,7 +735,7 @@ class ModelSpec:
         for method in methods:
             # Add the function signature
             sig = FunctionSignature(
-                func_or_cls,
+                func_or_cls=func_or_cls,
                 method=method,
                 init_args=init_args,
                 init_kwargs=init_kwargs,
@@ -706,14 +748,13 @@ class ModelSpec:
         spec = cls(
             model_id,
             signature=signature,
-            metadata=metadata,
             runtime_env=runtime_env,
         )
         return spec
 
     def _to_proto(self) -> nos_service_pb2.GenericResponse:
         """Convert the model spec to proto."""
-        spec = copy.deepcopy(self)
+        spec: ModelSpec = loads(dumps(self, protocol=-1))
         # Note (spillai): We only serialize the input/output
         # signatures and method of the spec. Notably, the
         # `func_or_cls` attribute is not serialized to avoid

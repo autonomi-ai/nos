@@ -2,7 +2,7 @@ import typing
 from typing import Generic, Optional, Tuple, TypeVar
 
 import numpy as np
-from pydantic import ValidationError, validator
+from pydantic import ValidationError, field_validator
 from pydantic.dataclasses import dataclass
 from typing_extensions import Annotated
 
@@ -36,19 +36,21 @@ class TensorSpec:
     dtype: str = None
     """Tensor dtype. (uint8, int32, int64, float32, float64)"""
 
-    @validator("shape")
+    @field_validator("shape")
+    @classmethod
     def validate_shape(cls, shape: Optional[Tuple[Optional[int], ...]]):
         """Validate the shape."""
         if shape and (len(shape) < 1 or len(shape) > 4):
-            raise ValidationError(f"Invalid tensor shape [shape={shape}].")
+            raise ValueError(f"Invalid tensor shape [shape={shape}].")
         else:
             return shape
 
-    @validator("dtype")
+    @field_validator("dtype", mode="before")
+    @classmethod
     def validate_dtype(cls, dtype: str):
         """Validate the dtype."""
         if dtype and not hasattr(np, dtype):
-            raise ValidationError(f"Invalid dtype [dtype={dtype}].")
+            raise ValueError(f"Invalid dtype [dtype={dtype}].")
         else:
             return dtype
 
@@ -65,7 +67,8 @@ class TensorSpec:
 class ImageSpec(TensorSpec):
     """Image tensor specification with dimensions (H, W, C)."""
 
-    @validator("shape")
+    @field_validator("shape", mode="before")
+    @classmethod
     def validate_shape(cls, shape: Tuple[Optional[int], ...]):
         """Validate the shape."""
         if shape and len(shape) != 3:
@@ -78,7 +81,8 @@ class ImageSpec(TensorSpec):
 class EmbeddingSpec(TensorSpec):
     """Embedding tensor specification with dimensions (D)."""
 
-    @validator("shape")
+    @field_validator("shape", mode="before")
+    @classmethod
     def validate_shape(cls, shape: Tuple[Optional[int]]):
         """Validate the shape."""
         if shape and len(shape) != 1:

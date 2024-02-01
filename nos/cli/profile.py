@@ -67,7 +67,9 @@ def _model_methods(model_id: str = None) -> Iterator[Tuple[str, str, ModelSpec]]
             yield _model_id, method, spec
 
 
-def profile_models(model_id: str = None, device_id: int = 0, save: bool = False, verbose: bool = False) -> Profiler:
+def profile_models(
+    model_id: str = None, device_id: int = 0, save: bool = False, verbose: bool = False, catalog_path: str = None
+) -> Profiler:
     """Main entrypoint for profiling all models."""
     import torch
 
@@ -189,8 +191,16 @@ def profile_models(model_id: str = None, device_id: int = 0, save: bool = False,
     # Run the profiler, and optionally save the catalog
     profiler.run()
     if save:
-        profiler.save()
+        profiler.save(catalog_path=catalog_path)
     return profiler
+
+
+def profile_models_with_method(
+    method_name: str, device_id: int = 0, save: bool = False, verbose: bool = False, catalog_path: str = None
+) -> Profiler:
+    for model_id, method, _spec in _model_methods(None):
+        if method == method_name:
+            profile_models(model_id, device_id, save, verbose, catalog_path)
 
 
 @profile_cli.command(name="model")
@@ -198,31 +208,49 @@ def _profile_model(
     model_id: str = typer.Option(..., "-m", "--model-id", help="Model identifier."),
     device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Export path for the catalog json."),
 ):
     """Profile a specific model by its identifier."""
-    profile_models(model_id, device_id=device_id, save=True, verbose=verbose)
+    profile_models(model_id, device_id=device_id, save=True, verbose=verbose, catalog_path=catalog_path)
+
+
+@profile_cli.command(name="method")
+def _profile_method(
+    method_name: str = typer.Option(..., "-m", "--method-name", help="Method name."),
+    device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Export path for the catalog json."),
+):
+    """Profile a specific model by its identifier."""
+    profile_models_with_method(
+        method_name=method_name, device_id=device_id, save=True, verbose=verbose, catalog_path=catalog_path
+    )
 
 
 @profile_cli.command(name="all")
 def _profile_all_models(
     device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Export path for the catalog json."),
 ):
     """Profile all models."""
-    profile_models(device_id=device_id, verbose=verbose)
+    profile_models(device_id=device_id, verbose=verbose, catalog_path=catalog_path)
 
 
 @profile_cli.command(name="rebuild-catalog")
 def _profile_rebuild_catalog(
     device_id: int = typer.Option(0, "--device-id", "-d", help="Device ID to use."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose profiling."),
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Export path for the catalog json."),
 ):
     """Profile all models and save the catalog."""
-    profile_models(device_id=device_id, save=True, verbose=verbose)
+    profile_models(device_id=device_id, save=True, verbose=verbose, catalog_path=catalog_path)
 
 
 @profile_cli.command(name="list")
-def _profile_list():
+def _profile_list(
+    catalog_path: str = typer.Option(None, "--catalog-path", "-e", help="Load a preexisiting catalog."),
+):
     """List all models and their methods."""
     from rich.table import Table
 
@@ -244,19 +272,22 @@ def _profile_list():
         spec: ModelSpec = hub.load_spec(model)
         for method in spec.signature:
             metadata = spec.metadata(method)
+            profile = metadata.profile
             try:
-                if hasattr(metadata, "resources"):
+                if hasattr(metadata, "resources") and metadata.resources is not None:
                     runtime = metadata.resources.runtime
                     device = "-".join(metadata.resources.device.split("-")[-2:])
-                    cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
-                    gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
-                if hasattr(metadata, "profile"):
-                    it_s = f'{metadata.profile["prof.forward::execution.num_iterations"] * 1e3 / metadata.profile["prof.forward::execution.total_ms"]:.1f}'
-                    cpu_util = f'{metadata.profile["prof.forward::execution.cpu_utilization"]:0.2f}'
-                    gpu_util = f'{metadata.profile["prof.forward::execution.gpu_utilization"]:0.2f}'
-                else:
-                    print("no metadata")
-            except Exception:
+                    cpu_memory = metadata.resources.memory
+                    if type(cpu_memory) != str:
+                        cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
+                    gpu_memory = metadata.resources.device_memory
+                    if type(gpu_memory) != str:
+                        gpu_memory = f"{humanize.naturalsize(metadata.resources.device_memory, binary=True)}"
+                it_s = f'{profile["profiling_data"]["forward::execution"]["num_iterations"] * 1e3 / profile["profiling_data"]["forward::execution"]["total_ms"]:.1f}'
+                cpu_util = f'{profile["profiling_data"]["forward::execution"]["cpu_utilization"]:0.2f}'
+                gpu_util = f'{profile["profiling_data"]["forward::execution"]["gpu_utilization"]:0.2f}'
+            except Exception as e:
+                logger.debug("Failed to load metadata: ", e)
                 it_s = "-"
                 cpu_util = "-"
                 gpu_util = "-"

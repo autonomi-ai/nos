@@ -50,7 +50,7 @@ class InferenceRequest:
     """Model identifier"""
     inputs: Dict[str, Any]
     """Input data for inference"""
-    method: str = field(default=None)
+    method: Optional[str] = field(default=None)
     """Inference method"""
     stream: bool = field(default=False)
     """Whether to stream the response"""
