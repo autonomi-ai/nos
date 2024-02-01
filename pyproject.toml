@@ -81,7 +81,7 @@ exclude = [
 
 
 [tool.setuptools.package-data]
-"*" = ["*.json", "*.proto", "*.j2", "test_data/**/*.*"]
+"*" = ["*.json", "*.proto", "*.j2", "test_data/*.*"]
 
 [tool.black]
 line-length = 119
