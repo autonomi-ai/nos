@@ -476,7 +476,6 @@ class ModelProfiler:
         print(f"[white]{self}[/white]")
         from nos.constants import NOS_PROFILE_CATALOG_PATH
 
-        # import pdb; pdb.set_trace()
         self.profiling_data = Profiler.from_json_path(NOS_PROFILE_CATALOG_PATH)
         with torch.inference_mode():
             for _idx, request in enumerate(self.requests):

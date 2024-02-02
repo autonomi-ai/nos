@@ -36,5 +36,4 @@ def prepare_images(images: Union[Image.Image, np.ndarray, List[Image.Image], Lis
             raise TypeError(f"Invalid type for images: {type(images[0])}")
     else:
         raise TypeError(f"Invalid type for images: {type(images)}")
-    # import pdb; pdb.set_trace()
     return images
