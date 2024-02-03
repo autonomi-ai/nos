@@ -14,7 +14,7 @@ nos serve up -c serve.yaml --http --runtime inf2
 ### Run the tests
 
 ```bash
-pytest -sv ./tests/test_embeddings_client.py
+pytest -sv ./tests/test_sdxl_inf2_client.py
 ```
 
 ### Call the service
@@ -26,7 +26,7 @@ curl \
 -X POST http://<service-ip>:8000/v1/infer \
 -H 'Content-Type: application/json' \
 -d '{
-    "model_id": "BAAI/bge-small-en-v1.5",
+    "model_id": "stabilityai/stable-diffusion-xl-base-1.0-inf2",
     "inputs": {
         "texts": ["fox jumped over the moon"]
     }
