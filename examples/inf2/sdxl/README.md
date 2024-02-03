@@ -23,7 +23,7 @@ You can also call the service via the REST API directly:
 
 ```bash
 curl \
--X POST http://127.0.0.1:8000/v1/infer \
+-X POST http://<service-ip>:8000/v1/infer \
 -H 'Content-Type: application/json' \
 -d '{
     "model_id": "stabilityai/stable-diffusion-xl-base-1.0-inf2",
