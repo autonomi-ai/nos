@@ -91,8 +91,8 @@ class StableDiffusionXLInf2:
         num_images: int = 1,
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
-        height: int = 512,
-        width: int = 512,
+        height: int = 1024,
+        width: int = 1024,
     ) -> List[Image.Image]:
         """Generate images from text prompt."""
 
