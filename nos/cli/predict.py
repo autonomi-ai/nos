@@ -19,6 +19,7 @@ import typer
 
 from nos.client import Client
 from nos.common.exceptions import ClientException
+from nos.constants import DEFAULT_GRPC_ADDRESS
 
 
 predict_cli = typer.Typer(name="predict", help="NOS gRPC Prediction CLI.", no_args_is_help=True)
@@ -36,7 +37,7 @@ class gRPCConfig:
 @predict_cli.callback()
 def grpc_config(
     ctx: typer.Context,
-    address: str = typer.Option("[::]:50051", "-a", "--address", help="Address of the gRPC server."),
+    address: str = typer.Option(DEFAULT_GRPC_ADDRESS, "-a", "--address", help="Address of the gRPC server."),
 ):
     """Common gRPC options"""
     client = Client(address)

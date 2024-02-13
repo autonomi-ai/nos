@@ -76,7 +76,7 @@ This command pulls and starts the latest GPU docker server with all the NOS good
 ```python
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 sdxl = client.Module("stabilityai/stable-diffusion-xl-base-1-0")
 image, = sdxl(prompts=["fox jumped over the moon"],
@@ -119,7 +119,7 @@ curl \
 ```python
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 clip = client.Module("openai/clip-vit-base-patch32")
 txt_vec = clip.encode_text(texts=["fox jumped over the moon"])
@@ -159,7 +159,7 @@ curl \
 from pathlib import Path
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 model = client.Module("openai/whisper-large-v2")
 with client.UploadFile(Path("audio.wav")) as remote_path:
@@ -197,7 +197,7 @@ curl \
 from pathlib import Path
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 model = client.Module("yolox/medium")
 response = model(images=[Image.open("image.jpg")])

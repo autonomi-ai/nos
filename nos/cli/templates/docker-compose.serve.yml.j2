@@ -40,6 +40,7 @@ services:
     environment:
       - NOS_HOME=/app/.nos
       - NOS_LOGGING_LEVEL={{ logging_level }}
+      - NOS_GRPC_HOST=[::]
     {%- if env_file|length > 0 %}
     env_file:
       {%- for envf in env_file %}

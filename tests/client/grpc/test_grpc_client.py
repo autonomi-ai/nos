@@ -4,6 +4,7 @@ import pytest
 
 import nos
 from nos.client import Client
+from nos.constants import DEFAULT_GRPC_HOST
 from nos.logging import logger
 from nos.server import InferenceServiceRuntime
 from nos.test.conftest import grpc_client  # noqa: F401
@@ -68,7 +69,7 @@ def test_grpc_client_init(runtime):  # noqa: F811
 
     # Test waiting for server to start
     # This call should be instantaneous as the server is already ready for the test
-    client = Client(f"[::]:{GRPC_PORT}")
+    client = Client(f"{DEFAULT_GRPC_HOST}:{GRPC_PORT}")
     assert client.WaitForServer(timeout=180, retry_interval=5)
     assert client.IsHealthy()
 

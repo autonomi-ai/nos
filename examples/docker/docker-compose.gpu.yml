@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  nos-server-gpu:
+  server-gpu:
     image: autonomi/nos:latest-gpu
     environment:
       - NOS_HOME=/app/.nos

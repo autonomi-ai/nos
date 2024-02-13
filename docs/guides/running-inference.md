@@ -16,7 +16,7 @@ Let's start by importing the NOS client and creating an `Client` instance. The c
 from nos.client import Client, TaskType
 
 # Create a client that connects to the server via gRPC (over 50051)
-client = Client("[::]:50051")
+client = Client()
 
 # We provide helper functions to wait for the server to be ready
 # if the server is simultaneously spun up in a separate process.

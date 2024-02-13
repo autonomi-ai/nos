@@ -8,7 +8,7 @@ from nos.client import Client
 
 
 if __name__ == "__main__":
-    client = Client("[::]:50051")
+    client = Client()
     assert client is not None
     assert client.WaitForServer()
 

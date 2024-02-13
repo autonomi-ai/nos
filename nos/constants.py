@@ -15,11 +15,11 @@ NOS_MODELS_DIR.mkdir(parents=True, exist_ok=True)
 NOS_LOG_DIR.mkdir(parents=True, exist_ok=True)
 NOS_TMP_DIR.mkdir(parents=True, exist_ok=True)
 
-DEFAULT_HTTP_HOST = os.getenv("NOS_HTTP_HOST", "127.0.0.1")
+DEFAULT_HTTP_HOST = os.getenv("NOS_HTTP_HOST", "localhost")
 DEFAULT_HTTP_PORT = int(os.getenv("NOS_HTTP_PORT", 8000))
 DEFAULT_HTTP_ADDRESS = f"{DEFAULT_HTTP_HOST}:{DEFAULT_HTTP_PORT}"
 
-DEFAULT_GRPC_HOST = os.getenv("NOS_GRPC_HOST", "[::]")
+DEFAULT_GRPC_HOST = os.getenv("NOS_GRPC_HOST", "localhost")
 DEFAULT_GRPC_PORT = int(os.getenv("NOS_GRPC_PORT", 50051))
 DEFAULT_GRPC_ADDRESS = f"{DEFAULT_GRPC_HOST}:{DEFAULT_GRPC_PORT}"
 
