@@ -104,6 +104,7 @@ def profile_models(
                     get_inputs=lambda: _model_inputs(task=TaskType.IMAGE_EMBEDDING, shape=(224, 224), batch_size=1),
                     batch_size=1,
                     shape=(224, 224),
+                    device_name=profiler.device_name,
                 ),
             )
         elif task == TaskType.TEXT_EMBEDDING:
@@ -114,6 +115,7 @@ def profile_models(
                     get_inputs=lambda: _model_inputs(task=TaskType.TEXT_EMBEDDING, batch_size=1),
                     batch_size=1,
                     shape=None,
+                    device_name=profiler.device_name,
                 ),
             )
         elif task == TaskType.OBJECT_DETECTION_2D:
@@ -126,6 +128,7 @@ def profile_models(
                     ),
                     batch_size=1,
                     shape=(640, 480),
+                    device_name=profiler.device_name,
                 ),
             )
         elif task == TaskType.IMAGE_GENERATION:
@@ -136,6 +139,7 @@ def profile_models(
                     get_inputs=lambda: _model_inputs(task=TaskType.IMAGE_GENERATION, batch_size=1),
                     batch_size=1,
                     shape=None,
+                    device_name=profiler.device_name,
                 ),
             )
         elif task == TaskType.AUDIO_TRANSCRIPTION:
@@ -146,6 +150,7 @@ def profile_models(
                     get_inputs=lambda: _model_inputs(task=TaskType.AUDIO_TRANSCRIPTION, batch_size=1),
                     batch_size=1,
                     shape=None,
+                    device_name=profiler.device_name,
                 ),
             )
         elif task == TaskType.DEPTH_ESTIMATION_2D:
@@ -158,6 +163,7 @@ def profile_models(
                     ),
                     batch_size=1,
                     shape=(640, 480),
+                    device_name=profiler.device_name,
                 ),
             )
         elif task == TaskType.IMAGE_SEGMENTATION_2D:
@@ -170,6 +176,7 @@ def profile_models(
                     ),
                     batch_size=1,
                     shape=(640, 480),
+                    device_name=profiler.device_name,
                 ),
             )
         elif task == TaskType.IMAGE_SUPER_RESOLUTION:
@@ -182,6 +189,7 @@ def profile_models(
                     ),
                     batch_size=1,
                     shape=(160, 120),
+                    device_name=profiler.device_name,
                 ),
             )
         else:
@@ -261,7 +269,8 @@ def _profile_list(
     table.add_column("method")
     table.add_column("task")
     table.add_column("runtime")
-    table.add_column("device")
+    table.add_column("device_type")
+    table.add_column("device_name")
     table.add_column("it/s")
     table.add_column("cpu_memory")
     table.add_column("cpu_util")
@@ -276,7 +285,7 @@ def _profile_list(
             try:
                 if hasattr(metadata, "resources") and metadata.resources is not None:
                     runtime = metadata.resources.runtime
-                    device = "-".join(metadata.resources.device.split("-")[-2:])
+                    device_type = "-".join(metadata.resources.device.split("-")[-2:])
                     cpu_memory = metadata.resources.memory
                     if type(cpu_memory) != str:
                         cpu_memory = f"{humanize.naturalsize(metadata.resources.memory, binary=True)}"
@@ -286,6 +295,7 @@ def _profile_list(
                 it_s = f'{profile["profiling_data"]["forward::execution"]["num_iterations"] * 1e3 / profile["profiling_data"]["forward::execution"]["total_ms"]:.1f}'
                 cpu_util = f'{profile["profiling_data"]["forward::execution"]["cpu_utilization"]:0.2f}'
                 gpu_util = f'{profile["profiling_data"]["forward::execution"]["gpu_utilization"]:0.2f}'
+                device_name = f'{profile["device_name"]}'
             except Exception as e:
                 logger.debug("Failed to load metadata: ", e)
                 it_s = "-"
@@ -293,13 +303,14 @@ def _profile_list(
                 gpu_util = "-"
                 cpu_memory = "-"
                 gpu_memory = "-"
-                runtime, device = None, None
+                runtime, device_type, device_name = None, None, None
             table.add_row(
                 f"[green]{model}[/green]",
                 method,
                 spec.task(method),
                 runtime,
-                device,
+                device_type,
+                device_name,
                 it_s,
                 cpu_memory,
                 cpu_util,

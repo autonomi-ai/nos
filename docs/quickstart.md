@@ -8,7 +8,7 @@ You will need to install [Docker](https://docs.docker.com/get-docker/), [Nvidia 
     On Linux, you can install Docker and Docker Compose via the following commands:
     ```bash
     sudo apt-get update \
-    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
+    && sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
     && sudo systemctl restart docker
     ```
 

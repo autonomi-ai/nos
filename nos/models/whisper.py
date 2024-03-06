@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
 
+import numpy as np
 import torch
 
 from nos import hub
@@ -89,6 +90,16 @@ class Whisper:
             )
             return response["chunks"]
 
+    def transcribe_raw(
+        self, raw: np.ndarray, chunk_length_s: int = 30, batch_size: int = 24, return_timestamps: bool = True
+    ) -> List[Dict[str, Any]]:
+        """Transcribe the audio file."""
+        with torch.inference_mode():
+            response = self.pipe(
+                raw, chunk_length_s=chunk_length_s, batch_size=batch_size, return_timestamps=return_timestamps
+            )
+            return response["chunks"]
+
 
 for model_name in Whisper.configs:
     cfg = Whisper.configs[model_name]
@@ -99,5 +110,15 @@ for model_name in Whisper.configs:
         init_args=(model_name,),
         method="transcribe",
         inputs={"path": Path, "chunk_length_s": int, "batch_size": int, "return_timestamps": bool},
+        outputs={"chunks": List[Dict[str, Any]]},
+    )
+
+    hub.register(
+        model_name,
+        TaskType.AUDIO_TRANSCRIPTION,
+        Whisper,
+        init_args=(model_name,),
+        method="transcribe_raw",
+        inputs={"raw": np.ndarray, "chunk_length_s": int, "batch_size": int, "return_timestamps": bool},
         outputs={"chunks": List[Dict[str, Any]]},
     )
