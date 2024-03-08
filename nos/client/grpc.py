@@ -20,7 +20,7 @@ from nos.common.exceptions import (
     ServerReadyException,
 )
 from nos.common.shm import NOS_SHM_ENABLED, SharedMemoryTransportManager
-from nos.constants import DEFAULT_GRPC_PORT, GRPC_MAX_MESSAGE_LENGTH, NOS_PROFILING_ENABLED
+from nos.constants import DEFAULT_GRPC_ADDRESS, GRPC_MAX_MESSAGE_LENGTH, NOS_PROFILING_ENABLED
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
@@ -64,11 +64,11 @@ class Client:
         ```
     """
 
-    def __init__(self, address: str = f"[::]:{DEFAULT_GRPC_PORT}"):
+    def __init__(self, address: str = DEFAULT_GRPC_ADDRESS):
         """Initializes the gRPC client.
 
         Args:
-            address (str): Address for the gRPC server. Defaults to f"[::]:{DEFAULT_GRPC_PORT}".
+            address (str): Address for the gRPC server. Defaults to DEFAULT_GRPC_ADDRESS.
         """
         self.address: str = address
         self._channel: grpc.Channel = None

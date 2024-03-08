@@ -1,7 +1,7 @@
 import pytest
 from loguru import logger
 
-from nos.constants import DEFAULT_GRPC_PORT
+from nos.constants import DEFAULT_GRPC_HOST, DEFAULT_GRPC_PORT
 from nos.protoc import import_module
 
 
@@ -62,7 +62,7 @@ async def grpc_server(ray_executor):
         ("grpc.max_receive_message_length", GRPC_MAX_MESSAGE_LENGTH),
     ]
     server = aio.server(options=options)
-    address = f"[::]:{GRPC_TEST_PORT}"
+    address = f"{DEFAULT_GRPC_HOST}:{GRPC_TEST_PORT}"
     nos_service_pb2_grpc.add_InferenceServiceServicer_to_server(InferenceServiceImpl(), server)
     server.add_insecure_port(address)
 
@@ -78,7 +78,7 @@ def grpc_client():
     """Test gRPC client (Port: 50052)."""
     from nos.client import Client
 
-    yield Client(f"[::]:{GRPC_TEST_PORT}")
+    yield Client(f"{DEFAULT_GRPC_HOST}:{GRPC_TEST_PORT}")
 
 
 @pytest.fixture(scope="session")
@@ -86,7 +86,7 @@ def grpc_client_cpu():
     """Test gRPC client to be used with CPU docker runtime (Port: 50053)."""
     from nos.client import Client
 
-    yield Client(f"[::]:{GRPC_TEST_PORT_CPU}")
+    yield Client(f"{DEFAULT_GRPC_HOST}:{GRPC_TEST_PORT_CPU}")
 
 
 @pytest.fixture(scope="session")
@@ -94,7 +94,7 @@ def grpc_client_gpu():
     """Test gRPC client to be used with GPU docker runtime (Port: 50054)."""
     from nos.client import Client
 
-    yield Client(f"[::]:{GRPC_TEST_PORT_GPU}")
+    yield Client(f"{DEFAULT_GRPC_HOST}:{GRPC_TEST_PORT_GPU}")
 
 
 @pytest.fixture(scope="session")
@@ -230,7 +230,7 @@ def local_http_client_with_server(grpc_server):  # noqa: F811
     from nos.server.http._service import app_factory
 
     # Yield the HTTP client once the server is up and initialized
-    with TestClient(app_factory(address=f"[::]:{GRPC_TEST_PORT}")) as _client:
+    with TestClient(app_factory(address=f"{DEFAULT_GRPC_HOST}:{GRPC_TEST_PORT}")) as _client:
         yield _client
 
 
@@ -247,7 +247,7 @@ def http_client_with_cpu_backend(grpc_server_docker_runtime_cpu):  # noqa: F811
     from nos.server.http._service import app_factory
 
     # Yield the HTTP client once the server is up and initialized
-    with TestClient(app_factory(address=f"[::]:{GRPC_TEST_PORT_CPU}")) as _client:
+    with TestClient(app_factory(address=f"{DEFAULT_GRPC_HOST}:{GRPC_TEST_PORT_CPU}")) as _client:
         yield _client
 
 
@@ -264,7 +264,7 @@ def http_client_with_gpu_backend(grpc_server_docker_runtime_gpu):  # noqa: F811
     from nos.server.http._service import app_factory
 
     # Yield the HTTP client once the server is up and initialized
-    with TestClient(app_factory(address=f"[::]:{GRPC_TEST_PORT_GPU}")) as _client:
+    with TestClient(app_factory(address=f"{DEFAULT_GRPC_HOST}:{GRPC_TEST_PORT_GPU}")) as _client:
         yield _client
 
 
@@ -301,7 +301,7 @@ def http_server_with_gpu_backend(grpc_client_with_gpu_backend):  # noqa: F811
 
     def _run_uvicorn_server():
         uvicorn.run(
-            app_factory(address=f"[::]:{GRPC_TEST_PORT_GPU}", env="dev"),
+            app_factory(address=f"{DEFAULT_GRPC_HOST}:{GRPC_TEST_PORT_GPU}", env="dev"),
             host="localhost",
             port=HTTP_TEST_PORT,
             workers=1,

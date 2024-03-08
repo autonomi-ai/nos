@@ -17,9 +17,8 @@ if __name__ == "__main__":
     path = Path(args.filename)
 
     # Create a client
-    address = "[::]:50051"
-    print(f"Connecting to client at {address} ...")
-    client = Client(address)
+    print("Connecting to client...")
+    client = Client()
     client.WaitForServer()
 
     # Transcribe with Whisper

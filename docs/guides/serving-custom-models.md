@@ -95,7 +95,7 @@ Via the `serve.yaml`, NOS automatically registers the new **WhisperX** model und
 ```python linenums="1" title="client.py"
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 ```
 
 !!!note
@@ -126,7 +126,7 @@ Once the model is served, we can use the client to call the `transcribe` method 
 ```python linenums="1" title="client.py"
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 client.WaitForServer()  # Wait for the server to start
 
 model = client.Module("mbain-whisperx")

@@ -8,7 +8,7 @@ def test_embeddings_inf2_client(model_id):
     from nos.client import Client
 
     # Create a client
-    client = Client("[::]:50051")
+    client = Client()
     assert client.WaitForServer()
 
     # Load the embeddings model

@@ -65,7 +65,7 @@ NOS provides an OpenAI-compatible server with streaming support so that you can 
 ```python
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 model = client.Module("TinyLlama/TinyLlama-1.1B-Chat-v1.0")
 response = model.chat(message="Tell me a story of 1000 words with emojis", _stream=True)
@@ -105,7 +105,7 @@ Build MidJourney discord bots in seconds.
 ```python
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 sdxl = client.Module("stabilityai/stable-diffusion-xl-base-1-0")
 image, = sdxl(prompts=["hippo with glasses in a library, cartoon styling"],
@@ -146,7 +146,7 @@ Build [scalable semantic search of images/videos](https://docs.nos.run/docs/demo
 ```python
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 clip = client.Module("openai/clip-vit-base-patch32")
 txt_vec = clip.encode_text(texts=["fox jumped over the moon"])
@@ -187,7 +187,7 @@ Perform [real-time audio transcription](./examples/tutorials/04-serving-multiple
 from pathlib import Path
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 model = client.Module("openai/whisper-small.en")
 with client.UploadFile(Path("audio.wav")) as remote_path:
@@ -225,7 +225,7 @@ Run classical computer-vision tasks in 2 lines of code.
 from pathlib import Path
 from nos.client import Client
 
-client = Client("[::]:50051")
+client = Client()
 
 model = client.Module("yolox/medium")
 response = model(images=[Image.open("image.jpg")])

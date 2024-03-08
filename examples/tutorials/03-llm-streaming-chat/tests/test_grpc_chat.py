@@ -5,12 +5,11 @@ from rich import print
 from nos.client import Client
 
 
-GRPC_PORT = 50051
 model_id = "tinyllama-1.1b-chat"
 
 
 if __name__ == "__main__":
-    client = Client(f"[::]:{GRPC_PORT}")
+    client = Client()
     assert client.WaitForServer()
 
     # Load the llama chat model
