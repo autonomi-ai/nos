@@ -1,19 +1,4 @@
----
-date: 2024-02-02
-tags:
-  - integrations
-  - skypilot
-  - chatGPT
-categories:
-  - infra
-  - embeddings
-authors:
- - sloftin
-links:
-  - posts/05-playing-with-nos-profiler.md
----
-
-# OK Computer, Why are you slow?
+# Profiling models with NOS
 
 (Originally published at https://scottloftin.substack.com/p/lets-build-an-ml-sre-bot-with-nos)
 
@@ -26,7 +11,7 @@ nos profile method --method encode_image
 nos profile list
 ```
 
-<img src="/docs/blog/assets/nos_profile_list.png" width="100%">
+<img src="/docs/demos/assets/nos_profile_list.png" width="100%">
 
 We see a breakdown across four different image embedding models including the method and task (interchangeable in this case, each CLIP variant will support both Image and Text embedding as methods), the Iterations per Second, GPU memory footprint (how much space did this model have to allocate) and finally the GPU utilization, which measures how efficiently we are using the HW (in a very broad sense). A few things to note: the image size is fixed to 224X224X1 across all runs with a batch size of 1. In practice, the Iterations/Second will depend tremendously on tuning the batch size and image resolution for our target HW, which will be the subject of a followup post. For now, we’ll take these numbers at face value and see what we can work out about how exactly to run a large embedding workload. We’re going to use Skypilot to deploy the profiler to a Tesla T4 instance on GCP:
 
@@ -75,13 +60,13 @@ The OpenAI assistants API is somewhat unstable at the moment, but after a few tr
 
 _Hey InfraBot, can you list the models in the profiling catalog by iterations per second?_
 
-<img src="/docs/blog/assets/clip_speed.png" width="100%">
+<img src="/docs/demos/assets/clip_speed.png" width="100%">
 
 Ok, our raw profiling data is slowly becoming more readable. Let’s see how this all scales with the number of embeddings:
 
 _Can you compute how long it would take to generate embeddings with each model for workload sizes in powers of 10, starting at 1000 image embeddings and ending at 10,000,000. Please plot these for each model in a graph._
 
-<img src="/docs/blog/assets/clip_embedding_times.png" width="100%">
+<img src="/docs/demos/assets/clip_embedding_times.png" width="100%">
 
 Reasonable: runtime will depend linearly on total embeddings (again, we’re using batch size 1 for illustration purposes).
 
@@ -113,19 +98,19 @@ Ok, lets add some dollar signs to our plot above:
 
 _Can you compute how much it would cost on a T4 with 1 GPU to generate embeddings with the cheapest model for workloads of powers of 10, starting at 1000 image embeddings and ending at 10,000,000. Please plot these in a graph._
 
-<img src="/docs/blog/assets/t4_laion_price.png" width="100%">
+<img src="/docs/demos/assets/t4_laion_price.png" width="100%">
 
 The above looks reasonable assuming a minimum reservation of 1 hour (we aren’t doing serverless; we need to pay for the whole instance for the whole hour in our proposed cloud landscape). For 10 million embeddings, the total is something like 13 hours, so assuming an on-demand price of $0.35 we have $0.35*13 ~= $4.55, pretty close to the graph. But what if we wanted to index something like YouTube with ~500PB of videos? Ok, maybe not the whole site, but a substantial subset, maybe 10^11 images. If we extrapolate the above we’re looking at $40,000 in compute, which we would probably care about fitting to our workload. In particular, we might go with a reserved rather than an on-demand instance for a ~%50 discount, but at what point does that pay off? Unfortunately at time of writing, Skypilot doesn’t seem to include reserved instance pricing by default, but for a single instance type it’s easy enough to track down and feed to InfraBot: a 1 Year commitment brings us down to $0.220 per GPU, and a 3 Year commitment to $0.160 per GPU. It’s still higher than the spot price of course, but at this scale its reasonable to assume some SLA that prevents us from halting indexing on preemption. Let’s see if we can find a break-even point.
 
 _Can you add the cost to reserve a 1 and 3 year instance? A 1 year reservation is $0.220 per gou per hour, and a 3 year reservation is $0.160 per gpu per hour._
 
-<img src="/docs/blog/assets/reserved_vs_on_demand_first.png" width="100%">
+<img src="/docs/demos/assets/reserved_vs_on_demand_first.png" width="100%">
 
 Looks like we need to go a little further to the right
 
 _Ok can you do the same plot, but at 10^9, 10^10, and 10^11_
 
-<img src="/docs/blog/assets/reserved_vs_on_demand_second.png" width="100%">
+<img src="/docs/demos/assets/reserved_vs_on_demand_second.png" width="100%">
 
 10^10 embeddings at $0.35/hr is about $4,860, so this looks roughly correct. 10 Billion embeddings is about 100,000 Hours of (low resolution) video at full 30FPS, so while it’s quite large its not completely unheard of for a larger video service.
 

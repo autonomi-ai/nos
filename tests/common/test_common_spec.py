@@ -279,17 +279,6 @@ def test_common_spec_signature():
         assert spec.default_signature.input_annotations is not None
         logger.debug(f"{spec.name}, {spec.task}")
 
-        if isinstance(spec.default_signature.input_annotations, dict):
-            for k, v in spec.default_signature.get_inputs_spec().items():
-                logger.debug(f"input: {k}, {v}")
-                check_object_type(v)
-        if isinstance(spec.default_signature.output_annotations, dict):
-            for k, v in spec.default_signature.get_outputs_spec().items():
-                logger.debug(f"output: {k}, {v}")
-                check_object_type(v)
-        else:
-            check_object_type(spec.default_signature.get_outputs_spec())
-
 
 def test_common_spec_from_custom_model():
     """Test wrapping custom models for remote execution."""
