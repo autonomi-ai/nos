@@ -1,0 +1,16 @@
+images:
+  embeddings-inf2:
+    base: autonomi/nos:latest-inf2
+    env:
+      NOS_LOGGING_LEVEL: DEBUG
+      NOS_NEURON_CORES: 2
+    run:
+      - python -m pip config set global.extra-index-url https://pip.repos.neuron.amazonaws.com
+      - pip install sentence-transformers
+
+models:
+  BAAI/bge-small-en-v1.5:
+    model_cls: EmbeddingServiceInf2
+    model_path: models/embeddings_inf2.py
+    default_method: __call__
+    runtime_env: embeddings-inf2

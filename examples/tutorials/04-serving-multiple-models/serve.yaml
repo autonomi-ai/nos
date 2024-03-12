@@ -1,0 +1,20 @@
+images:
+  custom-gpu:
+    base: autonomi/nos:latest-gpu
+    env:
+      NOS_MAX_CONCURRENT_MODELS: 2
+
+models:
+  TinyLlama/TinyLlama-1.1B-Chat-v1.0:
+    runtime_env: custom-gpu
+    deployment:
+      resources:
+        device: auto
+        device_memory: 3Gi
+
+  distil-whisper/distil-small.en:
+    runtime_env: custom-gpu
+    deployment:
+      resources:
+        device: auto
+        device_memory: 8Gi

@@ -1,0 +1,14 @@
+images:
+  animate-diff-gpu:
+    base: autonomi/nos:latest-gpu
+    pip:
+      - diffusers==0.24.0
+      - transformers==4.35.2
+      - accelerate==0.23.0
+
+models:
+  animate-diff:
+    model_cls: AnimateDiff
+    model_path: models/model.py
+    default_method: __call__
+    runtime_env: animate-diff-gpu

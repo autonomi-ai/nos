@@ -1,0 +1,4 @@
+discord==2.3.2
+discord.py==2.3.2
+diskcache
+docker

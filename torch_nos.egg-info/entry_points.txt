@@ -1,0 +1,4 @@
+[console_scripts]
+nos = nos.cli.cli:app_cli
+nos-grpc-server = nos.server._service:main
+nos-http-server = nos.server.http._service:main

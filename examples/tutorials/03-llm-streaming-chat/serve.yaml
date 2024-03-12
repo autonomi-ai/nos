@@ -1,0 +1,16 @@
+images:
+  llm-gpu:
+    base: autonomi/nos:latest-gpu
+
+models:
+  tinyllama-1.1b-chat:
+    model_cls: StreamingChat
+    model_path: models/chat.py
+    init_kwargs:
+      model_name: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+    default_method: chat
+    runtime_env: llm-gpu
+    deployment:
+      resources:
+        device: auto
+        device_memory: 4Gi

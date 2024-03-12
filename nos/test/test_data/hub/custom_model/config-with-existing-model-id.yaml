@@ -1,0 +1,15 @@
+# Here, we are testing the case where the model_id already exists in the hub.
+# In this case, the model_cls is not required, and instead we expect the server
+# to deploy the relevant number of replicas of the existing model.
+images:
+  gpu:
+    base: autonomi/nos:latest-gpu
+
+models:
+  noop/process-images:
+    runtime_env: gpu
+    deployment:
+      resources:
+        device: auto
+        device_memory: 1Gi
+      num_replicas: 2
