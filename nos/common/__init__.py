@@ -16,7 +16,6 @@ from .spec import (
     ModelSpec,
     ModelSpecMetadata,
     ModelSpecMetadataCatalog,
-    ObjectTypeInfo,
 )
 from .tasks import TaskType
 from .types import Batch, EmbeddingSpec, ImageSpec, ImageT, TensorSpec, TensorT

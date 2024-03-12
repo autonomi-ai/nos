@@ -3,7 +3,7 @@ import math
 import re
 from dataclasses import field
 from functools import cached_property
-from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union, get_args, get_origin
+from typing import Any, Callable, Dict, Literal, Optional, Tuple, Union
 
 import humanize
 from pydantic import BaseModel, Field, field_validator
@@ -22,121 +22,6 @@ from nos.protoc import import_module
 
 logger.disable(__name__)
 nos_service_pb2 = import_module("nos_service_pb2")
-
-
-class ObjectTypeInfo:
-    """Function signature information.
-
-    Parameters:
-        annotation (Any): Annotation for an input/output.
-        parameter (inspect.Parameter): Parameter information (optional).
-
-    Attributes:
-        _is_batched (bool): Batched flag.
-        _batch_size (int): Batch size.
-        _base_type (Any): Base type (Image.Image, np.ndarray etc).
-        _base_spec (Any): Base type specification (None, ImageSpec, TensorSpec etc).
-    """
-
-    def __init__(self, annotation: Any, parameter: inspect.Parameter = None):
-        """Initialize the function signature information."""
-        self.annotation = annotation
-        self.parameter = parameter
-        try:
-            (annotated_cls,) = annotation.__args__
-        except AttributeError:
-            annotated_cls = annotation
-
-        # Parse Batch annotation
-        self._is_batched, self._batch_size = False, None
-        if annotated_cls == Batch:
-            annotation, batch_size = annotation.__metadata__
-            self._is_batched, self._batch_size = True, batch_size
-            try:
-                (annotated_cls,) = annotation.__args__
-            except AttributeError:
-                annotated_cls = annotation
-
-        # Parse Tensor/type annotation
-        if annotated_cls in (TensorT, ImageT):
-            object_type, object_spec = annotation.__metadata__
-        else:
-            try:
-                (object_type,) = annotation.__metadata__
-            except AttributeError:
-                object_type = annotated_cls
-            object_spec = None
-
-        # Parse the base type and spec
-        self._base_type = object_type
-        self._base_spec = object_spec
-
-    def __repr__(self) -> str:
-        """Return the function signature information representation."""
-        repr = (
-            f"""{self.__class__.__name__}(is_batched={self._is_batched}, batch_size={self._batch_size}, """
-            f"""base_type={self._base_type}, base_spec={self._base_spec})"""
-        )
-        if self.parameter:
-            p_repr = f"pname={self.parameter}, ptype={self.parameter.annotation}, pdefault={self.parameter.default}"
-            repr = f"{repr}, {p_repr}"
-        return repr
-
-    def parameter_name(self) -> str:
-        """Return the parameter name."""
-        return self.parameter.name
-
-    def parameter_annotation(self) -> Any:
-        """Return the parameter annotation."""
-        return self.parameter.annotation
-
-    def parameter_default(self) -> Any:
-        """Return the parameter default."""
-        return self.parameter.default
-
-    def is_batched(self) -> bool:
-        """Return the `is_batched` flag.
-
-        Returns:
-            bool: Flag to indicate if batching is enabled.
-                If true, `batch_size=None` implies dynamic batch size, otherwise `batch_size=<int>`.
-        """
-        return self._is_batched
-
-    def batch_size(self) -> int:
-        """Return the batch size.
-
-        Returns:
-            int: Batch size. If `None` and `is_batched` is `true`, then batch size is considered dynamic.
-        """
-        return self._batch_size
-
-    def base_type(self) -> Any:
-        """Return the base type.
-
-        Returns:
-            Any: Base type. Base type here can be simple types (e.g. `str`, `int`, ...) or
-                complex types with library dependencies (e.g. `np.ndarray`, `PIL.Image.Image` etc).
-        """
-        return self._base_type
-
-    def base_spec(self) -> Optional[Union[TensorSpec, ImageSpec, EmbeddingSpec]]:
-        """Return the base spec.
-
-        Returns:
-            Optional[Union[TensorSpec, ImageSpec, EmbeddingSpec]]: Base spec.
-        """
-        return self._base_spec
-
-
-def AnnotatedParameter(
-    annotation: Any, parameter: inspect.Parameter = None
-) -> Union[ObjectTypeInfo, List[ObjectTypeInfo]]:
-    """Annotate the parameter for inferring additional metdata."""
-    # Union of annotated types are converted into set of annotated types.
-    if get_origin(annotation) == Union:
-        return [AnnotatedParameter(ann, parameter) for ann in get_args(annotation)]
-    return ObjectTypeInfo(annotation, parameter)
 
 
 class FunctionSignature(BaseModel):
@@ -235,34 +120,6 @@ class FunctionSignature(BaseModel):
         """Decode inputs based on defined signature."""
         inputs = FunctionSignature.validate(inputs, self.parameters)
         return {k: loads(v) for k, v in inputs.items()}
-
-    def get_inputs_spec(self) -> Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]:
-        """Return the full input function signature specification.
-
-        For example, for CLIP's text embedding model, the inputs/output spec is:
-            ```
-            inputs  = {'texts': ObjectTypeInfo(is_batched=True, batch_size=None, base_type=<class 'str'>, base_spec=None)}
-            outputs = {'embedding': ObjectTypeInfo(is_batched=True, batch_size=None, base_type=<class 'numpy.ndarray'>, base_spec=EmbeddingSpec(shape=(512,), dtype='float32'))}
-            ```
-        Returns:
-            Dict[str, Union[ObjectTypeInfo, List[ObjectTypeInfo]]]: Inputs spec.
-        """
-        parameters = self.parameters.copy()
-        parameters.pop("self", None)
-        return {k: AnnotatedParameter(self.input_annotations.get(k, p.annotation), p) for k, p in parameters.items()}
-
-    def get_outputs_spec(self) -> Dict[str, Union[ObjectTypeInfo, Dict[str, ObjectTypeInfo]]]:
-        """Return the full output function signature specification.
-
-        Returns:
-            Dict[str, Union[ObjectTypeInfo, Dict[str, ObjectTypeInfo]]]: Outputs spec.
-        """
-        if self.output_annotations is None:
-            return AnnotatedParameter(self.return_annotation)
-        elif isinstance(self.output_annotations, dict):
-            return {k: AnnotatedParameter(ann) for k, ann in self.output_annotations.items()}
-        else:
-            return AnnotatedParameter(self.output_annotations)
 
 
 class ModelResources(BaseModel):

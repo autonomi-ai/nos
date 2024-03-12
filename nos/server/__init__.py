@@ -6,7 +6,6 @@ from collections import deque
 from typing import List, Optional, Union
 
 import psutil
-import rich.status
 
 import docker
 import docker.errors

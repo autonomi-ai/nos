@@ -52,7 +52,7 @@ def test_grpc_client_inference(client_with_server, request):  # noqa: F811
 
 
 def _test_grpc_client_inference_spec(client):  # noqa: F811
-    from nos.common import ImageSpec, ModelSpec, ModelSpecMetadataCatalog, ObjectTypeInfo, TaskType, TensorSpec
+    from nos.common import ModelSpec, ModelSpecMetadataCatalog, TaskType
 
     # List models
     models: List[str] = client.ListModels()
@@ -78,34 +78,11 @@ def _test_grpc_client_inference_spec(client):  # noqa: F811
         assert len(spec.default_signature.parameters) >= 1
         assert spec.default_signature.return_annotation is not None
 
-        inputs = spec.default_signature.get_inputs_spec()
-        outputs = spec.default_signature.get_outputs_spec()
-        assert isinstance(inputs, dict)
-        for _, v in inputs.items():
-            assert isinstance(v, (list, ObjectTypeInfo))
-            if isinstance(v, list):
-                assert isinstance(v[0], ObjectTypeInfo)
-        assert isinstance(outputs, (dict, ObjectTypeInfo))
-
         for method in spec.signature:
             task: TaskType = spec.task(method)
             assert isinstance(task, TaskType)
             assert task.value is not None
             logger.debug(f"Testing model [id={model_id}, spec={spec}, method={method}, task={spec.task(method)}]")
-            inputs = spec.signature[method].get_inputs_spec()
-            outputs = spec.signature[method].get_outputs_spec()
-            assert isinstance(inputs, dict)
-            for _, v in inputs.items():
-                assert isinstance(v, (list, ObjectTypeInfo))
-                if isinstance(v, list):
-                    assert isinstance(v[0], ObjectTypeInfo)
-            assert isinstance(outputs, (dict, ObjectTypeInfo))
-
-            for _, type_info in inputs.items():
-                assert isinstance(type_info, (list, ObjectTypeInfo))
-                if isinstance(type_info, ObjectTypeInfo):
-                    assert type_info.base_spec() is None or isinstance(type_info.base_spec(), (ImageSpec, TensorSpec))
-                    assert type_info.base_type() is not None
 
 
 def _test_grpc_client_inference_noop(client):  # noqa: F811

@@ -4,7 +4,7 @@ from typing import Dict, List, Union
 import numpy as np
 from PIL import Image
 
-from nos import hub, internal_libs_available
+from nos import hub
 from nos.common import ImageSpec, TaskType
 from nos.common.types import Batch, ImageT
 
@@ -21,8 +21,3 @@ from .super_resolution import SuperResolution  # noqa: F401
 from .tts import TextToSpeech  # noqa: F401
 from .whisper import Whisper  # noqa: F401
 from .yolox import YOLOX  # noqa: F401
-
-
-if internal_libs_available():
-    # Register internal models with hub
-    from autonomi.nos._internal import models  # noqa: F401, F403
