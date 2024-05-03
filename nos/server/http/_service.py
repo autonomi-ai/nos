@@ -22,6 +22,8 @@ from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
 
+from ._exceptions import default_exception_handler, default_exception_middleware
+from ._security import ValidMachineToMachine as ValidM2M
 from ._utils import decode_item, encode_item
 from .integrations.openai.models import (
     ChatCompletionsRequest,
@@ -60,28 +62,14 @@ class InferenceRequest:
 class InferenceService:
     """HTTP server application for NOS API."""
 
-    version: str = field(default="v1")
-    """NOS version."""
-
     address: str = field(default=DEFAULT_GRPC_ADDRESS)
     """gRPC address."""
-
-    env: str = field(default=HTTP_ENV)
-    """Environment (dev/prod/test)."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     """Model configuration."""
 
     def __post_init__(self):
         """Post initialization."""
-        self.app = FastAPI(
-            title="NOS REST API",
-            description=f"NOS REST API (version={__version__}, api_version={self.version})",
-            version=self.version,
-            debug=self.env != "prod",
-        )
-        logger.debug(f"Starting NOS REST API (version={__version__}, env={self.env})")
-
         self.client = Client(self.address)
         logger.debug(f"Connecting to gRPC server (address={self.client.address})")
 
@@ -144,12 +132,33 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
     Returns:
         (FastAPI) FastAPI application.
     """
-    nos_app = InferenceService(version=version, address=address, env=env)
-    app = nos_app.app
+    from fastapi.middleware.cors import CORSMiddleware
+
+    svc = InferenceService(address=address)
+    logger.info(f"app_factory [env={env}]: Adding CORS middleware ...")
+    app = FastAPI(
+        title="NOS REST API",
+        description=f"NOS REST API (version={__version__}, api_version={version})",
+        version=version,
+        debug=env != "prod",
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    logger.debug(f"Starting NOS REST API (version={__version__}, env={env})")
+
+    # Add default exception handler
+    logger.info(f"app_factory [env={env}]: Adding default exception handlers ...")
+    app.middleware("http")(default_exception_middleware)
+    app.add_exception_handler(Exception, default_exception_handler)
 
     def get_client() -> Client:
         """Get the inference client."""
-        return nos_app.client
+        return svc.client
 
     def unnormalize_id(model_id: str) -> str:
         """Un-normalize the model identifier."""
@@ -192,6 +201,7 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
     @app.get(f"/{version}/models", status_code=status.HTTP_200_OK, response_model=Model)
     def models(
         client: Client = Depends(get_client),
+        user: Depends = ValidM2M,
     ) -> Model:
         """List all available models."""
         _model_table = build_model_table(client)
@@ -199,7 +209,11 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
         return Model(data=list(_model_table.values()))
 
     @app.get(f"/{version}/models/" + "{model:path}", response_model=ChatModel)
-    def model_info(model: str, client: Client = Depends(get_client)) -> ChatModel:
+    def model_info(
+        model: str,
+        client: Client = Depends(get_client),
+        user: Depends = ValidM2M,
+    ) -> ChatModel:
         """Get model information."""
         _model_table = build_model_table(client)
         try:
@@ -211,6 +225,7 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
     def chat(
         request: ChatCompletionsRequest,
         client: Client = Depends(get_client),
+        user: Depends = ValidM2M,
     ) -> StreamingResponse:
         """Perform chat completion on the given input data."""
         logger.debug(f"Received chat request [model={request.model}, messages={request.messages}]")
@@ -270,6 +285,7 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
     def infer(
         request: InferenceRequest,
         client: Client = Depends(get_client),
+        user: Depends = ValidM2M,
     ) -> JSONResponse:
         """Perform inference on the given input data.
 
@@ -319,6 +335,7 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
         file: Optional[UploadFile] = File(None),
         url: Optional[str] = Form(None),
         client: Client = Depends(get_client),
+        user: Depends = ValidM2M,
     ) -> JSONResponse:
         """Perform inference on the given input data using multipart/form-data.
 
