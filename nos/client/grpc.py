@@ -165,7 +165,8 @@ class Client:
                 if int(elapsed) > 10:
                     logger.warning("Waiting for server to start... (elapsed={:.0f}s)".format(time.time() - st))
                 time.sleep(retry_interval)
-        raise ServerReadyException("Failed to ping server.")
+        default_msg = """\n If you are running the server in docker, make sure the server sets `NOS_GRPC_HOST=[::]` and the client sets `NOS_GRPC_HOST=<server-container-name>` in their environment variables."""
+        raise ServerReadyException(f"Failed to ping server. {default_msg}")
 
     def GetServiceVersion(self) -> str:
         """Get service version.
