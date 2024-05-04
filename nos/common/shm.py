@@ -253,7 +253,7 @@ class SharedMemoryTransportManager:
                     shm_map[key]
                 ), f"Shared memory already initialized with length={len(shm_map[key])}, provided input with length={len(data[key])}."
                 # Move data from the data dict value to the shared memory segment.
-                for item, shm in zip(data[key], shm_map[key]):
+                for item, shm in zip(data[key], shm_map[key], strict=False):
                     shm.copy_from(item)
             elif isinstance(data[key], np.ndarray):
                 # Move data from the data dict value to the shared memory segment.

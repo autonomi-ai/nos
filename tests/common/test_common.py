@@ -12,7 +12,7 @@ def test_common_tqdm():
     import time
 
     # Use tqdm as a regular progress bar
-    for i1, i2 in zip(range(10), tqdm(range(10))):
+    for i1, i2 in zip(range(10), tqdm(range(10)), strict=False):
         assert i1 == i2
 
     # Use tqdm as a timer

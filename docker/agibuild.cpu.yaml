@@ -2,7 +2,7 @@ images:
   base-cpu:
     base: debian:buster-slim
     name: nos
-    python: "3.8"
+    python: "3.10"
     system:
       - gnupg2
       - sudo

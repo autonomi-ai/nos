@@ -12,7 +12,7 @@ resources:
 setup: |
   # Setup conda environment
   conda init bash
-  conda create -n nos python=3.8 -y
+  conda create -n nos python=3.10 -y
   conda activate nos
 
   # Install docker compose plugin
