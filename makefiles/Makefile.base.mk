@@ -57,7 +57,7 @@ docker-build-and-push-multiplatform-cpu:
 	agi-pack generate ${AGIPACK_ARGS} \
 		-c docker/agibuild.cpu.yaml \
 		-o docker/Dockerfile.multiplatform.cpu \
-		-p 3.8.15 \
+		-p 3.10.11 \
 		-b debian:buster-slim \
 		-t '${DOCKER_IMAGE_NAME}:${NOS_VERSION_TAG}-{target}'
 	make .docker-build-and-push-multiplatform \

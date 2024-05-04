@@ -34,8 +34,8 @@
 To quickly get started with a light-weight NOS client, run the following command:
 
   ```shell
-  $ conda create -n nos-py38 python=3.8
-  $ conda activate nos-py38
+  $ conda create -n nos-py310 python=3.10
+  $ conda activate nos-py310
   $ pip install torch-nos
   ```
 
@@ -44,8 +44,8 @@ In the setup above, the client pulls and utilizes the NOS docker server that run
 If you're interested in developing or contributing new models to NOS, consider installing the full NOS server via pip/conda:
 
   ```shell
-  $ conda create -n nos-py38 python=3.8
-  $ conda activate nos-py38
+  $ conda create -n nos-py310 python=3.10
+  $ conda activate nos-py310
   $ conda install pytorch>=2.0.1 torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
   $ pip install torch-nos[server]
   ```

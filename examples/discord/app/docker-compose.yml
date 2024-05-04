@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   bot:
     image: autonomi/nos:latest-discord-app

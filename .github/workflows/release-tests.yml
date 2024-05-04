@@ -13,7 +13,7 @@ jobs:
       fail-fast: true
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.8"]
+        python-version: ["3.10"]
     defaults:
       run:
         shell: bash -el {0}
