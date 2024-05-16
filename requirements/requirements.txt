@@ -6,6 +6,8 @@ gitpython
 grpcio-tools<=1.49.1
 humanize
 loguru>=0.7.0
+msgpack
+msgpack-numpy
 opencv-python-headless>=4.6.0.66
 pandas
 Pillow

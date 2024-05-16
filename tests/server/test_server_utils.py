@@ -1,17 +1,60 @@
 import logging
+from pathlib import Path
 
+import numpy as np
 import psutil
 import pytest
+from PIL import Image
 
 import nos
 from nos.common.system import has_docker
 from nos.server import InferenceServiceRuntime
+from nos.server.http._utils import decode_item, encode_item
 from nos.test.utils import AVAILABLE_RUNTIMES
 
 
 # Skip this entire test if docker is not installed
 NUM_CPUS = psutil.cpu_count(logical=False)
 pytestmark = pytest.mark.skipif(not has_docker() or NUM_CPUS < 4, reason="docker is not installed")
+
+
+@pytest.mark.importorskip("fastapi")
+def test_encode_decode_item():
+    from fastapi.responses import FileResponse
+
+    # Test encoding a dictionary
+    input_dict = {"key1": "value1", "key2": "value2"}
+    expected_dict = {"key1": "value1", "key2": "value2"}
+    assert encode_item(input_dict) == expected_dict
+
+    # Test encoding a list
+    input_list = [1, 2, 3]
+    expected_list = [1, 2, 3]
+    assert encode_item(input_list) == expected_list
+
+    # Test encoding a tuple
+    input_tuple = (4, 5, 6)
+    expected_tuple = [4, 5, 6]
+    assert encode_item(input_tuple) == expected_tuple
+
+    # Test encoding an Image object
+    input_image = Image.new("RGB", (100, 100))
+    assert encode_item(input_image).startswith("data:image/")
+    assert (decode_item(encode_item(input_image)) == input_image).all()
+
+    # Test encoding an ndarray object
+    input_ndarray = np.array([1, 2, 3])
+    expected_ndarray = [1, 2, 3]
+    assert encode_item(input_ndarray) == expected_ndarray
+
+    # Test encoding a 3D ndarray object
+    input_ndarray = np.random.rand(3, 3, 3)
+    assert encode_item(input_ndarray).startswith("data:application/numpy;base64,")
+    assert (decode_item(encode_item(input_ndarray)) == input_ndarray).all()
+
+    # Test encoding a Path object
+    input_path = Path("/path/to/file.txt")
+    assert isinstance(encode_item(input_path), FileResponse)
 
 
 @pytest.mark.parametrize("runtime", AVAILABLE_RUNTIMES)
