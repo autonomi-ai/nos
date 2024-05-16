@@ -4,10 +4,15 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict
 
+import msgpack
+import msgpack_numpy as m
 import numpy as np
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image
+
+
+m.patch()
 
 
 def encode_item(v: Any) -> Any:
@@ -22,7 +27,8 @@ def encode_item(v: Any) -> Any:
         if v.ndim <= 2:
             return v.tolist()
         else:
-            raise ValueError(f"Unsupported ndarray dimension: {v.ndim}")
+            arr_b64 = base64.b64encode(msgpack.packb(v)).decode()
+            return f"data:application/numpy;base64,{arr_b64}"
     elif isinstance(v, Path):
         return FileResponse(v)
     else:
@@ -37,6 +43,9 @@ def decode_item(v: Any) -> Any:
         return [decode_item(x) for x in v]
     elif isinstance(v, str) and v.startswith("data:image/"):
         return base64_str_to_image(v)
+    elif isinstance(v, str) and v.startswith("data:application/numpy;base64,"):
+        arr_b64 = v[len("data:application/numpy;base64,") :]
+        return msgpack.unpackb(base64.b64decode(arr_b64), raw=False)
     else:
         return v
 
