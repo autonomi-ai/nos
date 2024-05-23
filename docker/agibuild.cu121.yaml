@@ -12,7 +12,7 @@ images:
       - git
     conda:
       - accelerate
-      - pytorch
+      - pytorch=2.3.0
       - torchvision
       - pytorch-cuda=12.1
       - -c pytorch -c nvidia
