@@ -16,6 +16,7 @@ python-multipart
 pyyaml
 rich>=12.5.1
 sentry-sdk[loguru]
+setuptools==69.5.1
 tqdm
 typer>=0.7.0
 typing_extensions>=4.5.0

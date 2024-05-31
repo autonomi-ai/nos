@@ -17,7 +17,7 @@ images:
       - ./scripts/entrypoint.sh:/app/entrypoint.sh
       - ./requirements/requirements.server.txt:/tmp/requirements.server.txt
     run:
-      - mamba install pytorch==2.1.1 torchvision==0.16.1 torchaudio==2.1.1 cpuonly -c pytorch
+      - mamba install pytorch=2.3.0 torchvision torchaudio cpuonly -c pytorch
       - pip config set global.extra-index-url https://download.pytorch.org/whl/cpu
       - pip install -r /tmp/requirements.server.txt && rm -rf /tmp/requirements.server.txt
       - mamba install -y -c conda-forge x264=='1!161.3030' ffmpeg=4.3.2
