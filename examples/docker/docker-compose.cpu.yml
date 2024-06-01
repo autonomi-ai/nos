@@ -1,0 +1,12 @@
+services:
+  server-cpu:
+    image: autonomi/nos:latest-cpu
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL=INFO
+    volumes:
+      - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
+    ipc: host
+    ports:
+      - 50051:50051

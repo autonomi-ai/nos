@@ -1,0 +1,19 @@
+images:
+  gpu:
+    base: autonomi/nos:latest-gpu
+    workdir: /app/serve
+
+models:
+  custom-model:
+    model_path: models/model.py
+    model_cls: CustomModel
+    init_args:
+      - "arg1"
+    init_kwargs:
+      kwarg_int: 2
+      kwarg_str: "3"
+    default_method: __call__
+    runtime_env: gpu
+    resources:
+      device: auto
+      device_memory: 4Gi

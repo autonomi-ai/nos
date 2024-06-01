@@ -1,0 +1,1846 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="NOS -- A fast, and flexible AI inference server.">
+      
+      
+        <meta name="author" content="Sudeep Pillai">
+      
+      
+        <link rel="canonical" href="https://docs.nos.run/docs/blog/introducing-the-nos-inferentia2-runtime.html">
+      
+      
+        <link rel="prev" href="serving-llms-on-a-budget.html">
+      
+      
+      
+      <link rel="icon" href="../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.25">
+    
+    
+      
+        <title>Introducing the NOS Inferentia2 Runtime - NOS Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.6543a935.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function n(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],n("js",new Date),n("config","G-J38LQZWLM3"),document.addEventListener("DOMContentLoaded",function(){document.forms.search&&document.forms.search.query.addEventListener("blur",function(){this.value&&n("event","search",{search_term:this.value})}),document$.subscribe(function(){var a=document.forms.feedback;if(void 0!==a)for(var e of a.querySelectorAll("[type=submit]"))e.addEventListener("click",function(e){e.preventDefault();var t=document.location.pathname,e=this.getAttribute("data-md-value");n("event","feedback",{page:t,data:e}),a.firstElementChild.disabled=!0;e=a.querySelector(".md-feedback__note [data-md-value='"+e+"']");e&&(e.hidden=!1)}),a.hidden=!1}),location$.subscribe(function(e){n("config","G-J38LQZWLM3",{page_path:e.pathname})})});var e=document.createElement("script");e.async=!0,e.src="https://www.googletagmanager.com/gtag/js?id=G-J38LQZWLM3",document.getElementById("__analytics").insertAdjacentElement("afterEnd",e)}</script>
+  
+    <script>"undefined"!=typeof __md_analytics&&__md_analytics()</script>
+  
+
+    
+    
+      
+        <meta  property="og:type"  content="website" >
+      
+        <meta  property="og:title"  content="Introducing the NOS Inferentia2 Runtime - NOS Docs" >
+      
+        <meta  property="og:description"  content="NOS -- A fast, and flexible AI inference server." >
+      
+        <meta  property="og:image"  content="https://docs.nos.run/assets/images/social/docs/blog/posts/04-introducing-inf2-runtime.png" >
+      
+        <meta  property="og:image:type"  content="image/png" >
+      
+        <meta  property="og:image:width"  content="1200" >
+      
+        <meta  property="og:image:height"  content="630" >
+      
+        <meta  property="og:url"  content="https://docs.nos.run/docs/blog/introducing-the-nos-inferentia2-runtime.html" >
+      
+        <meta  name="twitter:card"  content="summary_large_image" >
+      
+        <meta  name="twitter:title"  content="Introducing the NOS Inferentia2 Runtime - NOS Docs" >
+      
+        <meta  name="twitter:description"  content="NOS -- A fast, and flexible AI inference server." >
+      
+        <meta  name="twitter:image"  content="https://docs.nos.run/assets/images/social/docs/blog/posts/04-introducing-inf2-runtime.png" >
+      
+    
+    
+  <!-- Add scripts that need to run before here -->
+  
+  <!-- Add scripts that need to run afterwards here -->
+  <meta name="robots" content="noindex, nofollow" />
+
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#introducing-the-nos-inferentia2-runtime" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../index.html" title="NOS Docs" class="md-header__button md-logo" aria-label="NOS Docs" data-md-component="logo">
+      
+  <img src="../assets/favicon.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NOS Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Introducing the NOS Inferentia2 Runtime
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/autonomi-ai/nos" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    autonomi-ai/nos
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../index.html" title="NOS Docs" class="md-nav__button md-logo" aria-label="NOS Docs" data-md-component="logo">
+      
+  <img src="../assets/favicon.png" alt="logo">
+
+    </a>
+    NOS Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/autonomi-ai/nos" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    autonomi-ai/nos
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../index.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    🏠 Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    🔥 Quickstart
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/supported-models.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    🧠 Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    ⚡️ Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            ⚡️ Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/architecture-overview.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    What is NOS?
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/model-spec.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model specification
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/model-manager.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HW-aware execution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/runtime-environments.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Runtime environments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    📚 Usage Guide
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            📚 Usage Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/starting-the-server.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Starting the server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/running-inference.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running inference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/serving-custom-models.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Serving custom models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    🤖 Demos
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            🤖 Demos
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../demos/discord-bot.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Build a Discord image-generation bot
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../demos/video-search.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Build a video search engine
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../demos/profiling-models-with-nos.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Profiling models with NOS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    👩‍💻 API Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            👩‍💻 API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_1" id="__nav_7_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    CLI
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_1">
+            <span class="md-nav__icon md-icon"></span>
+            CLI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/serve.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    <kbd>nos serve</kbd>
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/system.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    <kbd>nos system</kbd>
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    nos.common
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            nos.common
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/common/exceptions.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.exceptions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/common/metaclass.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.metaclass
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/common/shm.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.shm
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/common/spec.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.spec
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/common/system.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.system
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/common/types.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.types
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/common/tasks.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.tasks
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/client.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.client
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/server.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/hub.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.hub
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/managers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.managers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/executors.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.executors
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    🔌 Integrations
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            🔌 Integrations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../integrations/skypilot.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SkyPilot
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ✍️ Blog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../support.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ❓ Support / FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-aws-inferentia2" class="md-nav__link">
+    <span class="md-ellipsis">
+      ⚡️ What is AWS Inferentia2?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#nos-inference-runtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      🏃‍♂️ NOS Inference Runtime
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deploying-a-pytorch-model-on-inferentia2-with-nos" class="md-nav__link">
+    <span class="md-ellipsis">
+      📦 Deploying a PyTorch model on Inferentia2 with NOS
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="📦 Deploying a PyTorch model on Inferentia2 with NOS">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-define-your-custom-inf2-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Define your custom inf2 model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-define-the-custom-inf2-runtime-with-the-nos-serve-specification" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Define the custom inf2 runtime with the NOS serve specification
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-deploy-the-embedding-service-on-aws-inf2xlarge-with-skypilot" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Deploy the embedding service on AWS inf2.xlarge with SkyPilot
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-test-your-custom-model-on-aws-inf2-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      3. Test your custom model on AWS Inf2 instance
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-it-going-to-cost-me" class="md-nav__link">
+    <span class="md-ellipsis">
+      🤑 What's it going to cost me?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wrapping-up" class="md-nav__link">
+    <span class="md-ellipsis">
+      🎁 Wrapping up
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+  <div class="md-content md-content--post" data-md-component="content">
+    <div class="md-sidebar md-sidebar--post" data-md-component="sidebar" data-md-type="navigation">
+      <div class="md-sidebar__scrollwrap">
+        <div class="md-sidebar__inner md-post">
+          <nav class="md-nav md-nav--primary">
+            <div class="md-post__back">
+              <div class="md-nav__title md-nav__container">
+                <a href="index.html" class="md-nav__link">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+                  <span class="md-ellipsis">
+                    Back to index
+                  </span>
+                </a>
+              </div>
+            </div>
+            
+              <div class="md-post__authors md-typeset">
+                
+                  <div class="md-profile md-post__profile">
+                    <span class="md-author md-author--long">
+                      <img src="https://github.com/spillai.png" alt="Sudeep Pillai">
+                    </span>
+                    <span class="md-profile__description">
+                      <strong>
+                        
+                          Sudeep Pillai
+                        
+                      </strong>
+                      <br>
+                      NOS Core Developer
+                    </span>
+                  </div>
+                
+              </div>
+            
+            <ul class="md-post__meta md-nav__list">
+              <li class="md-nav__item md-nav__item--section">
+                <div class="md-post__title">
+                  <span class="md-ellipsis">
+                    Metadata
+                  </span>
+                </div>
+                <nav class="md-nav">
+                  <ul class="md-nav__list">
+                    <li class="md-nav__item">
+                      <div class="md-nav__link">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 19H5V8h14m-3-7v2H8V1H6v2H5c-1.11 0-2 .89-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-1V1m-1 11h-5v5h5v-5Z"/></svg>
+                        <time datetime="2024-02-01 00:00:00" class="md-ellipsis">Feb 1, 2024</time>
+                      </div>
+                    </li>
+                    
+                    
+                      <li class="md-nav__item">
+                        <div class="md-nav__link">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9 3v15h3V3H9m3 2 4 13 3-1-4-13-3 1M5 5v13h3V5H5M3 19v2h18v-2H3Z"/></svg>
+                          <span class="md-ellipsis">
+                            in
+                            
+                              <a href="category/infra.html">infra</a>, 
+                              <a href="category/embeddings.html">embeddings</a>, 
+                              <a href="category/asic.html">asic</a></span>
+                        </div>
+                      </li>
+                    
+                    
+                      
+                      <li class="md-nav__item">
+                        <div class="md-nav__link">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 20a8 8 0 0 0 8-8 8 8 0 0 0-8-8 8 8 0 0 0-8 8 8 8 0 0 0 8 8m0-18a10 10 0 0 1 10 10 10 10 0 0 1-10 10C6.47 22 2 17.5 2 12A10 10 0 0 1 12 2m.5 5v5.25l4.5 2.67-.75 1.23L11 13V7h1.5Z"/></svg>
+                          <span class="md-ellipsis">
+                            
+                              11 min read
+                            
+                          </span>
+                        </div>
+                      </li>
+                    
+                  </ul>
+                </nav>
+              </li>
+            </ul>
+          </nav>
+          
+        </div>
+      </div>
+    </div>
+    <article class="md-content__inner md-typeset">
+      
+        
+  
+  
+
+<nav class="md-tags" >
+  
+    
+    
+    
+      <span class="md-tag">embeddings</span>
+    
+  
+    
+    
+    
+      <span class="md-tag">integrations</span>
+    
+  
+    
+    
+    
+      <span class="md-tag">inferentia</span>
+    
+  
+</nav>
+
+
+  
+  
+
+
+<h1 id="introducing-the-nos-inferentia2-runtime">Introducing the NOS Inferentia2 Runtime<a class="headerlink" href="#introducing-the-nos-inferentia2-runtime" title="Permanent link">&para;</a></h1>
+<p><img src="/docs/blog/assets/nos-inf2.jpg" width="100%"></p>
+<p>We are excited to announce the availability of the <a href="https://aws.amazon.com/en/ec2/instance-types/inf2/">AWS Inferentia2</a> runtime on <a href="https://github.com/autonomi-ai/nos">NOS</a> - a.k.a. our <strong><a href="../concepts/runtime-environments.html#🏃‍♂️-supported-runtimes"><code>inf2</code></a></strong> runtime. This runtime is designed to easily serve models on AWS Inferentia2, a high-performance, purpose-built chip for inference. In this blog post, we will introduce the AWS Inferentia2 runtime, and show you how to trivially deploy a model on the AWS Inferentia2 device using NOS. If you have followed our previous tutorial on <a href="serving-llms-on-a-budget.html">serving LLMs on a budget (on NVIDIA hardware)</a>, you will be pleasantly surprised to see how easy it is to deploy a model on the AWS Inferentia2 device using the pre-baked NOS <strong><a href="../concepts/runtime-environments.html#🏃‍♂️-supported-runtimes"><code>inf2</code></a></strong> runtime we provide.</p>
+<h2 id="what-is-aws-inferentia2">⚡️ What is AWS Inferentia2?<a class="headerlink" href="#what-is-aws-inferentia2" title="Permanent link">&para;</a></h2>
+<p><a href="https://aws.amazon.com/en/ec2/instance-types/inf2/">AWS Inferentia2</a> (Inf2 for short) is the second-generation inference accelerator from AWS. Inf2 instances raise the performance of <a href="https://aws.amazon.com/ec2/instance-types/inf1/">Inf1</a> (originally launched in 2019) by delivering 3x higher compute performance, 4x larger total accelerator memory, up to 4x higher throughput, and up to 10x lower latency. Inf2 instances are the first inference-optimized instances in Amazon EC2 to support scale-out distributed inference with ultra-high-speed connectivity between accelerators. </p>
+<p>Relative to the <a href="https://aws.amazon.com/ec2/instance-types/g5/">AWS G5 instances</a> (<a href="https://www.nvidia.com/en-us/data-center/products/a10-gpu/">NVIDIA A10G</a>), Inf2 instances promise up to 50% better performance-per-watt. Inf2 instances are ideal for applications such as natural language processing, recommender systems, image classification and recognition, speech recognition, and language translation that can take advantage of scale-out distributed inference. </p>
+<table>
+<thead>
+<tr>
+<th>Instance Size</th>
+<th>Inf2 Accelerators</th>
+<th>Accelerator Memory (GB)</th>
+<th>vCPU</th>
+<th>Memory (GiB)</th>
+<th>On-Demand Price</th>
+<th>Spot Price</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>inf2.xlarge</td>
+<td>1</td>
+<td>32</td>
+<td>4</td>
+<td>16</td>
+<td>$0.76</td>
+<td>$0.32</td>
+</tr>
+<tr>
+<td>inf2.8xlarge</td>
+<td>1</td>
+<td>32</td>
+<td>32</td>
+<td>128</td>
+<td>$1.97</td>
+<td>$0.79</td>
+</tr>
+<tr>
+<td>inf2.24xlarge</td>
+<td>6</td>
+<td>192</td>
+<td>96</td>
+<td>384</td>
+<td>$6.49</td>
+<td>$2.45</td>
+</tr>
+<tr>
+<td>inf2.48xlarge</td>
+<td>12</td>
+<td>384</td>
+<td>192</td>
+<td>768</td>
+<td>$12.98</td>
+<td>$5.13</td>
+</tr>
+</tbody>
+</table>
+<h2 id="nos-inference-runtime">🏃‍♂️ NOS Inference Runtime<a class="headerlink" href="#nos-inference-runtime" title="Permanent link">&para;</a></h2>
+<p>The NOS inference server supports custom runtime environments through the use of the <a href="../api/server.md#inferenceserviceruntime">InferenceServiceRuntime</a> class - a high-level interface for defining new <strong>containerized</strong> and <strong>hardware-aware</strong> runtime environments. NOS already ships with <a href="../concepts/runtime-environments.html#🏃‍♂️-supported-runtimes">runtime environments</a> for NVIDIA GPUs (<code>gpu</code>) and Intel/ARM CPUs (<code>cpu</code>). Today, we're adding the <a href="https://hub.docker.com/repository/docker/autonomi/nos/general">NOS Inferentia2 runtime</a> (<code>inf2</code>) with the <a href="https://awsdocs-neuron.readthedocs-hosted.com/en/latest/general/setup/neuron-setup/pytorch/neuronx/ubuntu/torch-neuronx-ubuntu22.html#setup-torch-neuronx-ubuntu22">AWS Neuron drivers</a>, the <a href="https://github.com/aws-neuron/aws-neuron-sdk">AWS Neuron SDK</a> and NOS pre-installed. This allows developers to quickly develop applications for AWS Inferentia2, without wasting any precious time on the complexities of setting up the AWS Neuron SDK and the AWS Inferentia2 driver environments.</p>
+<h2 id="deploying-a-pytorch-model-on-inferentia2-with-nos">📦 Deploying a PyTorch model on Inferentia2 with NOS<a class="headerlink" href="#deploying-a-pytorch-model-on-inferentia2-with-nos" title="Permanent link">&para;</a></h2>
+<p>Deploying PyTorch models on AWS Inferentia2 chips presents a unique set of challenges, distinct from the experience with NVIDIA GPUs. This is primarily due to the static graph execution requirement of ASICs, requiring the user to <a href="https://pytorch.org/docs/stable/generated/torch.jit.trace.html">trace</a> and <a href="https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html">compile models ahead-of-time</a>, making them less accessible to entry-level developers. In some cases, custom model tracing and compilation are essential steps to fully utilize the AWS Inferentia2 accelerators. This demands a deep understanding of the HW-specific deployment/compiler toolchain (<a href="https://developer.nvidia.com/tensorrt">TensorRT</a>, <a href="https://github.com/aws-neuron/aws-neuron-sdk">AWS Neuron SDK</a>), the captured and data-dependent traced PyTorch graph, and the underlying HW-specific kernel/op-support to name just a few challenges. </p>
+<div class="admonition tip">
+<p class="admonition-title"><strong>Simplifying AI hardware access with NOS</strong></p>
+<p>NOS aims to bridge this gap and streamline the deployment process, making it more even accessible for both entry-level and expert developers to leverage the powerful inference capabilities of AWS Inferentia2 for their inference needs. </p>
+</div>
+<h3 id="1-define-your-custom-inf2-model">1. Define your custom <code>inf2</code> model<a class="headerlink" href="#1-define-your-custom-inf2-model" title="Permanent link">&para;</a></h3>
+<p>In this example, we'll be using the <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/"><code>inf2/embeddings</code></a> sentence embedding tutorial on <a href="https://github.com/autonomi-ai/nos">NOS</a>. First, we'll define our custom <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/models/embeddings_inf2.py#L24"><code>EmbeddingServiceInf2</code></a> model <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/models/embeddings_inf2.py"><code>models/embeddings_inf2.py</code></a> and a <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/serve.yaml"><code>serve.yaml</code></a> serve specification that will be used by NOS to serve our model on the AWS Inferentia2 device. The relevant files are shown below:</p>
+<div class="annotate">
+<div class="language-text highlight"><span class="filename">Directory structure of <code>nos/examples/inf2/embeddings</code></span><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$ tree .
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├── job-inf2-embeddings-deployment.yaml
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├── models
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>│   └── embeddings_inf2.py  (1)
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├── README.md
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├── serve.yaml  (2)
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>└── tests
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    ├── test_embeddings_inf2_client.py  (3)
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    └── test_embeddings_inf2.py
+</span></code></pre></div>
+</div>
+<ol>
+<li>Main python module that defines the <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/models/embeddings_inf2.py#L24"><code>EmbeddingServiceInf2</code></a> model.</li>
+<li>The <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/serve.yaml"><code>serve.yaml</code></a> serve specification that defines the custom <code>inf2</code> runtime and registers the <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/models/embeddings_inf2.py#L24"><code>EmbeddingServiceInf2</code></a> model with NOS.</li>
+<li>The pytest test for calling the <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/models/embeddings_inf2.py#L24"><code>EmbeddingServiceInf2</code></a> service via gRPC.</li>
+</ol>
+<p>The embeddings interface is defined in the <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/models/embeddings_inf2.py#L24"><code>EmbeddingServiceInf2</code></a> module in <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/models/embeddings_inf2.py"><code>models/embeddings_inf2.py</code></a>, where the <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/models/embeddings_inf2.py#L67"><code>__call__</code></a> method returns the embedding of the text prompt using <a href="https://huggingface.co/BAAI/bge-small-en-v1.5"><code>BAAI/bge-small-en-v1.5</code></a> embedding model. </p>
+<h3 id="2-define-the-custom-inf2-runtime-with-the-nos-serve-specification">2. Define the custom <code>inf2</code> runtime with the NOS serve specification<a class="headerlink" href="#2-define-the-custom-inf2-runtime-with-the-nos-serve-specification" title="Permanent link">&para;</a></h3>
+<p>The <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/serve.yaml"><code>serve.yaml</code></a> serve specification defines the custom embedding model, and a custom <code>inf2</code> runtime that NOS uses to execute our model. Follow the annotations below to understand the different components of the serve specification.</p>
+<div class="annotate">
+<div class="language-yaml highlight"><span class="filename">serve.yaml</span><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">images</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">embeddings-inf2</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">base</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">autonomi/nos:latest-inf2  (1)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">env</span><span class="p">:</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">      </span><span class="nt">NOS_LOGGING_LEVEL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DEBUG</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">NOS_NEURON_CORES</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">run</span><span class="p">:</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python -m pip config set global.extra-index-url https://pip.repos.neuron.amazonaws.com</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pip install sentence-transformers  (2)</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="nt">models</span><span class="p">:</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">BAAI/bge-small-en-v1.5</span><span class="p">:</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">model_cls</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">EmbeddingServiceInf2</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">model_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">models/embeddings_inf2.py</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="nt">default_method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">__call__</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">    </span><span class="nt">runtime_env</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">embeddings-inf2  (3)</span>
+</span></code></pre></div>
+</div>
+<ol>
+<li>Specifies the base runtime image to use - we use the pre-baked <code>autonomi/nos:latest-inf2</code> runtime image to build our custom runtime image. This custom NOS runtime comes pre-installed with the AWS Neuron drivers and the AWS Neuron SDK.</li>
+<li>Installs the <code>sentence-transformers</code> library, which is used to embed the text prompt using the <code>BAAI/bge-small-en-v1.5</code> model.</li>
+<li>Specifies the custom runtime environment to use for the specific model deployment - <code>embeddings-inf2</code> - which is used to execute the <code>EmbeddingServiceInf2</code> model.</li>
+</ol>
+<p>In this example, we'll be using the <a href="https://github.com/huggingface/optimum-neuron">Huggingface Optimum</a> library to help us simplify the deployment process to the Inf2 chip. However, for custom model architectures and optimizations, we have built our own PyTorch tracer and compiler for a growing list of popular models on the <a href="https://huggingface.co/models">Huggingface Hub</a>. </p>
+<details class="question">
+<summary>Need support for custom models on AWS Inferentia2?</summary>
+<p>If you're interested in deploying a custom model on the AWS Inferentia2 chip with NOS, please reach out to us on our <a href="https://github.com/autonomi-ai/nos/issues">GitHub Issues</a> page or at <a href="mailto:support@autonomi.ai">support@autonomi.ai</a>, and we'll be happy to help you out.</p>
+</details>
+<h3 id="3-deploy-the-embedding-service-on-aws-inf2xlarge-with-skypilot">3. Deploy the embedding service on AWS <code>inf2.xlarge</code> with SkyPilot<a class="headerlink" href="#3-deploy-the-embedding-service-on-aws-inf2xlarge-with-skypilot" title="Permanent link">&para;</a></h3>
+<p>Now that we have defined our custom model, let's deploy this service on <a href="https://aws.amazon.com/en/ec2/instance-types/inf2/">AWS Inferentia2</a> using <a href="https://github.com/skypilot-org/skypilot">SkyPilot</a>. In this example, we're going to use SkyPilot's <code>sky launch</code> command to deploy our NOS service on an AWS <code>inf2.xlarge</code> on-demand instance. </p>
+<p>Before we launch the service, let's look at the <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/job-inf2-embeddings-deployment.yaml"><code>job-inf2-embeddings-deployment.yaml</code></a> file that we will use to provision the <code>inf2</code> instance and deploy the <code>EmbeddingServiceInf2</code> model.</p>
+<div class="annotate">
+<div class="language-yaml highlight"><span class="filename">job-inf2-embeddings-deployment.yaml</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">file_mounts</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(1)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">/app</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">resources</span><span class="p">:</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">region</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">us-west-2</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">instance_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">inf2.xlarge (2)</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">image_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ami-096319086cc3d5f23</span><span class="w"> </span><span class="c1"># us-west-2 (3)</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nt">disk_size</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">256</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">ports</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="nt">setup</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">  </span><span class="no">sudo apt-get install -y docker-compose-plugin</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span><span class="no">cd /app</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">  </span><span class="no">cd /app &amp;&amp; python3 -m venv .venv &amp;&amp; source .venv/bin/activate</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">  </span><span class="no">pip install git+https://github.com/autonomi-ai/nos.git pytest (4)</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">  </span><span class="no">source /app/.venv/bin/activate</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">  </span><span class="no">cd /app &amp;&amp; nos serve up -c serve.yaml --http (5)</span>
+</span></code></pre></div>
+</div>
+<ol>
+<li>Mounts the local <code>./app</code> directory so that the <code>serve.yaml</code>, <code>models/</code> and <code>tests/</code> directories are available on the remote instance.</li>
+<li>Specifies the AWS Inferentia2 instance type to use - we use the <code>inf2.xlarge</code> instance type.</li>
+<li>Specifies the Amazon Machine Instance (AMI) use that come pre-installed with AWS Neuron drivers.</li>
+<li>We simply need <code>pytest</code> for testing the client-side logic in <code>tests/test_embeddings_inf2_client.py</code></li>
+<li>Starts the NOS server with the <code>serve.yaml</code> specification. The runtime flag <code>--runtime inf2</code> is optional, and automatically detected by NOS as illustrated here.</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Provisioning <code>inf2.xlarge</code> instances</p>
+<p>To provision an <code>inf2.xlarge</code> instance, you will need to have an AWS account and the necessary <a href="https://console.aws.amazon.com/servicequotas/home/services/ec2/quotas/">service quotas</a> set for the <code>inf2</code> instance nodes. For more information on service quotas, please refer to the <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html">AWS documentation</a>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Using SkyPilot with <code>inf2</code> instances</p>
+<p>Due to a <a href="https://github.com/skypilot-org/skypilot/issues/2968">job submission bug</a> in the SkyPilot CLI for <code>inf2</code> instances, you will need to use the <code>skypilot-nightly[aws]</code> (<code>pip install skypilot-nightly[aws]</code>) package to provision <code>inf2</code> instances correctly with the <code>sky launch</code> command below. </p>
+</div>
+<p>Let's deploy the <code>inf2</code> embeddings service using the following command:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>sky<span class="w"> </span>launch<span class="w"> </span>-c<span class="w"> </span>inf2-embeddings-service<span class="w"> </span>job-inf2-embeddings-deployment.yaml
+</span></code></pre></div></p>
+<details class="success">
+<summary><code>sky launch</code> output</summary>
+<p>You should see the following output from the <code>sky launch</code> command:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="o">(</span>nos-infra-py38<span class="o">)</span><span class="w"> </span>inf2/embeddings<span class="w"> </span>spillai-desktop<span class="w"> </span><span class="o">[</span><span class="w"> </span>sky<span class="w"> </span>launch<span class="w"> </span>-c<span class="w"> </span>inf2-embeddings-service<span class="w"> </span>job-inf2-embeddings-deployment.yaml
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>Task<span class="w"> </span>from<span class="w"> </span>YAML<span class="w"> </span>spec:<span class="w"> </span>job-inf2-embeddings-deployment.yaml
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:694<span class="o">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nv">Optimizer</span><span class="w"> </span><span class="o">==</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:717<span class="o">]</span><span class="w"> </span>Estimated<span class="w"> </span>cost:<span class="w"> </span><span class="nv">$0</span>.8<span class="w"> </span>/<span class="w"> </span>hour
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:717<span class="o">]</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:840<span class="o">]</span><span class="w"> </span>Considered<span class="w"> </span>resources<span class="w"> </span><span class="o">(</span><span class="m">1</span><span class="w"> </span>node<span class="o">)</span>:
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w"> </span>------------------------------------------------------------------------------------------
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w">  </span>CLOUD<span class="w">   </span>INSTANCE<span class="w">      </span>vCPUs<span class="w">   </span>Mem<span class="o">(</span>GB<span class="o">)</span><span class="w">   </span>ACCELERATORS<span class="w">   </span>REGION/ZONE<span class="w">   </span>COST<span class="w"> </span><span class="o">(</span>$<span class="o">)</span><span class="w">   </span>CHOSEN
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w"> </span>------------------------------------------------------------------------------------------
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w">  </span>AWS<span class="w">     </span>inf2.xlarge<span class="w">   </span><span class="m">4</span><span class="w">       </span><span class="m">16</span><span class="w">        </span>Inferentia:1<span class="w">   </span>us-west-2<span class="w">     </span><span class="m">0</span>.76<span class="w">          </span>✔
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w"> </span>------------------------------------------------------------------------------------------
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:06<span class="w"> </span>optimizer.py:910<span class="o">]</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>Launching<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>cluster<span class="w"> </span><span class="s1">&#39;inf2-embeddings-service&#39;</span>.<span class="w"> </span>Proceed?<span class="w"> </span><span class="o">[</span>Y/n<span class="o">]</span>:<span class="w"> </span>y
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:18<span class="w"> </span>cloud_vm_ray_backend.py:4389<span class="o">]</span><span class="w"> </span>Creating<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>cluster:<span class="w"> </span><span class="s1">&#39;inf2-embeddings-service&#39;</span><span class="w"> </span><span class="o">[</span>1x<span class="w"> </span>AWS<span class="o">(</span>inf2.xlarge,<span class="w"> </span><span class="o">{</span><span class="s1">&#39;Inferentia&#39;</span>:<span class="w"> </span><span class="m">1</span><span class="o">}</span>,<span class="w"> </span><span class="nv">image_id</span><span class="o">={</span><span class="s1">&#39;us-west-2&#39;</span>:<span class="w"> </span><span class="s1">&#39;ami-096319086cc3d5f23&#39;</span><span class="o">}</span>,<span class="w"> </span><span class="nv">ports</span><span class="o">=[</span><span class="s1">&#39;8000&#39;</span><span class="o">])]</span>.
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:18<span class="w"> </span>cloud_vm_ray_backend.py:4389<span class="o">]</span><span class="w"> </span>Tip:<span class="w"> </span>to<span class="w"> </span>reuse<span class="w"> </span>an<span class="w"> </span>existing<span class="w"> </span>cluster,<span class="w"> </span>specify<span class="w"> </span>--cluster<span class="w"> </span><span class="o">(</span>-c<span class="o">)</span>.<span class="w"> </span>Run<span class="w"> </span><span class="sb">`</span>sky<span class="w"> </span>status<span class="sb">`</span><span class="w"> </span>to<span class="w"> </span>see<span class="w"> </span>existing<span class="w"> </span>clusters.
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:18<span class="w"> </span>cloud_vm_ray_backend.py:1386<span class="o">]</span><span class="w"> </span>To<span class="w"> </span>view<span class="w"> </span>detailed<span class="w"> </span>progress:<span class="w"> </span>tail<span class="w"> </span>-n100<span class="w"> </span>-f<span class="w"> </span>/home/spillai/sky_logs/sky-2024-01-31-21-48-06-108390/provision.log
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:48:19<span class="w"> </span>provisioner.py:79<span class="o">]</span><span class="w"> </span>Launching<span class="w"> </span>on<span class="w"> </span>AWS<span class="w"> </span>us-west-2<span class="w"> </span><span class="o">(</span>us-west-2a,us-west-2b,us-west-2c,us-west-2d<span class="o">)</span>
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:49:37<span class="w"> </span>provisioner.py:429<span class="o">]</span><span class="w"> </span>Successfully<span class="w"> </span>provisioned<span class="w"> </span>or<span class="w"> </span>found<span class="w"> </span>existing<span class="w"> </span>instance.
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:51:03<span class="w"> </span>provisioner.py:531<span class="o">]</span><span class="w"> </span>Successfully<span class="w"> </span>provisioned<span class="w"> </span>cluster:<span class="w"> </span>inf2-embeddings-service
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:51:04<span class="w"> </span>cloud_vm_ray_backend.py:4418<span class="o">]</span><span class="w"> </span>Processing<span class="w"> </span>file<span class="w"> </span>mounts.
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:51:05<span class="w"> </span>cloud_vm_ray_backend.py:4450<span class="o">]</span><span class="w"> </span>To<span class="w"> </span>view<span class="w"> </span>detailed<span class="w"> </span>progress:<span class="w"> </span>tail<span class="w"> </span>-n100<span class="w"> </span>-f<span class="w"> </span>~/sky_logs/sky-2024-01-31-21-48-06-108390/file_mounts.log
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:51:05<span class="w"> </span>backend_utils.py:1286<span class="o">]</span><span class="w"> </span>Syncing<span class="w"> </span><span class="o">(</span>to<span class="w"> </span><span class="m">1</span><span class="w"> </span>node<span class="o">)</span>:<span class="w"> </span>.<span class="w"> </span>-&gt;<span class="w"> </span>~/.sky/file_mounts/app
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>I<span class="w"> </span><span class="m">01</span>-31<span class="w"> </span><span class="m">21</span>:51:06<span class="w"> </span>cloud_vm_ray_backend.py:3158<span class="o">]</span><span class="w"> </span>Running<span class="w"> </span>setup<span class="w"> </span>on<span class="w"> </span><span class="m">1</span><span class="w"> </span>node.
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>...
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>✓<span class="w"> </span>Launching<span class="w"> </span>docker<span class="w"> </span>compose<span class="w"> </span>with<span class="w"> </span>command:<span class="w"> </span>docker<span class="w"> </span>compose<span class="w"> </span>-f
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>/home/ubuntu/.nos/tmp/serve/docker-compose.app.yml<span class="w"> </span>up
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w">  </span>Network<span class="w"> </span>serve_default<span class="w">  </span>Creating
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w">  </span>Network<span class="w"> </span>serve_default<span class="w">  </span>Created
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w">  </span>Container<span class="w"> </span>serve-nos-server-1<span class="w">  </span>Creating
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w">  </span>Container<span class="w"> </span>serve-nos-server-1<span class="w">  </span>Created
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w">  </span>Container<span class="w"> </span>serve-nos-http-gateway-1<span class="w">  </span>Creating
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w">  </span>Container<span class="w"> </span>serve-nos-http-gateway-1<span class="w">  </span>Created
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>Attaching<span class="w"> </span>to<span class="w"> </span>serve-nos-http-gateway-1,<span class="w"> </span>serve-nos-server-1
+</span><span id="__span-4-34"><a id="__codelineno-4-34" name="__codelineno-4-34" href="#__codelineno-4-34"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-http-gateway-1<span class="w">  </span><span class="p">|</span><span class="w"> </span>WARNING:<span class="w">  </span>Current<span class="w"> </span>configuration<span class="w"> </span>will<span class="w"> </span>not<span class="w"> </span>reload<span class="w"> </span>as<span class="w"> </span>not<span class="w"> </span>all<span class="w"> </span>conditions<span class="w"> </span>are<span class="w"> </span>met,<span class="w"> </span>please<span class="w"> </span>refer<span class="w"> </span>to<span class="w"> </span>documentation.
+</span><span id="__span-4-35"><a id="__codelineno-4-35" name="__codelineno-4-35" href="#__codelineno-4-35"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w">  </span>✓<span class="w"> </span>InferenceExecutor<span class="w"> </span>::<span class="w"> </span>Backend<span class="w"> </span>initializing<span class="w"> </span><span class="o">(</span>as<span class="w"> </span>daemon<span class="o">)</span><span class="w"> </span>...
+</span><span id="__span-4-36"><a id="__codelineno-4-36" name="__codelineno-4-36" href="#__codelineno-4-36"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w">  </span>✓<span class="w"> </span>InferenceExecutor<span class="w"> </span>::<span class="w"> </span>Backend<span class="w"> </span>initialized<span class="w"> </span><span class="o">(</span><span class="nv">elapsed</span><span class="o">=</span><span class="m">2</span>.9s<span class="o">)</span>.
+</span><span id="__span-4-37"><a id="__codelineno-4-37" name="__codelineno-4-37" href="#__codelineno-4-37"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w">  </span>✓<span class="w"> </span>InferenceExecutor<span class="w"> </span>::<span class="w"> </span>Connected<span class="w"> </span>to<span class="w"> </span>backend.
+</span><span id="__span-4-38"><a id="__codelineno-4-38" name="__codelineno-4-38" href="#__codelineno-4-38"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w">  </span>✓<span class="w"> </span>Starting<span class="w"> </span>gRPC<span class="w"> </span>server<span class="w"> </span>on<span class="w"> </span><span class="o">[</span>::<span class="o">]</span>:50051
+</span><span id="__span-4-39"><a id="__codelineno-4-39" name="__codelineno-4-39" href="#__codelineno-4-39"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w">  </span>✓<span class="w"> </span>InferenceService<span class="w"> </span>::<span class="w"> </span>Deployment<span class="w"> </span><span class="nb">complete</span><span class="w"> </span><span class="o">(</span><span class="nv">elapsed</span><span class="o">=</span><span class="m">0</span>.0s<span class="o">)</span>
+</span><span id="__span-4-40"><a id="__codelineno-4-40" name="__codelineno-4-40" href="#__codelineno-4-40"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w"> </span><span class="o">(</span>EmbeddingServiceInf2<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">404</span><span class="o">)</span><span class="w"> </span><span class="m">2024</span>-01-31<span class="w"> </span><span class="m">21</span>:53:58.566<span class="w"> </span><span class="p">|</span><span class="w"> </span>INFO<span class="w">     </span><span class="p">|</span><span class="w"> </span>nos.neuron.device:setup_environment:36<span class="w"> </span>-<span class="w"> </span>Setting<span class="w"> </span>up<span class="w"> </span>neuron<span class="w"> </span>env<span class="w"> </span>with<span class="w"> </span><span class="m">2</span><span class="w"> </span>cores
+</span><span id="__span-4-41"><a id="__codelineno-4-41" name="__codelineno-4-41" href="#__codelineno-4-41"></a>...
+</span><span id="__span-4-42"><a id="__codelineno-4-42" name="__codelineno-4-42" href="#__codelineno-4-42"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w"> </span><span class="o">(</span>EmbeddingServiceInf2<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">404</span><span class="o">)</span><span class="w"> </span><span class="m">2024</span>-02-01T05:54:36Z<span class="w"> </span>Compiler<span class="w"> </span>status<span class="w"> </span>PASS
+</span><span id="__span-4-43"><a id="__codelineno-4-43" name="__codelineno-4-43" href="#__codelineno-4-43"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w"> </span><span class="o">(</span>EmbeddingServiceInf2<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">404</span><span class="o">)</span><span class="w"> </span><span class="m">2024</span>-01-31<span class="w"> </span><span class="m">21</span>:54:46.928<span class="w"> </span><span class="p">|</span><span class="w"> </span>INFO<span class="w">     </span><span class="p">|</span><span class="w"> </span>EmbeddingServiceInf2:__init__:61<span class="w"> </span>-<span class="w"> </span>Saved<span class="w"> </span>model<span class="w"> </span>to<span class="w"> </span>/app/.nos/cache/neuron/BAAI/bge-small-en-v1.5-bs-1-sl-384
+</span><span id="__span-4-44"><a id="__codelineno-4-44" name="__codelineno-4-44" href="#__codelineno-4-44"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w"> </span><span class="o">(</span>EmbeddingServiceInf2<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">404</span><span class="o">)</span><span class="w"> </span><span class="m">2024</span>-01-31<span class="w"> </span><span class="m">21</span>:54:47.037<span class="w"> </span><span class="p">|</span><span class="w"> </span>INFO<span class="w">     </span><span class="p">|</span><span class="w"> </span>EmbeddingServiceInf2:__init__:64<span class="w"> </span>-<span class="w"> </span>Loaded<span class="w"> </span>neuron<span class="w"> </span>model:<span class="w"> </span>BAAI/bge-small-en-v1.5
+</span><span id="__span-4-45"><a id="__codelineno-4-45" name="__codelineno-4-45" href="#__codelineno-4-45"></a>...
+</span><span id="__span-4-46"><a id="__codelineno-4-46" name="__codelineno-4-46" href="#__codelineno-4-46"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w"> </span><span class="m">2024</span>-01-31<span class="w"> </span><span class="m">22</span>:25:43.710<span class="w"> </span><span class="p">|</span><span class="w"> </span>INFO<span class="w">     </span><span class="p">|</span><span class="w"> </span>nos.server._service:Run:360<span class="w"> </span>-<span class="w"> </span>Executing<span class="w"> </span>request<span class="w"> </span><span class="o">[</span><span class="nv">model</span><span class="o">=</span>BAAI/bge-small-en-v1.5,<span class="w"> </span><span class="nv">method</span><span class="o">=</span>None<span class="o">]</span>
+</span><span id="__span-4-47"><a id="__codelineno-4-47" name="__codelineno-4-47" href="#__codelineno-4-47"></a><span class="o">(</span>task,<span class="w"> </span><span class="nv">pid</span><span class="o">=</span><span class="m">23904</span><span class="o">)</span><span class="w"> </span>serve-nos-server-1<span class="w">        </span><span class="p">|</span><span class="w"> </span><span class="m">2024</span>-01-31<span class="w"> </span><span class="m">22</span>:25:43.717<span class="w"> </span><span class="p">|</span><span class="w"> </span>INFO<span class="w">     </span><span class="p">|</span><span class="w"> </span>nos.server._service:Run:362<span class="w"> </span>-<span class="w"> </span>Executed<span class="w"> </span>request<span class="w"> </span><span class="o">[</span><span class="nv">model</span><span class="o">=</span>BAAI/bge-small-en-v1.5,<span class="w"> </span><span class="nv">method</span><span class="o">=</span>None,<span class="w"> </span><span class="nv">elapsed</span><span class="o">=</span><span class="m">7</span>.1ms<span class="o">]</span>
+</span></code></pre></div></p>
+</details>
+<p>Once complete, you should see the following (trimmed) output from the <code>sky launch</code> command:
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>✓<span class="w"> </span>InferenceExecutor<span class="w"> </span>::<span class="w"> </span>Backend<span class="w"> </span>initializing<span class="w"> </span><span class="o">(</span>as<span class="w"> </span>daemon<span class="o">)</span><span class="w"> </span>...
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>✓<span class="w"> </span>InferenceExecutor<span class="w"> </span>::<span class="w"> </span>Backend<span class="w"> </span>initialized<span class="w"> </span><span class="o">(</span><span class="nv">elapsed</span><span class="o">=</span><span class="m">2</span>.9s<span class="o">)</span>.
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>✓<span class="w"> </span>InferenceExecutor<span class="w"> </span>::<span class="w"> </span>Connected<span class="w"> </span>to<span class="w"> </span>backend.
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>✓<span class="w"> </span>Starting<span class="w"> </span>gRPC<span class="w"> </span>server<span class="w"> </span>on<span class="w"> </span><span class="o">[</span>::<span class="o">]</span>:50051
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>✓<span class="w"> </span>InferenceService<span class="w"> </span>::<span class="w"> </span>Deployment<span class="w"> </span><span class="nb">complete</span><span class="w"> </span><span class="o">(</span><span class="nv">elapsed</span><span class="o">=</span><span class="m">0</span>.0s<span class="o">)</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>Setting<span class="w"> </span>up<span class="w"> </span>neuron<span class="w"> </span>env<span class="w"> </span>with<span class="w"> </span><span class="m">2</span><span class="w"> </span>cores
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>...
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>Compiler<span class="w"> </span>status<span class="w"> </span>PASS
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>Saved<span class="w"> </span>model<span class="w"> </span>to<span class="w"> </span>/app/.nos/cache/neuron/BAAI/bge-small-en-v1.5-bs-1-sl-384
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>Loaded<span class="w"> </span>neuron<span class="w"> </span>model:<span class="w"> </span>BAAI/bge-small-en-v1.5
+</span></code></pre></div></p>
+<h3 id="3-test-your-custom-model-on-aws-inf2-instance">3. Test your custom model on AWS Inf2 instance<a class="headerlink" href="#3-test-your-custom-model-on-aws-inf2-instance" title="Permanent link">&para;</a></h3>
+<p>Once the service is deployed, you should be able to simply make a cURL request to the <code>inf2</code> instance to test the server-side logic of the embeddings model.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Using cURL (remote)</label><label for="__tabbed_1_2">Using the gRPC client (on the <code>inf2</code> instance)</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">IP</span><span class="o">=</span><span class="k">$(</span>sky<span class="w"> </span>status<span class="w"> </span>--ip<span class="w"> </span>inf2-embeddings-service<span class="k">)</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>curl<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>-X<span class="w"> </span>POST<span class="w"> </span>http://<span class="si">${</span><span class="nv">IP</span><span class="si">}</span>:8000/v1/infer<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>-d<span class="w"> </span><span class="s1">&#39;{</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="s1">    &quot;model_id&quot;: &quot;BAAI/bge-small-en-v1.5&quot;,</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="s1">    &quot;inputs&quot;: {</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="s1">        &quot;texts&quot;: [&quot;fox jumped over the moon&quot;]</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="s1">    }</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="s1">}&#39;</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Optionally, you can also test the gRPC service using the provided <a href="https://github.com/autonomi-ai/nos/blob/main/examples/inf2/embeddings/tests/test_embeddings_inf2_client.py"><code>tests/test_embeddings_inf2_client.py</code></a>. For this test however, you'll need to ssh into the <code>inf2</code> instance and run the following command.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>ssh<span class="w"> </span>inf2-embeddings-service
+</span></code></pre></div>
+<p>Once you're on the <code>inf2.xlarge</code> instance, you can run <code>pytest -sv tests/test_embeddings_inf2_client.py</code> to test the server-side logic of the embeddings model. </p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$<span class="w"> </span>pytest<span class="w"> </span>-sv<span class="w"> </span>tests/test_embeddings_inf2_client.py
+</span></code></pre></div>
+<p>Here's a simplified version of the test to execute the embeddings model.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span> <span class="nn">nos.client</span> <span class="kn">import</span> <span class="n">Client</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="c1"># Create the client</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="s2">&quot;[::]:50051&quot;</span><span class="p">)</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">assert</span> <span class="n">client</span><span class="o">.</span><span class="n">WaitForServer</span><span class="p">()</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Load the embeddings model</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">model</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">Module</span><span class="p">(</span><span class="s2">&quot;BAAI/bge-small-en-v1.5&quot;</span><span class="p">)</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="c1"># Embed text with the model</span>
+</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="n">texts</span> <span class="o">=</span> <span class="s2">&quot;What is the meaning of life?&quot;</span>
+</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="n">response</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">texts</span><span class="o">=</span><span class="n">texts</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<h2 id="whats-it-going-to-cost-me">🤑 What's it going to cost me?<a class="headerlink" href="#whats-it-going-to-cost-me" title="Permanent link">&para;</a></h2>
+<p>The table below shows the costs of deploying one of these <em>latency-optimized</em> (<code>bsize=1</code>) embedding services on a single Inf2 instance on AWS. While the costs are only one part of the equation, it is important to note that the AWS Inf2 instances are ~25% cheaper than the NVIDIA A10G instances, and offer a more cost-effective solution for inference workloads on AWS. In the coming weeks, we'll be digging into evaluating the performance of the Inf2 instances with respect to their NVIDIA GPU counterparts on inference metrics such as latency/throughput and cost metrics such as number of requests / $, montly costs etc.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Cloud Instance</th>
+<th>Spot</th>
+<th>Cost / hr</th>
+<th>Cost / month</th>
+<th># of Req. / $</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://huggingface.co/BAAI/bge-small-en-v1.5">BAAI/bge-small-en-v1.5</a></td>
+<td><code>inf2.xlarge</code></td>
+<td>-</td>
+<td>$0.75</td>
+<td>~$540</td>
+<td>~685K / $1</td>
+</tr>
+<tr>
+<td><strong><a href="https://huggingface.co/BAAI/bge-small-en-v1.5">BAAI/bge-small-en-v1.5</a></strong></td>
+<td><code>inf2.xlarge</code></td>
+<td>✅</td>
+<td><strong>$0.32</strong></td>
+<td><strong>~$230</strong></td>
+<td>~1.6M / $1</td>
+</tr>
+</tbody>
+</table>
+<h2 id="wrapping-up">🎁 Wrapping up<a class="headerlink" href="#wrapping-up" title="Permanent link">&para;</a></h2>
+<p>In this post, we introduced the new NOS <strong><a href="../concepts/runtime-environments.html#🏃‍♂️-supported-runtimes"><code>inf2</code></a></strong> runtime that allows developers to easily develop, and serve models on the <a href="https://aws.amazon.com/en/ec2/instance-types/inf2/">AWS Inferentia2</a> chip. With more cost-efficient, and inference-optimized chips coming to market (<a href="https://cloud.google.com/tpu/docs/v5e-inference">Google TPUs</a>, <a href="https://groq.com/products/">Groq</a>, <a href="https://tenstorrent.com/cards/">Tenstorrent</a> etc), we believe it is important for developers to be able to easily access and deploy models on these devices. The specialized <a href="../concepts/runtime-environments.html#⚡️-nos-inference-runtime">NOS Inference Runtime</a> aims to do just that - a fast, and frictionless way to deploy models onto any of the AI accelerators, be it NVIDIA GPUs or AWS Inferentia2 chips, in the cloud, or on-prem.</p>
+<p>Thanks for reading, and we hope you found this post useful - and finally, give <a href="https://github.com/autonomi-ai/nos">NOS</a> a try. If you have any questions, or would like to learn more about the <a href="https://github.com/autonomi-ai/nos">NOS</a> <code>inf2</code> runtime, please reach out to us on our <a href="https://github.com/autonomi-ai/nos/issues">GitHub Issues</a> page or join us on <a href="https://discord.gg/QAGgvTuvgg">Discord</a>. 
+<br></p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+  
+
+
+  
+
+
+
+      
+    </article>
+  </div>
+
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2022 - 2024 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+    <a href="mailto:support@autonomi.ai" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M498.1 5.6c10.1 7 15.4 19.1 13.5 31.2l-64 416c-1.5 9.7-7.4 18.2-16 23s-18.9 5.4-28 1.6L284 427.7l-68.5 74.1c-8.9 9.7-22.9 12.9-35.2 8.1S160 493.2 160 480v-83.6c0-4 1.5-7.8 4.2-10.7l167.6-182.9c5.8-6.3 5.6-16-.4-22s-15.7-6.4-22-.7L106 360.8l-88.3-44.2C7.1 311.3.3 300.7 0 288.9s5.9-22.8 16.1-28.7l448-256c10.7-6.1 23.9-5.5 34 1.4z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/autonomi-ai/nos" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/company/74939899" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/autonomi_ai" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/QAGgvTuvgg" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["content.code.copy", "content.code.annotate", "navigation.instant", "navigation.tracking", "toc.follow"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.081f42fc.min.js"></script>
+      
+    
+  </body>
+</html>

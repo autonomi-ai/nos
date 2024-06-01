@@ -1,0 +1,6 @@
+models:
+  custom-model-with-malformed-model-method:
+    model_path: models/model.py
+    model_cls: CustomModel
+    default_method: ___call__
+    runtime_env: gpu

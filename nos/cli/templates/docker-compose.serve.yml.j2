@@ -1,0 +1,73 @@
+services:
+{%- if http %}
+  nos-http-gateway:
+    image: {{ image }}
+    command: nos-http-server --host {{ http_host }} --port {{ http_port }} --workers {{ http_workers }} {% if reload %}--reload --reload-dir {{ reload_dir }} {% endif %}
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL={{ logging_level }}
+      - NOS_GRPC_HOST=nos-server
+      {%- if http_env %}
+      - NOS_HTTP_ENV={{ http_env }}
+      {%- endif %}
+    {%- if env_file|length > 0 %}
+    env_file:
+      {%- for envf in env_file %}
+      - {{ envf }}
+      {%- endfor %}
+    {%- endif %}
+    volumes:
+      - {{home_directory}}:/app/.nos
+      - /dev/shm:/dev/shm
+    {%- if volumes|length > 0 %}
+        {%- for volume in volumes %}
+      - {{ volume }}
+        {%- endfor %}
+      {%- endif %}
+    ports:
+      - {{ http_port }}:{{ http_port }}
+    ipc: host
+    depends_on:
+      - nos-server
+{% endif %}
+  nos-server:
+    image: {{ image }}
+    {%- if config %}
+    command: nos-grpc-server -c {{ config }}
+    {%- endif %}
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL={{ logging_level }}
+      - NOS_GRPC_HOST=[::]
+    {%- if env_file|length > 0 %}
+    env_file:
+      {%- for envf in env_file %}
+      - {{ envf }}
+      {%- endfor %}
+    {%- endif %}
+    volumes:
+      - {{home_directory}}:/app/.nos
+      - /dev/shm:/dev/shm
+      {%- if volumes|length > 0 %}
+        {%- for volume in volumes %}
+      - {{ volume }}
+        {%- endfor %}
+      {%- endif %}
+    ports:
+      - 50051:50051
+    ipc: host
+{%- if runtime == 'gpu' %}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+{% endif %}
+{%- if runtime == 'inf2' %}
+    {%- if devices|length > 0 %}
+    devices:
+    {%- for device in devices %}
+      - {{ device }}
+    {%- endfor %}
+    {%- endif %}
+{% endif %}

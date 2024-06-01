@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  nos-http-gateway:
+    image: autonomi/nos:latest-gpu
+    command: nos-http-server --host 0.0.0.0 --port 8000 --workers 1
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL=INFO
+      - NOS_GRPC_HOST=nos-grpc-server
+      - NOS_HTTP_ENV=prod
+    volumes:
+      - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
+    ports:
+      - 8000:8000
+    ipc: host
+    depends_on:
+      - nos-grpc-server
+
+  nos-grpc-server:
+    image: autonomi/nos:latest-gpu
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_GRPC_HOST=[::]
+      - NOS_LOGGING_LEVEL=INFO
+    volumes:
+      - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
+    ports:
+      - 50051:50051
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+        limits:
+          memory: 12G

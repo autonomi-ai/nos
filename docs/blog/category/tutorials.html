@@ -1,0 +1,1783 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="NOS -- A fast, and flexible AI inference server.">
+      
+      
+        <meta name="author" content="Sudeep Pillai">
+      
+      
+        <link rel="canonical" href="https://docs.nos.run/docs/blog/category/tutorials.html">
+      
+      
+      
+      
+      <link rel="icon" href="../../assets/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.25">
+    
+    
+      
+        <title>tutorials - NOS Docs</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.6543a935.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function n(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],n("js",new Date),n("config","G-J38LQZWLM3"),document.addEventListener("DOMContentLoaded",function(){document.forms.search&&document.forms.search.query.addEventListener("blur",function(){this.value&&n("event","search",{search_term:this.value})}),document$.subscribe(function(){var a=document.forms.feedback;if(void 0!==a)for(var e of a.querySelectorAll("[type=submit]"))e.addEventListener("click",function(e){e.preventDefault();var t=document.location.pathname,e=this.getAttribute("data-md-value");n("event","feedback",{page:t,data:e}),a.firstElementChild.disabled=!0;e=a.querySelector(".md-feedback__note [data-md-value='"+e+"']");e&&(e.hidden=!1)}),a.hidden=!1}),location$.subscribe(function(e){n("config","G-J38LQZWLM3",{page_path:e.pathname})})});var e=document.createElement("script");e.async=!0,e.src="https://www.googletagmanager.com/gtag/js?id=G-J38LQZWLM3",document.getElementById("__analytics").insertAdjacentElement("afterEnd",e)}</script>
+  
+    <script>"undefined"!=typeof __md_analytics&&__md_analytics()</script>
+  
+
+    
+    
+      
+        <meta  property="og:type"  content="website" >
+      
+        <meta  property="og:title"  content="tutorials - NOS Docs" >
+      
+        <meta  property="og:description"  content="NOS -- A fast, and flexible AI inference server." >
+      
+        <meta  property="og:image"  content="https://docs.nos.run/assets/images/social/docs/blog/category/tutorials.png" >
+      
+        <meta  property="og:image:type"  content="image/png" >
+      
+        <meta  property="og:image:width"  content="1200" >
+      
+        <meta  property="og:image:height"  content="630" >
+      
+        <meta  property="og:url"  content="https://docs.nos.run/docs/blog/category/tutorials.html" >
+      
+        <meta  name="twitter:card"  content="summary_large_image" >
+      
+        <meta  name="twitter:title"  content="tutorials - NOS Docs" >
+      
+        <meta  name="twitter:description"  content="NOS -- A fast, and flexible AI inference server." >
+      
+        <meta  name="twitter:image"  content="https://docs.nos.run/assets/images/social/docs/blog/category/tutorials.png" >
+      
+    
+    
+  <!-- Add scripts that need to run before here -->
+  
+  <!-- Add scripts that need to run afterwards here -->
+  <meta name="robots" content="noindex, nofollow" />
+
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tutorials" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../index.html" title="NOS Docs" class="md-header__button md-logo" aria-label="NOS Docs" data-md-component="logo">
+      
+  <img src="../../assets/favicon.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            NOS Docs
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              tutorials
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/autonomi-ai/nos" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    autonomi-ai/nos
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../index.html" title="NOS Docs" class="md-nav__button md-logo" aria-label="NOS Docs" data-md-component="logo">
+      
+  <img src="../../assets/favicon.png" alt="logo">
+
+    </a>
+    NOS Docs
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/autonomi-ai/nos" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    autonomi-ai/nos
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../index.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    🏠 Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    🔥 Quickstart
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../models/supported-models.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    🧠 Models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    ⚡️ Concepts
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            ⚡️ Concepts
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/architecture-overview.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    What is NOS?
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/model-spec.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Model specification
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/model-manager.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    HW-aware execution
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/runtime-environments.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Runtime environments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    📚 Usage Guide
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            📚 Usage Guide
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/starting-the-server.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Starting the server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/running-inference.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running inference
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/serving-custom-models.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Serving custom models
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    🤖 Demos
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            🤖 Demos
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../demos/discord-bot.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Build a Discord image-generation bot
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../demos/video-search.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Build a video search engine
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../demos/profiling-models-with-nos.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Profiling models with NOS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    👩‍💻 API Reference
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            👩‍💻 API Reference
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_1" id="__nav_7_1_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    CLI
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_1">
+            <span class="md-nav__icon md-icon"></span>
+            CLI
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/serve.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    <kbd>nos serve</kbd>
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/system.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    <kbd>nos system</kbd>
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_2" id="__nav_7_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    nos.common
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_2">
+            <span class="md-nav__icon md-icon"></span>
+            nos.common
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/common/exceptions.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.exceptions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/common/metaclass.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.metaclass
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/common/shm.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.shm
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/common/spec.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.spec
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/common/system.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.system
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/common/types.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.types
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/common/tasks.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.common.tasks
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/client.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.client
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/server.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/hub.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.hub
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/managers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.managers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/executors.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    nos.executors
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    🔌 Integrations
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            🔌 Integrations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../integrations/skypilot.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    SkyPilot
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ✍️ Blog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../support.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ❓ Support / FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#serving-llms-on-a-budget" class="md-nav__link">
+    <span class="md-ellipsis">
+      Serving LLMs on a budget
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started-with-nos-tutorials" class="md-nav__link">
+    <span class="md-ellipsis">
+      📚 Getting started with NOS tutorials
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+  <div class="md-content" data-md-component="content">
+    <div class="md-content__inner">
+      <header class="md-typeset">
+        <h1 id="tutorials">tutorials<a class="headerlink" href="#tutorials" title="Permanent link">&para;</a></h1>
+      </header>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+      <nav class="md-post__authors md-typeset">
+        
+          <span class="md-author">
+            <img src="https://github.com/spillai.png" alt="Sudeep Pillai">
+          </span>
+        
+      </nav>
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
+          <time datetime="2024-01-18 00:00:00">Jan 18, 2024</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="infra.html" class="md-meta__link">infra</a>, 
+              <a href="tutorials.html" class="md-meta__link">tutorials</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              10 min read
+            
+          </li>
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="serving-llms-on-a-budget"><a class="toclink" href="../serving-llms-on-a-budget.html">Serving LLMs on a budget</a></h2>
+<p><img src="/docs/blog/assets/nos-phixtral.jpg" width="100%"></p>
+<p>Deploying Large Language Models (LLMs) and Mixture of Experts (MoEs) are all the rage today, and for good reason. They are the most powerful and <a href="https://huggingface.co/spaces/lmsys/chatbot-arena-leaderboard">closest</a> open-source models in terms of performance to OpenAI GPT-3.5 today. However, it turns out that deploying these models can still be somewhat of a lift for most ML engineers and researchers, both in terms of engineering work and operational costs. For example, the recently announced <a href="https://mistral.ai/news/mixtral-of-experts/">Mixtral 8x7B</a> requires 2x <a href="https://www.nvidia.com/en-us/data-center/a100/">NVIDIA A100-80G GPUs</a>, which can cost upwards of $5000 / month (on-demand) on CSPs.</p>
+<p>With recent advancements in <a href="https://huggingface.co/docs/optimum/intel/optimization_inc#optimization">model compression</a>, <a href="https://github.com/mit-han-lab/llm-awq">quantization</a> and <a href="https://mistral.ai/news/mixtral-of-experts/">model mixing</a>, we are now seeing an exciting race unfold to deploy these expert models on a budget, without sacrificing significantly on performance. In this blog post, we'll show you how to deploy the <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> model on a single <a href="https://www.nvidia.com/en-us/data-center/l4/">NVIDIA L4 GPU</a> for under $160 / month and easily scale-out a dirt-cheap, dedicated inference service of your own. We'll be using <a href="https://github.com/skypilot-org/skypilot">SkyPilot</a> to deploy and manage our <a href="https://github.com/autonomi-ai/nos">NOS</a> service on spot (pre-emptible) instances, making them especially cost-efficient.</p>
+<h3 id="what-is-phixtral"><a class="toclink" href="../serving-llms-on-a-budget.html#what-is-phixtral">🧠 What is Phixtral?</a></h3>
+<p>Inspired inspired by the <a href="https://huggingface.co/mistralai/Mixtral-8x7B-v0.1">mistralai/Mixtral-8x7B-v0.1</a> architecture, <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> is the first Mixure of Experts (MoE) made with 4 <a href="https://huggingface.co/microsoft/phi-2">microsoft/phi-2</a> models that was recently MIT licensed. The general idea behind mixture-of-experts is to combine the capabilities of multiple models to achieve better performance than each individual model. They are <a href="https://huggingface.co/blog/moe#what-is-a-mixture-of-experts-moe">significantly more memory-efficient</a> for inference too, but that's a post for a later date. In this case, we combine the capabilities of 4 <a href="https://huggingface.co/microsoft/phi-2">microsoft/phi-2</a> models to achieve better performance than each of the individual 2.7B parameter models it's composed of. </p>
+<details class="note">
+<summary>Breakdown of the <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> model</summary>
+<p>Here's the breakdown of the 4 models that make up the <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> model:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="nt">base_model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cognitivecomputations/dolphin-2_6-phi-2</span>
+</span><span id="__span-36-2"><a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a><span class="nt">gate_mode</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cheap_embed</span>
+</span><span id="__span-36-3"><a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a><span class="nt">experts</span><span class="p">:</span>
+</span><span id="__span-36-4"><a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cognitivecomputations/dolphin-2_6-phi-2</span>
+</span><span id="__span-36-5"><a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="w">    </span><span class="nt">positive_prompts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-36-6"><a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">lxuechen/phi-2-dpo</span>
+</span><span id="__span-36-7"><a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a><span class="w">    </span><span class="nt">positive_prompts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-36-8"><a id="__codelineno-36-8" name="__codelineno-36-8" href="#__codelineno-36-8"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Yhyu13/phi-2-sft-dpo-gpt4_en-ep1</span>
+</span><span id="__span-36-9"><a id="__codelineno-36-9" name="__codelineno-36-9" href="#__codelineno-36-9"></a><span class="w">    </span><span class="nt">positive_prompts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;&quot;</span><span class="p p-Indicator">]</span>
+</span><span id="__span-36-10"><a id="__codelineno-36-10" name="__codelineno-36-10" href="#__codelineno-36-10"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source_model</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mrm8488/phi-2-coder</span>
+</span><span id="__span-36-11"><a id="__codelineno-36-11" name="__codelineno-36-11" href="#__codelineno-36-11"></a><span class="w">    </span><span class="nt">positive_prompts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;&quot;</span><span class="p p-Indicator">]</span>
+</span></code></pre></div>
+<p>You can go to the original model card <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">here</a> for more details on how the model was merged using <a href="https://github.com/cg123/mergekit">mergekit</a>.</p>
+</details>
+<p>Now, let's take a look at the performance of the <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> model on the <a href="https://github.com/mlabonne/llm-autoeval?tab=readme-ov-file#evaluation-parameters">Nous Suite</a> compared to other models in the 2.7B parameter range. </p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>AGIEval</th>
+<th>GPT4All</th>
+<th>TruthfulQA</th>
+<th>Bigbench</th>
+<th>Average</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a></strong></td>
+<td><strong>33.91</strong></td>
+<td>70.44</td>
+<td>48.78</td>
+<td><strong>37.82</strong></td>
+<td><strong>47.78</strong></td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/cognitivecomputations/dolphin-2_6-phi-2">dolphin-2_6-phi-2</a></td>
+<td>33.12</td>
+<td>69.85</td>
+<td>47.39</td>
+<td>37.2</td>
+<td>46.89</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/lxuechen/phi-2-dpo">phi-2-dpo</a></td>
+<td>30.39</td>
+<td><strong>71.68</strong></td>
+<td><strong>50.75</strong></td>
+<td>34.9</td>
+<td>46.93</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/microsoft/phi-2">phi-2</a></td>
+<td>27.98</td>
+<td>70.8</td>
+<td>44.43</td>
+<td>35.21</td>
+<td>44.61</td>
+</tr>
+</tbody>
+</table>
+<h3 id="serving-phixtral-on-a-budget-with-skypilot-and-nos"><a class="toclink" href="../serving-llms-on-a-budget.html#serving-phixtral-on-a-budget-with-skypilot-and-nos">💸 Serving Phixtral on a budget with SkyPilot and NOS</a></h3>
+<p>Let's now see how we can deploy the <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> model on a single NVIDIA L4 GPU for under $160 / month. We'll be using <a href="https://github.com/skypilot-org/skypilot">SkyPilot</a> to deploy and manage our <a href="https://github.com/autonomi-ai/nos">NOS</a> service on spot (pre-emptible) instances, making them especially cost-efficient.</p>
+<div class="admonition question">
+<p class="admonition-title">What's SkyPilot?</p>
+<p>If you're new to SkyPilot, we recommend you go through our <a href="/docs/integrations/skypilot.html" target="_blank">NOS x SkyPilot integration page</a> first to familiarize yourself with the tool.</p>
+</div>
+<h4 id="1-define-your-custom-model-and-serve-specification"><a class="toclink" href="../serving-llms-on-a-budget.html#1-define-your-custom-model-and-serve-specification">1. Define your custom model and serve specification</a></h4>
+<p>In this example, we'll be using the <a href="https://github.com/autonomi-ai/nos-playground/blob/main/examples/llm-streaming-chat/"><code>llm-streaming-chat</code></a> tutorial on <a href="https://github.com/autonomi-ai/nos-playground">NOS playground</a>. First, we'll define our custom phixtral chat model <a href="https://github.com/autonomi-ai/nos-playground/blob/main/examples/llm-streaming-chat/models/phixtral_chat.py"><code>phixtral_chat.py</code></a> and a <a href="https://github.com/autonomi-ai/nos-playground/blob/main/examples/llm-streaming-chat/serve.phixtral.yaml"><code>serve.phixtral.yaml</code></a> serve specification that will be used by NOS to serve our model. The relevant files are shown below:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="o">(</span>nos-py38<span class="o">)</span><span class="w"> </span>nos-playground/examples/llm-streaming-chat<span class="w"> </span>$<span class="w"> </span>tree<span class="w"> </span>.
+</span><span id="__span-37-2"><a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>├──<span class="w"> </span>models
+</span><span id="__span-37-3"><a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a>│<span class="w">   </span>└──<span class="w"> </span>phixtral_chat.py
+</span><span id="__span-37-4"><a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a>├──<span class="w"> </span>serve.phixtral.yaml
+</span></code></pre></div>
+<p>The entire chat interface is defined in the <code>StreamingChat</code> module in <a href="https://github.com/autonomi-ai/nos-playground/blob/main/examples/llm-streaming-chat/models/phixtral_chat.py"><code>phixtral_chat.py</code></a>, where the <code>chat</code> method returns a string iterable for the gRPC / HTTP server to stream back model predictions to the client. </p>
+<p>The <a href="https://github.com/autonomi-ai/nos-playground/blob/main/examples/llm-streaming-chat/serve.phixtral.yaml"><code>serve.phixtral.yaml</code></a> serve specification defines the custom chat model, and a custom runtime that NOS uses to execute our model. Follow the annotations below to understand the different components of the serve specification.</p>
+<div class="annotate">
+<div class="language-yaml highlight"><span class="filename">serve.phixtral.yaml</span><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="nt">images</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(1)</span>
+</span><span id="__span-38-2"><a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">llm-py310-cu121</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(2)</span>
+</span><span id="__span-38-3"><a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">base</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">autonomi/nos:latest-py310-cu121 (3)</span>
+</span><span id="__span-38-4"><a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">pip</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(4)</span>
+</span><span id="__span-38-5"><a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">- bitsandbytes</span>
+</span><span id="__span-38-6"><a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">- transformers</span>
+</span><span id="__span-38-7"><a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">- einops</span>
+</span><span id="__span-38-8"><a id="__codelineno-38-8" name="__codelineno-38-8" href="#__codelineno-38-8"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">- accelerate</span>
+</span><span id="__span-38-9"><a id="__codelineno-38-9" name="__codelineno-38-9" href="#__codelineno-38-9"></a>
+</span><span id="__span-38-10"><a id="__codelineno-38-10" name="__codelineno-38-10" href="#__codelineno-38-10"></a><span class="nt">models</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(5)</span>
+</span><span id="__span-38-11"><a id="__codelineno-38-11" name="__codelineno-38-11" href="#__codelineno-38-11"></a><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">mlabonne/phixtral-4x2_8</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(6)</span>
+</span><span id="__span-38-12"><a id="__codelineno-38-12" name="__codelineno-38-12" href="#__codelineno-38-12"></a><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">model_cls</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">StreamingChat (7)</span>
+</span><span id="__span-38-13"><a id="__codelineno-38-13" name="__codelineno-38-13" href="#__codelineno-38-13"></a><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">model_path</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">models/phixtral_chat.py (8)</span>
+</span><span id="__span-38-14"><a id="__codelineno-38-14" name="__codelineno-38-14" href="#__codelineno-38-14"></a><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">init_kwargs</span><span class="p p-Indicator">:</span>
+</span><span id="__span-38-15"><a id="__codelineno-38-15" name="__codelineno-38-15" href="#__codelineno-38-15"></a><span class="w">      </span><span class="nt">model_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">mlabonne/phixtral-4x2_8</span>
+</span><span id="__span-38-16"><a id="__codelineno-38-16" name="__codelineno-38-16" href="#__codelineno-38-16"></a><span class="w w-Error">    </span><span class="nt">default_method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">chat</span>
+</span><span id="__span-38-17"><a id="__codelineno-38-17" name="__codelineno-38-17" href="#__codelineno-38-17"></a><span class="w">    </span><span class="nt">runtime_env</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">llm-gpu</span>
+</span><span id="__span-38-18"><a id="__codelineno-38-18" name="__codelineno-38-18" href="#__codelineno-38-18"></a><span class="w">    </span><span class="nt">deployment</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(9)</span>
+</span><span id="__span-38-19"><a id="__codelineno-38-19" name="__codelineno-38-19" href="#__codelineno-38-19"></a><span class="w">      </span><span class="l l-Scalar l-Scalar-Plain">resources</span><span class="p p-Indicator">:</span>
+</span><span id="__span-38-20"><a id="__codelineno-38-20" name="__codelineno-38-20" href="#__codelineno-38-20"></a><span class="w">        </span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span>
+</span><span id="__span-38-21"><a id="__codelineno-38-21" name="__codelineno-38-21" href="#__codelineno-38-21"></a><span class="w">        </span><span class="nt">device_memory</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7Gi (10)</span>
+</span></code></pre></div>
+</div>
+<ol>
+<li>Specifies the custom runtime images that will be used to serve our model.</li>
+<li>Specifies the name of the custom runtime image (referenced below in <code>runtime_env</code>). </li>
+<li>Specifies the base NOS image to use for the custom runtime image. We provide a few pre-built images on <a href="https://hub.docker.com/repository/docker/autonomi/nos/general">dockerhub</a>. </li>
+<li>Specifies the pip dependencies to install in the custom runtime image.</li>
+<li>Specifies all the custom models we intend to serve.</li>
+<li>Specifies the unique name of the custom model (model identifier).</li>
+<li>Specifies the model class to use for the custom model.</li>
+<li>Specifies the path to the model class definition.</li>
+<li>Specifies the deployment resources needed for the custom model.</li>
+<li>Specifies the GPU memory to allocate for the custom model.</li>
+</ol>
+<h4 id="2-test-your-custom-model-locally-with-nos"><a class="toclink" href="../serving-llms-on-a-budget.html#2-test-your-custom-model-locally-with-nos">2. Test your custom model locally with NOS</a></h4>
+<p>In order to start the NOS server locally, we can simply run the following command:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>nos<span class="w"> </span>serve<span class="w"> </span>up<span class="w"> </span>-c<span class="w"> </span>serve.phixtral.yaml<span class="w"> </span>--http
+</span></code></pre></div>
+<p>This will build the custom runtime image, and start the NOS server locally, exposing an OpenAI compatible HTTP proxy on port <code>8000</code>. This will allow you to chat with your custom LLM endpoint using any OpenAI API compatible client. </p>
+<h4 id="3-deploy-your-nos-service-with-skypilot"><a class="toclink" href="../serving-llms-on-a-budget.html#3-deploy-your-nos-service-with-skypilot">3. Deploy your NOS service with SkyPilot</a></h4>
+<p>Now that we have defined our serve YAML specification, let's deploy this service on GCP using <a href="https://github.com/skypilot-org/skypilot">SkyPilot</a>. In this example, we're going to use SkyPilot's <code>sky serve</code> command to deploy our NOS service on spot (pre-emptible) instances on GCP. </p>
+<details class="note">
+<summary>Deploy on any cloud provider (AWS, Azure, GCP, OCI, Lambda Labs, etc.)</summary>
+<p>SkyPilot supports deploying NOS services on any cloud provider. In this example, we're going to use GCP, but you can easily deploy on AWS, Azure, or any other cloud provider of your choice. You can override <code>gcp</code> by providing the <code>--cloud</code> flag to <code>sky serve up</code>.</p>
+</details>
+<p>Let's define a serving configuration in a <a href="https://github.com/autonomi-ai/nos-playground/blob/main/deployments/deploy-llms-with-skypilot/service-phixtral.sky.yaml"><code>service-phixtral.sky.yaml</code></a> file. This YAML specification will be used by SkyPilot to deploy and manage our NOS service on pre-emptible instances, automatically provisioning and recovering from failovers, setting up new instances when needed on server pre-emptions. </p>
+<div class="annotate">
+<div class="language-yaml highlight"><span class="filename">service-phixtral.sky.yaml</span><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">service-phixtral</span>
+</span><span id="__span-40-2"><a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>
+</span><span id="__span-40-3"><a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a><span class="nt">file_mounts</span><span class="p">:</span>
+</span><span id="__span-40-4"><a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="w">  </span><span class="nt">/app</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">./app (1)</span>
+</span><span id="__span-40-5"><a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a>
+</span><span id="__span-40-6"><a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a><span class="nt">resources</span><span class="p">:</span>
+</span><span id="__span-40-7"><a id="__codelineno-40-7" name="__codelineno-40-7" href="#__codelineno-40-7"></a><span class="w">  </span><span class="nt">cloud</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gcp</span>
+</span><span id="__span-40-8"><a id="__codelineno-40-8" name="__codelineno-40-8" href="#__codelineno-40-8"></a><span class="w">  </span><span class="nt">accelerators</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">L4:1</span>
+</span><span id="__span-40-9"><a id="__codelineno-40-9" name="__codelineno-40-9" href="#__codelineno-40-9"></a><span class="w">  </span><span class="nt">use_spot</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True (2)</span>
+</span><span id="__span-40-10"><a id="__codelineno-40-10" name="__codelineno-40-10" href="#__codelineno-40-10"></a><span class="w">  </span><span class="nt">ports</span><span class="p">:</span>
+</span><span id="__span-40-11"><a id="__codelineno-40-11" name="__codelineno-40-11" href="#__codelineno-40-11"></a><span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">8000</span>
+</span><span id="__span-40-12"><a id="__codelineno-40-12" name="__codelineno-40-12" href="#__codelineno-40-12"></a>
+</span><span id="__span-40-13"><a id="__codelineno-40-13" name="__codelineno-40-13" href="#__codelineno-40-13"></a><span class="nt">service</span><span class="p">:</span>
+</span><span id="__span-40-14"><a id="__codelineno-40-14" name="__codelineno-40-14" href="#__codelineno-40-14"></a><span class="w">  </span><span class="nt">readiness_probe</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">(3)</span>
+</span><span id="__span-40-15"><a id="__codelineno-40-15" name="__codelineno-40-15" href="#__codelineno-40-15"></a><span class="w">    </span><span class="l l-Scalar l-Scalar-Plain">path</span><span class="p p-Indicator">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/v1/health</span><span class="w"> </span>
+</span><span id="__span-40-16"><a id="__codelineno-40-16" name="__codelineno-40-16" href="#__codelineno-40-16"></a><span class="w">  </span><span class="nt">replicas</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2 (4)</span>
+</span><span id="__span-40-17"><a id="__codelineno-40-17" name="__codelineno-40-17" href="#__codelineno-40-17"></a>
+</span><span id="__span-40-18"><a id="__codelineno-40-18" name="__codelineno-40-18" href="#__codelineno-40-18"></a><span class="nt">setup</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-40-19"><a id="__codelineno-40-19" name="__codelineno-40-19" href="#__codelineno-40-19"></a><span class="w">  </span><span class="no">sudo apt-get install -y docker-compose-plugin</span>
+</span><span id="__span-40-20"><a id="__codelineno-40-20" name="__codelineno-40-20" href="#__codelineno-40-20"></a><span class="w">  </span><span class="no">pip install torch-nos</span>
+</span><span id="__span-40-21"><a id="__codelineno-40-21" name="__codelineno-40-21" href="#__codelineno-40-21"></a>
+</span><span id="__span-40-22"><a id="__codelineno-40-22" name="__codelineno-40-22" href="#__codelineno-40-22"></a><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-40-23"><a id="__codelineno-40-23" name="__codelineno-40-23" href="#__codelineno-40-23"></a><span class="w">  </span><span class="no">cd /app &amp;&amp; nos serve up -c serve.phixtral.yaml --http (5)</span>
+</span></code></pre></div>
+</div>
+<ol>
+<li>Setup file-mounts to mount the local <code>./app</code> directory so that the <code>serve.phixtral.yaml</code> and <code>models/</code> directory are available on the remote instance.</li>
+<li>Use spot (pre-emptible) instances instead of on-demand instances.</li>
+<li>Define the readiness probe path for the service. This allows the SkyPilot controller to check the health of the service and recover from failures if needed.</li>
+<li>Define the number of replicas to deploy.</li>
+<li>Define the <code>run</code> command to execute on each replica. In this case, we're simply starting the NOS server with the phixtral model deployed on init. </li>
+</ol>
+<p>To deploy our NOS service, we can simply run the following command:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>sky<span class="w"> </span>serve<span class="w"> </span>up<span class="w"> </span>-n<span class="w"> </span>service-mixtral<span class="w"> </span>service-mixtral.sky.yaml
+</span></code></pre></div>
+<p>SkyPilot will automatically pick the cheapest region and zone to deploy our service, and provision the necessary cloud resources to deploy the NOS server. In this case, you'll notice that SkyPilot provisioned two <a href="https://www.nvidia.com/en-us/data-center/l4/">NVIDIA L4 GPU</a> instances on GCP in the <code>us-central1-a</code> availability zone. </p>
+<p>You should see the following output:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a><span class="o">(</span>nos-infra-py38<span class="o">)</span><span class="w"> </span>deployments/deploy-llms-with-skypilot<span class="w"> </span>$<span class="w"> </span>sky<span class="w"> </span>serve<span class="w"> </span>up<span class="w"> </span>-n<span class="w"> </span>service-mixtral<span class="w"> </span>service-mixtral.sky.yaml
+</span><span id="__span-42-2"><a id="__codelineno-42-2" name="__codelineno-42-2" href="#__codelineno-42-2"></a>Service<span class="w"> </span>from<span class="w"> </span>YAML<span class="w"> </span>spec:<span class="w"> </span>service-mixtral.sky.yaml
+</span><span id="__span-42-3"><a id="__codelineno-42-3" name="__codelineno-42-3" href="#__codelineno-42-3"></a>Service<span class="w"> </span>Spec:
+</span><span id="__span-42-4"><a id="__codelineno-42-4" name="__codelineno-42-4" href="#__codelineno-42-4"></a>Readiness<span class="w"> </span>probe<span class="w"> </span>method:<span class="w">           </span>GET<span class="w"> </span>/v1/health
+</span><span id="__span-42-5"><a id="__codelineno-42-5" name="__codelineno-42-5" href="#__codelineno-42-5"></a>Readiness<span class="w"> </span>initial<span class="w"> </span>delay<span class="w"> </span>seconds:<span class="w">  </span><span class="m">1200</span>
+</span><span id="__span-42-6"><a id="__codelineno-42-6" name="__codelineno-42-6" href="#__codelineno-42-6"></a>Replica<span class="w"> </span>autoscaling<span class="w"> </span>policy:<span class="w">       </span>Fixed<span class="w"> </span><span class="m">2</span><span class="w"> </span>replicas
+</span><span id="__span-42-7"><a id="__codelineno-42-7" name="__codelineno-42-7" href="#__codelineno-42-7"></a>Replica<span class="w"> </span>auto<span class="w"> </span>restart:<span class="w">             </span>True
+</span><span id="__span-42-8"><a id="__codelineno-42-8" name="__codelineno-42-8" href="#__codelineno-42-8"></a>Each<span class="w"> </span>replica<span class="w"> </span>will<span class="w"> </span>use<span class="w"> </span>the<span class="w"> </span>following<span class="w"> </span>resources<span class="w"> </span><span class="o">(</span>estimated<span class="o">)</span>:
+</span><span id="__span-42-9"><a id="__codelineno-42-9" name="__codelineno-42-9" href="#__codelineno-42-9"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:694<span class="o">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nv">Optimizer</span><span class="w"> </span><span class="o">==</span>
+</span><span id="__span-42-10"><a id="__codelineno-42-10" name="__codelineno-42-10" href="#__codelineno-42-10"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:705<span class="o">]</span><span class="w"> </span>Target:<span class="w"> </span>minimizing<span class="w"> </span>cost
+</span><span id="__span-42-11"><a id="__codelineno-42-11" name="__codelineno-42-11" href="#__codelineno-42-11"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:717<span class="o">]</span><span class="w"> </span>Estimated<span class="w"> </span>cost:<span class="w"> </span><span class="nv">$0</span>.2<span class="w"> </span>/<span class="w"> </span>hour
+</span><span id="__span-42-12"><a id="__codelineno-42-12" name="__codelineno-42-12" href="#__codelineno-42-12"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:717<span class="o">]</span>
+</span><span id="__span-42-13"><a id="__codelineno-42-13" name="__codelineno-42-13" href="#__codelineno-42-13"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:840<span class="o">]</span><span class="w"> </span>Considered<span class="w"> </span>resources<span class="w"> </span><span class="o">(</span><span class="m">1</span><span class="w"> </span>node<span class="o">)</span>:
+</span><span id="__span-42-14"><a id="__codelineno-42-14" name="__codelineno-42-14" href="#__codelineno-42-14"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w"> </span>----------------------------------------------------------------------------------------------------
+</span><span id="__span-42-15"><a id="__codelineno-42-15" name="__codelineno-42-15" href="#__codelineno-42-15"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w">  </span>CLOUD<span class="w">   </span>INSTANCE<span class="w">              </span>vCPUs<span class="w">   </span>Mem<span class="o">(</span>GB<span class="o">)</span><span class="w">   </span>ACCELERATORS<span class="w">   </span>REGION/ZONE<span class="w">     </span>COST<span class="w"> </span><span class="o">(</span>$<span class="o">)</span><span class="w">   </span>CHOSEN
+</span><span id="__span-42-16"><a id="__codelineno-42-16" name="__codelineno-42-16" href="#__codelineno-42-16"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w"> </span>----------------------------------------------------------------------------------------------------
+</span><span id="__span-42-17"><a id="__codelineno-42-17" name="__codelineno-42-17" href="#__codelineno-42-17"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w">  </span>GCP<span class="w">     </span>g2-standard-4<span class="o">[</span>Spot<span class="o">]</span><span class="w">   </span><span class="m">4</span><span class="w">       </span><span class="m">16</span><span class="w">        </span>L4:1<span class="w">           </span>us-central1-a<span class="w">   </span><span class="m">0</span>.22<span class="w">          </span>✔
+</span><span id="__span-42-18"><a id="__codelineno-42-18" name="__codelineno-42-18" href="#__codelineno-42-18"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:910<span class="o">]</span><span class="w"> </span>----------------------------------------------------------------------------------------------------
+</span><span id="__span-42-19"><a id="__codelineno-42-19" name="__codelineno-42-19" href="#__codelineno-42-19"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:01:58<span class="w"> </span>optimizer.py:910<span class="o">]</span>
+</span><span id="__span-42-20"><a id="__codelineno-42-20" name="__codelineno-42-20" href="#__codelineno-42-20"></a>Launching<span class="w"> </span>a<span class="w"> </span>new<span class="w"> </span>service<span class="w"> </span><span class="s1">&#39;service-mixtral&#39;</span>.<span class="w"> </span>Proceed?<span class="w"> </span><span class="o">[</span>Y/n<span class="o">]</span>:<span class="w"> </span>y
+</span><span id="__span-42-21"><a id="__codelineno-42-21" name="__codelineno-42-21" href="#__codelineno-42-21"></a>Launching<span class="w"> </span>controller<span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="s1">&#39;service-mixtral&#39;</span>
+</span><span id="__span-42-22"><a id="__codelineno-42-22" name="__codelineno-42-22" href="#__codelineno-42-22"></a>...
+</span><span id="__span-42-23"><a id="__codelineno-42-23" name="__codelineno-42-23" href="#__codelineno-42-23"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:02:14<span class="w"> </span>cloud_vm_ray_backend.py:1912<span class="o">]</span><span class="w"> </span>Launching<span class="w"> </span>on<span class="w"> </span>GCP<span class="w"> </span>us-west1<span class="w"> </span><span class="o">(</span>us-west1-a<span class="o">)</span>
+</span><span id="__span-42-24"><a id="__codelineno-42-24" name="__codelineno-42-24" href="#__codelineno-42-24"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:02:30<span class="w"> </span>log_utils.py:45<span class="o">]</span><span class="w"> </span>Head<span class="w"> </span>node<span class="w"> </span>is<span class="w"> </span>up.
+</span><span id="__span-42-25"><a id="__codelineno-42-25" name="__codelineno-42-25" href="#__codelineno-42-25"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:03:03<span class="w"> </span>cloud_vm_ray_backend.py:1717<span class="o">]</span><span class="w"> </span>Successfully<span class="w"> </span>provisioned<span class="w"> </span>or<span class="w"> </span>found<span class="w"> </span>existing<span class="w"> </span>VM.
+</span><span id="__span-42-26"><a id="__codelineno-42-26" name="__codelineno-42-26" href="#__codelineno-42-26"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:03:05<span class="w"> </span>cloud_vm_ray_backend.py:4558<span class="o">]</span><span class="w"> </span>Processing<span class="w"> </span>file<span class="w"> </span>mounts.
+</span><span id="__span-42-27"><a id="__codelineno-42-27" name="__codelineno-42-27" href="#__codelineno-42-27"></a>...
+</span><span id="__span-42-28"><a id="__codelineno-42-28" name="__codelineno-42-28" href="#__codelineno-42-28"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:03:20<span class="w"> </span>cloud_vm_ray_backend.py:3325<span class="o">]</span><span class="w"> </span>Setup<span class="w"> </span>completed.
+</span><span id="__span-42-29"><a id="__codelineno-42-29" name="__codelineno-42-29" href="#__codelineno-42-29"></a>I<span class="w"> </span><span class="m">01</span>-19<span class="w"> </span><span class="m">16</span>:03:29<span class="w"> </span>cloud_vm_ray_backend.py:3422<span class="o">]</span><span class="w"> </span>Job<span class="w"> </span>submitted<span class="w"> </span>with<span class="w"> </span>Job<span class="w"> </span>ID:<span class="w"> </span><span class="m">11</span>
+</span><span id="__span-42-30"><a id="__codelineno-42-30" name="__codelineno-42-30" href="#__codelineno-42-30"></a>
+</span><span id="__span-42-31"><a id="__codelineno-42-31" name="__codelineno-42-31" href="#__codelineno-42-31"></a>Service<span class="w"> </span>name:<span class="w"> </span>service-mixtral
+</span><span id="__span-42-32"><a id="__codelineno-42-32" name="__codelineno-42-32" href="#__codelineno-42-32"></a>Endpoint<span class="w"> </span>URL:<span class="w"> </span>XX.XXX.X.XXX:30001
+</span><span id="__span-42-33"><a id="__codelineno-42-33" name="__codelineno-42-33" href="#__codelineno-42-33"></a>To<span class="w"> </span>see<span class="w"> </span>detailed<span class="w"> </span>info:<span class="w">           </span>sky<span class="w"> </span>serve<span class="w"> </span>status<span class="w"> </span>service-mixtral<span class="w"> </span><span class="o">[</span>--endpoint<span class="o">]</span>
+</span><span id="__span-42-34"><a id="__codelineno-42-34" name="__codelineno-42-34" href="#__codelineno-42-34"></a>To<span class="w"> </span>teardown<span class="w"> </span>the<span class="w"> </span>service:<span class="w">        </span>sky<span class="w"> </span>serve<span class="w"> </span>down<span class="w"> </span>service-mixtral
+</span><span id="__span-42-35"><a id="__codelineno-42-35" name="__codelineno-42-35" href="#__codelineno-42-35"></a>
+</span><span id="__span-42-36"><a id="__codelineno-42-36" name="__codelineno-42-36" href="#__codelineno-42-36"></a>To<span class="w"> </span>see<span class="w"> </span>logs<span class="w"> </span>of<span class="w"> </span>a<span class="w"> </span>replica:<span class="w">       </span>sky<span class="w"> </span>serve<span class="w"> </span>logs<span class="w"> </span>service-mixtral<span class="w"> </span><span class="o">[</span>REPLICA_ID<span class="o">]</span>
+</span><span id="__span-42-37"><a id="__codelineno-42-37" name="__codelineno-42-37" href="#__codelineno-42-37"></a>To<span class="w"> </span>see<span class="w"> </span>logs<span class="w"> </span>of<span class="w"> </span>load<span class="w"> </span>balancer:<span class="w">   </span>sky<span class="w"> </span>serve<span class="w"> </span>logs<span class="w"> </span>--load-balancer<span class="w"> </span>service-mixtral
+</span><span id="__span-42-38"><a id="__codelineno-42-38" name="__codelineno-42-38" href="#__codelineno-42-38"></a>To<span class="w"> </span>see<span class="w"> </span>logs<span class="w"> </span>of<span class="w"> </span>controller:<span class="w">      </span>sky<span class="w"> </span>serve<span class="w"> </span>logs<span class="w"> </span>--controller<span class="w"> </span>service-mixtral
+</span><span id="__span-42-39"><a id="__codelineno-42-39" name="__codelineno-42-39" href="#__codelineno-42-39"></a>
+</span><span id="__span-42-40"><a id="__codelineno-42-40" name="__codelineno-42-40" href="#__codelineno-42-40"></a>To<span class="w"> </span>monitor<span class="w"> </span>replica<span class="w"> </span>status:<span class="w">      </span>watch<span class="w"> </span>-n10<span class="w"> </span>sky<span class="w"> </span>serve<span class="w"> </span>status<span class="w"> </span>service-mixtral
+</span><span id="__span-42-41"><a id="__codelineno-42-41" name="__codelineno-42-41" href="#__codelineno-42-41"></a>To<span class="w"> </span>send<span class="w"> </span>a<span class="w"> </span><span class="nb">test</span><span class="w"> </span>request:<span class="w">         </span>curl<span class="w"> </span>-L<span class="w"> </span>XX.XX.X.XXX:30001
+</span></code></pre></div>
+<p>Once the service is deployed, you can get the IP address of the SkyPilot service via:. </p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>sky<span class="w"> </span>serve<span class="w"> </span>status<span class="w"> </span>service-phixtral<span class="w"> </span>--endpoint
+</span></code></pre></div>
+<p>We'll refer to <code>&lt;sky-serve-ip&gt;</code> as the load balancer's IP address, that takes the full form of <code>&lt;sky-serve-ip&gt;:30001</code>. You should now be able to ping the load-balancer endpoint directly with <code>cURL</code> and see the following output:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-44-1"><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>$<span class="w"> </span>curl<span class="w"> </span>-L<span class="w"> </span>http://&lt;sky-serve-ip&gt;:30001/v1/health
+</span><span id="__span-44-2"><a id="__codelineno-44-2" name="__codelineno-44-2" href="#__codelineno-44-2"></a><span class="o">{</span><span class="s2">&quot;status&quot;</span>:<span class="s2">&quot;ok&quot;</span><span class="o">}</span>
+</span></code></pre></div>
+<h3 id="chatting-with-your-custom-phixtral-service"><a class="toclink" href="../serving-llms-on-a-budget.html#chatting-with-your-custom-phixtral-service">💬 Chatting with your custom Phixtral service</a></h3>
+<p>You're now ready to chat with your hosted, custom LLM endpoint! Here's a quick demo of the <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> model served with NOS across 2 spot (pre-emptible) instances. </p>
+<script async id="asciicast-632285" src="https://asciinema.org/a/632285.js"></script>
+
+<p>On the top, you'll see the logs from both the serve replicas, and the corresponding chats that are happening <em>concurrently</em> on the bottom. SkyPilot handles the load-balancing and routing of requests to the replicas, while NOS handles the custom model serving and streaming inference. Below, we show you how you can chat with your hosted LLM endpoint using <code>cURL</code>, an OpenAI compatible client, or the OpenAI Python client.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Using cURL</label><label for="__tabbed_4_2">Using an OpenAI compatible client</label><label for="__tabbed_4_3">Using the OpenAI Python client</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-45-1"><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>curl<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-45-2"><a id="__codelineno-45-2" name="__codelineno-45-2" href="#__codelineno-45-2"></a>-X<span class="w"> </span>POST<span class="w"> </span>-L<span class="w"> </span>http://&lt;sky-serve-ip&gt;:30001/v1/chat/completions<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-45-3"><a id="__codelineno-45-3" name="__codelineno-45-3" href="#__codelineno-45-3"></a>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-45-4"><a id="__codelineno-45-4" name="__codelineno-45-4" href="#__codelineno-45-4"></a>-d<span class="w"> </span><span class="s1">&#39;{</span>
+</span><span id="__span-45-5"><a id="__codelineno-45-5" name="__codelineno-45-5" href="#__codelineno-45-5"></a><span class="s1">    &quot;model&quot;: &quot;mlabonne/phixtral-4x2_8&quot;,</span>
+</span><span id="__span-45-6"><a id="__codelineno-45-6" name="__codelineno-45-6" href="#__codelineno-45-6"></a><span class="s1">    &quot;messages&quot;: [{&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Tell me a joke in 300 words&quot;}],</span>
+</span><span id="__span-45-7"><a id="__codelineno-45-7" name="__codelineno-45-7" href="#__codelineno-45-7"></a><span class="s1">    &quot;temperature&quot;: 0.7, &quot;stream&quot;: true</span>
+</span><span id="__span-45-8"><a id="__codelineno-45-8" name="__codelineno-45-8" href="#__codelineno-45-8"></a><span class="s1">  }&#39;</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Below, we show how you can use any OpenAI API compatible client to chat with your hosted LLM endpoint. We will use the popular <a href="https://github.com/simonw/llm">llm</a> CLI tool from <a href="https://simonwillison.net/">Simon Willison</a> to chat with our hosted LLM endpoint.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-46-1"><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a><span class="c1"># Install the llm CLI tool</span>
+</span><span id="__span-46-2"><a id="__codelineno-46-2" name="__codelineno-46-2" href="#__codelineno-46-2"></a>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>llm
+</span><span id="__span-46-3"><a id="__codelineno-46-3" name="__codelineno-46-3" href="#__codelineno-46-3"></a>
+</span><span id="__span-46-4"><a id="__codelineno-46-4" name="__codelineno-46-4" href="#__codelineno-46-4"></a><span class="c1"># Install the llm-nosrun plugin to talk to your service</span>
+</span><span id="__span-46-5"><a id="__codelineno-46-5" name="__codelineno-46-5" href="#__codelineno-46-5"></a>$<span class="w"> </span>llm<span class="w"> </span>install<span class="w"> </span>llm-nosrun
+</span><span id="__span-46-6"><a id="__codelineno-46-6" name="__codelineno-46-6" href="#__codelineno-46-6"></a>
+</span><span id="__span-46-7"><a id="__codelineno-46-7" name="__codelineno-46-7" href="#__codelineno-46-7"></a><span class="c1"># List the models</span>
+</span><span id="__span-46-8"><a id="__codelineno-46-8" name="__codelineno-46-8" href="#__codelineno-46-8"></a>$<span class="w"> </span>llm<span class="w"> </span>models<span class="w"> </span>list
+</span><span id="__span-46-9"><a id="__codelineno-46-9" name="__codelineno-46-9" href="#__codelineno-46-9"></a>
+</span><span id="__span-46-10"><a id="__codelineno-46-10" name="__codelineno-46-10" href="#__codelineno-46-10"></a><span class="c1"># Chat with your endpoint</span>
+</span><span id="__span-46-11"><a id="__codelineno-46-11" name="__codelineno-46-11" href="#__codelineno-46-11"></a>$<span class="w"> </span><span class="nv">NOSRUN_API_BASE</span><span class="o">=</span>http://&lt;sky-serve-ip&gt;:30001/v1<span class="w"> </span>llm<span class="w"> </span>-m<span class="w"> </span>mlabonne/phixtral-4x2_8<span class="w"> </span><span class="s2">&quot;Tell me a joke in 300 words&quot;</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<p>Below, we show how you can use the <a href="https://github.com/openai/openai-python">OpenAI Python Client</a> to chat with your hosted LLM endpoint.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-47-1"><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a><span class="kn">import</span> <span class="nn">openai</span>
+</span><span id="__span-47-2"><a id="__codelineno-47-2" name="__codelineno-47-2" href="#__codelineno-47-2"></a>
+</span><span id="__span-47-3"><a id="__codelineno-47-3" name="__codelineno-47-3" href="#__codelineno-47-3"></a><span class="c1"># Create a stream and print the output</span>
+</span><span id="__span-47-4"><a id="__codelineno-47-4" name="__codelineno-47-4" href="#__codelineno-47-4"></a><span class="n">client</span> <span class="o">=</span> <span class="n">openai</span><span class="o">.</span><span class="n">OpenAI</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="s2">&quot;no-key-required&quot;</span><span class="p">,</span> <span class="n">base_url</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;http://&lt;sky-serve-ip&gt;:30001/v1&quot;</span><span class="p">)</span>
+</span><span id="__span-47-5"><a id="__codelineno-47-5" name="__codelineno-47-5" href="#__codelineno-47-5"></a><span class="n">stream</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">chat</span><span class="o">.</span><span class="n">completions</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+</span><span id="__span-47-6"><a id="__codelineno-47-6" name="__codelineno-47-6" href="#__codelineno-47-6"></a>    <span class="n">model</span><span class="o">=</span><span class="s2">&quot;mlabonne/phixtral-4x2_8&quot;</span><span class="p">,</span>
+</span><span id="__span-47-7"><a id="__codelineno-47-7" name="__codelineno-47-7" href="#__codelineno-47-7"></a>    <span class="n">messages</span><span class="o">=</span><span class="p">[{</span><span class="s2">&quot;role&quot;</span><span class="p">:</span> <span class="s2">&quot;user&quot;</span><span class="p">,</span> <span class="s2">&quot;content&quot;</span><span class="p">:</span> <span class="s2">&quot;Tell me a joke in 300 words&quot;</span><span class="p">}],</span>
+</span><span id="__span-47-8"><a id="__codelineno-47-8" name="__codelineno-47-8" href="#__codelineno-47-8"></a>    <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+</span><span id="__span-47-9"><a id="__codelineno-47-9" name="__codelineno-47-9" href="#__codelineno-47-9"></a><span class="p">)</span>
+</span><span id="__span-47-10"><a id="__codelineno-47-10" name="__codelineno-47-10" href="#__codelineno-47-10"></a><span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">stream</span><span class="p">:</span>
+</span><span id="__span-47-11"><a id="__codelineno-47-11" name="__codelineno-47-11" href="#__codelineno-47-11"></a>    <span class="nb">print</span><span class="p">(</span><span class="n">chunk</span><span class="o">.</span><span class="n">choices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">delta</span><span class="o">.</span><span class="n">content</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
+<p>In these examples, we use SkyPilot's load-balancer port <code>30001</code>  which redirects HTTP traffic to one of the many NOS replicas (on port <code>8000</code>) in a round-robin fashion. This allows us to scale-out our service to multiple replicas, and load-balance requests across them.</p>
+</div>
+<h3 id="whats-it-going-to-cost-me"><a class="toclink" href="../serving-llms-on-a-budget.html#whats-it-going-to-cost-me">🤑 What's it going to cost me?</a></h3>
+<p>In the example above, we were able to deploy the <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> model on a single <a href="https://www.nvidia.com/en-us/data-center/l4/">NVIDIA L4 GPU</a> for <strong>$0.22</strong> / hour / replica, or <strong>$160</strong> / month / replica. This is a <strong>45x</strong> improvement over the cost of deploying the <a href="https://huggingface.co/mistralai/Mixtral-8x7B-v0.1">mistralai/Mixtral-8x7B-v0.1</a> model on 2x <a href="https://www.nvidia.com/en-us/data-center/a100/">NVIDIA A100-80G GPUs</a>, which can cost upwards of $7000 / month (on-demand) on CSPs. As advancements in model compression, quantization and model mixing continue to improve, we expect more users to be able to fine-tune, distill and deploy these expert <a href="https://www.microsoft.com/en-us/research/blog/orca-2-teaching-small-language-models-how-to-reason/">small-langauge models</a> on a budget, without sacrificing significantly on performance.</p>
+<p>The table below shows the costs of deploying one of these popular MoE LLM models on a single GPU server on GCP. As you can see, the cost of deploying a single model can range from $500 to $7300 / month, depending on the model and of course CSP (kept fixed here). </p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Cloud Provider</th>
+<th>GPU</th>
+<th>VRAM</th>
+<th>Spot</th>
+<th>Cost / hr</th>
+<th>Cost / month</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://huggingface.co/mistralai/Mixtral-8x7B-v0.1">mistralai/Mixtral-8x7B-v0.1</a></td>
+<td>GCP</td>
+<td>2x NVIDIA A100-80G</td>
+<td>~94 GB</td>
+<td>-</td>
+<td>$10.05</td>
+<td>~$7236</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/TheBloke/Mixtral-8x7B-Instruct-v0.1-AWQ">TheBloke/Mixtral-8x7B-Instruct-v0.1-AWQ</a></td>
+<td>GCP</td>
+<td>NVIDIA A100-40G</td>
+<td>~25GB</td>
+<td>-</td>
+<td>$3.67</td>
+<td>~$2680</td>
+</tr>
+<tr>
+<td><a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a></td>
+<td>GCP</td>
+<td>NVIDIA L4</td>
+<td>~9GB</td>
+<td>-</td>
+<td>$0.70</td>
+<td>~$500</td>
+</tr>
+<tr>
+<td><strong><a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a></strong></td>
+<td>GCP</td>
+<td>NVIDIA L4</td>
+<td>~9GB</td>
+<td>✅</td>
+<td><strong>$0.22</strong></td>
+<td><strong>~$160</strong></td>
+</tr>
+</tbody>
+</table>
+<p>However, the <strong>onus is on the developer</strong> to figure out the <strong>right instance type, spot instance strategy, and the right number of replicas</strong> to deploy to ensure that the service is both <em>cost-efficient and performant</em>. In the coming weeks, we're going to be introducing some exciting tools to help developers alleviate this pain and provide transparency to make the right infrastructure decisions for their services. Stay tuned!</p>
+<h3 id="wrapping-up"><a class="toclink" href="../serving-llms-on-a-budget.html#wrapping-up">🎁 Wrapping up</a></h3>
+<p>In this blog post, we showed you how to deploy the <a href="https://huggingface.co/mlabonne/phixtral-4x2_8">mlabonne/phixtral-4x2_8</a> model on a single NVIDIA L4 GPU for under $160 / month and scale-out a dirt-cheap inference service of your own. We used <a href="https://github.com/skypilot-org/skypilot">SkyPilot</a> to deploy and manage our <a href="https://github.com/autonomi-ai/nos">NOS</a> service on spot (pre-emptible) instances, making them especially cost-efficient.</p>
+<p>In our next blog post, we’ll take it one step further. We'll explore how you can serve multiple models on the same GPU so that <strong>your infrastructure costs don’t have to scale with the number of models you serve</strong>. The <strong>TL;DR</strong> is that you will soon be able to serve multiple models with fixed and predictable pricing, making model serving more accessible and cost-efficient than ever before.</p>
+<p><br></p>
+    
+  </div>
+</article>
+      
+        <article class="md-post md-post--excerpt">
+  <header class="md-post__header">
+    
+      <nav class="md-post__authors md-typeset">
+        
+          <span class="md-author">
+            <img src="https://github.com/spillai.png" alt="Sudeep Pillai">
+          </span>
+        
+      </nav>
+    
+    <div class="md-post__meta md-meta">
+      <ul class="md-meta__list">
+        <li class="md-meta__item">
+          <time datetime="2024-01-16 00:00:00">Jan 16, 2024</time></li>
+        
+          <li class="md-meta__item">
+            in
+            
+              <a href="infra.html" class="md-meta__link">infra</a>, 
+              <a href="tutorials.html" class="md-meta__link">tutorials</a></li>
+        
+        
+          
+          <li class="md-meta__item">
+            
+              2 min read
+            
+          </li>
+        
+      </ul>
+      
+    </div>
+  </header>
+  <div class="md-post__content md-typeset">
+    <h2 id="getting-started-with-nos-tutorials"><a class="toclink" href="../-getting-started-with-nos-tutorials.html">📚 Getting started with NOS tutorials</a></h2>
+<p>We are thrilled to announce a new addition to our resources - the <a href="https://github.com/autonomi-ai/nos/tree/main/examples/tutorials"><strong>NOS Tutorials</strong></a>! This series of tutorials is designed to empower users with the knowledge and tools needed to leverage NOS for serving models efficiently and effectively. Whether you're a seasoned developer or just starting out, our tutorials offer insights into various aspects of using NOS, making your journey with model serving a breeze.</p>
+<p>Over the next few weeks, we'll walk you through the process of using NOS to serve models, from the basics to more advanced topics. We'll also cover how to use NOS in a production environment, ensuring you have all the tools you need to take your projects to the next level. Finally, keep yourself updated on NOS by giving us a 🌟 on <a href="https://github.com/autonomi-ai/nos">Github</a>.</p>
+<div class="admonition tip">
+<p class="admonition-title">Can't wait? Show me the code!</p>
+<p>If you can't wait to get started, head over to our <a href="https://github.com/autonomi-ai/nos/tree/main/examples/tutorials">tutorials</a> page on <a href="https://github.com/autonomi-ai/nos">Github</a> to dive right in to the code!</p>
+</div>
+<h3 id="whats-inside-the-nos-tutorials"><a class="toclink" href="../-getting-started-with-nos-tutorials.html#whats-inside-the-nos-tutorials">🌟 What’s Inside the NOS Tutorials?</a></h3>
+<p>The NOS Tutorials encompass a wide range of topics, each focusing on different facets of model serving. Here's a sneak peek into what you can expect:</p>
+<h4 id="1-serving-custom-models-01-serving-custom-models"><a class="toclink" href="../-getting-started-with-nos-tutorials.html#1-serving-custom-models-01-serving-custom-models">1. Serving custom models: <a href="https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/01-serving-custom-models"><code>01-serving-custom-models</code></a></a></h4>
+<p>Dive into the world of custom GPU models with NOS. This tutorial shows you how easy it is to wrap your <a href="https://pytorch.org/">PyTorch</a> code with NOS, and serve them via a REST / gRPC API.</p>
+<h4 id="2-serving-multiple-methods-02-serving-multiple-methods"><a class="toclink" href="../-getting-started-with-nos-tutorials.html#2-serving-multiple-methods-02-serving-multiple-methods">2. Serving multiple methods: <a href="https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/02-serving-multiple-methods"><code>02-serving-multiple-methods</code></a></a></h4>
+<p>Learn how to expose several custom methods of a model for serving. This tutorial is perfect for those looking to tailor their model's functionality to specific requirements, enhancing its utility and performance.</p>
+<h4 id="3-serve-llms-with-streaming-support-03-llm-streaming-chat"><a class="toclink" href="../-getting-started-with-nos-tutorials.html#3-serve-llms-with-streaming-support-03-llm-streaming-chat">3. Serve LLMs with streaming support: <a href="https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/03-llm-streaming-chat"><code>03-llm-streaming-chat</code></a></a></h4>
+<p>Get hands-on with serving an LLM with streaming support. This tutorial focuses on using <a href="https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0"><code>TinyLlama/TinyLlama-1.1B-Chat-v0.1</code></a>, showcasing how to implement streaming capabilities with NOS for smoother, more efficient language model interactions.</p>
+<h4 id="4-serve-multiple-models-on-the-same-gpu-04-serving-multiple-models"><a class="toclink" href="../-getting-started-with-nos-tutorials.html#4-serve-multiple-models-on-the-same-gpu-04-serving-multiple-models">4. Serve multiple models on the same GPU: <a href="https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/04-serving-multiple-models"><code>04-serving-multiple-models</code></a></a></h4>
+<p>Step up your game by serving multiple models on the same GPU. This tutorial explores the integration of models like <a href="https://huggingface.co/TinyLlama/TinyLlama-1.1B-Chat-v1.0"><code>TinyLlama/TinyLlama-1.1B-Chat-v0.1</code></a> and <a href="https://huggingface.co/distil-whisper/distil-small.en">distil-whisper/distil-small.en</a>, enabling multi-modal applications such as audio transcription combined with summarization on a single GPU.</p>
+<h4 id="5-serving-models-in-production-with-docker-05-serving-with-docker"><a class="toclink" href="../-getting-started-with-nos-tutorials.html#5-serving-models-in-production-with-docker-05-serving-with-docker">5. Serving models in production with Docker <a href="https://github.com/autonomi-ai/nos/tree/main/examples/tutorials/05-serving-with-docker"><code>05-serving-with-docker</code></a></a></h4>
+<p>Enter the realm of production environments with our Docker tutorial. This guide is essential for anyone looking to use NOS in a more structured, scalable environment. You'll learn how to deploy your production NOS images with Docker and Docker Compose, ensuring your model serving works with existing ML infrastructure as reliably as possible.</p>
+<div class="admonition info">
+<p class="admonition-title">Stay tuned!</p>
+<p>🔗 <strong>Stay tuned</strong>, as we'll continuously update the section with more tutorials and resources to keep you ahead in the ever-evolving world of model serving!</p>
+</div>
+<p>Happy Model Serving!</p>
+<hr />
+<p><em>This blog post is brought to you by the <a href="https://github.com/autonomi-ai/">NOS Team</a> - committed to making model serving fast, efficient, and accessible to all!</em></p>
+    
+  </div>
+</article>
+      
+      
+        
+          
+
+
+
+<nav class="md-pagination">
+  
+</nav>
+        
+      
+    </div>
+  </div>
+
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2022 - 2024 <a href="https://autonomi.ai" target="_blank">Autonomi AI, Inc.</a> All rights reserved.
+
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+    <a href="mailto:support@autonomi.ai" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M498.1 5.6c10.1 7 15.4 19.1 13.5 31.2l-64 416c-1.5 9.7-7.4 18.2-16 23s-18.9 5.4-28 1.6L284 427.7l-68.5 74.1c-8.9 9.7-22.9 12.9-35.2 8.1S160 493.2 160 480v-83.6c0-4 1.5-7.8 4.2-10.7l167.6-182.9c5.8-6.3 5.6-16-.4-22s-15.7-6.4-22-.7L106 360.8l-88.3-44.2C7.1 311.3.3 300.7 0 288.9s5.9-22.8 16.1-28.7l448-256c10.7-6.1 23.9-5.5 34 1.4z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/autonomi-ai/nos" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/company/74939899" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/autonomi_ai" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/QAGgvTuvgg" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../../..", "features": ["content.code.copy", "content.code.annotate", "navigation.instant", "navigation.tracking", "toc.follow"], "search": "../../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.081f42fc.min.js"></script>
+      
+    
+  </body>
+</html>

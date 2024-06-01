@@ -1,0 +1,18 @@
+services:
+  server:
+    image: autonomi/nos:latest-gpu
+    command: /app/entrypoint.sh --http
+    environment:
+      - NOS_HOME=/app/.nos
+      - NOS_LOGGING_LEVEL=INFO
+    volumes:
+      - ~/.nosd:/app/.nos
+      - /dev/shm:/dev/shm
+    ports:
+      - 8000:8000
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]

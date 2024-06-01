@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
+
+package nos.inference;
+
+
+// Ping / healthcheck response
+message PingResponse {
+    string status = 1;  // (e.g. "ok" or "not_ok")
+}
+
+// Service information repsonse
+message ServiceInfoResponse {
+    string version = 1;  // (e.g. "0.1.0")
+    string runtime = 2;  // (e.g. "cpu", "gpu", "local" etc)
+}
+
+// Register system shared memory request
+message GenericRequest {
+  bytes request_bytes = 1;
+}
+
+// Register system shared memory response
+message GenericResponse {
+  bytes response_bytes = 1;
+}
+
+// Service definition
+service InferenceService {
+  // Check health status of the inference server.
+  rpc Ping(google.protobuf.Empty) returns (PingResponse) {}
+
+  // Get service information (version, release date etc.)
+  rpc GetServiceInfo(google.protobuf.Empty) returns (ServiceInfoResponse) {}
+
+  // List available models from Hugging Face Hub
+  rpc ListModels(google.protobuf.Empty) returns (GenericResponse) {};
+
+  /// Pre-load a model for inference
+  rpc LoadModel(GenericRequest) returns (GenericResponse) {};
+
+  // Get model information from the deployment
+  rpc GetModelCatalog(google.protobuf.Empty) returns (GenericResponse) {};
+  rpc GetModelInfo(google.protobuf.StringValue) returns (GenericResponse) {};
+
+  // Run the inference request
+  rpc Run(GenericRequest) returns (GenericResponse) {}
+
+  // Stream the inference response
+  rpc Stream(GenericRequest) returns (stream GenericResponse) {}
+
+  // Register shared memory
+  rpc RegisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
+
+  // Unregister shared memory
+  rpc UnregisterSystemSharedMemory(GenericRequest) returns (GenericResponse) {}
+
+  // Upload file
+  rpc UploadFile(stream GenericRequest) returns (GenericResponse) {}
+
+  // Delete file
+  rpc DeleteFile(GenericRequest) returns (google.protobuf.Empty) {}
+
+}
