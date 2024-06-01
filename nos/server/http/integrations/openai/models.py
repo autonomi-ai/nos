@@ -69,6 +69,28 @@ class Model(BaseModel):
         pass
 
 
+class File(BaseModel):
+    id: str
+    """ID of the file"""
+
+    bytes: int
+    """Size of the file in bytes"""
+
+    purpose: Optional[
+        Literal["assistants", "assistants_output", "batch", "batch_output", "fine-tune", "fine-tune-results", "vision"]
+    ]
+    """Purpose of the file"""
+
+    filename: str
+    """Name of the file"""
+
+    created_at: int = Field(default_factory=lambda: int(datetime.datetime.utcnow().timestamp()))
+    """UNIX timestamp (in seconds) of when the file was created"""
+
+    object: Literal["file"] = Field(default="file")
+    """Type of the file"""
+
+
 class Message(BaseModel):
     role: Literal["user", "assistant", "system"] = Field(default="user")
     """Role of the message, either 'user', 'assistant' or 'system'"""
