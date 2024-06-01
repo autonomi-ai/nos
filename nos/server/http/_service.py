@@ -7,7 +7,7 @@ from dataclasses import field
 from functools import lru_cache
 from pathlib import Path
 from tempfile import NamedTemporaryFile, SpooledTemporaryFile
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import requests
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile, status
@@ -38,6 +38,9 @@ from .integrations.openai.models import (
     DeltaRole,
     Message,
     Model,
+)
+from .integrations.openai.models import (
+    File as FileModel,
 )
 
 
@@ -228,11 +231,15 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
             raise HTTPException(status_code=400, detail=f"Invalid model {model}")
 
     # TODO (delete file after processing)
-    @app.post(f"/{version}/file/upload", status_code=201)
-    def upload_file(file: UploadFile = File(...), client: Client = Depends(get_client)) -> JSONResponse:
+    @app.post(f"/{version}/files", response_model=FileModel, status_code=201)
+    def upload_file(
+        file: UploadFile = File(...),
+        purpose: Literal["assistants", "vision", "batch", "fine-tune"] = Form(...),
+        client: Client = Depends(get_client),
+    ) -> JSONResponse:
         try:
             uid = uuid.uuid4()
-            basename = f"{uid}-{Path(file.filename).name}"
+            basename = f"file-{uid}-{Path(file.filename).name}"
             path = NOS_TMP_FILES_DIR / basename
             logger.debug(f"Uploading file: [local={file.filename}, path={path}]")
             file.file.seek(0)
@@ -249,10 +256,7 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
         except Exception as exc:
             logger.error(f"""Failed to upload file [file={file.filename}, exc={exc}]""")
             raise HTTPException(status_code=500, detail="Failed to upload file.")
-        return {
-            "file_id": str(uid),
-            "filename": basename,
-        }
+        return FileModel(id=f"file-{uid}", bytes=path.stat().st_size, purpose=purpose, filename=f"file://{basename}")
 
     @app.post(f"/{version}/chat/completions", status_code=status.HTTP_201_CREATED)
     def chat(
