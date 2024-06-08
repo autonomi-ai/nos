@@ -11,9 +11,11 @@ from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image
 
+from nos.constants import NOS_TMP_DIR
 
 m.patch()
 
+NOS_TMP_FILES_DIR = Path(NOS_TMP_DIR) / "uploaded_files"
 
 def encode_item(v: Any) -> Any:
     """Encode an item to a JSON-serializable object."""
@@ -41,6 +43,8 @@ def decode_item(v: Any) -> Any:
         return {k: decode_item(_v) for k, _v in v.items()}
     elif isinstance(v, (list, tuple, set, frozenset)):
         return [decode_item(x) for x in v]
+    elif isinstance(v, str) and v.startswith("file://"):
+        return NOS_TMP_FILES_DIR / v[len("file://") :]
     elif isinstance(v, str) and v.startswith("data:image/"):
         return base64_str_to_image(v)
     elif isinstance(v, str) and v.startswith("data:application/numpy;base64,"):
