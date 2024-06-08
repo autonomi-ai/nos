@@ -72,12 +72,12 @@ post-install-check: ## Post-install checks (check version, etc)
 
 develop-gpu: ## Install GPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
-	pip install --editable '.[server,gpu,dev,test,docs]'
+	pip install --editable '.[server,http,gpu,dev,test,docs]'
 	make post-install-check
 
 develop-cpu: ## Install CPU dependencies and package in developer/editable-mode
 	python -m pip install --upgrade pip
-	pip install --editable '.[server,cpu,dev,test,docs]'
+	pip install --editable '.[server,http,cpu,dev,test,docs]'
 	make post-install-check
 
 install: ## Install wheel package

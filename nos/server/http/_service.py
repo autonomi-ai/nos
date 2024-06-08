@@ -19,14 +19,14 @@ from tqdm import tqdm
 
 from nos.client import Client
 from nos.common.tasks import TaskType
-from nos.constants import DEFAULT_GRPC_ADDRESS, NOS_TMP_DIR
+from nos.constants import DEFAULT_GRPC_ADDRESS
 from nos.logging import logger
 from nos.protoc import import_module
 from nos.version import __version__
 
 from ._exceptions import default_exception_handler, default_exception_middleware
 from ._security import ValidMachineToMachine as ValidM2M
-from ._utils import decode_item, encode_item
+from ._utils import decode_item, encode_item, NOS_TMP_FILES_DIR
 from .integrations.openai.models import (
     ChatCompletionsRequest,
     ChatModel,
@@ -162,7 +162,7 @@ def app_factory(version: str = HTTP_API_VERSION, address: str = DEFAULT_GRPC_ADD
     app.middleware("http")(default_exception_middleware)
     app.add_exception_handler(Exception, default_exception_handler)
 
-    NOS_TMP_FILES_DIR = Path(NOS_TMP_DIR) / "uploaded_files"
+    # Create the temporary files directory (if it doesn't exist)
     NOS_TMP_FILES_DIR.mkdir(parents=True, exist_ok=True)
 
     def get_client() -> Client:

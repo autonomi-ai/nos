@@ -52,6 +52,10 @@ class Whisper:
             model_name="distil-whisper/distil-large-v2",
             torch_dtype="float16",
         ),
+        "distil-whisper/distil-large-v3": WhisperConfig(
+            model_name="distil-whisper/distil-large-v3",
+            torch_dtype="float16",
+        ),
     }
 
     def __init__(self, model_name: str = "openai/whisper-tiny.en"):

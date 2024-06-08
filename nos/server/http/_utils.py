@@ -4,11 +4,18 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict
 
+import msgpack
+import msgpack_numpy as m
 import numpy as np
 from fastapi import UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image
 
+from nos.constants import NOS_TMP_DIR
+
+m.patch()
+
+NOS_TMP_FILES_DIR = Path(NOS_TMP_DIR) / "uploaded_files"
 
 def encode_item(v: Any) -> Any:
     """Encode an item to a JSON-serializable object."""
@@ -22,7 +29,8 @@ def encode_item(v: Any) -> Any:
         if v.ndim <= 2:
             return v.tolist()
         else:
-            raise ValueError(f"Unsupported ndarray dimension: {v.ndim}")
+            arr_b64 = base64.b64encode(msgpack.packb(v)).decode()
+            return f"data:application/numpy;base64,{arr_b64}"
     elif isinstance(v, Path):
         return FileResponse(v)
     else:
@@ -35,8 +43,13 @@ def decode_item(v: Any) -> Any:
         return {k: decode_item(_v) for k, _v in v.items()}
     elif isinstance(v, (list, tuple, set, frozenset)):
         return [decode_item(x) for x in v]
+    elif isinstance(v, str) and v.startswith("file://"):
+        return NOS_TMP_FILES_DIR / v[len("file://") :]
     elif isinstance(v, str) and v.startswith("data:image/"):
         return base64_str_to_image(v)
+    elif isinstance(v, str) and v.startswith("data:application/numpy;base64,"):
+        arr_b64 = v[len("data:application/numpy;base64,") :]
+        return msgpack.unpackb(base64.b64decode(arr_b64), raw=False)
     else:
         return v
 
